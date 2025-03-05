@@ -1,0 +1,15 @@
+release/plotwidget.o
+release/qcustomplot.o
+release/QSingleSelectTimeWidget.o
+release/datetimeselectwidget.o
+release/main.o
+release/mainwindow.o
+release/rollingtimewidget.o
+release/qrc_resource.o
+release/qrc_qm.o
+release/moc_plotwidget.o
+release/moc_qcustomplot.o
+release/moc_QSingleSelectTimeWidget.o
+release/moc_datetimeselectwidget.o
+release/moc_mainwindow.o
+release/moc_rollingtimewidget.o

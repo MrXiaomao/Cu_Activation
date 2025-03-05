@@ -1,0 +1,37 @@
+<RCC>
+    <qresource prefix="/">
+        <file>resource/canshushezhi-05.png</file>
+        <file>resource/dakaiwenjian.png</file>
+        <file>resource/daochu.png</file>
+        <file>resource/kouyu_lishi.png</file>
+        <file>resource/lianjie.png</file>
+        <file>resource/lingcunwei.png</file>
+        <file>resource/qingchu.png</file>
+        <file>resource/quxiaolianjie.png</file>
+        <file>resource/shebeishebeiguanli.png</file>
+        <file>resource/tuichu.png</file>
+        <file>resource/windows.png</file>
+        <file>resource/zuoye.png</file>
+        <file>resource/log.png</file>
+        <file>resource/stop.png</file>
+        <file>resource/about.png</file>
+        <file>resource/help.png</file>
+        <file>resource/energy.png</file>
+        <file>resource/IoTDB.png</file>
+        <file>resource/wave.png</file>
+        <file>resource/terminate.png</file>
+        <file>resource/option.png</file>
+        <file>resource/script.png</file>
+        <file>resource/remote.png</file>
+        <file>resource/logo.png</file>
+        <file>resource/zhiling.png</file>
+        <file>resource/splash.png</file>
+        <file>resource/open.png</file>
+        <file>resource/exit.png</file>
+        <file>resource/power-off.png</file>
+        <file>resource/power-on.png</file>
+        <file>resource/line.png</file>
+        <file>resource/analyze.png</file>
+        <file>resource/measure.png</file>
+    </qresource>
+</RCC>

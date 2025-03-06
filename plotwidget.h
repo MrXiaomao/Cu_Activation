@@ -1,14 +1,14 @@
 #ifndef PLOTWIDGET_H
 #define PLOTWIDGET_H
 
-#include <QWidget>
+#include <QDockWidget>
 
 class QCustomPlot;
 class QCPItemText;
 class QCPItemLine;
 class QCPItemRect;
 class QCPAbstractPlottable;
-class PlotWidget : public QWidget
+class PlotWidget : public QDockWidget
 {
     Q_OBJECT
 public:

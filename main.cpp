@@ -6,7 +6,7 @@
 
 int main(int argc, char *argv[])
 {
-    QApplication::setStyle(QStyleFactory::create("fusion"));//WindowsVista fusion windows
+    QApplication::setStyle(QStyleFactory::create("WindowsVista"));//WindowsVista fusion windows
     QApplication a(argc, argv);
     a.setAttribute(Qt::AA_EnableHighDpiScaling); // 启用高DPI缩放支持
     a.setAttribute(Qt::AA_UseHighDpiPixmaps); // 使用高DPI位图

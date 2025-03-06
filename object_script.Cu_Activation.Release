@@ -1,3 +1,5 @@
+release/commandhelper.o
+release/equipmentmanagementform.o
 release/plotwidget.o
 release/qcustomplot.o
 release/QSingleSelectTimeWidget.o
@@ -5,11 +7,19 @@ release/datetimeselectwidget.o
 release/main.o
 release/mainwindow.o
 release/rollingtimewidget.o
+release/spectrumModel.o
+release/waveformmodel.o
+release/FPGASetting.o
 release/qrc_resource.o
 release/qrc_qm.o
+release/moc_commandhelper.o
+release/moc_equipmentmanagementform.o
 release/moc_plotwidget.o
 release/moc_qcustomplot.o
 release/moc_QSingleSelectTimeWidget.o
 release/moc_datetimeselectwidget.o
 release/moc_mainwindow.o
 release/moc_rollingtimewidget.o
+release/moc_spectrumModel.o
+release/moc_waveformmodel.o
+release/moc_FPGASetting.o

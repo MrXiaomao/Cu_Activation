@@ -2576,7 +2576,9 @@ public:
   void undefinePen();
   void applyTo(QCPPainter *painter, const QPen &defaultPen) const;
   void drawShape(QCPPainter *painter, const QPointF &pos) const;
+  void drawShape(QCPPainter *painter, const QPointF &pos, const QColor &color) const;
   void drawShape(QCPPainter *painter, double x, double y) const;
+  void drawShape(QCPPainter *painter, double x, double y, QColor color) const;
 
 protected:
   // property members:
@@ -5476,6 +5478,8 @@ public:
   inline QCPRange valueRange() const { return QCPRange(value, value); }
   
   double key, value;
+
+  QColor color;
 };
 Q_DECLARE_TYPEINFO(QCPGraphData, Q_PRIMITIVE_TYPE);
 
@@ -5531,6 +5535,7 @@ public:
   // setters:
   void setData(QSharedPointer<QCPGraphDataContainer> data);
   void setData(const QVector<double> &keys, const QVector<double> &values, bool alreadySorted=false);
+  void setData(const QVector<double> &keys, const QVector<double> &values, const QVector<QColor> &colors, bool alreadySorted=false);
   void setLineStyle(LineStyle ls);
   void setScatterStyle(const QCPScatterStyle &style);
   void setScatterSkip(int skip);
@@ -5539,6 +5544,7 @@ public:
   
   // non-property methods:
   void addData(const QVector<double> &keys, const QVector<double> &values, bool alreadySorted=false);
+  void addData(const QVector<double> &keys, const QVector<double> &values, const QVector<QColor> &colors, bool alreadySorted=false);
   void addData(double key, double value);
   
   // reimplemented virtual methods:
@@ -5561,6 +5567,7 @@ protected:
   // introduced virtual methods:
   virtual void drawFill(QCPPainter *painter, QVector<QPointF> *lines) const;
   virtual void drawScatterPlot(QCPPainter *painter, const QVector<QPointF> &scatters, const QCPScatterStyle &style) const;
+  virtual void drawScatterPlot(QCPPainter *painter, const QVector<QPointF> &scatters, const QVector<QColor> &colors, const QCPScatterStyle &style) const;
   virtual void drawLinePlot(QCPPainter *painter, const QVector<QPointF> &lines) const;
   virtual void drawImpulsePlot(QCPPainter *painter, const QVector<QPointF> &lines) const;
   
@@ -5571,6 +5578,7 @@ protected:
   void getVisibleDataBounds(QCPGraphDataContainer::const_iterator &begin, QCPGraphDataContainer::const_iterator &end, const QCPDataRange &rangeRestriction) const;
   void getLines(QVector<QPointF> *lines, const QCPDataRange &dataRange) const;
   void getScatters(QVector<QPointF> *scatters, const QCPDataRange &dataRange) const;
+  void getScatters(QVector<QPointF> *scatters, QVector<QColor> *colors, const QCPDataRange &dataRange) const;
   QVector<QPointF> dataToLines(const QVector<QCPGraphData> &data) const;
   QVector<QPointF> dataToStepLeftLines(const QVector<QCPGraphData> &data) const;
   QVector<QPointF> dataToStepRightLines(const QVector<QCPGraphData> &data) const;

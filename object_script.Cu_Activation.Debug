@@ -1,3 +1,5 @@
+debug/commandhelper.o
+debug/equipmentmanagementform.o
 debug/plotwidget.o
 debug/qcustomplot.o
 debug/QSingleSelectTimeWidget.o
@@ -5,11 +7,19 @@ debug/datetimeselectwidget.o
 debug/main.o
 debug/mainwindow.o
 debug/rollingtimewidget.o
+debug/spectrumModel.o
+debug/waveformmodel.o
+debug/FPGASetting.o
 debug/qrc_resource.o
 debug/qrc_qm.o
+debug/moc_commandhelper.o
+debug/moc_equipmentmanagementform.o
 debug/moc_plotwidget.o
 debug/moc_qcustomplot.o
 debug/moc_QSingleSelectTimeWidget.o
 debug/moc_datetimeselectwidget.o
 debug/moc_mainwindow.o
 debug/moc_rollingtimewidget.o
+debug/moc_spectrumModel.o
+debug/moc_waveformmodel.o
+debug/moc_FPGASetting.o

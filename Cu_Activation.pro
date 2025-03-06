@@ -16,23 +16,37 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    commandhelper.cpp \
+    equipmentmanagementform.cpp \
     plotwidget.cpp \
     qcustomplot.cpp \
     QSingleSelectTimeWidget.cpp \
     datetimeselectwidget.cpp \
     main.cpp \
     mainwindow.cpp \
-    rollingtimewidget.cpp
+    rollingtimewidget.cpp \
+    spectrumModel.cpp \
+    waveformmodel.cpp \
+    FPGASetting.cpp
 
 HEADERS += \
+    commandhelper.h \
+    equipmentmanagementform.h \
     plotwidget.h \
     qcustomplot.h \
     QSingleSelectTimeWidget.h \
     datetimeselectwidget.h \
     mainwindow.h \
-    rollingtimewidget.h
+    rollingtimewidget.h \
+    spectrumModel.h \
+    waveformmodel.h \
+    FPGASetting.h
 
 FORMS += \
+    FPGASetting.ui \
+    spectrumModel.ui \
+    waveformmodel.ui \
+    equipmentmanagementform.ui \
     QSingleSelectTimeWidget.ui \
     datetimeselectwidget.ui \
     mainwindow.ui
@@ -58,3 +72,18 @@ RESOURCES += \
 
 # 软件图标
 RC_ICONS = $$PWD/resource/logo.ico
+
+# 避免创建空的debug和release目录
+CONFIG -= debug_and_release
+
+#指定编译产生的文件分门别类放到对应目录
+MOC_DIR     = temp/moc
+RCC_DIR     = temp/rcc
+UI_DIR      = temp/ui
+OBJECTS_DIR = temp/obj
+
+#把所有警告都关掉眼不见为净
+CONFIG += warn_off
+
+#开启大资源支持
+CONFIG += resources_big

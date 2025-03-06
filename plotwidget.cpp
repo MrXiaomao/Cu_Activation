@@ -3,15 +3,14 @@
 #include <QGridLayout>
 #include <QtMath>
 
-PlotWidget::PlotWidget(QWidget *parent) : QWidget(parent)
+PlotWidget::PlotWidget(QWidget *parent) : QDockWidget(parent)
     , titleTextTtem(nullptr)
     , coordsTextItem(nullptr)
     , textTipItem(nullptr)
     , lineFlagItem(nullptr)
 {
     this->setContentsMargins(0, 0, 0, 0);
-    this->setLayout(new QGridLayout(this));
-    this->layout()->setMargin(0);
+    this->setAllowedAreas(Qt::AllDockWidgetAreas);
     initCustomPlot();
 }
 
@@ -20,15 +19,25 @@ void PlotWidget::setName(QString name)
     this->title = name;
     if (titleTextTtem)
         titleTextTtem->setText(name);
+    this->setWindowTitle(name);
+
 }
 
 void PlotWidget::initCustomPlot()
 {
+    QWidget *dockWidgetContents = new QWidget();
+    dockWidgetContents->setObjectName(QString::fromUtf8("dockWidgetContents"));
+    QGridLayout *gridLayout = new QGridLayout(dockWidgetContents);
+    gridLayout->setObjectName(QString::fromUtf8("gridLayout"));
+    gridLayout->setContentsMargins(0, 0, 0, 0);
+
     customPlot = new QCustomPlot(this);
     customPlot->setObjectName(QString("customPlot_%1").arg(title));
     customPlot->setLocale(QLocale(QLocale::Chinese, QLocale::China));
     customPlot->installEventFilter(this);
-    this->layout()->addWidget(customPlot);
+    //this->layout()->addWidget(customPlot);
+    gridLayout->addWidget(customPlot, 0, 0, 1, 1);
+    this->setWidget(dockWidgetContents);
 
     // 设置选择容忍度，即鼠标点击点到数据点的距离
     //customPlot->setSelectionTolerance(5);
@@ -113,22 +122,25 @@ void PlotWidget::initCustomPlot()
     //随机数据
     static int lastV = qrand() % 100 + 5000;
     QVector<double> keys, values;
+    QVector<QColor> colors;
     for (int i=0; i<2048; i++){
         keys << i;
 
         lastV += qrand() % 100 - 50;
         values << lastV;
-    }
-    customPlot->graph(0)->setData(keys, values);
 
-    QCPGraph * shadowGraph = customPlot->addGraph(customPlot->xAxis, customPlot->yAxis);
-    shadowGraph->setAntialiased(false);
-    Q_UNUSED(shadowGraph);
-    customPlot->graph(1)->setPen(QColor(255,0,255,255));
-    customPlot->graph(1)->selectionDecorator()->setPen(QColor(255,0,255,255));
-    //customPlot->graph(1)->setLineStyle(QCPGraph::lsLine);
-    customPlot->graph(1)->setLineStyle(QCPGraph::lsNone);// 隐藏线性图
-    customPlot->graph(1)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssPlus, 2));//显示散点图
+        colors << QColor(255, 255, 255, 255);
+    }
+    customPlot->graph(0)->setData(keys, values, colors);
+
+//    QCPGraph * shadowGraph = customPlot->addGraph(customPlot->xAxis, customPlot->yAxis);
+//    shadowGraph->setAntialiased(false);
+//    Q_UNUSED(shadowGraph);
+//    customPlot->graph(1)->setPen(QColor(255,0,255,255));
+//    customPlot->graph(1)->selectionDecorator()->setPen(QColor(255,0,255,255));
+//    //customPlot->graph(1)->setLineStyle(QCPGraph::lsLine);
+//    customPlot->graph(1)->setLineStyle(QCPGraph::lsNone);// 隐藏线性图
+//    customPlot->graph(1)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssPlus, 2));//显示散点图
 
     // 文本元素随窗口变动而变动
     titleTextTtem = new QCPItemText(customPlot);
@@ -210,6 +222,7 @@ void PlotWidget::initCustomPlot()
     connect(customPlot, SIGNAL(plottableClick(QCPAbstractPlottable*, int, QMouseEvent*)), this, SLOT(slotPlotClick(QCPAbstractPlottable*, int, QMouseEvent*)));
     //connect(customPlot, SIGNAL(selectionChangedByUser()), this, SLOT(slotSelectionChanged()));
     connect(customPlot, SIGNAL(beforeReplot()), this, SLOT(slotBeforeReplot()));
+    connect(customPlot, SIGNAL(afterLayout()), this, SLOT(slotBeforeReplot()));
 }
 
 QCustomPlot *PlotWidget::customPlotInstance() const
@@ -236,7 +249,20 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                 } else if (e->button() == Qt::RightButton) {
                     isPressed = false;
                     isDragging = false;
-                    customPlot->graph(1)->setData(QVector<double>(), QVector<double>());//.reset();// ->data().data()->clear();
+
+                    QCPGraph *graph = customPlot->graph(0);
+                    QVector<double> keys, values;
+                    QVector<QColor> colors;
+                    for (int i=0; i<graph->data()->size(); ++i){
+                        keys << (double)graph->data()->at(i)->key;
+                        values << (double)graph->data()->at(i)->value;
+                        colors << QColor(255, 255, 255, 255);
+                    }
+
+                    // 这里需要对数据去重和排序处理
+                    customPlot->graph(0)->setData(keys, values, colors);
+
+                    //customPlot->graph(1)->setData(QVector<double>(), QVector<double>());//.reset();// ->data().data()->clear();
                     dragRectItem->setVisible(false);
                     coordsTextItem->setVisible(false);
                     lineFlagItem->setVisible(false);
@@ -291,26 +317,23 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                             key_from = qMin(key_from, key_to);
                             key_to = qMax(key_temp, key_to);
 
-                            QMap<qint32, double> mapKeyValues;
-                            graph = customPlot->graph(1);
-                            for (int i=0; i<graph->data()->size(); ++i){
-                                mapKeyValues[graph->data()->at(i)->key] = graph->data()->at(i)->value;
-                            }
-
                             graph = customPlot->graph(0);
+                            QVector<double> keys, values;
+                            QVector<QColor> colors;
                             for (int i=0; i<graph->data()->size(); ++i){
                                 if (graph->data()->at(i)->key>=key_from && graph->data()->at(i)->key<=key_to) {
-                                    mapKeyValues[graph->data()->at(i)->key] = graph->data()->at(i)->value;
+                                    keys << (double)graph->data()->at(i)->key;
+                                    values << (double)graph->data()->at(i)->value;
+                                    colors << QColor(255, 0, 255, 255);
+                                } else {
+                                    keys << (double)graph->data()->at(i)->key;
+                                    values << (double)graph->data()->at(i)->value;
+                                    colors << graph->data()->at(i)->color;
                                 }
                             }
 
                             // 这里需要对数据去重和排序处理
-                            QVector<double> keys, values;
-                            for (QMap<qint32, double>::iterator iter = mapKeyValues.begin(); iter != mapKeyValues.end(); ++iter){
-                                keys << (double)iter.key();
-                                values << (double)iter.value();
-                            }
-                            customPlot->graph(1)->setData(keys, values);
+                            customPlot->graph(0)->setData(keys, values, colors);
                             customPlot->replot();
                         }
                     }
@@ -355,11 +378,8 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
 }
 
 #include <QTimer>
-void PlotWidget::slotPlotClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event)
+void PlotWidget::slotPlotClick(QCPAbstractPlottable */*plottable*/, int dataIndex, QMouseEvent *event)
 {
-    QCPLayer* layers = customPlot->layer(0);
-    QList<QCPLayerable*> layerable = layers->children();
-
     QCPGraph *graph = customPlot->graph(0);
     QSharedPointer<QCPGraphDataContainer> data = graph->data();
     const QCPGraphData *ghd = data->at(dataIndex);
@@ -371,14 +391,8 @@ void PlotWidget::slotPlotClick(QCPAbstractPlottable *plottable, int dataIndex, Q
     textTipItem->setVisible(true);
 
     //显示标记点
-    //lineFlagItem->start->setCoords(ghd->key, ghd->value);
     lineFlagItem->setProperty("key", ghd->key);
     lineFlagItem->setProperty("value", ghd->value);
-//    double key, value;
-//    graph->pixelsToCoords(event->pos().x() + 1, event->pos().y() - 2, key, value);
-//    lineFlagItem->start->setCoords(key, value);
-//    graph->pixelsToCoords(event->pos().x() + 1, event->pos().y() - 32, key, value);
-//    lineFlagItem->end->setCoords(key, value);
     lineFlagItem->setVisible(true);
 
     customPlot->replot();

@@ -10888,11 +10888,152 @@ void QCPScatterStyle::drawShape(QCPPainter *painter, const QPointF &pos) const
   drawShape(painter, pos.x(), pos.y());
 }
 
+void QCPScatterStyle::drawShape(QCPPainter *painter, const QPointF &pos, const QColor &color) const
+{
+  drawShape(painter, pos.x(), pos.y(), color);
+}
+
 /*! \overload
   Draws the scatter shape with \a painter at position \a x and \a y.
 */
 void QCPScatterStyle::drawShape(QCPPainter *painter, double x, double y) const
 {
+  double w = mSize/2.0;
+  switch (mShape)
+  {
+    case ssNone: break;
+    case ssDot:
+    {
+      painter->drawLine(QPointF(x, y), QPointF(x+0.0001, y));
+      break;
+    }
+    case ssCross:
+    {
+      painter->drawLine(QLineF(x-w, y-w, x+w, y+w));
+      painter->drawLine(QLineF(x-w, y+w, x+w, y-w));
+      break;
+    }
+    case ssPlus:
+    {
+      painter->drawLine(QLineF(x-w,   y, x+w,   y));
+      painter->drawLine(QLineF(  x, y+w,   x, y-w));
+      break;
+    }
+    case ssCircle:
+    {
+      painter->drawEllipse(QPointF(x , y), w, w);
+      break;
+    }
+    case ssDisc:
+    {
+      QBrush b = painter->brush();
+      painter->setBrush(painter->pen().color());
+      painter->drawEllipse(QPointF(x , y), w, w);
+      painter->setBrush(b);
+      break;
+    }
+    case ssSquare:
+    {
+      painter->drawRect(QRectF(x-w, y-w, mSize, mSize));
+      break;
+    }
+    case ssDiamond:
+    {
+      QPointF lineArray[4] = {QPointF(x-w,   y),
+                              QPointF(  x, y-w),
+                              QPointF(x+w,   y),
+                              QPointF(  x, y+w)};
+      painter->drawPolygon(lineArray, 4);
+      break;
+    }
+    case ssStar:
+    {
+      painter->drawLine(QLineF(x-w,   y, x+w,   y));
+      painter->drawLine(QLineF(  x, y+w,   x, y-w));
+      painter->drawLine(QLineF(x-w*0.707, y-w*0.707, x+w*0.707, y+w*0.707));
+      painter->drawLine(QLineF(x-w*0.707, y+w*0.707, x+w*0.707, y-w*0.707));
+      break;
+    }
+    case ssTriangle:
+    {
+      QPointF lineArray[3] = {QPointF(x-w, y+0.755*w),
+                              QPointF(x+w, y+0.755*w),
+                              QPointF(  x, y-0.977*w)};
+      painter->drawPolygon(lineArray, 3);
+      break;
+    }
+    case ssTriangleInverted:
+    {
+      QPointF lineArray[3] = {QPointF(x-w, y-0.755*w),
+                              QPointF(x+w, y-0.755*w),
+                              QPointF(  x, y+0.977*w)};
+      painter->drawPolygon(lineArray, 3);
+      break;
+    }
+    case ssCrossSquare:
+    {
+      painter->drawRect(QRectF(x-w, y-w, mSize, mSize));
+      painter->drawLine(QLineF(x-w, y-w, x+w*0.95, y+w*0.95));
+      painter->drawLine(QLineF(x-w, y+w*0.95, x+w*0.95, y-w));
+      break;
+    }
+    case ssPlusSquare:
+    {
+      painter->drawRect(QRectF(x-w, y-w, mSize, mSize));
+      painter->drawLine(QLineF(x-w,   y, x+w*0.95,   y));
+      painter->drawLine(QLineF(  x, y+w,        x, y-w));
+      break;
+    }
+    case ssCrossCircle:
+    {
+      painter->drawEllipse(QPointF(x, y), w, w);
+      painter->drawLine(QLineF(x-w*0.707, y-w*0.707, x+w*0.670, y+w*0.670));
+      painter->drawLine(QLineF(x-w*0.707, y+w*0.670, x+w*0.670, y-w*0.707));
+      break;
+    }
+    case ssPlusCircle:
+    {
+      painter->drawEllipse(QPointF(x, y), w, w);
+      painter->drawLine(QLineF(x-w,   y, x+w,   y));
+      painter->drawLine(QLineF(  x, y+w,   x, y-w));
+      break;
+    }
+    case ssPeace:
+    {
+      painter->drawEllipse(QPointF(x, y), w, w);
+      painter->drawLine(QLineF(x, y-w,         x,       y+w));
+      painter->drawLine(QLineF(x,   y, x-w*0.707, y+w*0.707));
+      painter->drawLine(QLineF(x,   y, x+w*0.707, y+w*0.707));
+      break;
+    }
+    case ssPixmap:
+    {
+      const double widthHalf = mPixmap.width()*0.5;
+      const double heightHalf = mPixmap.height()*0.5;
+#if QT_VERSION < QT_VERSION_CHECK(4, 8, 0)
+      const QRectF clipRect = painter->clipRegion().boundingRect().adjusted(-widthHalf, -heightHalf, widthHalf, heightHalf);
+#else
+      const QRectF clipRect = painter->clipBoundingRect().adjusted(-widthHalf, -heightHalf, widthHalf, heightHalf);
+#endif
+      if (clipRect.contains(x, y))
+        painter->drawPixmap(qRound(x-widthHalf), qRound(y-heightHalf), mPixmap);
+      break;
+    }
+    case ssCustom:
+    {
+      QTransform oldTransform = painter->transform();
+      painter->translate(x, y);
+      painter->scale(mSize/6.0, mSize/6.0);
+      painter->drawPath(mCustomPath);
+      painter->setTransform(oldTransform);
+      break;
+    }
+  }
+}
+
+void QCPScatterStyle::drawShape(QCPPainter *painter, double x, double y, QColor color) const
+{
+  painter->setPen(color);
   double w = mSize/2.0;
   switch (mShape)
   {
@@ -20943,6 +21084,12 @@ void QCPGraph::setData(const QVector<double> &keys, const QVector<double> &value
   addData(keys, values, alreadySorted);
 }
 
+void QCPGraph::setData(const QVector<double> &keys, const QVector<double> &values, const QVector<QColor> &colors, bool alreadySorted)
+{
+    mDataContainer->clear();
+    addData(keys, values, colors, alreadySorted);
+}
+
 /*!
   Sets how the single data points are connected in the plot. For scatter-only plots, set \a ls to
   \ref lsNone and \ref setScatterStyle to the desired scatter style.
@@ -21077,6 +21224,26 @@ void QCPGraph::addData(const QVector<double> &keys, const QVector<double> &value
   mDataContainer->add(tempData, alreadySorted); // don't modify tempData beyond this to prevent copy on write
 }
 
+void QCPGraph::addData(const QVector<double> &keys, const QVector<double> &values, const QVector<QColor> &colors, bool alreadySorted)
+{
+    if (keys.size() != values.size())
+      qDebug() << Q_FUNC_INFO << "keys and values have different sizes:" << keys.size() << values.size();
+    const int n = qMin(keys.size(), values.size());
+    QVector<QCPGraphData> tempData(n);
+    QVector<QCPGraphData>::iterator it = tempData.begin();
+    const QVector<QCPGraphData>::iterator itEnd = tempData.end();
+    int i = 0;
+    while (it != itEnd)
+    {
+      it->key = keys[i];
+      it->value = values[i];
+      it->color = colors[i];
+      ++it;
+      ++i;
+    }
+    mDataContainer->add(tempData, alreadySorted); // don't modify tempData beyond this to prevent copy on write
+}
+
 /*! \overload
   
   Adds the provided data point as \a key and \a value to the current data.
@@ -21138,7 +21305,8 @@ void QCPGraph::draw(QCPPainter *painter)
   if (mLineStyle == lsNone && mScatterStyle.isNone()) return;
   
   QVector<QPointF> lines, scatters; // line and (if necessary) scatter pixel coordinates will be stored here while iterating over segments
-  
+  QVector<QColor> colors;
+
   // loop over and draw segments of unselected/selected data:
   QList<QCPDataRange> selectedSegments, unselectedSegments, allSegments;
   getDataSegments(selectedSegments, unselectedSegments);
@@ -21188,8 +21356,8 @@ void QCPGraph::draw(QCPPainter *painter)
       finalScatterStyle = mSelectionDecorator->getFinalScatterStyle(mScatterStyle);
     if (!finalScatterStyle.isNone())
     {
-      getScatters(&scatters, allSegments.at(i));
-      drawScatterPlot(painter, scatters, finalScatterStyle);
+      getScatters(&scatters, &colors, allSegments.at(i));
+      drawScatterPlot(painter, scatters, colors, finalScatterStyle);
     }
   }
   
@@ -21339,6 +21507,54 @@ void QCPGraph::getScatters(QVector<QPointF> *scatters, const QCPDataRange &dataR
   }
 }
 
+void QCPGraph::getScatters(QVector<QPointF> *scatters, QVector<QColor> *colors, const QCPDataRange &dataRange) const
+{
+  if (!scatters) return;
+  QCPAxis *keyAxis = mKeyAxis.data();
+  QCPAxis *valueAxis = mValueAxis.data();
+  if (!keyAxis || !valueAxis) { qDebug() << Q_FUNC_INFO << "invalid key or value axis"; scatters->clear(); return; }
+
+  QCPGraphDataContainer::const_iterator begin, end;
+  getVisibleDataBounds(begin, end, dataRange);
+  if (begin == end)
+  {
+    scatters->clear();
+    colors->clear();
+    return;
+  }
+
+  QVector<QCPGraphData> data;
+  getOptimizedScatterData(&data, begin, end);
+
+  if (mKeyAxis->rangeReversed() != (mKeyAxis->orientation() == Qt::Vertical)) // make sure key pixels are sorted ascending in data (significantly simplifies following processing)
+    std::reverse(data.begin(), data.end());
+
+  scatters->resize(data.size());
+  colors->resize(data.size());
+  if (keyAxis->orientation() == Qt::Vertical)
+  {
+    for (int i=0; i<data.size(); ++i)
+    {
+      if (!qIsNaN(data.at(i).value))
+      {
+        (*scatters)[i].setX(valueAxis->coordToPixel(data.at(i).value));
+        (*scatters)[i].setY(keyAxis->coordToPixel(data.at(i).key));
+        (*colors)[i] = data.at(i).color;
+      }
+    }
+  } else
+  {
+    for (int i=0; i<data.size(); ++i)
+    {
+      if (!qIsNaN(data.at(i).value))
+      {
+        (*scatters)[i].setX(keyAxis->coordToPixel(data.at(i).key));
+        (*scatters)[i].setY(valueAxis->coordToPixel(data.at(i).value));
+        (*colors)[i] = data.at(i).color;
+      }
+    }
+  }
+}
 /*! \internal
 
   Takes raw data points in plot coordinates as \a data, and returns a vector containing pixel
@@ -21650,6 +21866,15 @@ void QCPGraph::drawScatterPlot(QCPPainter *painter, const QVector<QPointF> &scat
   style.applyTo(painter, mPen);
   foreach (const QPointF &scatter, scatters)
     style.drawShape(painter, scatter.x(), scatter.y());
+}
+
+void QCPGraph::drawScatterPlot(QCPPainter *painter, const QVector<QPointF> &scatters, const QVector<QColor> &colors, const QCPScatterStyle &style) const
+{
+  applyScattersAntialiasingHint(painter);
+  style.applyTo(painter, mPen);
+  int ref = 0;
+  foreach (const QPointF &scatter, scatters)
+    style.drawShape(painter, scatter.x(), scatter.y(), colors[ref++]);
 }
 
 /*!  \internal

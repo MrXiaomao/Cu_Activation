@@ -17,11 +17,10 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
     commandhelper.cpp \
+    dataanalysiswidget.cpp \
     equipmentmanagementform.cpp \
     plotwidget.cpp \
     qcustomplot.cpp \
-    QSingleSelectTimeWidget.cpp \
-    datetimeselectwidget.cpp \
     main.cpp \
     mainwindow.cpp \
     rollingtimewidget.cpp \
@@ -31,11 +30,10 @@ SOURCES += \
 
 HEADERS += \
     commandhelper.h \
+    dataanalysiswidget.h \
     equipmentmanagementform.h \
     plotwidget.h \
     qcustomplot.h \
-    QSingleSelectTimeWidget.h \
-    datetimeselectwidget.h \
     mainwindow.h \
     rollingtimewidget.h \
     spectrumModel.h \
@@ -44,10 +42,10 @@ HEADERS += \
 
 FORMS += \
     FPGASetting.ui \
+    dataanalysiswidget.ui \
     spectrumModel.ui \
     waveformmodel.ui \
     equipmentmanagementform.ui \
-    QSingleSelectTimeWidget.ui \
     datetimeselectwidget.ui \
     mainwindow.ui
 
@@ -61,6 +59,11 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 # QCustomPlot所需
 QT       += printsupport
+
+# 启用OpenGL硬件加速
+DEFINES  += QCUSTOMPLOT_USE_OPENGL
+QT       += opengl
+LIBS     += -lopengl32 -lglu32
 
 # 图片资源文件
 RESOURCES += \

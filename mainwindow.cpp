@@ -1,16 +1,17 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "datetimeselectwidget.h"
 #include "equipmentmanagementform.h"
+#include "spectrumModel.h"
+#include "dataanalysiswidget.h"
 #include "plotwidget.h"
 #include <QFileDialog>
 #include <QToolButton>
 #include <QTimer>
+#include <QScreen>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
-    , m_pTimeWidget(nullptr)
     , power_on(false)
     , net_connected(false)
 {
@@ -56,10 +57,10 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    if (m_pTimeWidget)
+    if (commandhelper)
     {
-        delete m_pTimeWidget;
-        m_pTimeWidget = nullptr;
+        delete commandhelper;
+        commandhelper = nullptr;
     }
 
     delete ui;
@@ -74,7 +75,6 @@ void MainWindow::InitMainWindowUi()
 {
     // 获取当前时间
     ui->start_time_text->setDateTime(QDateTime::currentDateTime());
-    ui->stop_time_text->setDateTime(QDateTime::currentDateTime());
     ui->textEdit_log->clear();
 
     // 手动测量-标定文件
@@ -114,6 +114,13 @@ void MainWindow::InitMainWindowUi()
     }
 
     ui->tabWidget_measure->setCurrentIndex(0);
+
+    // 启用关闭按钮
+    ui->tabWidget_client->setTabsClosable(true);
+    ui->tabWidget_client->tabBar()->setTabButton(0, QTabBar::RightSide, nullptr);//第一个tab取消关闭按钮
+    connect(ui->tabWidget_client, &QTabWidget::tabCloseRequested, this, [=](int index){
+        ui->tabWidget_client->removeTab(index);
+    });
 
     // 任务栏信息
     QLabel *label_Idle = new QLabel(ui->statusbar);
@@ -168,30 +175,6 @@ void MainWindow::InitMainWindowUi()
     });
 }
 
-void MainWindow::on_btn_select_start_time_clicked()
-{
-//    /*显示继承QWidget对象窗口*/
-//    if (nullptr == m_pTimeWidget){
-//        m_pTimeWidget = new DateTimeSelectWidget(this);
-//        //m_pTimeWidget->setAttribute(Qt::WA_DeleteOnClose, true);
-//        m_pTimeWidget->setWindowFlags(m_pTimeWidget->windowFlags() |Qt::Dialog);
-//        m_pTimeWidget->setWindowModality(Qt::ApplicationModal);
-//        m_pTimeWidget->setWindowModality(Qt::WindowModal);
-//        connect(m_pTimeWidget, &DateTimeSelectWidget::signal_snd_time_update, this, &MainWindow::MsgReceived_CaseTime_NewTime);
-//    }
-
-//    QPoint position = ui->btn_select_start_time->pos();
-//    int height = ui->btn_select_start_time->height();
-//    m_pTimeWidget->SetSelectNewTime(ui->start_time_text->text());
-//    m_pTimeWidget->move(position.x(),position.y()+height);
-//    m_pTimeWidget->show();
-}
-
-void MainWindow::MsgReceived_CaseTime_NewTime(QString qsTime)
-{
-    //ui->start_time_text->setText(qsTime);
-}
-
 // 打开电源
 void MainWindow::on_action_power_triggered()
 {
@@ -206,11 +189,11 @@ void MainWindow::on_action_power_triggered()
 void MainWindow::on_actionaction_net_connect_triggered()
 {
     if (net_connected){
-        ui->actionaction_net_connect->setIcon(QIcon(":/resource/quxiaolianjie.png"));
+        ui->actionaction_net_connect->setIcon(QIcon(":/resource/lianjie.png"));
         ui->actionaction_net_connect->setText(tr("打开网络"));
         net_connected = false;
     } else {
-        ui->actionaction_net_connect->setIcon(QIcon(":/resource/lianjie.png"));
+        ui->actionaction_net_connect->setIcon(QIcon(":/resource/quxiaolianjie.png"));
         ui->actionaction_net_connect->setText(tr("断开网络"));
         net_connected = true;
     }
@@ -218,6 +201,8 @@ void MainWindow::on_actionaction_net_connect_triggered()
 
 void MainWindow::initCustomPlot()
 {
+    //this->setDockNestingEnabled(true);
+
     // Det1
     PlotWidget *customPlotWidget_Det1 = new PlotWidget(ui->widget_plot);
     customPlotWidget_Det1->setName(tr("Det1"));
@@ -305,4 +290,90 @@ void MainWindow::slotWriteLog(const QString &log, log_level level/* = lower*/)
 
     // 确保 QTextEdit 显示了光标的新位置
     ui->textEdit_log->setTextCursor(cursor);
+}
+
+void MainWindow::on_action_SpectrumModel_triggered()
+{
+    if (spectrummodel && spectrummodel->isVisible()){
+        return ;
+    }
+
+    //能谱测量
+    if (nullptr == spectrummodel){
+        spectrummodel = new SpectrumModel(this);
+        //spectrummodel->setAttribute(Qt::WA_DeleteOnClose, true);
+        //spectrummodel->setWindowModality(Qt::ApplicationModal);
+    }
+
+    int index = ui->tabWidget_client->addTab(spectrummodel, tr("能谱测量"));
+    ui->tabWidget_client->setCurrentIndex(index);
+}
+
+void MainWindow::on_action_DataAnalysis_triggered()
+{
+    if (dataAnalysisWidget && dataAnalysisWidget->isVisible()){
+        return ;
+    }
+
+    //数据解析
+    if (nullptr == dataAnalysisWidget){
+        dataAnalysisWidget = new DataAnalysisWidget(this);
+        //dataAnalysisWidget->setAttribute(Qt::WA_DeleteOnClose, true);
+        //dataAnalysisWidget->setWindowModality(Qt::ApplicationModal);
+    }
+
+    int index = ui->tabWidget_client->addTab(dataAnalysisWidget, tr("数据解析"));
+    ui->tabWidget_client->setCurrentIndex(index);
+}
+
+#include "waveformmodel.h"
+void MainWindow::on_action_WaveformModel_triggered()
+{
+    QDockWidget *dockWidget = new QDockWidget();
+    dockWidget->setAttribute(Qt::WA_DeleteOnClose, true);
+    dockWidget->setFloating(true);
+    dockWidget->setWindowTitle(tr("波形测量"));
+    dockWidget->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    this->addDockWidget(Qt::NoDockWidgetArea, dockWidget);
+
+    QWidget *dockWidgetContents = new QWidget(dockWidget);
+    dockWidgetContents->setObjectName(QString::fromUtf8("dockWidgetContents"));
+    QGridLayout *gridLayout = new QGridLayout(dockWidgetContents);
+    gridLayout->setObjectName(QString::fromUtf8("gridLayout"));
+    gridLayout->setContentsMargins(0, 0, 0, 0);
+
+    WaveformModel *waveformModel = new WaveformModel(dockWidget);
+    gridLayout->addWidget(waveformModel, 0, 0, 1, 1);
+    dockWidget->setWidget(dockWidgetContents);
+    dockWidget->setGeometry(0,0,waveformModel->width(), waveformModel->height() + 52);
+
+    QRect screenRect = QGuiApplication::primaryScreen()->availableGeometry();
+    int x = (screenRect.width() - 260/*waveformModel->width()*/) / 2;
+    int y = (screenRect.height() - 400/*waveformModel->height()*/) / 2;
+    dockWidget->move(x, y);
+    dockWidget->show();
+    dockWidget->activateWindow();
+}
+
+#include "FPGASetting.h"
+void MainWindow::on_action_FPGASetting_triggered()
+{
+    QDockWidget *dockWidget = new QDockWidget();
+    dockWidget->setAttribute(Qt::WA_DeleteOnClose, true);
+    dockWidget->setFloating(true);
+    dockWidget->setWindowTitle(tr("硬件参数设置"));
+    dockWidget->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    this->addDockWidget(Qt::LeftDockWidgetArea, dockWidget);
+
+    QWidget *dockWidgetContents = new QWidget(dockWidget);
+    dockWidgetContents->setObjectName(QString::fromUtf8("dockWidgetContents"));
+    QGridLayout *gridLayout = new QGridLayout(dockWidgetContents);
+    gridLayout->setObjectName(QString::fromUtf8("gridLayout"));
+    gridLayout->setContentsMargins(0, 0, 0, 0);
+
+    FPGASetting *fpgaSetting = new FPGASetting(dockWidget);
+    gridLayout->addWidget(fpgaSetting, 0, 0, 1, 1);
+    dockWidget->setWidget(dockWidgetContents);
+    dockWidget->setGeometry(0,0,fpgaSetting->width(), fpgaSetting->height());
+    dockWidget->showNormal();
 }

@@ -2,14 +2,14 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include "datetimeselectwidget.h" //日历时间
 #include "commandhelper.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
-class QCustomPlot;
+class SpectrumModel;
+class DataAnalysisWidget;
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -34,8 +34,6 @@ signals:
     void sigWriteLog(const QString &log, log_level level = lower);
 
 private slots:
-    void on_btn_select_start_time_clicked();
-    void MsgReceived_CaseTime_NewTime(QString qsTime); //更新测量时间
     void slotPlowWidgetDoubleClickEvent();
 
     void on_action_power_triggered();
@@ -44,10 +42,19 @@ private slots:
 
     void on_action_devices_triggered();
 
+    void on_action_SpectrumModel_triggered();
+
+    void on_action_WaveformModel_triggered();
+
+    void on_action_FPGASetting_triggered();
+
+    void on_action_DataAnalysis_triggered();
+
 private:
-    Ui::MainWindow *ui;
-    DateTimeSelectWidget* m_pTimeWidget; //日期 时间选择窗口
-    CommandHelper *commandhelper;//网络指令
+    Ui::MainWindow *ui = nullptr;
+    SpectrumModel *spectrummodel = nullptr;//能谱模型
+    DataAnalysisWidget *dataAnalysisWidget = nullptr;//数据解析
+    CommandHelper *commandhelper = nullptr;//网络指令
     bool power_on;//电源打开标识
     bool net_connected;//网络连接标识
 };

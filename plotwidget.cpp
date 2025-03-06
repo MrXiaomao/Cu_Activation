@@ -11,6 +11,7 @@ PlotWidget::PlotWidget(QWidget *parent) : QDockWidget(parent)
 {
     this->setContentsMargins(0, 0, 0, 0);
     this->setAllowedAreas(Qt::AllDockWidgetAreas);
+    //this->setFeatures(QDockWidget::Reserved/*QDockWidget::AllDockWidgetFeatures*/);
     initCustomPlot();
 }
 
@@ -25,6 +26,9 @@ void PlotWidget::setName(QString name)
 
 void PlotWidget::initCustomPlot()
 {
+    QColor clrBackground = QColor(0, 0, 255);
+    QColor clrLine = Qt::white;
+
     QWidget *dockWidgetContents = new QWidget();
     dockWidgetContents->setObjectName(QString::fromUtf8("dockWidgetContents"));
     QGridLayout *gridLayout = new QGridLayout(dockWidgetContents);
@@ -32,10 +36,12 @@ void PlotWidget::initCustomPlot()
     gridLayout->setContentsMargins(0, 0, 0, 0);
 
     customPlot = new QCustomPlot(this);
+    customPlot->setOpenGl(true);
     customPlot->setObjectName(QString("customPlot_%1").arg(title));
-    customPlot->setLocale(QLocale(QLocale::Chinese, QLocale::China));
     customPlot->installEventFilter(this);
-    //this->layout()->addWidget(customPlot);
+    customPlot->plotLayout()->insertRow(0);
+    customPlot->plotLayout()->addElement(0, 0, new QCPTextElement(customPlot, title, QFont("微软雅黑", 10, QFont::Bold)));
+
     gridLayout->addWidget(customPlot, 0, 0, 1, 1);
     this->setWidget(dockWidgetContents);
 
@@ -51,11 +57,11 @@ void PlotWidget::initCustomPlot()
     // 设置边界
     customPlot->setContentsMargins(0, 0, 0, 0);
     // 背景色
-    customPlot->setBackground(QBrush(QColor(0, 0, 127)));
+    customPlot->setBackground(QBrush(clrBackground));
     // 图像画布边界
     customPlot->axisRect()->setMinimumMargins(QMargins(0, 0, 0, 0));
     // 坐标背景色
-    customPlot->axisRect()->setBackground(QColor(0, 0, 255));
+    customPlot->axisRect()->setBackground(clrBackground);
     // 允许拖拽，缩放
     customPlot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectPlottables);
     // 允许轴自适应大小
@@ -113,38 +119,15 @@ void PlotWidget::initCustomPlot()
     QCPGraph * curGraph = customPlot->addGraph(customPlot->xAxis, customPlot->yAxis);
     curGraph->setAntialiased(false);
     Q_UNUSED(curGraph);
-    customPlot->graph(0)->setPen(QPen(Qt::white));
-    customPlot->graph(0)->selectionDecorator()->setPen(QPen(Qt::white));
+    customPlot->graph(0)->setPen(QPen(clrLine));
+    customPlot->graph(0)->selectionDecorator()->setPen(QPen(clrLine));
     //customPlot->graph(0)->setLineStyle(QCPGraph::lsLine);
     customPlot->graph(0)->setLineStyle(QCPGraph::lsNone);// 隐藏线性图
     customPlot->graph(0)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssPlus, 2));//显示散点图
 
-    //随机数据
-    static int lastV = qrand() % 100 + 5000;
-    QVector<double> keys, values;
-    QVector<QColor> colors;
-    for (int i=0; i<2048; i++){
-        keys << i;
-
-        lastV += qrand() % 100 - 50;
-        values << lastV;
-
-        colors << QColor(255, 255, 255, 255);
-    }
-    customPlot->graph(0)->setData(keys, values, colors);
-
-//    QCPGraph * shadowGraph = customPlot->addGraph(customPlot->xAxis, customPlot->yAxis);
-//    shadowGraph->setAntialiased(false);
-//    Q_UNUSED(shadowGraph);
-//    customPlot->graph(1)->setPen(QColor(255,0,255,255));
-//    customPlot->graph(1)->selectionDecorator()->setPen(QColor(255,0,255,255));
-//    //customPlot->graph(1)->setLineStyle(QCPGraph::lsLine);
-//    customPlot->graph(1)->setLineStyle(QCPGraph::lsNone);// 隐藏线性图
-//    customPlot->graph(1)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssPlus, 2));//显示散点图
-
     // 文本元素随窗口变动而变动
     titleTextTtem = new QCPItemText(customPlot);
-    titleTextTtem->setColor(Qt::white);
+    titleTextTtem->setColor(clrLine);
     titleTextTtem->position->setType(QCPItemPosition::ptAbsolute);
     titleTextTtem->setPositionAlignment(Qt::AlignTop | Qt::AlignLeft);
     titleTextTtem->setTextAlignment(Qt::AlignLeft);
@@ -152,6 +135,7 @@ void PlotWidget::initCustomPlot()
     titleTextTtem->setPadding(QMargins(8, 0, 0, 0));
     titleTextTtem->position->setCoords(10.0, 10.0);//窗口坐标值
     titleTextTtem->setText(QString("%1").arg(title));
+    titleTextTtem->setVisible(false);
 
     // 文本元素随坐标变动而变动
     coordsTextItem = new QCPItemText(customPlot);
@@ -223,6 +207,23 @@ void PlotWidget::initCustomPlot()
     //connect(customPlot, SIGNAL(selectionChangedByUser()), this, SLOT(slotSelectionChanged()));
     connect(customPlot, SIGNAL(beforeReplot()), this, SLOT(slotBeforeReplot()));
     connect(customPlot, SIGNAL(afterLayout()), this, SLOT(slotBeforeReplot()));
+
+    QTimer::singleShot(50, this, [=](){
+        //随机数据
+        static int lastV = qrand() % 100 + 5000;
+        QVector<double> keys, values;
+        QVector<QColor> colors;
+        for (int i=0; i<2048; i++){
+            keys << i;
+
+            lastV += qrand() % 100 - 50;
+            values << lastV;
+
+            colors << clrLine;
+        }
+        customPlot->graph(0)->setData(keys, values, colors);
+        customPlot->replot();
+    });
 }
 
 QCustomPlot *PlotWidget::customPlotInstance() const

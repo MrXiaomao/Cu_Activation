@@ -33,5 +33,9 @@
         <file>resource/line.png</file>
         <file>resource/analyze.png</file>
         <file>resource/measure.png</file>
+        <file>resource/arrow-drop-down-x16.png</file>
+        <file>resource/arrow-drop-left-x16.png</file>
+        <file>resource/arrow-drop-right-x16.png</file>
+        <file>resource/arrow-drop-up-x16.png</file>
     </qresource>
 </RCC>

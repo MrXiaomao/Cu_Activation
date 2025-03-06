@@ -46,8 +46,6 @@ private slots:
 
     void on_action_WaveformModel_triggered();
 
-    void on_action_FPGASetting_triggered();
-
     void on_action_DataAnalysis_triggered();
 
 private:

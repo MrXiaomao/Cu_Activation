@@ -103,6 +103,9 @@
               <property name="bottomMargin">
                <number>0</number>
               </property>
+              <item>
+               <widget class="QWidget" name="widget_8" native="true"/>
+              </item>
              </layout>
             </widget>
            </item>
@@ -184,7 +187,7 @@
               </size>
              </property>
              <property name="currentIndex">
-              <number>0</number>
+              <number>1</number>
              </property>
              <widget class="QWidget" name="tab_3">
               <attribute name="title">
@@ -489,7 +492,7 @@
                    </widget>
                   </item>
                   <item row="7" column="1" colspan="2">
-                   <widget class="QWidget" name="widget_2" native="true">
+                   <widget class="QWidget" name="widget_12" native="true">
                     <layout class="QHBoxLayout" name="horizontalLayout_2">
                      <property name="leftMargin">
                       <number>0</number>
@@ -1016,117 +1019,316 @@
             </widget>
            </item>
            <item>
-            <widget class="QGroupBox" name="groupBox_2">
-             <property name="title">
-              <string>测量结果</string>
+            <widget class="QScrollArea" name="scrollArea">
+             <property name="frameShape">
+              <enum>QFrame::NoFrame</enum>
              </property>
-             <layout class="QGridLayout" name="gridLayout_7">
-              <item row="0" column="0" colspan="2">
-               <widget class="QLabel" name="label_17">
-                <property name="text">
-                 <string>已测时长/s：</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="2">
-               <widget class="QLCDNumber" name="lcdNumber"/>
-              </item>
-              <item row="1" column="0" colspan="2">
-               <widget class="QLabel" name="label_18">
-                <property name="text">
-                 <string>总符合计数：</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="2">
-               <widget class="QLCDNumber" name="lcdNumber_2"/>
-              </item>
-              <item row="2" column="0" colspan="2">
-               <widget class="QLabel" name="label_19">
-                <property name="text">
-                 <string>Det1计数率/cps：</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="2">
-               <widget class="QLCDNumber" name="lcdNumber_3"/>
-              </item>
-              <item row="3" column="0" colspan="2">
-               <widget class="QLabel" name="label_20">
-                <property name="text">
-                 <string>Det2计数率/cps：</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="2">
-               <widget class="QLCDNumber" name="lcdNumber_4"/>
-              </item>
-              <item row="4" column="0" colspan="2">
-               <widget class="QLabel" name="label_21">
-                <property name="text">
-                 <string>符合计数率：</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="2">
-               <widget class="QLCDNumber" name="lcdNumber_5"/>
-              </item>
-              <item row="5" column="0" colspan="2">
-               <widget class="QLabel" name="label_22">
-                <property name="text">
-                 <string>中子产额：</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="5" column="2">
-               <widget class="QLCDNumber" name="lcdNumber_6"/>
-              </item>
-              <item row="6" column="0">
-               <widget class="QLabel" name="label_24">
-                <property name="text">
-                 <string>存储路径：</string>
-                </property>
-               </widget>
-              </item>
-              <item row="6" column="1" colspan="2">
-               <widget class="QLineEdit" name="lineEdit_20"/>
-              </item>
-              <item row="7" column="0">
-               <widget class="QLabel" name="label_55">
-                <property name="text">
-                 <string>文件名：</string>
-                </property>
-               </widget>
-              </item>
-              <item row="7" column="1" colspan="2">
-               <widget class="QLineEdit" name="lineEdit_27"/>
-              </item>
-              <item row="8" column="2">
-               <widget class="QPushButton" name="pushButton_2">
-                <property name="text">
-                 <string>保存数据</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
+             <property name="widgetResizable">
+              <bool>true</bool>
+             </property>
+             <widget class="QWidget" name="scrollAreaWidgetContents">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>283</width>
+                <height>317</height>
+               </rect>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_6">
+               <property name="spacing">
+                <number>2</number>
+               </property>
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QWidget" name="widget_10" native="true">
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <layout class="QVBoxLayout" name="verticalLayout_5">
+                  <property name="spacing">
+                   <number>0</number>
+                  </property>
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                  <item>
+                   <widget class="QWidget" name="widget_9" native="true">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>23</height>
+                     </size>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">.QWidget{
+	border: 1px solid #5e5e5e;	
+	background-color: rgb(190, 190, 190);
+}</string>
+                    </property>
+                    <layout class="QHBoxLayout" name="horizontalLayout_9">
+                     <property name="topMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="bottomMargin">
+                      <number>0</number>
+                     </property>
+                     <item>
+                      <widget class="QLabel" name="label_tag">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <property name="text">
+                        <string/>
+                       </property>
+                       <property name="pixmap">
+                        <pixmap resource="resource.qrc">:/resource/arrow-drop-up-x16.png</pixmap>
+                       </property>
+                       <property name="scaledContents">
+                        <bool>false</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLabel" name="label_57">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <property name="text">
+                        <string>参数设置</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QWidget" name="widget_tag" native="true">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <layout class="QGridLayout" name="gridLayout_12">
+                     <property name="leftMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="topMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="rightMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="bottomMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="spacing">
+                      <number>0</number>
+                     </property>
+                    </layout>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QWidget" name="widget_11" native="true">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>23</height>
+                  </size>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">.QWidget{
+	border: 1px solid #5e5e5e;	
+	background-color: rgb(190, 190, 190);
+}</string>
+                 </property>
+                 <layout class="QHBoxLayout" name="horizontalLayout_10">
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                  <item>
+                   <widget class="QLabel" name="label_58">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>测量结果</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QWidget" name="widget_2" native="true">
+                 <layout class="QGridLayout" name="gridLayout_7">
+                  <item row="0" column="0" colspan="2">
+                   <widget class="QLabel" name="label_17">
+                    <property name="text">
+                     <string>已测时长/s：</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="2">
+                   <widget class="QLCDNumber" name="lcdNumber"/>
+                  </item>
+                  <item row="1" column="0" colspan="2">
+                   <widget class="QLabel" name="label_18">
+                    <property name="text">
+                     <string>总符合计数：</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="2">
+                   <widget class="QLCDNumber" name="lcdNumber_2"/>
+                  </item>
+                  <item row="2" column="0" colspan="2">
+                   <widget class="QLabel" name="label_19">
+                    <property name="text">
+                     <string>Det1计数率/cps：</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="2">
+                   <widget class="QLCDNumber" name="lcdNumber_3"/>
+                  </item>
+                  <item row="3" column="0" colspan="2">
+                   <widget class="QLabel" name="label_20">
+                    <property name="text">
+                     <string>Det2计数率/cps：</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="2">
+                   <widget class="QLCDNumber" name="lcdNumber_4"/>
+                  </item>
+                  <item row="4" column="0" colspan="2">
+                   <widget class="QLabel" name="label_21">
+                    <property name="text">
+                     <string>符合计数率：</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="2">
+                   <widget class="QLCDNumber" name="lcdNumber_5"/>
+                  </item>
+                  <item row="5" column="0" colspan="2">
+                   <widget class="QLabel" name="label_22">
+                    <property name="text">
+                     <string>中子产额：</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="5" column="2">
+                   <widget class="QLCDNumber" name="lcdNumber_6"/>
+                  </item>
+                  <item row="6" column="0">
+                   <widget class="QLabel" name="label_24">
+                    <property name="text">
+                     <string>存储路径：</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="6" column="1" colspan="2">
+                   <widget class="QLineEdit" name="lineEdit_20"/>
+                  </item>
+                  <item row="7" column="0">
+                   <widget class="QLabel" name="label_55">
+                    <property name="text">
+                     <string>文件名：</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="7" column="1" colspan="2">
+                   <widget class="QLineEdit" name="lineEdit_27"/>
+                  </item>
+                  <item row="8" column="2">
+                   <widget class="QPushButton" name="pushButton_2">
+                    <property name="text">
+                     <string>保存数据</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+              </layout>
+             </widget>
             </widget>
            </item>
            <item>
@@ -1165,7 +1367,6 @@
      <string>设置</string>
     </property>
     <addaction name="action_devices"/>
-    <addaction name="action_FPGASetting"/>
     <addaction name="action_power"/>
     <addaction name="action_cachepath"/>
    </widget>
@@ -1264,21 +1465,6 @@ p, li { white-space: pre-wrap; }
    </property>
    <property name="text">
     <string>网络设置</string>
-   </property>
-  </action>
-  <action name="action_FPGASetting">
-   <property name="icon">
-    <iconset resource="resource.qrc">
-     <normaloff>:/resource/canshushezhi-05.png</normaloff>:/resource/canshushezhi-05.png</iconset>
-   </property>
-   <property name="text">
-    <string>硬件参数设置</string>
-   </property>
-   <property name="iconText">
-    <string>参数设置</string>
-   </property>
-   <property name="toolTip">
-    <string>硬件参数设置</string>
    </property>
   </action>
   <action name="action_5">

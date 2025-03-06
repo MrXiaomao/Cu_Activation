@@ -4,6 +4,7 @@
 #include "spectrumModel.h"
 #include "dataanalysiswidget.h"
 #include "plotwidget.h"
+#include "FPGASetting.h"
 #include <QFileDialog>
 #include <QToolButton>
 #include <QTimer>
@@ -66,8 +67,35 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+#include <QMouseEvent>
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 {
+    if (watched != this){
+        if (event->type() == QEvent::MouseButtonPress){
+            if (watched->inherits("QLabel")){
+                QMouseEvent *e = reinterpret_cast<QMouseEvent*>(event);
+                if (e->button() == Qt::LeftButton) {
+                    QLabel* label = qobject_cast<QLabel*>(watched);
+                    bool toggled = false;
+                    if (label->property("toggled").isValid())
+                        toggled = label->property("toggled").toBool();
+
+                    toggled = !toggled;
+                    label->setProperty("toggled", toggled);
+                    if (toggled){
+                        label->setPixmap(QPixmap(":/resource/arrow-drop-up-x16.png"));
+                        QWidget * w = label->buddy();
+                        w->hide();
+                    } else {
+                        label->setPixmap(QPixmap(":/resource/arrow-drop-down-x16.png"));
+                        QWidget * w = label->buddy();
+                        w->show();
+                    }
+                }
+            }
+        }
+    }
+
     return QMainWindow::eventFilter(watched, event);
 }
 
@@ -121,6 +149,11 @@ void MainWindow::InitMainWindowUi()
     connect(ui->tabWidget_client, &QTabWidget::tabCloseRequested, this, [=](int index){
         ui->tabWidget_client->removeTab(index);
     });
+
+    ui->label_tag->setBuddy(ui->widget_tag);
+    ui->label_tag->installEventFilter(this);
+    FPGASetting *fpgaSetting = new FPGASetting(this);
+    ui->widget_tag->layout()->addWidget(fpgaSetting);
 
     // 任务栏信息
     QLabel *label_Idle = new QLabel(ui->statusbar);
@@ -345,35 +378,12 @@ void MainWindow::on_action_WaveformModel_triggered()
     WaveformModel *waveformModel = new WaveformModel(dockWidget);
     gridLayout->addWidget(waveformModel, 0, 0, 1, 1);
     dockWidget->setWidget(dockWidgetContents);
-    dockWidget->setGeometry(0,0,waveformModel->width(), waveformModel->height() + 52);
+    dockWidget->setGeometry(0,0,waveformModel->width(), 410/*waveformModel->height()*/ + 12);
 
     QRect screenRect = QGuiApplication::primaryScreen()->availableGeometry();
     int x = (screenRect.width() - 260/*waveformModel->width()*/) / 2;
-    int y = (screenRect.height() - 400/*waveformModel->height()*/) / 2;
+    int y = (screenRect.height() - 410/*waveformModel->height()*/) / 2;
     dockWidget->move(x, y);
     dockWidget->show();
     dockWidget->activateWindow();
-}
-
-#include "FPGASetting.h"
-void MainWindow::on_action_FPGASetting_triggered()
-{
-    QDockWidget *dockWidget = new QDockWidget();
-    dockWidget->setAttribute(Qt::WA_DeleteOnClose, true);
-    dockWidget->setFloating(true);
-    dockWidget->setWindowTitle(tr("硬件参数设置"));
-    dockWidget->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-    this->addDockWidget(Qt::LeftDockWidgetArea, dockWidget);
-
-    QWidget *dockWidgetContents = new QWidget(dockWidget);
-    dockWidgetContents->setObjectName(QString::fromUtf8("dockWidgetContents"));
-    QGridLayout *gridLayout = new QGridLayout(dockWidgetContents);
-    gridLayout->setObjectName(QString::fromUtf8("gridLayout"));
-    gridLayout->setContentsMargins(0, 0, 0, 0);
-
-    FPGASetting *fpgaSetting = new FPGASetting(dockWidget);
-    gridLayout->addWidget(fpgaSetting, 0, 0, 1, 1);
-    dockWidget->setWidget(dockWidgetContents);
-    dockWidget->setGeometry(0,0,fpgaSetting->width(), fpgaSetting->height());
-    dockWidget->showNormal();
 }

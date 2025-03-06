@@ -17,6 +17,9 @@ public:
 
     void initCustomPlot();
 
+protected:
+    virtual bool eventFilter(QObject *watched, QEvent *event) override;
+
 public slots:
     void slotPlowWidgetDoubleClickEvent();
 

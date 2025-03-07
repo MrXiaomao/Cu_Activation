@@ -11,7 +11,7 @@ PlotWidget::PlotWidget(QWidget *parent) : QDockWidget(parent)
 {
     this->setContentsMargins(0, 0, 0, 0);
     this->setAllowedAreas(Qt::AllDockWidgetAreas);
-    //this->setFeatures(QDockWidget::Reserved/*QDockWidget::AllDockWidgetFeatures*/);
+    this->setFeatures(QDockWidget::DockWidgetMovable|DockWidgetFloatable/*QDockWidget::AllDockWidgetFeatures*/);
     initCustomPlot();
 }
 
@@ -36,11 +36,11 @@ void PlotWidget::initCustomPlot()
     gridLayout->setContentsMargins(0, 0, 0, 0);
 
     customPlot = new QCustomPlot(this);
-    customPlot->setOpenGl(true);
+    //customPlot->setOpenGl(true); //不能启用硬件加速，否则多个控件数据刷新起冲突
     customPlot->setObjectName(QString("customPlot_%1").arg(title));
     customPlot->installEventFilter(this);
-    customPlot->plotLayout()->insertRow(0);
-    customPlot->plotLayout()->addElement(0, 0, new QCPTextElement(customPlot, title, QFont("微软雅黑", 10, QFont::Bold)));
+//    customPlot->plotLayout()->insertRow(0);
+//    customPlot->plotLayout()->addElement(0, 0, new QCPTextElement(customPlot, title, QFont("微软雅黑", 10, QFont::Bold)));
 
     gridLayout->addWidget(customPlot, 0, 0, 1, 1);
     this->setWidget(dockWidgetContents);
@@ -302,39 +302,39 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                         isDragging = true;
                     }else {
                         if (e->modifiers() & Qt::ControlModifier){
-                            QCPGraph *graph = customPlot->graph(0);
                             dragRectItem->setProperty("bottom", e->pos().y());
                             dragRectItem->setProperty("right", e->pos().x());
 
                             double key, value;
-                            graph->pixelsToCoords(e->pos().x(), e->pos().y(), key, value);
+                            customPlot->graph(0)->pixelsToCoords(e->pos().x(), e->pos().y(), key, value);
                             dragRectItem->bottomRight->setCoords(key, value);
                             dragRectItem->setVisible(true);
 
-                            //颜色更新
-                            double key_from = dragRectItem->topLeft->key();
-                            double key_to = dragRectItem->bottomRight->key();
-                            double key_temp = key_from;
-                            key_from = qMin(key_from, key_to);
-                            key_to = qMax(key_temp, key_to);
+//                            //颜色更新
+//                            double key_from = dragRectItem->topLeft->key();
+//                            double key_to = dragRectItem->bottomRight->key();
+//                            double key_temp = key_from;
+//                            key_from = qMin(key_from, key_to);
+//                            key_to = qMax(key_temp, key_to);
 
-                            graph = customPlot->graph(0);
-                            QVector<double> keys, values;
-                            QVector<QColor> colors;
-                            for (int i=0; i<graph->data()->size(); ++i){
-                                if (graph->data()->at(i)->key>=key_from && graph->data()->at(i)->key<=key_to) {
-                                    keys << (double)graph->data()->at(i)->key;
-                                    values << (double)graph->data()->at(i)->value;
-                                    colors << QColor(255, 0, 255, 255);
-                                } else {
-                                    keys << (double)graph->data()->at(i)->key;
-                                    values << (double)graph->data()->at(i)->value;
-                                    colors << graph->data()->at(i)->color;
-                                }
-                            }
+//                            QCPGraph *graph = customPlot->graph(0);
+//                            QVector<double> keys, values;
+//                            QVector<QColor> colors;
+//                            for (int i=0; i<graph->data()->size(); ++i){
+//                                if (graph->data()->at(i)->key>=key_from && graph->data()->at(i)->key<=key_to) {
+//                                    keys << (double)graph->data()->at(i)->key;
+//                                    values << (double)graph->data()->at(i)->value;
+//                                    colors << QColor(255, 0, 0, 255);
+//                                } else {
+//                                    keys << (double)graph->data()->at(i)->key;
+//                                    values << (double)graph->data()->at(i)->value;
+//                                    colors << graph->data()->at(i)->color;
+//                                }
+//                            }
 
-                            // 这里需要对数据去重和排序处理
-                            customPlot->graph(0)->setData(keys, values, colors);
+//                            // 这里需要对数据去重和排序处理
+//                            customPlot->graph(0)->setData(keys, values, colors);
+
                             customPlot->replot();
                         }
                     }
@@ -349,7 +349,33 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
 
                     if (e->modifiers() & Qt::ControlModifier){
                         if (dragRectItem->visible()){
+                            //颜色更新
+                            double key_from = dragRectItem->topLeft->key();
+                            double key_to = dragRectItem->bottomRight->key();
+                            double key_temp = key_from;
+                            key_from = qMin(key_from, key_to);
+                            key_to = qMax(key_temp, key_to);
+
                             QCPGraph *graph = customPlot->graph(0);
+                            QVector<double> keys, values;
+                            QVector<QColor> colors;
+                            for (int i=0; i<graph->data()->size(); ++i){
+                                if (graph->data()->at(i)->key>=key_from && graph->data()->at(i)->key<=key_to) {
+                                    keys << (double)graph->data()->at(i)->key;
+                                    values << (double)graph->data()->at(i)->value;
+                                    colors << QColor(255, 0, 0, 255);
+                                } else {
+                                    keys << (double)graph->data()->at(i)->key;
+                                    values << (double)graph->data()->at(i)->value;
+                                    colors << graph->data()->at(i)->color;
+                                }
+                            }
+
+                            // 这里需要对数据去重和排序处理
+                            customPlot->graph(0)->setData(keys, values, colors);
+                            customPlot->replot();
+
+                            //显示拟合数据
                             coordsTextItem->setText("峰: 239.10 = 207.37 keV\n"
                                                     "半高宽: 40.15 FW[1/5]M:71.59\n"
                                                     "库: Sn-113[Tin]在255.04; 0 Bq\n"

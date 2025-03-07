@@ -6,6 +6,9 @@ EquipmentManagementForm::EquipmentManagementForm(QWidget *parent) :
     ui(new Ui::EquipmentManagementForm)
 {
     ui->setupUi(this);
+
+    //ui->tableWidget->resizeColumnsToContents();
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch); // 平分
 }
 
 EquipmentManagementForm::~EquipmentManagementForm()

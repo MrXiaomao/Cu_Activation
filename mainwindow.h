@@ -48,6 +48,8 @@ private slots:
 
     void on_action_DataAnalysis_triggered();
 
+    void on_action_detector_conndect_triggered();
+
 private:
     Ui::MainWindow *ui = nullptr;
     SpectrumModel *spectrummodel = nullptr;//能谱模型
@@ -55,5 +57,6 @@ private:
     CommandHelper *commandhelper = nullptr;//网络指令
     bool power_on;//电源打开标识
     bool net_connected;//网络连接标识
+    bool detector_connected;//探测器连接标识
 };
 #endif // MAINWINDOW_H

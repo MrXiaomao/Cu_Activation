@@ -37,6 +37,7 @@ private:
     QCPItemLine *lineFlagItem;// 标记选择点
     QCPItemRect *dragRectItem;//框选
 
+    bool showAxis = false;//是否显示轴线
     QString title;
     bool isDragging = false;
     bool isPressed = false;

@@ -9,6 +9,7 @@
 #include <QToolButton>
 #include <QTimer>
 #include <QScreen>
+#include <QButtonGroup>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -151,9 +152,30 @@ void MainWindow::InitMainWindowUi()
     });
 
     ui->label_tag->setBuddy(ui->widget_tag);
+    ui->label_tag_->setBuddy(ui->widget_tag);
     ui->label_tag->installEventFilter(this);
+    ui->label_tag_->installEventFilter(this);
     FPGASetting *fpgaSetting = new FPGASetting(this);
     ui->widget_tag->layout()->addWidget(fpgaSetting);
+//    ui->widget_tag->hide();
+//    ui->widget_tag->setProperty("toggled", true);
+
+    // 显示计数/能谱
+    ui->label_tag_2->setBuddy(ui->widget_tag_2);
+    ui->label_tag_2_->setBuddy(ui->widget_tag_2);
+    ui->label_tag_2->installEventFilter(this);
+    ui->label_tag_2_->installEventFilter(this);
+    QButtonGroup *grp = new QButtonGroup(this);
+    grp->addButton(ui->radioButton_ref, 0);
+    grp->addButton(ui->radioButton_spectrum, 1);
+    connect(grp, QOverload<int>::of(&QButtonGroup::buttonClicked), this, [=](int index){
+        if (0 == index){
+            ui->widget_gauss->hide();
+        } else {
+            ui->widget_gauss->show();
+        }
+    });
+    ui->widget_gauss->hide();
 
     // 任务栏信息
     QLabel *label_Idle = new QLabel(ui->statusbar);
@@ -223,11 +245,11 @@ void MainWindow::on_actionaction_net_connect_triggered()
 {
     if (net_connected){
         ui->actionaction_net_connect->setIcon(QIcon(":/resource/lianjie.png"));
-        ui->actionaction_net_connect->setText(tr("打开网络"));
+        ui->actionaction_net_connect->setText(tr("连接外设"));
         net_connected = false;
     } else {
         ui->actionaction_net_connect->setIcon(QIcon(":/resource/quxiaolianjie.png"));
-        ui->actionaction_net_connect->setText(tr("断开网络"));
+        ui->actionaction_net_connect->setText(tr("断开外设"));
         net_connected = true;
     }
 }
@@ -327,19 +349,46 @@ void MainWindow::slotWriteLog(const QString &log, log_level level/* = lower*/)
 
 void MainWindow::on_action_SpectrumModel_triggered()
 {
-    if (spectrummodel && spectrummodel->isVisible()){
-        return ;
-    }
+//    if (spectrummodel && spectrummodel->isVisible()){
+//        return ;
+//    }
 
-    //能谱测量
-    if (nullptr == spectrummodel){
-        spectrummodel = new SpectrumModel(this);
-        //spectrummodel->setAttribute(Qt::WA_DeleteOnClose, true);
-        //spectrummodel->setWindowModality(Qt::ApplicationModal);
-    }
+//    //能谱测量
+//    if (nullptr == spectrummodel){
+//        spectrummodel = new SpectrumModel(this);
+//        //spectrummodel->setAttribute(Qt::WA_DeleteOnClose, true);
+//        //spectrummodel->setWindowModality(Qt::ApplicationModal);
+//    }
 
-    int index = ui->tabWidget_client->addTab(spectrummodel, tr("能谱测量"));
-    ui->tabWidget_client->setCurrentIndex(index);
+//    int index = ui->tabWidget_client->addTab(spectrummodel, tr("能谱测量"));
+//    ui->tabWidget_client->setCurrentIndex(index);
+
+    QDockWidget *dockWidget = new QDockWidget();
+    dockWidget->setAttribute(Qt::WA_DeleteOnClose, true);
+    dockWidget->setWindowFlags(dockWidget->windowFlags() |Qt::Dialog);
+    dockWidget->setWindowModality(Qt::ApplicationModal);
+    dockWidget->setFloating(true);
+    dockWidget->setWindowTitle(tr("能谱测量"));
+    dockWidget->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    this->addDockWidget(Qt::NoDockWidgetArea, dockWidget);
+
+    QWidget *dockWidgetContents = new QWidget(dockWidget);
+    dockWidgetContents->setObjectName(QString::fromUtf8("dockWidgetContents"));
+    QGridLayout *gridLayout = new QGridLayout(dockWidgetContents);
+    gridLayout->setObjectName(QString::fromUtf8("gridLayout"));
+    gridLayout->setContentsMargins(0, 0, 0, 0);
+
+    SpectrumModel *spectrummodel = new SpectrumModel(dockWidget);
+    gridLayout->addWidget(spectrummodel, 0, 0, 1, 1);
+    dockWidget->setWidget(dockWidgetContents);
+    dockWidget->setGeometry(0,0,spectrummodel->width(), 361/*waveformModel->height()*/ + 12);
+
+    QRect screenRect = QGuiApplication::primaryScreen()->availableGeometry();
+    int x = (screenRect.width() - 260/*waveformModel->width()*/) / 2;
+    int y = (screenRect.height() - 361/*waveformModel->height()*/) / 2;
+    dockWidget->move(x, y);
+    dockWidget->show();
+    dockWidget->activateWindow();
 }
 
 void MainWindow::on_action_DataAnalysis_triggered()
@@ -364,6 +413,8 @@ void MainWindow::on_action_WaveformModel_triggered()
 {
     QDockWidget *dockWidget = new QDockWidget();
     dockWidget->setAttribute(Qt::WA_DeleteOnClose, true);
+    dockWidget->setWindowFlags(dockWidget->windowFlags() |Qt::Dialog);
+    dockWidget->setWindowModality(Qt::ApplicationModal);
     dockWidget->setFloating(true);
     dockWidget->setWindowTitle(tr("波形测量"));
     dockWidget->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
@@ -386,4 +437,15 @@ void MainWindow::on_action_WaveformModel_triggered()
     dockWidget->move(x, y);
     dockWidget->show();
     dockWidget->activateWindow();
+}
+
+void MainWindow::on_action_detector_conndect_triggered()
+{
+    if (detector_connected){
+        ui->actionaction_net_connect->setText(tr("连接探测器"));
+        detector_connected = false;
+    } else {
+        ui->actionaction_net_connect->setText(tr("断开探测器"));
+        detector_connected = true;
+    }
 }

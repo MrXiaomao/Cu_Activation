@@ -15,16 +15,10 @@ public:
     explicit SpectrumModel(QWidget *parent = nullptr);
     ~SpectrumModel();
 
-    void initCustomPlot();
-
 private slots:
     void on_pushButton_start_clicked();
 
     void on_pushButton_save_clicked();
-
-    void on_pushButton_gauss_clicked();
-
-    void slotPlowWidgetDoubleClickEvent();
 
 private:
     Ui::SpectrumModel *ui;

@@ -17,6 +17,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
     commandhelper.cpp \
+    coolingtimewidget.cpp \
     dataanalysiswidget.cpp \
     equipmentmanagementform.cpp \
     plotwidget.cpp \
@@ -30,6 +31,7 @@ SOURCES += \
 
 HEADERS += \
     commandhelper.h \
+    coolingtimewidget.h \
     dataanalysiswidget.h \
     equipmentmanagementform.h \
     plotwidget.h \
@@ -42,6 +44,7 @@ HEADERS += \
 
 FORMS += \
     FPGASetting.ui \
+    coolingtimewidget.ui \
     dataanalysiswidget.ui \
     spectrumModel.ui \
     waveformmodel.ui \
@@ -61,9 +64,9 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 QT       += printsupport
 
 # 启用OpenGL硬件加速
-DEFINES  += QCUSTOMPLOT_USE_OPENGL
-QT       += opengl
-LIBS     += -lopengl32 -lglu32
+#DEFINES  += QCUSTOMPLOT_USE_OPENGL
+#QT       += opengl
+#LIBS     += -lopengl32 -lglu32
 
 # 图片资源文件
 RESOURCES += \

@@ -37,5 +37,6 @@
         <file>resource/arrow-drop-left-x16.png</file>
         <file>resource/arrow-drop-right-x16.png</file>
         <file>resource/arrow-drop-up-x16.png</file>
+        <file>resource/conect.png</file>
     </qresource>
 </RCC>

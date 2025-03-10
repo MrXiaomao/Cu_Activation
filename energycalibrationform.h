@@ -16,6 +16,11 @@ public:
     explicit EnergyCalibrationForm(QWidget *parent = nullptr);
     ~EnergyCalibrationForm();
 
+private slots:
+    void on_pushButton_add_clicked();
+
+    void on_pushButton_del_clicked();
+
 private:
     void initCustomPlot();
 

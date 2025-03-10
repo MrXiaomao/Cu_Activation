@@ -1,15 +1,23 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "equipmentmanagementform.h"
+#include "energycalibrationform.h"
 #include "spectrumModel.h"
 #include "dataanalysiswidget.h"
 #include "plotwidget.h"
 #include "FPGASetting.h"
+#include "qcustomplot.h"
 #include <QFileDialog>
 #include <QToolButton>
 #include <QTimer>
 #include <QScreen>
 #include <QButtonGroup>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <QFile>
+#include <QDir>
+#include <QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -20,7 +28,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
     connect(this, SIGNAL(sigWriteLog(const QString &, log_level)), this, SLOT(slotWriteLog(const QString &, log_level)));
-    commandhelper = new CommandHelper(this);
+    commandhelper = new CommandHelper();
     connect(commandhelper, &CommandHelper::sigPowerStatus, this, [=](bool on){
         power_on = on;
         if (power_on){
@@ -47,6 +55,26 @@ MainWindow::MainWindow(QWidget *parent)
         ui->statusbar->showMessage(msg);
         emit sigWriteLog(msg);
     });
+    qRegisterMetaType<PariticalFrame>("PariticalFrame");
+    connect(commandhelper, &CommandHelper::sigRefreshData, this, [=](PariticalFrame frame){
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("Det1");
+        QCustomPlot *customPlot = plotWidget->customPlotInstance();
+
+        QVector<double> keys, values;
+        QVector<QColor> colors;
+        for (int i=0; i<frame.data.size(); i++){
+            keys << i;
+            values << frame.data[i].data;
+
+            colors << QColor(255, 255, 255, 255);
+        }
+        if (frame.channel == 0x000000F1)
+            customPlot->graph(0)->setData(keys, values, colors);
+        else if (frame.channel == 0x000000F2)
+            customPlot->graph(1)->setData(keys, values, colors);
+        customPlot->replot();
+    });
+
 
     InitMainWindowUi();
     // 创建图表
@@ -349,46 +377,54 @@ void MainWindow::slotWriteLog(const QString &log, log_level level/* = lower*/)
 
 void MainWindow::on_action_SpectrumModel_triggered()
 {
-//    if (spectrummodel && spectrummodel->isVisible()){
-//        return ;
-//    }
+    if (0){
+        if (spectrummodel && spectrummodel->isVisible()){
+            return ;
+        }
 
-//    //能谱测量
-//    if (nullptr == spectrummodel){
-//        spectrummodel = new SpectrumModel(this);
-//        //spectrummodel->setAttribute(Qt::WA_DeleteOnClose, true);
-//        //spectrummodel->setWindowModality(Qt::ApplicationModal);
-//    }
+        //能谱测量
+        if (nullptr == spectrummodel){
+            spectrummodel = new SpectrumModel(this);
+            //spectrummodel->setAttribute(Qt::WA_DeleteOnClose, true);
+            //spectrummodel->setWindowModality(Qt::ApplicationModal);
+        }
 
-//    int index = ui->tabWidget_client->addTab(spectrummodel, tr("能谱测量"));
-//    ui->tabWidget_client->setCurrentIndex(index);
+        int index = ui->tabWidget_client->addTab(spectrummodel, tr("能谱测量"));
+        ui->tabWidget_client->setCurrentIndex(index);
 
-    QDockWidget *dockWidget = new QDockWidget();
-    dockWidget->setAttribute(Qt::WA_DeleteOnClose, true);
-    dockWidget->setWindowFlags(dockWidget->windowFlags() |Qt::Dialog);
-    dockWidget->setWindowModality(Qt::ApplicationModal);
-    dockWidget->setFloating(true);
-    dockWidget->setWindowTitle(tr("能谱测量"));
-    dockWidget->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-    this->addDockWidget(Qt::NoDockWidgetArea, dockWidget);
+        QDockWidget *dockWidget = new QDockWidget();
+        dockWidget->setAttribute(Qt::WA_DeleteOnClose, true);
+        dockWidget->setWindowFlags(dockWidget->windowFlags() |Qt::Dialog);
+        dockWidget->setWindowModality(Qt::ApplicationModal);
+        dockWidget->setFloating(true);
+        dockWidget->setWindowTitle(tr("能谱测量"));
+        dockWidget->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+        this->addDockWidget(Qt::NoDockWidgetArea, dockWidget);
 
-    QWidget *dockWidgetContents = new QWidget(dockWidget);
-    dockWidgetContents->setObjectName(QString::fromUtf8("dockWidgetContents"));
-    QGridLayout *gridLayout = new QGridLayout(dockWidgetContents);
-    gridLayout->setObjectName(QString::fromUtf8("gridLayout"));
-    gridLayout->setContentsMargins(0, 0, 0, 0);
+        QWidget *dockWidgetContents = new QWidget(dockWidget);
+        dockWidgetContents->setObjectName(QString::fromUtf8("dockWidgetContents"));
+        QGridLayout *gridLayout = new QGridLayout(dockWidgetContents);
+        gridLayout->setObjectName(QString::fromUtf8("gridLayout"));
+        gridLayout->setContentsMargins(0, 0, 0, 0);
 
-    SpectrumModel *spectrummodel = new SpectrumModel(dockWidget);
-    gridLayout->addWidget(spectrummodel, 0, 0, 1, 1);
-    dockWidget->setWidget(dockWidgetContents);
-    dockWidget->setGeometry(0,0,spectrummodel->width(), 361/*waveformModel->height()*/ + 12);
+        SpectrumModel *spectrummodel = new SpectrumModel(dockWidget);
+        gridLayout->addWidget(spectrummodel, 0, 0, 1, 1);
+        dockWidget->setWidget(dockWidgetContents);
+        dockWidget->setGeometry(0,0,spectrummodel->width(), 361/*waveformModel->height()*/ + 12);
 
-    QRect screenRect = QGuiApplication::primaryScreen()->availableGeometry();
-    int x = (screenRect.width() - 260/*waveformModel->width()*/) / 2;
-    int y = (screenRect.height() - 361/*waveformModel->height()*/) / 2;
-    dockWidget->move(x, y);
-    dockWidget->show();
-    dockWidget->activateWindow();
+        QRect screenRect = QGuiApplication::primaryScreen()->availableGeometry();
+        int x = (screenRect.width() - 260/*waveformModel->width()*/) / 2;
+        int y = (screenRect.height() - 361/*waveformModel->height()*/) / 2;
+        dockWidget->move(x, y);
+        dockWidget->show();
+        dockWidget->activateWindow();
+    } else {
+        SpectrumModel *spectrummodel = new SpectrumModel(this);
+        spectrummodel->setAttribute(Qt::WA_DeleteOnClose, true);
+        spectrummodel->setWindowFlags(Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint|Qt::Dialog);
+        spectrummodel->setWindowModality(Qt::ApplicationModal);
+        spectrummodel->showNormal();
+    }
 }
 
 void MainWindow::on_action_DataAnalysis_triggered()
@@ -411,32 +447,40 @@ void MainWindow::on_action_DataAnalysis_triggered()
 #include "waveformmodel.h"
 void MainWindow::on_action_WaveformModel_triggered()
 {
-    QDockWidget *dockWidget = new QDockWidget();
-    dockWidget->setAttribute(Qt::WA_DeleteOnClose, true);
-    dockWidget->setWindowFlags(dockWidget->windowFlags() |Qt::Dialog);
-    dockWidget->setWindowModality(Qt::ApplicationModal);
-    dockWidget->setFloating(true);
-    dockWidget->setWindowTitle(tr("波形测量"));
-    dockWidget->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-    this->addDockWidget(Qt::NoDockWidgetArea, dockWidget);
+    if (0){
+        QDockWidget *dockWidget = new QDockWidget();
+        dockWidget->setAttribute(Qt::WA_DeleteOnClose, true);
+        dockWidget->setWindowFlags(dockWidget->windowFlags() |Qt::Dialog);
+        dockWidget->setWindowModality(Qt::ApplicationModal);
+        dockWidget->setFloating(true);
+        dockWidget->setWindowTitle(tr("波形测量"));
+        dockWidget->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+        this->addDockWidget(Qt::NoDockWidgetArea, dockWidget);
 
-    QWidget *dockWidgetContents = new QWidget(dockWidget);
-    dockWidgetContents->setObjectName(QString::fromUtf8("dockWidgetContents"));
-    QGridLayout *gridLayout = new QGridLayout(dockWidgetContents);
-    gridLayout->setObjectName(QString::fromUtf8("gridLayout"));
-    gridLayout->setContentsMargins(0, 0, 0, 0);
+        QWidget *dockWidgetContents = new QWidget(dockWidget);
+        dockWidgetContents->setObjectName(QString::fromUtf8("dockWidgetContents"));
+        QGridLayout *gridLayout = new QGridLayout(dockWidgetContents);
+        gridLayout->setObjectName(QString::fromUtf8("gridLayout"));
+        gridLayout->setContentsMargins(0, 0, 0, 0);
 
-    WaveformModel *waveformModel = new WaveformModel(dockWidget);
-    gridLayout->addWidget(waveformModel, 0, 0, 1, 1);
-    dockWidget->setWidget(dockWidgetContents);
-    dockWidget->setGeometry(0,0,waveformModel->width(), 410/*waveformModel->height()*/ + 12);
+        WaveformModel *waveformModel = new WaveformModel(dockWidget);
+        gridLayout->addWidget(waveformModel, 0, 0, 1, 1);
+        dockWidget->setWidget(dockWidgetContents);
+        dockWidget->setGeometry(0,0,waveformModel->width(), 410/*waveformModel->height()*/ + 12);
 
-    QRect screenRect = QGuiApplication::primaryScreen()->availableGeometry();
-    int x = (screenRect.width() - 260/*waveformModel->width()*/) / 2;
-    int y = (screenRect.height() - 410/*waveformModel->height()*/) / 2;
-    dockWidget->move(x, y);
-    dockWidget->show();
-    dockWidget->activateWindow();
+        QRect screenRect = QGuiApplication::primaryScreen()->availableGeometry();
+        int x = (screenRect.width() - 260/*waveformModel->width()*/) / 2;
+        int y = (screenRect.height() - 410/*waveformModel->height()*/) / 2;
+        dockWidget->move(x, y);
+        dockWidget->show();
+        dockWidget->activateWindow();
+    } else {
+        WaveformModel *waveformModel = new WaveformModel(this);
+        waveformModel->setAttribute(Qt::WA_DeleteOnClose, true);
+        waveformModel->setWindowFlags(Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint|Qt::Dialog);
+        waveformModel->setWindowModality(Qt::ApplicationModal);
+        waveformModel->showNormal();
+    }
 }
 
 void MainWindow::on_action_detector_conndect_triggered()
@@ -448,4 +492,77 @@ void MainWindow::on_action_detector_conndect_triggered()
         ui->actionaction_net_connect->setText(tr("断开探测器"));
         detector_connected = true;
     }
+}
+
+void MainWindow::on_action_energycalibration_triggered()
+{
+    EnergyCalibrationForm *energyCalibrationForm = new EnergyCalibrationForm(this);
+    energyCalibrationForm->setAttribute(Qt::WA_DeleteOnClose, true);
+    energyCalibrationForm->setWindowFlags(Qt::WindowMinMaxButtonsHint|Qt::WindowCloseButtonHint|Qt::Dialog);
+    energyCalibrationForm->setWindowModality(Qt::ApplicationModal);
+    energyCalibrationForm->showNormal();
+}
+
+void MainWindow::on_pushButton_measure_clicked()
+{
+    //手动测量
+    DetectorParameter detectorParameter;
+    detectorParameter.triggerThold1 = 0x81;
+    detectorParameter.triggerThold2 = 0x81;
+    detectorParameter.waveformPolarity = 0x00;
+    detectorParameter.dieTimeLength = 0x05;
+    detectorParameter.gain = 0x00;
+    detectorParameter.transferModel = 0x05;// 传输模式
+
+    // 打开 JSON 文件
+    QFile file(QApplication::applicationDirPath() + "/config/fpga.json");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // 读取文件内容
+        QByteArray jsonData = file.readAll();
+        file.close(); //释放资源
+
+        // 将 JSON 数据解析为 QJsonDocument
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+        QJsonObject jsonObj = jsonDoc.object();
+        detectorParameter.triggerThold1 = jsonObj["TriggerThold1"].toInt();
+        detectorParameter.triggerThold2 = jsonObj["TriggerThold2"].toInt();
+        detectorParameter.waveformPolarity = jsonObj["WaveformPolarity"].toInt();
+        detectorParameter.dieTimeLength = jsonObj["DieTimeLength"].toInt();
+        detectorParameter.gain = jsonObj["DetectorGain"].toInt();
+    }
+
+    file.setFileName(QApplication::applicationDirPath() + "/config/ip.json");
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QMessageBox::information(this, tr("提示"), tr("请先设置外设网络ip地址。"));
+        return;
+    }
+
+    // 读取文件内容
+    QByteArray jsonData = file.readAll();
+    file.close(); //释放资源
+
+    // 将 JSON 数据解析为 QJsonDocument
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+    QJsonObject jsonObj = jsonDoc.object();
+
+    QString ip = "127.0.0.1";
+    qint32 port = 8000;
+    QJsonObject jsonDetector;
+    if (jsonObj.contains("Detector")){
+        jsonDetector = jsonObj["Detector"].toObject();
+        ip = jsonDetector["ip"].toString();
+        port = jsonDetector["port"].toInt();
+    }
+
+    commandhelper->slotStartManualMeasure(ip, port, detectorParameter);
+}
+
+void MainWindow::on_pushButton_measure_2_clicked()
+{
+    //自动测量
+}
+
+void MainWindow::on_pushButton_measure_3_clicked()
+{
+    //标定测量
 }

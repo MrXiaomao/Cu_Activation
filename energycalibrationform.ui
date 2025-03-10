@@ -91,11 +91,6 @@
         </row>
         <column>
          <property name="text">
-          <string>编号</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
           <string>通道</string>
          </property>
         </column>
@@ -114,14 +109,6 @@
         </item>
         <item row="0" column="1">
          <property name="text">
-          <string>1</string>
-         </property>
-         <property name="textAlignment">
-          <set>AlignCenter</set>
-         </property>
-        </item>
-        <item row="0" column="2">
-         <property name="text">
           <string>25.84</string>
          </property>
          <property name="textAlignment">
@@ -137,14 +124,6 @@
          </property>
         </item>
         <item row="1" column="1">
-         <property name="text">
-          <string>2</string>
-         </property>
-         <property name="textAlignment">
-          <set>AlignCenter</set>
-         </property>
-        </item>
-        <item row="1" column="2">
          <property name="text">
           <string>26.76</string>
          </property>
@@ -187,23 +166,23 @@
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_3">
         <item>
-         <widget class="QPushButton" name="pushButton">
+         <widget class="QPushButton" name="pushButton_add">
           <property name="text">
            <string>添加</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_2">
+         <widget class="QPushButton" name="pushButton_del">
           <property name="text">
-           <string>更新</string>
+           <string>删除</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_3">
+         <widget class="QPushButton" name="pushButton_2">
           <property name="text">
-           <string>删除</string>
+           <string>拟合</string>
           </property>
          </widget>
         </item>

@@ -1,6 +1,11 @@
 #include "FPGASetting.h"
 #include "ui_FPGASetting.h"
 #include "commandhelper.h"
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <QFile>
+#include <QDir>
 
 FPGASetting::FPGASetting(QWidget *parent)
     : QWidget(parent)
@@ -8,6 +13,31 @@ FPGASetting::FPGASetting(QWidget *parent)
     , commandHelper(new CommandHelper(this))
 {
     ui->setupUi(this);
+
+    QString path = QApplication::applicationDirPath() + "/config";
+    QDir dir(path);
+    if (!dir.exists())
+        dir.mkdir(path);
+    QFile file(QApplication::applicationDirPath() + "/config/fpga.json");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+
+        // 读取文件内容
+        QByteArray jsonData = file.readAll();
+        file.close(); //释放资源
+
+        // 将 JSON 数据解析为 QJsonDocument
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+        QJsonObject jsonObj = jsonDoc.object();
+
+        ui->comboBox->setCurrentIndex(jsonObj["WaveformPolarity"].toInt());
+        ui->comboBox_4->setCurrentIndex(jsonObj["DetectorGain"].toInt());
+
+        ui->spinBox->setValue(jsonObj["TriggerThold1"].toInt());
+        ui->spinBox_2->setValue(jsonObj["TriggerThold2"].toInt());
+
+        ui->spinBox_3->setValue(jsonObj["DieTimeLength"].toInt());
+        file.close();
+    }
 }
 
 FPGASetting::~FPGASetting()
@@ -15,11 +45,14 @@ FPGASetting::~FPGASetting()
     delete ui;
 }
 
-void FPGASetting::on_pushButton_setup_clicked()
+void FPGASetting::on_pushButton_save_clicked()
 {
+    // 保存参数
+    QJsonObject jsonObj;
+
     //波形极性
     quint8 v = ui->comboBox->currentIndex();
-    commandHelper->slotWaveformPolarity(v);
+    jsonObj["WaveformPolarity"] = v;
 
     //探测器增益
     {
@@ -54,26 +87,39 @@ void FPGASetting::on_pushButton_setup_clicked()
         } else {
             ch1 = 0x00;
         }
-        commandHelper->slotDetectorGain(ch1, ch1, ch1, ch1);
+        jsonObj["DetectorGain"] = ch1;
     }
 
     //探测器1阈值
     {
         quint16 ch1 = (quint16)ui->spinBox->value();
         quint16 ch2 = (quint16)ui->spinBox_2->value();
-        commandHelper->slotTriggerThold1(ch1, ch2);
+        jsonObj["TriggerThold1"] = ch1;
+        jsonObj["TriggerThold2"] = ch2;
     }
 
     //探测器2阈值
     {
         quint16 ch3 = 0x00;
         quint16 ch4 = 0x00;
-        commandHelper->slotTriggerThold2(ch3, ch4);
+        jsonObj["TriggerThold3"] = ch3;
+        jsonObj["TriggerThold4"] = ch4;
     }
 
     //死时间
     {
         quint16 dieTimelength = ui->spinBox_3->value();
-        commandHelper->slotSpectnumMode(dieTimelength);
+        jsonObj["DieTimeLength"] = dieTimelength;
+    }
+
+    QString path = QApplication::applicationDirPath() + "/config";
+    QDir dir(path);
+    if (!dir.exists())
+        dir.mkdir(path);
+    QFile file(QApplication::applicationDirPath() + "/config/fpga.json");
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QJsonDocument jsonDoc(jsonObj);
+        file.write(jsonDoc.toJson());
+        file.close();
     }
 }

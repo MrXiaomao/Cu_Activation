@@ -9,6 +9,7 @@ EnergyCalibrationForm::EnergyCalibrationForm(QWidget *parent) :
     ui->setupUi(this);
 
     initCustomPlot();
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 }
 
 EnergyCalibrationForm::~EnergyCalibrationForm()
@@ -99,18 +100,39 @@ void EnergyCalibrationForm::initCustomPlot()
     // 图形刷新
     customPlot->replot();
 
-    QTimer *timerUpdate = new QTimer(this);
-    static int timerRef = 0;
-    connect(timerUpdate, &QTimer::timeout, this, [=](){
-        // 更新数据
-        customPlot->graph(0)->addData(timerRef++, qrand() % 5 + 80);
+//    QTimer *timerUpdate = new QTimer(this);
+//    static int timerRef = 0;
+//    connect(timerUpdate, &QTimer::timeout, this, [=](){
+//        // 更新数据
+//        customPlot->graph(0)->addData(timerRef++, qrand() % 5 + 80);
 
-        // 保持图形范围合理
-        if (timerRef >= 2048)
-            customPlot->xAxis->setRange(timerRef - 2048, 2048, Qt::AlignRight);
+//        // 保持图形范围合理
+//        if (timerRef >= 2048)
+//            customPlot->xAxis->setRange(timerRef - 2048, 2048, Qt::AlignRight);
 
-        // 重新绘制
-        customPlot->replot();
-    });
-    timerUpdate->start(50);
+//        // 重新绘制
+//        customPlot->replot();
+//    });
+//    timerUpdate->start(50);
+}
+
+void EnergyCalibrationForm::on_pushButton_add_clicked()
+{
+    // 添加
+    int row = ui->tableWidget->rowCount();
+    ui->tableWidget->insertRow(row);
+    ui->tableWidget->setItem(row, 0, new QTableWidgetItem(QString("%1").arg(ui->lineEdit->text())));
+    ui->tableWidget->setItem(row, 1, new QTableWidgetItem(QString("%1").arg(ui->lineEdit_2->text())));
+}
+
+void EnergyCalibrationForm::on_pushButton_del_clicked()
+{
+    // 删除
+    QList<QTableWidgetItem*> selItems = ui->tableWidget->selectedItems();
+    if (selItems.count() <= 0)
+        return;
+
+    QTableWidgetItem* selItem = selItems[0];
+    int row = selItem->row();
+    ui->tableWidget->removeRow(row);
 }

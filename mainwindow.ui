@@ -106,9 +106,6 @@
               <property name="bottomMargin">
                <number>0</number>
               </property>
-              <item>
-               <widget class="QWidget" name="widget_8" native="true"/>
-              </item>
              </layout>
             </widget>
            </item>
@@ -730,7 +727,7 @@
                       </spacer>
                      </item>
                      <item>
-                      <widget class="QPushButton" name="pushButton_6">
+                      <widget class="QPushButton" name="pushButton_measure">
                        <property name="sizePolicy">
                         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                          <horstretch>0</horstretch>
@@ -1151,7 +1148,7 @@
                       </spacer>
                      </item>
                      <item>
-                      <widget class="QPushButton" name="pushButton_8">
+                      <widget class="QPushButton" name="pushButton_measure_2">
                        <property name="minimumSize">
                         <size>
                          <width>105</width>
@@ -1531,7 +1528,7 @@
                       </spacer>
                      </item>
                      <item>
-                      <widget class="QPushButton" name="pushButton">
+                      <widget class="QPushButton" name="pushButton_measure_3">
                        <property name="minimumSize">
                         <size>
                          <width>105</width>
@@ -1649,7 +1646,7 @@
                   <number>9</number>
                  </property>
                  <item>
-                  <widget class="QWidget" name="" native="true">
+                  <widget class="QWidget" name="widget" native="true">
                    <layout class="QHBoxLayout" name="horizontalLayout_20">
                     <property name="leftMargin">
                      <number>0</number>
@@ -1700,7 +1697,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QWidget" name="" native="true">
+                  <widget class="QWidget" name="widget" native="true">
                    <layout class="QHBoxLayout" name="horizontalLayout_19">
                     <property name="leftMargin">
                      <number>0</number>
@@ -1992,7 +1989,7 @@
     <property name="title">
      <string>工具</string>
     </property>
-    <addaction name="action_5"/>
+    <addaction name="action_energycalibration"/>
     <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menu_5">
@@ -2093,7 +2090,7 @@ p, li { white-space: pre-wrap; }
     <string>设备管理</string>
    </property>
   </action>
-  <action name="action_5">
+  <action name="action_energycalibration">
    <property name="icon">
     <iconset resource="resource.qrc">
      <normaloff>:/resource/measure.png</normaloff>:/resource/measure.png</iconset>

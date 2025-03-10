@@ -50,6 +50,14 @@ private slots:
 
     void on_action_detector_conndect_triggered();
 
+    void on_action_energycalibration_triggered();
+
+    void on_pushButton_measure_clicked();
+
+    void on_pushButton_measure_2_clicked();
+
+    void on_pushButton_measure_3_clicked();
+
 private:
     Ui::MainWindow *ui = nullptr;
     SpectrumModel *spectrummodel = nullptr;//能谱模型

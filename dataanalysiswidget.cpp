@@ -25,7 +25,7 @@ DataAnalysisWidget::DataAnalysisWidget(QWidget *parent)
     ui->label_tag_3_->setBuddy(ui->widget_tag_3);
 
     //ui->tableWidget->resizeColumnsToContents();
-    ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch); // 平分
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 }
 
 DataAnalysisWidget::~DataAnalysisWidget()

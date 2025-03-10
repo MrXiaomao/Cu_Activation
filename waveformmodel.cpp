@@ -74,7 +74,7 @@ void WaveformModel::on_pushButton_setup_clicked()
 
     //波形触发模式
     quint8 mode = ui->comboBox_2->currentIndex();
-    commandHelper->slotWaveformTriggerMode(mode);
+    commandHelper->slotWaveformTriggerModel(mode);
 
     //探测器1阈值
     {
@@ -122,7 +122,7 @@ void WaveformModel::on_pushButton_setup_clicked()
     //死时间
     {
         quint16 dieTimelength = ui->spinBox_3->value();
-        commandHelper->slotSpectnumMode(dieTimelength);
+        commandHelper->slotDieTimeLength(dieTimelength);
     }
 }
 

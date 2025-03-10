@@ -21,7 +21,7 @@ void PlotWidget::setName(QString name)
     if (titleTextTtem)
         titleTextTtem->setText(name);
     this->setWindowTitle(name);
-
+    this->setObjectName(name);
 }
 
 void PlotWidget::initCustomPlot()
@@ -73,7 +73,7 @@ void PlotWidget::initCustomPlot()
     axisTickerFixed->setTickStep(256);
     axisTickerFixed->setScaleStrategy(QCPAxisTickerFixed::ssNone);
     customPlot->xAxis->setTicker(axisTickerFixed);
-    customPlot->xAxis->setRange(0, 2048);
+    customPlot->xAxis->setRange(0, 1024);
     customPlot->yAxis->setRange(0, 10000);
     customPlot->yAxis->ticker()->setTickCount(5);
     customPlot->xAxis->ticker()->setTickCount(8);
@@ -213,7 +213,7 @@ void PlotWidget::initCustomPlot()
         static int lastV = qrand() % 100 + 5000;
         QVector<double> keys, values;
         QVector<QColor> colors;
-        for (int i=0; i<2048; i++){
+        for (int i=0; i<1024; i++){
             keys << i;
 
             lastV += qrand() % 100 - 50;

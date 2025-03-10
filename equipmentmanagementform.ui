@@ -81,7 +81,7 @@
      </column>
      <item row="0" column="0">
       <property name="text">
-       <string>192.168.0.10</string>
+       <string>127.0.0.1</string>
       </property>
       <property name="textAlignment">
        <set>AlignCenter</set>
@@ -97,7 +97,7 @@
      </item>
      <item row="1" column="0">
       <property name="text">
-       <string>192.168.0.11</string>
+       <string>127.0.0.1</string>
       </property>
       <property name="textAlignment">
        <set>AlignCenter</set>
@@ -113,7 +113,7 @@
      </item>
      <item row="2" column="0">
       <property name="text">
-       <string>192.168.0.12</string>
+       <string>127.0.0.1</string>
       </property>
       <property name="textAlignment">
        <set>AlignCenter</set>
@@ -129,7 +129,7 @@
      </item>
      <item row="3" column="0">
       <property name="text">
-       <string>192.168.0.103</string>
+       <string>127.0.0.1</string>
       </property>
       <property name="textAlignment">
        <set>AlignCenter</set>

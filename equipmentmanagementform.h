@@ -15,6 +15,11 @@ public:
     explicit EquipmentManagementForm(QWidget *parent = nullptr);
     ~EquipmentManagementForm();
 
+private slots:
+    void on_pushButton_ok_clicked();
+
+    void on_pushButton_cancel_clicked();
+
 private:
     Ui::EquipmentManagementForm *ui;
 };

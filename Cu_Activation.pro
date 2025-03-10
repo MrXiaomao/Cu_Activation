@@ -19,6 +19,7 @@ SOURCES += \
     commandhelper.cpp \
     coolingtimewidget.cpp \
     dataanalysiswidget.cpp \
+    energycalibrationform.cpp \
     equipmentmanagementform.cpp \
     plotwidget.cpp \
     qcustomplot.cpp \
@@ -33,6 +34,7 @@ HEADERS += \
     commandhelper.h \
     coolingtimewidget.h \
     dataanalysiswidget.h \
+    energycalibrationform.h \
     equipmentmanagementform.h \
     plotwidget.h \
     qcustomplot.h \
@@ -46,6 +48,7 @@ FORMS += \
     FPGASetting.ui \
     coolingtimewidget.ui \
     dataanalysiswidget.ui \
+    energycalibrationform.ui \
     spectrumModel.ui \
     waveformmodel.ui \
     equipmentmanagementform.ui \

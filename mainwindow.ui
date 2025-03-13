@@ -323,7 +323,7 @@
                  <string>显示计数</string>
                 </property>
                 <property name="checked">
-                 <bool>true</bool>
+                 <bool>false</bool>
                 </property>
                </widget>
               </item>
@@ -331,6 +331,9 @@
                <widget class="QRadioButton" name="radioButton_spectrum">
                 <property name="text">
                  <string>显示能谱</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>
@@ -389,6 +392,19 @@
                <property name="rightMargin">
                 <number>0</number>
                </property>
+               <item row="2" column="0">
+                <spacer name="verticalSpacer_2">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
                <item row="1" column="0">
                 <widget class="QGroupBox" name="groupBox_3">
                  <property name="sizePolicy">
@@ -401,78 +417,7 @@
                   <string>数据分析</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_5">
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="label_27">
-                    <property name="text">
-                     <string>标定文件：</string>
-                    </property>
-                    <property name="alignment">
-                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="1" colspan="2">
-                   <widget class="QLineEdit" name="lineEdit_9"/>
-                  </item>
-                  <item row="1" column="0" colspan="3">
-                   <widget class="QWidget" name="widget_19" native="true">
-                    <layout class="QHBoxLayout" name="horizontalLayout_11">
-                     <property name="leftMargin">
-                      <number>0</number>
-                     </property>
-                     <property name="topMargin">
-                      <number>0</number>
-                     </property>
-                     <property name="rightMargin">
-                      <number>0</number>
-                     </property>
-                     <property name="bottomMargin">
-                      <number>0</number>
-                     </property>
-                     <item>
-                      <widget class="QLabel" name="label_30">
-                       <property name="text">
-                        <string>时间步长(s)：</string>
-                       </property>
-                       <property name="alignment">
-                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLineEdit" name="lineEdit_12"/>
-                     </item>
-                    </layout>
-                   </widget>
-                  </item>
-                  <item row="2" column="0">
-                   <widget class="QLabel" name="label_31">
-                    <property name="text">
-                     <string>符合分辨时间：</string>
-                    </property>
-                    <property name="alignment">
-                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="2" column="1">
-                   <widget class="QLineEdit" name="lineEdit_13"/>
-                  </item>
-                  <item row="2" column="2">
-                   <widget class="QLabel" name="label_36">
-                    <property name="text">
-                     <string>ns</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="3" column="0">
-                   <widget class="QLabel" name="label_37">
-                    <property name="text">
-                     <string>Det1符合能窗：</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="3" column="1">
+                  <item row="8" column="1">
                    <widget class="QWidget" name="widget_7" native="true">
                     <property name="sizePolicy">
                      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -494,12 +439,12 @@
                       <number>0</number>
                      </property>
                      <item>
-                      <widget class="QLineEdit" name="lineEdit_14"/>
+                      <widget class="QSpinBox" name="spinBox_1_leftE"/>
                      </item>
                      <item>
                       <widget class="QLabel" name="label_38">
                        <property name="sizePolicy">
-                        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                          <horstretch>0</horstretch>
                          <verstretch>0</verstretch>
                         </sizepolicy>
@@ -507,73 +452,28 @@
                        <property name="text">
                         <string>-</string>
                        </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLineEdit" name="lineEdit_15"/>
-                     </item>
-                    </layout>
-                   </widget>
-                  </item>
-                  <item row="3" column="2">
-                   <widget class="QLabel" name="label_16">
-                    <property name="text">
-                     <string>keV</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="4" column="0">
-                   <widget class="QLabel" name="label_40">
-                    <property name="text">
-                     <string>Det2符合能窗：</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="4" column="1">
-                   <widget class="QWidget" name="widget" native="true">
-                    <property name="sizePolicy">
-                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                      <horstretch>0</horstretch>
-                      <verstretch>0</verstretch>
-                     </sizepolicy>
-                    </property>
-                    <layout class="QHBoxLayout" name="horizontalLayout_7">
-                     <property name="leftMargin">
-                      <number>0</number>
-                     </property>
-                     <property name="topMargin">
-                      <number>0</number>
-                     </property>
-                     <property name="rightMargin">
-                      <number>0</number>
-                     </property>
-                     <property name="bottomMargin">
-                      <number>0</number>
-                     </property>
-                     <item>
-                      <widget class="QLineEdit" name="lineEdit_17"/>
-                     </item>
-                     <item>
-                      <widget class="QLabel" name="label_39">
-                       <property name="text">
-                        <string>-</string>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
                        </property>
                       </widget>
                      </item>
                      <item>
-                      <widget class="QLineEdit" name="lineEdit_16"/>
+                      <widget class="QSpinBox" name="spinBox_1_rightE"/>
                      </item>
                     </layout>
                    </widget>
                   </item>
-                  <item row="4" column="2">
-                   <widget class="QLabel" name="label_23">
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label_27">
                     <property name="text">
-                     <string>keV</string>
+                     <string>标定文件：</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                     </property>
                    </widget>
                   </item>
-                  <item row="5" column="0" colspan="3">
+                  <item row="10" column="0" colspan="3">
                    <widget class="QWidget" name="widget_20" native="true">
                     <layout class="QHBoxLayout" name="horizontalLayout_13">
                      <property name="leftMargin">
@@ -602,7 +502,7 @@
                       </spacer>
                      </item>
                      <item>
-                      <widget class="QPushButton" name="pushButton_3">
+                      <widget class="QPushButton" name="pushButton_refresh">
                        <property name="minimumSize">
                         <size>
                          <width>105</width>
@@ -617,21 +517,162 @@
                     </layout>
                    </widget>
                   </item>
+                  <item row="7" column="1">
+                   <widget class="QSpinBox" name="spinBox_2"/>
+                  </item>
+                  <item row="7" column="2">
+                   <widget class="QLabel" name="label_36">
+                    <property name="text">
+                     <string>ns</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="8" column="2">
+                   <widget class="QLabel" name="label_16">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>keV</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QSpinBox" name="spinBox_step">
+                    <property name="value">
+                     <number>1</number>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="9" column="0">
+                   <widget class="QLabel" name="label_40">
+                    <property name="text">
+                     <string>Det2符合能窗：</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1" colspan="2">
+                   <widget class="QLineEdit" name="lineEdit_9"/>
+                  </item>
+                  <item row="8" column="0">
+                   <widget class="QLabel" name="label_37">
+                    <property name="text">
+                     <string>Det1符合能窗：</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="2">
+                   <widget class="QLabel" name="label_25">
+                    <property name="text">
+                     <string>s</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="9" column="2">
+                   <widget class="QLabel" name="label_23">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>keV</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="label_30">
+                    <property name="text">
+                     <string>时间步长：</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="0" colspan="3">
+                   <widget class="QWidget" name="widget_19" native="true">
+                    <layout class="QHBoxLayout" name="horizontalLayout_11">
+                     <property name="leftMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="topMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="rightMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="bottomMargin">
+                      <number>0</number>
+                     </property>
+                    </layout>
+                   </widget>
+                  </item>
+                  <item row="9" column="1">
+                   <widget class="QWidget" name="widget" native="true">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <layout class="QHBoxLayout" name="horizontalLayout_7">
+                     <property name="leftMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="topMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="rightMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="bottomMargin">
+                      <number>0</number>
+                     </property>
+                     <item>
+                      <widget class="QSpinBox" name="spinBox_2_leftE"/>
+                     </item>
+                     <item>
+                      <widget class="QLabel" name="label_39">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <property name="text">
+                        <string>-</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QSpinBox" name="spinBox_2_rightE"/>
+                     </item>
+                    </layout>
+                   </widget>
+                  </item>
+                  <item row="7" column="0">
+                   <widget class="QLabel" name="label_31">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>符合分辨时间：</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
                  </layout>
                 </widget>
-               </item>
-               <item row="2" column="0">
-                <spacer name="verticalSpacer_2">
-                 <property name="orientation">
-                  <enum>Qt::Vertical</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>20</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                </spacer>
                </item>
                <item row="0" column="0">
                 <widget class="QGroupBox" name="groupBox_5">
@@ -661,9 +702,6 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="1" colspan="2">
-                   <widget class="QLineEdit" name="lineEdit_11"/>
-                  </item>
                   <item row="0" column="3">
                    <widget class="QLabel" name="label_32">
                     <property name="text">
@@ -672,30 +710,6 @@
                     <property name="alignment">
                      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                     </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="4">
-                   <widget class="QComboBox" name="comboBox_2">
-                    <item>
-                     <property name="text">
-                      <string>0~1E4</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>1E4~1E7</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>1E7~1E10</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>1E10~13</string>
-                     </property>
-                    </item>
                    </widget>
                   </item>
                   <item row="2" column="0" colspan="5">
@@ -748,6 +762,33 @@
                     </layout>
                    </widget>
                   </item>
+                  <item row="0" column="4">
+                   <widget class="QComboBox" name="comboBox_2">
+                    <item>
+                     <property name="text">
+                      <string>0~1E4</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>1E4~1E7</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>1E7~1E10</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>1E10~13</string>
+                     </property>
+                    </item>
+                   </widget>
+                  </item>
+                  <item row="0" column="1" colspan="2">
+                   <widget class="QSpinBox" name="spinBox_9"/>
+                  </item>
                   <item row="1" column="0">
                    <widget class="QLabel" name="label_28">
                     <property name="minimumSize">
@@ -765,7 +806,7 @@
                    </widget>
                   </item>
                   <item row="1" column="1" colspan="4">
-                   <widget class="QLineEdit" name="lineEdit_10"/>
+                   <widget class="QSpinBox" name="spinBox_10"/>
                   </item>
                  </layout>
                 </widget>
@@ -798,6 +839,16 @@
                   <string>数据分析</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout">
+                  <item row="3" column="2" rowspan="2">
+                   <widget class="QLabel" name="label_48">
+                    <property name="text">
+                     <string>s</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
                   <item row="0" column="0">
                    <widget class="QLabel" name="label_41">
                     <property name="text">
@@ -808,93 +859,14 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="1" colspan="2">
-                   <widget class="QLineEdit" name="lineEdit_18"/>
-                  </item>
-                  <item row="1" column="0" rowspan="2">
-                   <widget class="QLabel" name="label_42">
+                  <item row="7" column="0">
+                   <widget class="QLabel" name="label_54">
                     <property name="text">
-                     <string>冷却时长：</string>
-                    </property>
-                    <property name="alignment">
-                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                     <string>Det2符合能窗：</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="1" column="1" rowspan="2">
-                   <widget class="QLineEdit" name="lineEdit_19">
-                    <property name="enabled">
-                     <bool>true</bool>
-                    </property>
-                    <property name="readOnly">
-                     <bool>true</bool>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="2">
-                   <widget class="QLabel" name="label_50">
-                    <property name="text">
-                     <string>s</string>
-                    </property>
-                    <property name="alignment">
-                     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="2" column="2" rowspan="2">
-                   <widget class="QLabel" name="label_48">
-                    <property name="text">
-                     <string>s</string>
-                    </property>
-                    <property name="alignment">
-                     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="3" column="0">
-                   <widget class="QLabel" name="label_44">
-                    <property name="text">
-                     <string>时间步长：</string>
-                    </property>
-                    <property name="alignment">
-                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="3" column="1">
-                   <widget class="QLineEdit" name="lineEdit_21"/>
-                  </item>
-                  <item row="4" column="0">
-                   <widget class="QLabel" name="label_45">
-                    <property name="text">
-                     <string>符合分辨时间：</string>
-                    </property>
-                    <property name="alignment">
-                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="4" column="1">
-                   <widget class="QLineEdit" name="lineEdit_22"/>
-                  </item>
-                  <item row="4" column="2">
-                   <widget class="QLabel" name="label_47">
-                    <property name="text">
-                     <string>ns</string>
-                    </property>
-                    <property name="alignment">
-                     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="5" column="0">
-                   <widget class="QLabel" name="label_51">
-                    <property name="text">
-                     <string>Det1符合能窗：</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="5" column="1">
+                  <item row="6" column="1">
                    <widget class="QWidget" name="widget_12" native="true">
                     <layout class="QHBoxLayout" name="horizontalLayout_2">
                      <property name="leftMargin">
@@ -910,36 +882,73 @@
                       <number>0</number>
                      </property>
                      <item>
-                      <widget class="QLineEdit" name="lineEdit_23"/>
+                      <widget class="QSpinBox" name="spinBox_15"/>
                      </item>
                      <item>
                       <widget class="QLabel" name="label_52">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
                        <property name="text">
                         <string>-</string>
                        </property>
                       </widget>
                      </item>
                      <item>
-                      <widget class="QLineEdit" name="lineEdit_24"/>
+                      <widget class="QSpinBox" name="spinBox_16"/>
                      </item>
                     </layout>
                    </widget>
                   </item>
                   <item row="5" column="2">
-                   <widget class="QLabel" name="label_26">
+                   <widget class="QLabel" name="label_47">
+                    <property name="text">
+                     <string>ns</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="5" column="1">
+                   <widget class="QSpinBox" name="spinBox_14"/>
+                  </item>
+                  <item row="4" column="1">
+                   <widget class="QSpinBox" name="spinBox_13"/>
+                  </item>
+                  <item row="2" column="1">
+                   <widget class="QSpinBox" name="spinBox_12"/>
+                  </item>
+                  <item row="0" column="1" colspan="2">
+                   <widget class="QLineEdit" name="lineEdit_18"/>
+                  </item>
+                  <item row="7" column="2">
+                   <widget class="QLabel" name="label_56">
                     <property name="text">
                      <string>keV</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="6" column="0">
-                   <widget class="QLabel" name="label_54">
+                  <item row="2" column="2">
+                   <widget class="QLabel" name="label_50">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
                     <property name="text">
-                     <string>Det2符合能窗：</string>
+                     <string>s</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
                     </property>
                    </widget>
                   </item>
-                  <item row="6" column="1">
+                  <item row="7" column="1">
                    <widget class="QWidget" name="widget_3" native="true">
                     <layout class="QHBoxLayout" name="horizontalLayout_3">
                      <property name="leftMargin">
@@ -955,29 +964,78 @@
                       <number>0</number>
                      </property>
                      <item>
-                      <widget class="QLineEdit" name="lineEdit_26"/>
+                      <widget class="QSpinBox" name="spinBox_17"/>
                      </item>
                      <item>
                       <widget class="QLabel" name="label_53">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
                        <property name="text">
                         <string>-</string>
                        </property>
                       </widget>
                      </item>
                      <item>
-                      <widget class="QLineEdit" name="lineEdit_25"/>
+                      <widget class="QSpinBox" name="spinBox_18"/>
                      </item>
                     </layout>
                    </widget>
                   </item>
+                  <item row="5" column="0">
+                   <widget class="QLabel" name="label_45">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>符合分辨时间：</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="0" rowspan="2">
+                   <widget class="QLabel" name="label_42">
+                    <property name="text">
+                     <string>冷却时长：</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="6" column="0">
+                   <widget class="QLabel" name="label_51">
+                    <property name="text">
+                     <string>Det1符合能窗：</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="0">
+                   <widget class="QLabel" name="label_44">
+                    <property name="text">
+                     <string>时间步长：</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
                   <item row="6" column="2">
-                   <widget class="QLabel" name="label_56">
+                   <widget class="QLabel" name="label_26">
                     <property name="text">
                      <string>keV</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="7" column="0" colspan="3">
+                  <item row="8" column="0" colspan="3">
                    <widget class="QWidget" name="widget_10" native="true">
                     <layout class="QHBoxLayout" name="horizontalLayout_15">
                      <property name="leftMargin">
@@ -1006,7 +1064,7 @@
                       </spacer>
                      </item>
                      <item>
-                      <widget class="QPushButton" name="pushButton_4">
+                      <widget class="QPushButton" name="pushButton_refresh_2">
                        <property name="minimumSize">
                         <size>
                          <width>105</width>
@@ -1049,10 +1107,23 @@
                   <string>测量参数设置</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_10">
+                  <item row="1" column="1">
+                   <widget class="QSpinBox" name="spinBox_11"/>
+                  </item>
                   <item row="0" column="0">
                    <widget class="QLabel" name="label_43">
                     <property name="text">
                      <string>触发时刻：</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="2">
+                   <widget class="QLabel" name="label_46">
+                    <property name="text">
+                     <string>量程选取：</string>
                     </property>
                     <property name="alignment">
                      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -1080,43 +1151,6 @@
                     <property name="alignment">
                      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                     </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="1">
-                   <widget class="QLineEdit" name="lineEdit_28"/>
-                  </item>
-                  <item row="1" column="2">
-                   <widget class="QLabel" name="label_46">
-                    <property name="text">
-                     <string>量程选取：</string>
-                    </property>
-                    <property name="alignment">
-                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="3">
-                   <widget class="QComboBox" name="comboBox_3">
-                    <item>
-                     <property name="text">
-                      <string>0~1E4</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>1E4~1E7</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>1E7~1E10</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>1E10~13</string>
-                     </property>
-                    </item>
                    </widget>
                   </item>
                   <item row="2" column="0" colspan="4">
@@ -1163,6 +1197,30 @@
                     </layout>
                    </widget>
                   </item>
+                  <item row="1" column="3">
+                   <widget class="QComboBox" name="comboBox_3">
+                    <item>
+                     <property name="text">
+                      <string>0~1E4</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>1E4~1E7</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>1E7~1E10</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>1E10~13</string>
+                     </property>
+                    </item>
+                   </widget>
+                  </item>
                  </layout>
                 </widget>
                </item>
@@ -1207,51 +1265,34 @@
                   <string>数据分析</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_2">
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="label">
-                    <property name="text">
-                     <string>中子产额：</string>
-                    </property>
-                    <property name="alignment">
-                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="1">
-                   <widget class="QLineEdit" name="lineEdit"/>
-                  </item>
-                  <item row="0" column="2">
-                   <widget class="QLabel" name="label_5">
-                    <property name="text">
-                     <string>个</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QLabel" name="label_2">
+                  <item row="3" column="0">
+                   <widget class="QLabel" name="label_10">
                     <property name="layoutDirection">
                      <enum>Qt::RightToLeft</enum>
                     </property>
                     <property name="text">
-                     <string>样品冷却时长：</string>
+                     <string>Det1符合能窗：</string>
                     </property>
                     <property name="alignment">
                      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                     </property>
                    </widget>
                   </item>
-                  <item row="1" column="1">
-                   <widget class="QLineEdit" name="lineEdit_2"/>
-                  </item>
-                  <item row="1" column="2">
-                   <widget class="QLabel" name="label_6">
+                  <item row="3" column="2">
+                   <widget class="QLabel" name="label_14">
                     <property name="text">
-                     <string>s</string>
+                     <string>keV</string>
                     </property>
                    </widget>
                   </item>
                   <item row="2" column="0">
                    <widget class="QLabel" name="label_4">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
                     <property name="layoutDirection">
                      <enum>Qt::RightToLeft</enum>
                     </property>
@@ -1263,23 +1304,63 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="2" column="1">
-                   <widget class="QLineEdit" name="lineEdit_4"/>
-                  </item>
-                  <item row="2" column="2">
-                   <widget class="QLabel" name="label_8">
+                  <item row="1" column="2">
+                   <widget class="QLabel" name="label_6">
                     <property name="text">
-                     <string>ns</string>
+                     <string>s</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="3" column="0">
-                   <widget class="QLabel" name="label_10">
+                  <item row="4" column="1">
+                   <widget class="QWidget" name="widget_5" native="true">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <layout class="QHBoxLayout" name="horizontalLayout_5">
+                     <property name="leftMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="topMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="rightMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="bottomMargin">
+                      <number>0</number>
+                     </property>
+                     <item>
+                      <widget class="QSpinBox" name="spinBox_25"/>
+                     </item>
+                     <item>
+                      <widget class="QLabel" name="label_13">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <property name="text">
+                        <string>-</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QSpinBox" name="spinBox_26"/>
+                     </item>
+                    </layout>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="label_2">
                     <property name="layoutDirection">
                      <enum>Qt::RightToLeft</enum>
                     </property>
                     <property name="text">
-                     <string>Det1符合能窗：</string>
+                     <string>样品冷却时长：</string>
                     </property>
                     <property name="alignment">
                      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -1308,84 +1389,42 @@
                       <number>0</number>
                      </property>
                      <item>
-                      <widget class="QLineEdit" name="lineEdit_5"/>
+                      <widget class="QSpinBox" name="spinBox_23"/>
                      </item>
                      <item>
                       <widget class="QLabel" name="label_12">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
                        <property name="text">
                         <string>-</string>
                        </property>
                       </widget>
                      </item>
                      <item>
-                      <widget class="QLineEdit" name="lineEdit_7"/>
+                      <widget class="QSpinBox" name="spinBox_24"/>
                      </item>
                     </layout>
                    </widget>
                   </item>
-                  <item row="3" column="2">
-                   <widget class="QLabel" name="label_14">
-                    <property name="text">
-                     <string>keV</string>
-                    </property>
-                   </widget>
+                  <item row="2" column="1">
+                   <widget class="QSpinBox" name="spinBox_22"/>
                   </item>
-                  <item row="4" column="0">
-                   <widget class="QLabel" name="label_11">
-                    <property name="layoutDirection">
-                     <enum>Qt::RightToLeft</enum>
-                    </property>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label">
                     <property name="text">
-                     <string>Det2符合能窗：</string>
+                     <string>中子产额：</string>
                     </property>
                     <property name="alignment">
                      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                     </property>
                    </widget>
                   </item>
-                  <item row="4" column="1">
-                   <widget class="QWidget" name="widget_5" native="true">
-                    <property name="sizePolicy">
-                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                      <horstretch>0</horstretch>
-                      <verstretch>0</verstretch>
-                     </sizepolicy>
-                    </property>
-                    <layout class="QHBoxLayout" name="horizontalLayout_5">
-                     <property name="leftMargin">
-                      <number>0</number>
-                     </property>
-                     <property name="topMargin">
-                      <number>0</number>
-                     </property>
-                     <property name="rightMargin">
-                      <number>0</number>
-                     </property>
-                     <property name="bottomMargin">
-                      <number>0</number>
-                     </property>
-                     <item>
-                      <widget class="QLineEdit" name="lineEdit_6"/>
-                     </item>
-                     <item>
-                      <widget class="QLabel" name="label_13">
-                       <property name="text">
-                        <string>-</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLineEdit" name="lineEdit_8"/>
-                     </item>
-                    </layout>
-                   </widget>
-                  </item>
-                  <item row="4" column="2">
-                   <widget class="QLabel" name="label_15">
-                    <property name="text">
-                     <string>keV</string>
-                    </property>
-                   </widget>
+                  <item row="1" column="1">
+                   <widget class="QSpinBox" name="spinBox_21"/>
                   </item>
                   <item row="5" column="0" colspan="3">
                    <widget class="QWidget" name="widget_13" native="true">
@@ -1416,7 +1455,7 @@
                       </spacer>
                      </item>
                      <item>
-                      <widget class="QPushButton" name="pushButton_5">
+                      <widget class="QPushButton" name="pushButton_refresh_3">
                        <property name="minimumSize">
                         <size>
                          <width>105</width>
@@ -1429,6 +1468,49 @@
                       </widget>
                      </item>
                     </layout>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QSpinBox" name="spinBox_20"/>
+                  </item>
+                  <item row="0" column="2">
+                   <widget class="QLabel" name="label_5">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>个</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="0">
+                   <widget class="QLabel" name="label_11">
+                    <property name="layoutDirection">
+                     <enum>Qt::RightToLeft</enum>
+                    </property>
+                    <property name="text">
+                     <string>Det2符合能窗：</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="2">
+                   <widget class="QLabel" name="label_8">
+                    <property name="text">
+                     <string>ns</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="2">
+                   <widget class="QLabel" name="label_15">
+                    <property name="text">
+                     <string>keV</string>
+                    </property>
                    </widget>
                   </item>
                  </layout>
@@ -1446,59 +1528,6 @@
                   <string>测量参数设置</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_11">
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="label_3">
-                    <property name="layoutDirection">
-                     <enum>Qt::RightToLeft</enum>
-                    </property>
-                    <property name="text">
-                     <string>测量时间(s)：</string>
-                    </property>
-                    <property name="alignment">
-                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="1">
-                   <widget class="QLineEdit" name="lineEdit_3"/>
-                  </item>
-                  <item row="0" column="2">
-                   <widget class="QLabel" name="label_9">
-                    <property name="layoutDirection">
-                     <enum>Qt::RightToLeft</enum>
-                    </property>
-                    <property name="text">
-                     <string>量程选择：</string>
-                    </property>
-                    <property name="alignment">
-                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="3">
-                   <widget class="QComboBox" name="comboBox">
-                    <item>
-                     <property name="text">
-                      <string>0~1E4</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>1E4~1E7</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>1E7~1E10</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>1E10~1E13</string>
-                     </property>
-                    </item>
-                   </widget>
-                  </item>
                   <item row="1" column="0" colspan="4">
                    <widget class="QWidget" name="widget_17" native="true">
                     <layout class="QHBoxLayout" name="horizontalLayout_16">
@@ -1542,6 +1571,59 @@
                      </item>
                     </layout>
                    </widget>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label_3">
+                    <property name="layoutDirection">
+                     <enum>Qt::RightToLeft</enum>
+                    </property>
+                    <property name="text">
+                     <string>测量时间(s)：</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="3">
+                   <widget class="QComboBox" name="comboBox">
+                    <item>
+                     <property name="text">
+                      <string>0~1E4</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>1E4~1E7</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>1E7~1E10</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>1E10~1E13</string>
+                     </property>
+                    </item>
+                   </widget>
+                  </item>
+                  <item row="0" column="2">
+                   <widget class="QLabel" name="label_9">
+                    <property name="layoutDirection">
+                     <enum>Qt::RightToLeft</enum>
+                    </property>
+                    <property name="text">
+                     <string>量程选择：</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QSpinBox" name="spinBox_19"/>
                   </item>
                  </layout>
                 </widget>
@@ -1646,7 +1728,7 @@
                   <number>9</number>
                  </property>
                  <item>
-                  <widget class="QWidget" name="widget" native="true">
+                  <widget class="QWidget" name="widget_8" native="true">
                    <layout class="QHBoxLayout" name="horizontalLayout_20">
                     <property name="leftMargin">
                      <number>0</number>
@@ -1697,7 +1779,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QWidget" name="widget" native="true">
+                  <widget class="QWidget" name="widget_21" native="true">
                    <layout class="QHBoxLayout" name="horizontalLayout_19">
                     <property name="leftMargin">
                      <number>0</number>
@@ -1917,14 +1999,14 @@
                </widget>
               </item>
               <item row="4" column="2">
-               <widget class="QPushButton" name="pushButton_2">
+               <widget class="QPushButton" name="pushButton_save">
                 <property name="text">
                  <string>保存数据</string>
                 </property>
                </widget>
               </item>
               <item row="3" column="1" colspan="2">
-               <widget class="QLineEdit" name="lineEdit_27"/>
+               <widget class="QLineEdit" name="lineEdit_filename"/>
               </item>
               <item row="3" column="0">
                <widget class="QLabel" name="label_55">
@@ -1934,7 +2016,7 @@
                </widget>
               </item>
               <item row="2" column="1" colspan="2">
-               <widget class="QLineEdit" name="lineEdit_20"/>
+               <widget class="QLineEdit" name="lineEdit_path"/>
               </item>
              </layout>
             </widget>
@@ -2028,11 +2110,12 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="actionaction_net_connect"/>
+   <addaction name="action_net_connect"/>
    <addaction name="action_power"/>
-   <addaction name="action_detector_conndect"/>
+   <addaction name="action_detector_connect"/>
    <addaction name="separator"/>
    <addaction name="action_devices"/>
+   <addaction name="action_refresh"/>
    <addaction name="actionaction_line_log"/>
    <addaction name="separator"/>
    <addaction name="actionaction_close"/>
@@ -2159,7 +2242,7 @@ p, li { white-space: pre-wrap; }
     <string>版本信息</string>
    </property>
   </action>
-  <action name="actionaction_net_connect">
+  <action name="action_net_connect">
    <property name="icon">
     <iconset resource="resource.qrc">
      <normaloff>:/resource/lianjie.png</normaloff>:/resource/lianjie.png</iconset>
@@ -2207,7 +2290,7 @@ p, li { white-space: pre-wrap; }
     <string>数据解析</string>
    </property>
   </action>
-  <action name="action_detector_conndect">
+  <action name="action_detector_connect">
    <property name="icon">
     <iconset resource="resource.qrc">
      <normaloff>:/resource/conect.png</normaloff>:/resource/conect.png</iconset>
@@ -2232,6 +2315,18 @@ p, li { white-space: pre-wrap; }
    </property>
    <property name="toolTip">
     <string>符合测量</string>
+   </property>
+  </action>
+  <action name="action_refresh">
+   <property name="icon">
+    <iconset resource="resource.qrc">
+     <normaloff>:/resource/pause.png</normaloff>:/resource/pause.png</iconset>
+   </property>
+   <property name="text">
+    <string>暂停刷新</string>
+   </property>
+   <property name="toolTip">
+    <string>暂停/继续</string>
    </property>
   </action>
  </widget>

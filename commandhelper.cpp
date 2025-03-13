@@ -1,24 +1,79 @@
 #include "commandhelper.h"
+#include "sysutils.h"
 #include <QDataStream>
 
 CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
 {
-    initSocket(&socketRelay);
-    initSocket(&socketDetector);
     initSocket(&socketDisplacement1);
     initSocket(&socketDisplacement2);
 
+    initSocket(&socketRelay);
+    //网络异常
+    connect(socketRelay, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error), this, [=](QAbstractSocket::SocketError){
+        emit sigRelayFault();
+    });
+
+    //状态改变
+    connect(socketRelay, &QAbstractSocket::stateChanged, this, [=](QAbstractSocket::SocketState){
+    });
+
+    //连接成功
+    connect(socketRelay, &QTcpSocket::connected, this, [=](){
+        //发送查询指令
+        command.clear();
+        QDataStream dataStream(&command, QIODevice::WriteOnly);
+        dataStream << (quint8)0x48;
+        dataStream << (quint8)0x3a;
+        dataStream << (quint8)0x01;
+        dataStream << (quint8)0x53;
+        dataStream << (quint8)0x00;
+        dataStream << (quint8)0x00;
+        dataStream << (quint8)0x00;
+        dataStream << (quint8)0x00;
+        dataStream << (quint8)0x00;
+        dataStream << (quint8)0x00;
+        dataStream << (quint8)0x00;
+        dataStream << (quint8)0x00;
+        dataStream << (quint8)0xd6;
+        dataStream << (quint8)0x45;
+        dataStream << (quint8)0x44;
+        socketRelay->write(command);
+    });
+
+    initSocket(&socketDetector);
+
     // 创建数据解析线程
-    qDebug() << "main thread ID:" << QThread::currentThreadId();
-    QUiThread* workhThread = new QUiThread();
-    workhThread->setWorkThreadProc([=](){
-        slotAnalyzeFrame();
+    analyzeNetDataThread = new QUiThread();
+    analyzeNetDataThread->setObjectName("analyzeNetDataThread");
+    analyzeNetDataThread->setWorkThreadProc([=](){
+        slotAnalyzeNetFrame();
     });
-    workhThread->start();
+    analyzeNetDataThread->start();
     connect(this, &CommandHelper::destroyed, [=]() {
-        workhThread->exit(0);
-        workhThread->wait(500);
+        analyzeNetDataThread->exit(0);
+        analyzeNetDataThread->wait(500);
     });
+
+    // 图形数据刷新
+    plotUpdateThread = new QUiThread();
+    plotUpdateThread->setObjectName("plotUpdateThread");
+    plotUpdateThread->setWorkThreadProc([=](){
+        slotPlotUpdateFrame();
+    });
+    plotUpdateThread->start();
+    connect(this, &CommandHelper::destroyed, [=]() {
+        plotUpdateThread->exit(0);
+        plotUpdateThread->wait(500);
+    });
+}
+
+CommandHelper::~CommandHelper(){
+    taskFinished = true;
+    analyzeNetDataThread->wait(500);
+    analyzeNetDataThread->quit();
+
+    plotUpdateThread->wait(500);
+    plotUpdateThread->quit();
 }
 
 void CommandHelper::initSocket(QTcpSocket** _socket)
@@ -30,88 +85,193 @@ void CommandHelper::initSocket(QTcpSocket** _socket)
     *_socket = socket;
 }
 
-void CommandHelper::openPower(QString ip, qint32 port)
+void CommandHelper::openDisplacement(QString ip, qint32 port, qint32 index)
+{
+    QTcpSocket *socketDisplacement;
+    if (0 == index)
+        socketDisplacement = socketDisplacement1;
+    else
+        socketDisplacement = socketDisplacement2;
+
+    //断开网络连接
+    if (socketDisplacement->isOpen())
+        socketDisplacement->disconnectFromHost();
+
+    disconnect(socketDisplacement);// 断开所有槽函数
+
+    //网络异常
+    connect(socketDisplacement, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error), this, [=](QAbstractSocket::SocketError){
+        emit sigDisplacementFault(index);
+    });
+
+    //状态改变
+    connect(socketDisplacement, &QAbstractSocket::stateChanged, this, [=](QAbstractSocket::SocketState){
+    });
+
+    //连接成功
+    connect(socketDisplacement, &QTcpSocket::connected, this, [=](){
+        sigDisplacementStatus(true, index);
+        //发送位移指令
+    });
+
+    //接收数据
+    connect(socketDisplacement, &QTcpSocket::readyRead, this, [=](){
+    });
+
+    socketDisplacement->connectToHost(ip, port);
+}
+
+void CommandHelper::closeDisplacement(qint32 index)
+{
+    QTcpSocket *socketDisplacement;
+    if (0 == index)
+        socketDisplacement = socketDisplacement1;
+    else
+        socketDisplacement = socketDisplacement2;
+
+    socketDisplacement->close();
+    sigDisplacementStatus(false, index);
+    sigDisplacementStatus(false, index);
+}
+
+void CommandHelper::openRelay(QString ip, qint32 port)
 {
     //断开网络连接
     if (socketRelay->isOpen())
         socketRelay->disconnectFromHost();
 
-    disconnect(socketRelay, nullptr, this, nullptr);// 断开所有槽函数
+    disconnect(socketRelay, &QTcpSocket::readyRead, this, nullptr);
 
-    //网络异常
-    connect(socketRelay, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error), this, [=](QAbstractSocket::SocketError){
-        emit sigPowerStatus(false);
-    });
-
-    //状态改变
-    connect(socketRelay, &QAbstractSocket::stateChanged, this, [=](QAbstractSocket::SocketState){
-    });
-
-    //连接成功
-    connect(socketRelay, &QTcpSocket::connected, this, [=](){
-        emit sigPowerStatus(true);
-
-        //发送指令
-        socketRelay->write("read");
-    });
-
+    socketRelay->setProperty("firstQuery", true);
     //接收数据
-    connect(socketRelay, &QTcpSocket::readyRead, this, [=](){
+    connect(socketRelay, &QTcpSocket::readyRead, this, [&](){
         QByteArray binaryData = socketRelay->readAll();
 
-        QString ack = QString::fromStdString(binaryData.toStdString());
-        if (ack.startsWith("relay")){
-            QString status = ack.remove("relay");
-            bool b1 = status[0] == '1';
-            bool b2 = status[1] == '1';
-            emit sigRelayStatus(b1, b2);
+        // 判断指令只开关返回指令还是查询返回指令
+        if (binaryData.size() == 15){
+            if (binaryData.at(0) == 0x48 && binaryData.at(1) == 0x3a && binaryData.at(2) == 0x01 && binaryData.at(3) == 0x54){
+                if (binaryData.at(4) == 0x00 || binaryData.at(5) == 0x00){
+                    //继电器未开启
+
+                    if (!socketRelay->property("firstQuery").toBool()){
+                        // 如果已经发送过开启指令，则直接上报状态即可
+                        emit sigRelayStatus(false);
+                    } else {
+                        socketRelay->setProperty("firstQuery", false);
+
+                        //发送开启指令
+                        command.clear();
+                        QDataStream dataStream(&command, QIODevice::WriteOnly);
+                        dataStream << (quint8)0x48;
+                        dataStream << (quint8)0x3a;
+                        dataStream << (quint8)0x01;
+                        dataStream << (quint8)0x57;
+                        dataStream << (quint8)0x01;
+                        dataStream << (quint8)0x01;
+                        dataStream << (quint8)0x00;
+                        dataStream << (quint8)0x00;
+                        dataStream << (quint8)0x00;
+                        dataStream << (quint8)0x00;
+                        dataStream << (quint8)0x00;
+                        dataStream << (quint8)0x00;
+                        dataStream << (quint8)0xdc;
+                        dataStream << (quint8)0x45;
+                        dataStream << (quint8)0x44;
+                        socketRelay->write(command);
+                    }
+                } else if (binaryData.at(4) == 0x01 || binaryData.at(5) == 0x01){
+                    //已经开启
+                    emit sigRelayStatus(true);
+                }
+            }
         }
     });
 
     socketRelay->connectToHost(ip, port);
 }
 
-void CommandHelper::closePower(QString ip, qint32 port)
+void CommandHelper::closeRelay()
 {
-    //断开网络连接
-    if (socketRelay->isOpen())
-        socketRelay->disconnectFromHost();
+    disconnect(socketRelay, &QTcpSocket::readyRead, this, nullptr);
 
-    disconnect(socketRelay);// 断开所有槽函数
-    emit sigPowerStatus(false);
-    return;
-
-    //网络异常
-    connect(socketRelay, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error), this, [=](QAbstractSocket::SocketError){
-        emit sigPowerStatus(false);
-    });
-
-    //状态改变
-    connect(socketRelay, &QAbstractSocket::stateChanged, this, [=](QAbstractSocket::SocketState){
-    });
-
-    //连接成功
-    connect(socketRelay, &QTcpSocket::connected, this, [=](){
-        emit sigPowerStatus(true);
-
-        //发送指令
-        socketRelay->write("close");
-    });
+    //清空
+    command.clear();
+    QDataStream dataStream(&command, QIODevice::WriteOnly);
+    dataStream << (quint8)0x48;
+    dataStream << (quint8)0x3a;
+    dataStream << (quint8)0x01;
+    dataStream << (quint8)0x57;
+    dataStream << (quint8)0x00;
+    dataStream << (quint8)0x00;
+    dataStream << (quint8)0x00;
+    dataStream << (quint8)0x00;
+    dataStream << (quint8)0x00;
+    dataStream << (quint8)0x00;
+    dataStream << (quint8)0x00;
+    dataStream << (quint8)0x00;
+    dataStream << (quint8)0xda;
+    dataStream << (quint8)0x45;
+    dataStream << (quint8)0x44;
 
     //接收数据
     connect(socketRelay, &QTcpSocket::readyRead, this, [=](){
         QByteArray binaryData = socketRelay->readAll();
 
-        QString ack = QString::fromStdString(binaryData.toStdString());
-        if (ack.startsWith("relay")){
-            QString status = ack.remove("relay");
-            bool b1 = status[0] == '1';
-            bool b2 = status[1] == '1';
-            emit sigRelayStatus(b1, b2);
+        // 判断指令只开关返回指令还是查询返回指令
+        if (binaryData.size() == 15){
+            if (binaryData.at(0) == 0x48 && binaryData.at(1) == 0x3a && binaryData.at(2) == 0x01 && binaryData.at(3) == 0x54){
+                if (binaryData.at(4) == 0x00 || binaryData.at(5) == 0x00){
+                    emit sigRelayStatus(false);
+                } else if (binaryData.at(4) == 0x01 || binaryData.at(5) == 0x01){
+                    //已经开启
+                    emit sigRelayStatus(true);
+
+                    socketRelay->disconnectFromHost();
+                }
+            }
         }
     });
 
-    socketRelay->connectToHost(ip, port);
+    socketRelay->write(command);
+}
+
+void CommandHelper::openDetector(QString ip, qint32 port)
+{
+    //断开网络连接
+    if (socketDetector->isOpen())
+        socketDetector->disconnectFromHost();
+
+    disconnect(socketDetector, &QTcpSocket::readyRead, this, nullptr);
+
+    //网络异常
+    connect(socketDetector, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error), this, [=](QAbstractSocket::SocketError){
+        emit sigDetectorFault();
+    });
+
+    //状态改变
+    connect(socketDetector, &QAbstractSocket::stateChanged, this, [=](QAbstractSocket::SocketState){
+    });
+
+    //连接成功
+    connect(socketDetector, &QTcpSocket::connected, this, [=](){
+        //发送位移指令
+        emit sigDetectorStatus(true);
+    });
+
+    //接收数据
+    connect(socketDetector, &QTcpSocket::readyRead, this, [=](){
+    });
+
+    socketDetector->connectToHost(ip, port);
+}
+
+void CommandHelper::closeDetector()
+{
+    //停止测量
+    slotStopManualMeasure();
+
+    socketDetector->close();
+    emit sigDetectorStatus(false);
 }
 
 void CommandHelper::makeFrame()
@@ -404,13 +564,13 @@ void CommandHelper::slotStart()
 
     quint8 ch1 = 0x01;
     quint8 ch2 = 0x01;
-    quint8 ch3 = 0x00;
-    quint8 ch4 = 0x00;
+    quint8 ch3 = 0x01;
+    quint8 ch4 = 0x01;
 
     //是否开启相应通道,0关闭，1开启    CH4在高位，    CH3在低位
-    dataStream << (quint8)((ch4 & 0x10) | (ch3 & 0x01));
+    dataStream << (quint8)((ch4 << 4) | (ch3 & 0x01));
     //是否开启相应通道,0关闭，1开启    CH2在高位，    CH1在低位
-    dataStream << (quint8)((ch2 & 0x10) | (ch1 & 0x01));
+    dataStream << (quint8)((ch2 << 4) | (ch1 & 0x01));
     dataStream << (quint8)0x00;
 
     //00:停止 01:软件触发 02:硬件触发
@@ -419,73 +579,76 @@ void CommandHelper::slotStart()
     dataStream << (quint8)0xab;
     dataStream << (quint8)0xcd;
 
+    qDebug() << QString("开始测量，软触发模式");
     socketDetector->write(command);
 }
 
 //开始手工测量
 #include <QThread>
-void CommandHelper::slotStartManualMeasure(QString ip, qint32 port, DetectorParameter p)
+void CommandHelper::slotStartManualMeasure(DetectorParameter p)
 {
-    workStatus = Measuring;//Preparing;
+    workStatus = Preparing;
     detectorParameter = p;
 
-    //断开网络连接
-    if (socketDetector->isOpen())
-        socketDetector->disconnectFromHost();
-
     // 断开所有槽函数
-    disconnect(socketDetector, nullptr, this, nullptr);
-
-    //网络异常
-    connect(socketDetector, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error), this, [=](QAbstractSocket::SocketError){
-        emit sigDetectorStatus(false);
-    });
-
-    //状态改变
-    qRegisterMetaType<QAbstractSocket::SocketState>("QAbstractSocket::SocketState");
-    connect(socketDetector, &QAbstractSocket::stateChanged, this, [=](QAbstractSocket::SocketState){
-    });
-
-    //连接成功
-    connect(socketDetector, &QTcpSocket::connected, this, [=](){
-        emit sigDetectorStatus(true);
-
-        if (0 == prepareStep){
-            // 触发阈值
-            emit slotTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2);
-        }
-    });
+    disconnect(socketDetector, SIGNAL(readyRead()), this, nullptr);
 
     //接收数据
     connect(socketDetector, &QTcpSocket::readyRead, this, [=](){
         QByteArray binaryData = socketDetector->readAll();
 
-        if (workStatus == Preparing){
-            if (binaryData.compare(command) == 0){
-                prepareStep++;
+        //00:能谱 03:波形 05:粒子
+        if (detectorParameter.transferModel == 0x00 || detectorParameter.transferModel == 0x03){
+            if (nullptr != pfSave){
+                pfSave->write(binaryData);
+            }
+        } else if (detectorParameter.transferModel == 0x05){
+            if (workStatus == Preparing){
+                if (binaryData.compare(command) == 0){
+                    prepareStep++;
+                } else if (prepareStep == 5){
+                    QByteArray firstPart = binaryData.left(command.size());
+                    if (firstPart == command){
+                        // 比较成功
+                        prepareStep++;
+                    }
+                }
+
+                switch (prepareStep) {
+                case 1: // 波形极性
+                    qDebug() << QString("设置波形极性, 值=%1").arg(detectorParameter.waveformPolarity);
+                    emit slotWaveformPolarity(detectorParameter.waveformPolarity);
+                    break;
+                case 2: // 能谱模式/粒子模式死时间
+                    qDebug() << QString("设置能谱模式/粒子模式死时间，值=%1").arg(detectorParameter.dieTimeLength);
+                    emit slotDieTimeLength(detectorParameter.dieTimeLength);
+                    break;
+                case 3: // 探测器增益
+                    qDebug() << QString("设置增益，值=%1").arg(detectorParameter.dieTimeLength);
+                    emit slotDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00);
+                    break;
+                case 4: // 传输模式
+                    qDebug() << QString("设置传输模式，值=%1").arg(detectorParameter.transferModel);
+                    emit slotTransferModel(detectorParameter.transferModel);
+                    break;
+                case 5: // 开始测量/停止测量
+                    emit slotStart();                    
+                    break;
+                case 6: // 开始测量/停止测量
+                    workStatus = Measuring;
+                    binaryData.remove(0, command.size());
+                    break;
+                }
             }
 
-            switch (prepareStep) {
-            case 1: // 波形极性
-                emit slotWaveformPolarity(detectorParameter.waveformPolarity);
-                break;
-            case 2: // 能谱模式/粒子模式死时间
-                emit slotDieTimeLength(detectorParameter.dieTimeLength);
-                break;
-            case 3: // 探测器增益
-                emit slotDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00);
-                break;
-            case 4: // 传输模式
-                emit slotTransferModel(detectorParameter.transferModel);
-                break;
-            case 5: // 开始测量/停止测量
-                emit slotStart();
-                workStatus = Measuring;
-                break;
+            if (workStatus == Measuring) {
+                if (nullptr != pfSave){
+                    pfSave->write(binaryData);
+                }
+
+                QMutexLocker locker(&mutex);
+                cachePool.push_back(binaryData);
             }
-        } else if (workStatus == Measuring) {
-            QMutexLocker locker(&mutex);
-            cachePool.push_back(binaryData);
         }
     });
 
@@ -495,7 +658,21 @@ void CommandHelper::slotStartManualMeasure(QString ip, qint32 port, DetectorPara
 
     //连接探测器
     prepareStep = 0;
-    socketDetector->connectToHost(ip, port);
+    if (0 == prepareStep){
+        QString name = QString("%1/%2").arg(detectorParameter.path).arg(detectorParameter.filename);
+        pfSave = new QFile(name);
+        if (pfSave->open(QIODevice::WriteOnly)) {
+            qWarning() << tr("创建保存文件成功，文件名：%1").arg(name);
+        } else {
+            qWarning() << tr("创建保存文件失败，文件名：%1").arg(name);
+        }
+
+        if (detectorParameter.transferModel == 0x05){
+            // 触发阈值
+            qDebug() << QString("设置触发阈值, 值1=%1 值2=%2").arg(detectorParameter.triggerThold1).arg(detectorParameter.triggerThold2);
+            emit slotTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2);
+        }
+    }
 }
 
 void CommandHelper::slotStopManualMeasure()
@@ -532,6 +709,12 @@ void CommandHelper::slotStopManualMeasure()
     dataStream << (quint8)0xcd;
 
     socketDetector->write(command);
+
+    if (nullptr != pfSave){
+        pfSave->close();
+        delete pfSave;
+        pfSave = nullptr;
+    }
 }
 
 #include <QThread>
@@ -543,12 +726,16 @@ void CommandHelper::slotDoTasks()
     }
 }
 
-void CommandHelper::slotAnalyzeFrame()
+void CommandHelper::slotAnalyzeNetFrame()
 {
-    qDebug()<<"work thread ID:"<<QThread::currentThreadId()<<'\n';
     while (!taskFinished)
     {
         QMutexLocker locker(&mutex);
+        if (cachePool.size() <= 0){
+            QThread::msleep(5);
+            continue;
+        }
+
         QByteArray validFrame;
 
         //00:能谱 03:波形 05:粒子
@@ -567,6 +754,7 @@ void CommandHelper::slotAnalyzeFrame()
                                 isNual = true;
                             }
                         } else {
+                            // 前面几个字节是开始测量的返回码
                             cachePool.remove(0, 1);
                         }
                     }
@@ -604,7 +792,6 @@ void CommandHelper::slotAnalyzeFrame()
                 }
             }
         } else if (detectorParameter.transferModel == 0x05){
-
             qint32 minPkgSize = 1026 * 8;
             bool isNual = false;
             while (true){
@@ -645,32 +832,142 @@ void CommandHelper::slotAnalyzeFrame()
                                  static_cast<quint64>(ptrOffset[6]) << 8 |
                                  static_cast<quint64>(ptrOffset[7]);
 
+                //通道值转换
+                channel = (channel == 0xFFF1) ? 0 : 1;
+
                 //粒子模式数据1024*8byte,前6字节:时间,后2字节:能量
                 int ref = 1;
                 ptrOffset += 8;
-                vctFrames.channel = channel;
+
+                vector<long long> dataT;
+                vector<unsigned int> dataE;
                 while (ref++<=1024){
-                    PariticalData v;
-                    v.time = static_cast<quint64>(ptrOffset[0]) << 40 |
+                    long long t = static_cast<quint64>(ptrOffset[0]) << 40 |
                             static_cast<quint64>(ptrOffset[1]) << 32 |
                             static_cast<quint64>(ptrOffset[2]) << 24 |
                             static_cast<quint64>(ptrOffset[3]) << 16 |
                             static_cast<quint64>(ptrOffset[4]) << 8 |
                             static_cast<quint64>(ptrOffset[5]);
-                    v.data = static_cast<quint16>(ptrOffset[6]) << 8 | static_cast<quint16>(ptrOffset[7]);
-
+                    unsigned int e = static_cast<quint16>(ptrOffset[6]) << 8 | static_cast<quint16>(ptrOffset[7]);
                     ptrOffset += 8;
-                    vctFrames.data.push_back(v);
+
+                    dataT.push_back(t);
+                    dataE.push_back(e);
                 }
 
-                emit sigRefreshData(vctFrames);
+                if (!this->refModel){
+                    PariticalSpectrumFrame frame;
+                    frame.channel = channel;
+                    frame.dataE.swap(dataE);
+                    QMutexLocker locker(&mutexPlot);
+                    spectrumFrameCachePool.push_back(frame);
+                    //emit sigRefreshSpectrum(frame);
+                } else {
+                    // 对输入的粒子[时间、能量]数据进行统计,给出计数率随时间变化的曲线，注意这里dataT与dataE一定是相同的长度
+                    // dataT粒子的时间, 单位ns
+                    // dataE粒子的能量
+                    // stepT统计的时间步长, 单位s
+                    // leftE：左区间
+                    // rightE：右区间
+                    // return：vector<TimeCountRate> 计数率数组
+                    PariticalCountFrame frame;
+                    frame.channel = channel;
+                    frame.dataT.swap(dataT);
+                    frame.dataE.swap(dataE);
+                    QMutexLocker locker(&mutexPlot);
+                    countFrameCachePool.push_back(frame);
+                    //emit sigRefreshCountData(frame);
+                }
             }
         } else if (detectorParameter.transferModel == 0x02){
 
-        } else{
+        } else {
             cachePool.clear();
         }
 
         QThread::msleep(5);
     }
+}
+
+#include <QDateTime>
+void CommandHelper::slotPlotUpdateFrame()
+{
+    QDateTime tmStart = QDateTime::currentDateTime().addDays(-1);
+    while (!taskFinished)
+    {
+        QDateTime tmNow = QDateTime::currentDateTime();
+        if (tmStart.secsTo(tmNow) >= this->stepT){
+            tmStart = tmNow;
+            // 时间步长到了，该刷新界面了
+            if (this->refModel){
+                // 对输入的粒子[时间、能量]数据进行统计,给出计数率随时间变化的曲线，注意这里dataT与dataE一定是相同的长度
+                // dataT粒子的时间, 单位ns
+                // dataE粒子的能量
+                // stepT统计的时间步长, 单位s
+                // leftE：左区间
+                // rightE：右区间
+                // return：vector<TimeCountRate> 计数率数组
+
+                QVector<PariticalCountFrame> swapFrames;
+                {
+                    QMutexLocker locker(&mutexPlot);
+                    swapFrames.swap(countFrameCachePool);
+                }
+
+                if (swapFrames.size() > 0){
+                    vector<long long> dataT[2];
+                    vector<unsigned int> dataE[2];
+                    for (auto frame : swapFrames){
+                        dataT[frame.channel].insert(dataT[frame.channel].end(), frame.dataT.begin(), frame.dataT.end());
+                        dataE[frame.channel].insert(dataE[frame.channel].end(), frame.dataE.begin(), frame.dataE.end());
+                    }
+
+                    for (int channel = 0; channel < 2; ++channel){
+                        PariticalCountFrame frame;
+                        frame.channel = channel;
+                        frame.timeCountRate = GetCountRate(dataT[channel], dataE[channel], this->stepT, this->leftE[channel], this->rightE[channel]);
+                        emit sigRefreshCountData(frame);
+                    }
+                }
+            } else {
+                QVector<PariticalSpectrumFrame> swapFrames;
+                {
+                    QMutexLocker locker(&mutexPlot);
+                    swapFrames.swap(spectrumFrameCachePool);
+                }
+
+                if (swapFrames.size() > 0){
+                    vector<long long> dataT[2];
+                    vector<unsigned int> dataE[2];
+                    for (auto frame : swapFrames){
+                        dataT[frame.channel].insert(dataT[frame.channel].end(), frame.dataT.begin(), frame.dataT.end());
+                        dataE[frame.channel].insert(dataE[frame.channel].end(), frame.dataE.begin(), frame.dataE.end());
+                    }
+
+                    for (int channel = 0; channel < 2; ++channel){
+                        PariticalSpectrumFrame frame;
+                        frame.channel = channel;
+                        frame.data = GetSpectrum(dataE[frame.channel], maxEnergy, maxCh);
+                        emit sigRefreshSpectrum(frame);
+                    }
+                }
+            }
+        }
+
+        QThread::msleep(500);
+    }
+}
+
+void CommandHelper::updateParamter(int _stepT, int _leftE[2], int _rightE[2])
+{
+    this->stepT = _stepT;
+    this->leftE[0] = _leftE[0];
+    this->leftE[1] = _leftE[1];
+    this->rightE[0] = _rightE[0];
+    this->rightE[1] = _rightE[1];
+}
+
+void CommandHelper::updateShowModel(bool _refModel)
+{
+    this->refModel = _refModel;
 }

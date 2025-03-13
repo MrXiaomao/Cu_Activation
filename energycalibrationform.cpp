@@ -121,8 +121,8 @@ void EnergyCalibrationForm::on_pushButton_add_clicked()
     // 添加
     int row = ui->tableWidget->rowCount();
     ui->tableWidget->insertRow(row);
-    ui->tableWidget->setItem(row, 0, new QTableWidgetItem(QString("%1").arg(ui->lineEdit->text())));
-    ui->tableWidget->setItem(row, 1, new QTableWidgetItem(QString("%1").arg(ui->lineEdit_2->text())));
+    ui->tableWidget->setItem(row, 0, new QTableWidgetItem(QString("%1").arg(ui->spinBox_ch->value())));
+    ui->tableWidget->setItem(row, 1, new QTableWidgetItem(QString("%1").arg(ui->doubleSpinBox_e->value())));
 }
 
 void EnergyCalibrationForm::on_pushButton_del_clicked()

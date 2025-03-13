@@ -31,14 +31,13 @@ public slots:
     void slotWriteLog(const QString &log, log_level level = lower);
 
 signals:
+    void sigUpdatePlot(const QString &log);
     void sigWriteLog(const QString &log, log_level level = lower);
 
 private slots:
     void slotPlowWidgetDoubleClickEvent();
 
     void on_action_power_triggered();
-
-    void on_actionaction_net_connect_triggered();
 
     void on_action_devices_triggered();
 
@@ -48,8 +47,6 @@ private slots:
 
     void on_action_DataAnalysis_triggered();
 
-    void on_action_detector_conndect_triggered();
-
     void on_action_energycalibration_triggered();
 
     void on_pushButton_measure_clicked();
@@ -58,13 +55,28 @@ private slots:
 
     void on_pushButton_measure_3_clicked();
 
+    void on_action_net_connect_triggered();
+
+    void on_action_detector_connect_triggered();
+
+    void on_pushButton_save_clicked();
+
+    void on_pushButton_refresh_clicked();
+
+    void on_actionaction_close_triggered();
+
+    void on_action_refresh_triggered();
+
 private:
     Ui::MainWindow *ui = nullptr;
     SpectrumModel *spectrummodel = nullptr;//能谱模型
     DataAnalysisWidget *dataAnalysisWidget = nullptr;//数据解析
     CommandHelper *commandhelper = nullptr;//网络指令
-    bool power_on;//电源打开标识
-    bool net_connected;//网络连接标识
+
+    bool relay_on;//电源打开标识
+    bool net_connected[2] = {false, false};//外设连接标识
     bool detector_connected;//探测器连接标识
+    bool measuring = false;
+    bool pause_plot = false;//图像暂停刷新
 };
 #endif // MAINWINDOW_H

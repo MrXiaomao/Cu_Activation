@@ -22,62 +22,196 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
-    , power_on(false)
-    , net_connected(false)
+    , relay_on(false)
+    , detector_connected(false)
 {
     ui->setupUi(this);
 
+    emit sigUpdatePlot(tr("更新ui..."));
     connect(this, SIGNAL(sigWriteLog(const QString &, log_level)), this, SLOT(slotWriteLog(const QString &, log_level)));
     commandhelper = new CommandHelper();
-    connect(commandhelper, &CommandHelper::sigPowerStatus, this, [=](bool on){
-        power_on = on;
-        if (power_on){
+    connect(commandhelper, &CommandHelper::sigDisplacementFault, this, [=](qint32 index){
+        ui->action_net_connect->setIcon(QIcon(":/resource/lianjie-fault.png"));
+        QString msg = QString(tr("网络故障，外设%1连接失败！").arg((index + 1)));
+        ui->statusbar->showMessage(msg);
+        emit sigWriteLog(msg);
+    });
+    connect(commandhelper, &CommandHelper::sigDisplacementStatus, this, [=](bool on, qint32 index){
+        net_connected[index] = on;
+        if (on){
+            ui->action_power->setEnabled(true);
+            ui->action_net_connect->setIcon(QIcon(":/resource/lianjie-on.png"));
+            ui->action_net_connect->setText(tr("关闭外设"));
+            ui->action_net_connect->setIconText(tr("关闭外设"));
+        } else {
+            ui->action_net_connect->setIcon(QIcon(":/resource/lianjie.png"));
+            ui->action_net_connect->setText(tr("打开外设"));
+            ui->action_net_connect->setIconText(tr("打开外设"));
+        }
+
+        QString msg = QString(tr("外设%1状态：%2")).arg(index + 1).arg(on ? tr("开") : tr("关"));
+        ui->statusbar->showMessage(msg);
+        emit sigWriteLog(msg);
+    });
+
+    // 禁用开启电源按钮
+    ui->action_power->setEnabled(false);
+    connect(commandhelper, &CommandHelper::sigRelayFault, this, [=](){
+        ui->action_power->setIcon(QIcon(":/resource/lianjie-fault.png"));
+        QString msg = QString(tr("网络故障，电源连接失败！"));
+        ui->statusbar->showMessage(msg);
+        emit sigWriteLog(msg);
+    });
+
+    connect(commandhelper, &CommandHelper::sigRelayStatus, this, [=](bool on){
+        relay_on = on;
+        if (relay_on){
+            ui->action_detector_connect->setEnabled(true);
             ui->action_power->setIcon(QIcon(":/resource/power-on.png"));
             ui->action_power->setText(tr("关闭电源"));
             ui->action_power->setIconText(tr("关闭电源"));
-
-            ui->statusbar->showMessage(tr("电源已连接"));
-            emit sigWriteLog(tr("电源已连接"));
         } else {
             ui->action_power->setIcon(QIcon(":/resource/power-off.png"));
             ui->action_power->setText(tr("打开电源"));
             ui->action_power->setIconText(tr("打开电源"));
-
-            ui->statusbar->showMessage(tr("电源连接失败"));
-            emit sigWriteLog(tr("电源连接失败"));
         }
-    });
-    connect(commandhelper, &CommandHelper::sigRelayStatus, this, [=](bool on1, bool on2){
-        QString msg = QString(tr("继电器1：%1，继电器2：%2"))
-                .arg(on1 ? tr("开") : tr("关"))
-                .arg(on2 ? tr("开") : tr("关"));
 
+        QString msg = QString(tr("电源状态：%1")).arg(on ? tr("开") : tr("关"));
         ui->statusbar->showMessage(msg);
         emit sigWriteLog(msg);
     });
-    qRegisterMetaType<PariticalFrame>("PariticalFrame");
-    connect(commandhelper, &CommandHelper::sigRefreshData, this, [=](PariticalFrame frame){
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("Det1");
-        QCustomPlot *customPlot = plotWidget->customPlotInstance();
 
-        QVector<double> keys, values;
-        QVector<QColor> colors;
-        for (int i=0; i<frame.data.size(); i++){
-            keys << i;
-            values << frame.data[i].data;
+    // 禁用连接探测器按钮
+    ui->action_detector_connect->setEnabled(false);
+    connect(commandhelper, &CommandHelper::sigDetectorFault, this, [=](){
+        ui->action_detector_connect->setIcon(QIcon(":/resource/conect-fault.png"));
+        QString msg = QString(tr("网络故障，探测器连接失败！"));
+        ui->statusbar->showMessage(msg);
+        emit sigWriteLog(msg);
 
-            colors << QColor(255, 255, 255, 255);
-        }
-        if (frame.channel == 0x000000F1)
-            customPlot->graph(0)->setData(keys, values, colors);
-        else if (frame.channel == 0x000000F2)
-            customPlot->graph(1)->setData(keys, values, colors);
-        customPlot->replot();
+        //手动
+        // 禁用开始测量按钮
+        ui->pushButton_measure->setEnabled(false);
+        // 禁用刷新按钮
+        ui->pushButton_refresh->setEnabled(false);
+
+        //自动
+        // 禁用等候触发按钮
+        ui->pushButton_measure_2->setEnabled(false);
+        // 禁用刷新按钮
+        ui->pushButton_refresh_2->setEnabled(false);
+
+        //标定
+        // 禁用开始测量按钮
+        ui->pushButton_measure_3->setEnabled(false);
+        // 禁用刷新按钮
+        ui->pushButton_refresh_3->setEnabled(false);
+
+        // 禁用高斯拟合按钮
+        ui->pushButton_gauss->setEnabled(false);
     });
 
+    connect(commandhelper, &CommandHelper::sigDetectorStatus, this, [=](bool on){
+        detector_connected = on;
+        if (detector_connected){
+            ui->action_detector_connect->setIcon(QIcon(":/resource/conect-on.png"));
+            ui->action_detector_connect->setText(tr("断开探测器"));
+            ui->action_detector_connect->setIconText(tr("断开探测器"));
 
+            //手动
+            // 禁用开始测量按钮
+            ui->pushButton_measure->setEnabled(true);
+            // 禁用刷新按钮
+            ui->pushButton_refresh->setEnabled(true);
+
+            //自动
+            // 禁用等候触发按钮
+            ui->pushButton_measure_2->setEnabled(true);
+            // 禁用刷新按钮
+            ui->pushButton_refresh_2->setEnabled(true);
+
+            //标定
+            // 禁用开始测量按钮
+            ui->pushButton_measure_3->setEnabled(true);
+            // 禁用刷新按钮
+            ui->pushButton_refresh_3->setEnabled(true);
+
+            // 禁用高斯拟合按钮
+            ui->pushButton_gauss->setEnabled(true);
+        } else {
+            ui->action_detector_connect->setIcon(QIcon(":/resource/conect.png"));
+            ui->action_detector_connect->setText(tr("连接探测器"));
+            ui->action_detector_connect->setIconText(tr("连接探测器"));
+
+            //手动
+            // 禁用开始测量按钮
+            ui->pushButton_measure->setEnabled(false);
+            // 禁用刷新按钮
+            ui->pushButton_refresh->setEnabled(false);
+
+            //自动
+            // 禁用等候触发按钮
+            ui->pushButton_measure_2->setEnabled(false);
+            // 禁用刷新按钮
+            ui->pushButton_refresh_2->setEnabled(false);
+
+            //标定
+            // 禁用开始测量按钮
+            ui->pushButton_measure_3->setEnabled(false);
+            // 禁用刷新按钮
+            ui->pushButton_refresh_3->setEnabled(false);
+
+            // 禁用高斯拟合按钮
+            ui->pushButton_gauss->setEnabled(false);
+        }
+
+        QString msg = QString(tr("探测器状态：%1")).arg(on ? tr("开") : tr("关"));
+        ui->statusbar->showMessage(msg);
+        emit sigWriteLog(msg);
+    });
+
+    qRegisterMetaType<PariticalCountFrame>("PariticalCountFrame");
+    qRegisterMetaType<std::vector<TimeCountRate>>("std::vector<TimeCountRate>");
+    connect(commandhelper, &CommandHelper::sigRefreshCountData, this, [=](PariticalCountFrame frame){
+        if (!pause_plot){
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-Detector");
+            plotWidget->slotUpdateCountData(frame);
+        }
+    });
+    qRegisterMetaType<PariticalSpectrumFrame>("PariticalSpectrumFrame");
+    connect(commandhelper, &CommandHelper::sigRefreshSpectrum, this, [=](PariticalSpectrumFrame frame){
+        if (!pause_plot){
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-Detector");
+            plotWidget->slotUpdateSpectrumData(frame);
+        }
+    });
+
+    //手动
+    // 禁用开始测量按钮
+    ui->pushButton_measure->setEnabled(false);
+    // 禁用刷新按钮
+    ui->pushButton_refresh->setEnabled(false);
+
+    //自动
+    // 禁用等候触发按钮
+    ui->pushButton_measure_2->setEnabled(false);
+    // 禁用刷新按钮
+    ui->pushButton_refresh_2->setEnabled(false);
+
+    //标定
+    // 禁用开始测量按钮
+    ui->pushButton_measure_3->setEnabled(false);
+    // 禁用刷新按钮
+    ui->pushButton_refresh_3->setEnabled(false);
+
+    // 禁用高斯拟合按钮
+    ui->pushButton_gauss->setEnabled(false);
+
+    emit sigUpdatePlot(tr("读取参数设置ui..."));
     InitMainWindowUi();
+
     // 创建图表
+    emit sigUpdatePlot(tr("创建图形库..."));
     initCustomPlot();
 
     QTimer::singleShot(500, this, [=](){
@@ -134,6 +268,9 @@ void MainWindow::InitMainWindowUi()
     ui->start_time_text->setDateTime(QDateTime::currentDateTime());
     ui->textEdit_log->clear();
 
+    ui->lineEdit_path->setText("./");
+    ui->lineEdit_filename->setText("test.dat");
+
     // 手动测量-标定文件
     {
         QAction *action = ui->lineEdit_9->addAction(QIcon(":/resource/open.png"), QLineEdit::TrailingPosition);
@@ -161,12 +298,12 @@ void MainWindow::InitMainWindowUi()
 
     // 测量结果-存储路径
     {
-        QAction *action = ui->lineEdit_20->addAction(QIcon(":/resource/open.png"), QLineEdit::TrailingPosition);
+        QAction *action = ui->lineEdit_path->addAction(QIcon(":/resource/open.png"), QLineEdit::TrailingPosition);
         QToolButton* button = qobject_cast<QToolButton*>(action->associatedWidgets().last());
         button->setCursor(QCursor(Qt::PointingHandCursor));
         connect(button, &QToolButton::pressed, this, [=](){
             QString dir = QFileDialog::getExistingDirectory(this);
-            ui->lineEdit_20->setText(dir);
+            ui->lineEdit_path->setText(dir);
         });
     }
 
@@ -258,58 +395,31 @@ void MainWindow::InitMainWindowUi()
     });
 }
 
-// 打开电源
-void MainWindow::on_action_power_triggered()
-{
-    if (!power_on){
-        commandhelper->openPower("127.0.0.1", 5000);
-    } else {
-        commandhelper->closePower("127.0.0.1", 5000);
-    }
-}
-
-// 连接网络
-void MainWindow::on_actionaction_net_connect_triggered()
-{
-    if (net_connected){
-        ui->actionaction_net_connect->setIcon(QIcon(":/resource/lianjie.png"));
-        ui->actionaction_net_connect->setText(tr("连接外设"));
-        net_connected = false;
-    } else {
-        ui->actionaction_net_connect->setIcon(QIcon(":/resource/quxiaolianjie.png"));
-        ui->actionaction_net_connect->setText(tr("断开外设"));
-        net_connected = true;
-    }
-}
-
 void MainWindow::initCustomPlot()
 {
     //this->setDockNestingEnabled(true);
 
-    // Det1
-    PlotWidget *customPlotWidget_Det1 = new PlotWidget(ui->widget_plot);
-    customPlotWidget_Det1->setName(tr("Det1"));
-    customPlotWidget_Det1->installEventFilter(this);
-    customPlotWidget_Det1->show();
-
-    // Det2
-    PlotWidget *customPlotWidget_Det2 = new PlotWidget(ui->widget_plot);
-    customPlotWidget_Det2->setName(tr("Det2"));
-    customPlotWidget_Det2->installEventFilter(this);
-    customPlotWidget_Det2->show();
+    // Det
+    PlotWidget *customPlotWidget_Det1_2 = new PlotWidget(ui->widget_plot);
+    customPlotWidget_Det1_2->setObjectName(tr("real-Detector"));
+    customPlotWidget_Det1_2->installEventFilter(this);
+    customPlotWidget_Det1_2->setWindowTitle(tr("Detector"));
+    customPlotWidget_Det1_2->initCustomPlot(2);
+    customPlotWidget_Det1_2->initDetailWidget();
+    customPlotWidget_Det1_2->show();
 
     // result
     PlotWidget *customPlotWidget_result = new PlotWidget(ui->widget_plot);
-    customPlotWidget_result->setName(tr("符合结果"));
+    customPlotWidget_result->setObjectName(tr("real-Result"));
     customPlotWidget_result->installEventFilter(this);
+    customPlotWidget_result->setWindowTitle(tr("符合结果"));
+    customPlotWidget_result->initCustomPlot(1);
     customPlotWidget_result->show();
 
-    ui->widget_plot->layout()->addWidget(customPlotWidget_Det1);
-    ui->widget_plot->layout()->addWidget(customPlotWidget_Det2);
+    ui->widget_plot->layout()->addWidget(customPlotWidget_Det1_2);
     ui->widget_plot->layout()->addWidget(customPlotWidget_result);
 
-    connect(customPlotWidget_Det1, SIGNAL(sigMouseDoubleClickEvent()), this, SLOT(slotPlowWidgetDoubleClickEvent()));
-    connect(customPlotWidget_Det2, SIGNAL(sigMouseDoubleClickEvent()), this, SLOT(slotPlowWidgetDoubleClickEvent()));
+    connect(customPlotWidget_Det1_2, SIGNAL(sigMouseDoubleClickEvent()), this, SLOT(slotPlowWidgetDoubleClickEvent()));
     connect(customPlotWidget_result, SIGNAL(sigMouseDoubleClickEvent()), this, SLOT(slotPlowWidgetDoubleClickEvent()));
 }
 
@@ -483,14 +593,111 @@ void MainWindow::on_action_WaveformModel_triggered()
     }
 }
 
-void MainWindow::on_action_detector_conndect_triggered()
+// 连接外设
+void MainWindow::on_action_net_connect_triggered()
 {
-    if (detector_connected){
-        ui->actionaction_net_connect->setText(tr("连接探测器"));
-        detector_connected = false;
+    QFile file(QApplication::applicationDirPath() + "/config/ip.json");
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QMessageBox::information(this, tr("提示"), tr("请先配置远程设备信息！"));
+        return;
+    }
+
+    // 读取文件内容
+    QByteArray jsonData = file.readAll();
+    file.close(); //释放资源
+
+    // 将 JSON 数据解析为 QJsonDocument
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+    QJsonObject jsonObj = jsonDoc.object();
+
+    QString ip = "192.168.10.253";
+    qint32 port = 1030;
+    if (jsonObj.contains("Displacement")){
+        QJsonArray jsonDisplacements = jsonObj["Displacement"].toArray();
+        QJsonObject jsonDisplacement;
+        for (int i=0; i<jsonDisplacements.size(); ++i){
+            jsonDisplacement = jsonDisplacements.at(0).toObject();
+            ip = jsonDisplacement["ip"].toString();
+            port = jsonDisplacement["port"].toInt();
+
+            //位移平台
+            if (!net_connected[i]){
+                commandhelper->openDisplacement(ip, port, i);
+            } else {
+                commandhelper->closeDisplacement(i);
+            }
+        }
+    }
+}
+
+// 打开电源
+void MainWindow::on_action_power_triggered()
+{
+    QFile file(QApplication::applicationDirPath() + "/config/ip.json");
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QMessageBox::information(this, tr("提示"), tr("请先配置远程设备信息！"));
+        return;
+    }
+
+    // 读取文件内容
+    QByteArray jsonData = file.readAll();
+    file.close(); //释放资源
+
+    // 将 JSON 数据解析为 QJsonDocument
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+    QJsonObject jsonObj = jsonDoc.object();
+
+    QString ip = "192.168.10.253";
+    qint32 port = 1030;
+    QJsonObject jsonDetector;
+    if (jsonObj.contains("Relay")){
+        jsonDetector = jsonObj["Relay"].toObject();
+        ip = jsonDetector["ip"].toString();
+        port = jsonDetector["port"].toInt();
+    }
+
+    if (!relay_on){
+        commandhelper->openRelay(ip, port);
     } else {
-        ui->actionaction_net_connect->setText(tr("断开探测器"));
-        detector_connected = true;
+        commandhelper->closeRelay();
+    }
+}
+
+
+// 打开探测器
+void MainWindow::on_action_detector_connect_triggered()
+{
+    if (!detector_connected){
+        QFile file(QApplication::applicationDirPath() + "/config/ip.json");
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QMessageBox::information(this, tr("提示"), tr("请先配置远程设备信息！"));
+            return;
+        }
+
+        // 读取文件内容
+        QByteArray jsonData = file.readAll();
+        file.close(); //释放资源
+
+        // 将 JSON 数据解析为 QJsonDocument
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+        QJsonObject jsonObj = jsonDoc.object();
+
+        QString ip = "192.168.10.3";
+        qint32 port = 5000;
+        QJsonObject jsonDetector;
+        if (jsonObj.contains("Detector")){
+            jsonDetector = jsonObj["Detector"].toObject();
+            ip = jsonDetector["ip"].toString();
+            port = jsonDetector["port"].toInt();
+        }
+
+        commandhelper->openDetector(ip, port);
+    } else {
+        measuring = false;
+        ui->pushButton_save->setEnabled(true);
+        ui->pushButton_measure->setText(tr("开始测量"));
+        commandhelper->slotStopManualMeasure();
+        commandhelper->closeDetector();
     }
 }
 
@@ -505,56 +712,49 @@ void MainWindow::on_action_energycalibration_triggered()
 
 void MainWindow::on_pushButton_measure_clicked()
 {
-    //手动测量
-    DetectorParameter detectorParameter;
-    detectorParameter.triggerThold1 = 0x81;
-    detectorParameter.triggerThold2 = 0x81;
-    detectorParameter.waveformPolarity = 0x00;
-    detectorParameter.dieTimeLength = 0x05;
-    detectorParameter.gain = 0x00;
-    detectorParameter.transferModel = 0x05;// 传输模式
+    if (!measuring){
+        //手动测量
+        DetectorParameter detectorParameter;
+        detectorParameter.triggerThold1 = 0x81;
+        detectorParameter.triggerThold2 = 0x81;
+        detectorParameter.waveformPolarity = 0x00;
+        detectorParameter.dieTimeLength = 0x05;
+        detectorParameter.gain = 0x00;
+        detectorParameter.transferModel = 0x05;// 传输模式
 
-    // 打开 JSON 文件
-    QFile file(QApplication::applicationDirPath() + "/config/fpga.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
+        // 打开 JSON 文件
+        QFile file(QApplication::applicationDirPath() + "/config/fpga.json");
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            // 读取文件内容
+            QByteArray jsonData = file.readAll();
+            file.close(); //释放资源
 
-        // 将 JSON 数据解析为 QJsonDocument
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-        detectorParameter.triggerThold1 = jsonObj["TriggerThold1"].toInt();
-        detectorParameter.triggerThold2 = jsonObj["TriggerThold2"].toInt();
-        detectorParameter.waveformPolarity = jsonObj["WaveformPolarity"].toInt();
-        detectorParameter.dieTimeLength = jsonObj["DieTimeLength"].toInt();
-        detectorParameter.gain = jsonObj["DetectorGain"].toInt();
+            // 将 JSON 数据解析为 QJsonDocument
+            QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+            QJsonObject jsonObj = jsonDoc.object();
+            detectorParameter.triggerThold1 = jsonObj["TriggerThold1"].toInt();
+            detectorParameter.triggerThold2 = jsonObj["TriggerThold2"].toInt();
+            detectorParameter.waveformPolarity = jsonObj["WaveformPolarity"].toInt();
+            detectorParameter.dieTimeLength = jsonObj["DieTimeLength"].toInt();
+            detectorParameter.gain = jsonObj["DetectorGain"].toInt();
+        }
+
+        detectorParameter.path = ui->lineEdit_path->text();
+        detectorParameter.filename = ui->lineEdit_filename->text();
+        measuring = true;
+        ui->pushButton_save->setEnabled(false);
+        ui->pushButton_measure->setText(tr("停止测量"));
+        commandhelper->slotStartManualMeasure(detectorParameter);
+    } else {
+        measuring = false;
+        ui->pushButton_save->setEnabled(true);
+        ui->pushButton_measure->setText(tr("开始测量"));
+
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-Detector");
+        plotWidget->slotResetPlot();
+
+        commandhelper->slotStopManualMeasure();
     }
-
-    file.setFileName(QApplication::applicationDirPath() + "/config/ip.json");
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QMessageBox::information(this, tr("提示"), tr("请先设置外设网络ip地址。"));
-        return;
-    }
-
-    // 读取文件内容
-    QByteArray jsonData = file.readAll();
-    file.close(); //释放资源
-
-    // 将 JSON 数据解析为 QJsonDocument
-    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-    QJsonObject jsonObj = jsonDoc.object();
-
-    QString ip = "127.0.0.1";
-    qint32 port = 8000;
-    QJsonObject jsonDetector;
-    if (jsonObj.contains("Detector")){
-        jsonDetector = jsonObj["Detector"].toObject();
-        ip = jsonDetector["ip"].toString();
-        port = jsonDetector["port"].toInt();
-    }
-
-    commandhelper->slotStartManualMeasure(ip, port, detectorParameter);
 }
 
 void MainWindow::on_pushButton_measure_2_clicked()
@@ -565,4 +765,51 @@ void MainWindow::on_pushButton_measure_2_clicked()
 void MainWindow::on_pushButton_measure_3_clicked()
 {
     //标定测量
+}
+
+void MainWindow::on_pushButton_save_clicked()
+{
+    // 保存参数
+    QJsonObject jsonObj;
+
+    QJsonObject jsonDetector;
+    QJsonObject jsonRelay;
+
+    QString path = QApplication::applicationDirPath() + "/config";
+    QDir dir(path);
+    if (!dir.exists())
+        dir.mkdir(path);
+    QFile file(QApplication::applicationDirPath() + "/config/user.json");
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QJsonDocument jsonDoc(jsonObj);
+        file.write(jsonDoc.toJson());
+        file.close();
+    }
+}
+
+void MainWindow::on_pushButton_refresh_clicked()
+{
+    int stepT = ui->spinBox_step->value();
+    int leftE[2] = {ui->spinBox_1_leftE->value(), ui->spinBox_2_leftE->value()};
+    int rightE[2] = {ui->spinBox_1_rightE->value(), ui->spinBox_2_rightE->value()};
+    commandhelper->updateParamter(stepT, leftE, rightE);
+}
+
+void MainWindow::on_actionaction_close_triggered()
+{
+    this->close();
+}
+
+void MainWindow::on_action_refresh_triggered()
+{
+    pause_plot = !pause_plot;
+    if (pause_plot){
+        ui->action_refresh->setIcon(QIcon(":/resource/work.png"));
+        ui->action_refresh->setText(tr("恢复刷新"));
+        ui->action_refresh->setIconText(tr("恢复刷新"));
+    } else {
+        ui->action_refresh->setIcon(QIcon(":/resource/pause.png"));
+        ui->action_refresh->setText(tr("暂停刷新"));
+        ui->action_refresh->setIconText(tr("暂停刷新"));
+    }
 }

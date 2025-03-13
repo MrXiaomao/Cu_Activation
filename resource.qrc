@@ -38,5 +38,12 @@
         <file>resource/arrow-drop-right-x16.png</file>
         <file>resource/arrow-drop-up-x16.png</file>
         <file>resource/conect.png</file>
+        <file>resource/conect-fault.png</file>
+        <file>resource/conect-on.png</file>
+        <file>resource/lianjie-fault.png</file>
+        <file>resource/lianjie-on.png</file>
+        <file>resource/power-fault.png</file>
+        <file>resource/pause.png</file>
+        <file>resource/work.png</file>
     </qresource>
 </RCC>

@@ -27,6 +27,7 @@ SOURCES += \
     mainwindow.cpp \
     rollingtimewidget.cpp \
     spectrumModel.cpp \
+    sysutils.cpp \
     waveformmodel.cpp \
     FPGASetting.cpp
 
@@ -41,6 +42,7 @@ HEADERS += \
     mainwindow.h \
     rollingtimewidget.h \
     spectrumModel.h \
+    sysutils.h \
     waveformmodel.h \
     FPGASetting.h
 

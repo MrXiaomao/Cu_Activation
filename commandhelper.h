@@ -4,7 +4,9 @@
 #include <QObject>
 #include <QTcpSocket>
 #include <QMutex>
+#include <QFile>
 
+#include "sysutils.h"
 typedef struct tagDetectorParameter{
     // 触发阈值
     qint16 triggerThold1, triggerThold2;
@@ -31,24 +33,25 @@ typedef struct tagDetectorParameter{
     05:粒子模式
     */
     qint8 transferModel;
+
+    // 保存路径
+    QString path;
+
+    // 保存文件名
+    QString filename;
 } DetectorParameter;
 
-typedef struct tagPariticalData{
-    quint64 time;
-    quint16 data;
-}PariticalData;
-typedef struct tagPariticalFrame{
-    quint64 channel;
-    QVector<PariticalData> data;
-}PariticalFrame;
-
+class QUiThread;
 class CommandHelper : public QObject
 {
     Q_OBJECT
 public:
     explicit CommandHelper(QObject *parent = nullptr);
+    ~CommandHelper();
 
-    void setDetectorParamter();
+    //void setDetectorParamter();
+    void updateShowModel(bool refModel);
+    void updateParamter(int stepT, int leftE[2], int rightE[2]);
 
     enum WorkStatusFlag {
         NoWork = 0,     // 未开始
@@ -65,19 +68,20 @@ public:
     };
 
 signals:
-    // 电源状态
-    void sigPowerStatus(bool on);
+    // 位移平台状态
+    void sigDisplacementStatus(bool on, qint32 index);
+    void sigDisplacementFault(qint32 index);//故障，一般指网络不通
 
     // 继电器状态
-    void sigRelayStatus(bool on1, bool on2);
+    void sigRelayStatus(bool on);
+    void sigRelayFault();//故障，一般指网络不通
 
     // 探测器状态
     void sigDetectorStatus(bool on);
+    void sigDetectorFault();//故障，一般指网络不通
 
-    // 位移平台状态
-    //void sigDisplacementStatus(bool on1, bool on2);
-
-    void sigRefreshData(PariticalFrame);
+    void sigRefreshCountData(PariticalCountFrame);// 计数
+    void sigRefreshSpectrum(PariticalSpectrumFrame);// 能谱
 
     void sigDoTasks();
     void sigAnalyzeFrame();
@@ -87,16 +91,27 @@ private:
     QByteArray command;
     QByteArray cachePool;
     QMutex mutex;
-    quint32 SequenceNumbre;// 帧序列号
-    PariticalFrame vctFrames;
+    QMutex mutexPlot;
+    quint32 SequenceNumbre;// 帧序列号    
+    QUiThread* analyzeNetDataThread;
+    QUiThread* plotUpdateThread;
 
 protected:
     void makeFrame();
     quint8 crc();
 
 public slots:
-    void openPower(QString ip, qint32 port);
-    void closePower(QString ip, qint32 port);
+//    void openPower(QString ip, qint32 port);
+//    void closePower(QString ip, qint32 port);
+
+    void openRelay(QString ip, qint32 port);
+    void closeRelay();
+
+    void openDisplacement(QString ip, qint32 port, qint32 index);
+    void closeDisplacement(qint32 index);
+
+    void openDetector(QString ip, qint32 port);
+    void closeDetector();
 
     //触发阈值1
     void slotTriggerThold1(quint16 ch1, quint16 ch2);
@@ -129,43 +144,37 @@ public slots:
     void slotStart();
 
     //开始手工测量
-    void slotStartManualMeasure(QString ip, qint32 port, DetectorParameter p);
+    void slotStartManualMeasure(DetectorParameter p);
 
     //停止手工测量
     void slotStopManualMeasure();
 
 public slots:
     void slotDoTasks();
-    void slotAnalyzeFrame();
+    void slotAnalyzeNetFrame();
+    void slotPlotUpdateFrame();
 
 private:
     QTcpSocket *socketDisplacement1;//2个位移平台、1个继电器、1个探测器
     QTcpSocket *socketDisplacement2;
-    QTcpSocket *socketRelay;
-    QTcpSocket *socketDetector;
+    QTcpSocket *socketRelay;    //继电器
+    QTcpSocket *socketDetector;//探测器
+
     WorkStatusFlag workStatus = NoWork;
     DetectorParameter detectorParameter;
-
+    QFile *pfSave = nullptr;
     qint8 prepareStep = 0;
     void initSocket(QTcpSocket** socket);
 
     bool taskFinished = false;
+
 private:
-
-};
-
-class Worker:public QObject                    //work定义了线程要执行的工作
-{
-    Q_OBJECT
-public:
-    Worker(QObject* parent = nullptr){}
-
-public slots:
-//    void slotDoTasks();
-//    void slotAnalyzeFrame();
-
-signals:
-    void resultReady(const int result);               //线程完成工作时发送的信号
+    int stepT = 1, leftE[2], rightE[2];
+    bool refModel = false;
+    unsigned int maxEnergy = 8192;
+    int maxCh = 4096;
+    QVector<PariticalSpectrumFrame> spectrumFrameCachePool;
+    QVector<PariticalCountFrame> countFrameCachePool;
 };
 
 #include <QThread>

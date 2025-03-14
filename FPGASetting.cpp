@@ -10,34 +10,10 @@
 FPGASetting::FPGASetting(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::FPGASetting)
-    , commandHelper(new CommandHelper(this))
 {
     ui->setupUi(this);
 
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(path);
-    QFile file(QApplication::applicationDirPath() + "/config/fpga.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
-
-        // 将 JSON 数据解析为 QJsonDocument
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-
-        ui->comboBox->setCurrentIndex(jsonObj["WaveformPolarity"].toInt());
-        ui->comboBox_4->setCurrentIndex(jsonObj["DetectorGain"].toInt());
-
-        ui->spinBox->setValue(jsonObj["TriggerThold1"].toInt());
-        ui->spinBox_2->setValue(jsonObj["TriggerThold2"].toInt());
-
-        ui->spinBox_3->setValue(jsonObj["DieTimeLength"].toInt());
-        file.close();
-    }
+    this->load();
 }
 
 FPGASetting::~FPGASetting()
@@ -46,6 +22,11 @@ FPGASetting::~FPGASetting()
 }
 
 void FPGASetting::on_pushButton_save_clicked()
+{
+    this->save();
+}
+
+bool FPGASetting::save()
 {
     // 保存参数
     QJsonObject jsonObj;
@@ -90,7 +71,7 @@ void FPGASetting::on_pushButton_save_clicked()
         jsonObj["DetectorGain"] = ch1;
     }
 
-    //探测器1阈值
+    //探测器1-2阈值
     {
         quint16 ch1 = (quint16)ui->spinBox->value();
         quint16 ch2 = (quint16)ui->spinBox_2->value();
@@ -98,7 +79,7 @@ void FPGASetting::on_pushButton_save_clicked()
         jsonObj["TriggerThold2"] = ch2;
     }
 
-    //探测器2阈值
+    //探测器3-4阈值
     {
         quint16 ch3 = 0x00;
         quint16 ch4 = 0x00;
@@ -121,5 +102,33 @@ void FPGASetting::on_pushButton_save_clicked()
         QJsonDocument jsonDoc(jsonObj);
         file.write(jsonDoc.toJson());
         file.close();
+    }
+}
+
+void FPGASetting::load()
+{
+    QString path = QApplication::applicationDirPath() + "/config";
+    QDir dir(path);
+    if (!dir.exists())
+        dir.mkdir(path);
+    QFile file(QApplication::applicationDirPath() + "/config/fpga.json");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // 读取文件内容
+        QByteArray jsonData = file.readAll();
+        file.close(); //释放资源
+
+        // 将 JSON 数据解析为 QJsonDocument
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+        QJsonObject jsonObj = jsonDoc.object();
+
+        ui->comboBox->setCurrentIndex(jsonObj["WaveformPolarity"].toInt());
+        ui->comboBox_4->setCurrentIndex(jsonObj["DetectorGain"].toInt());
+
+        ui->spinBox->setValue(jsonObj["TriggerThold1"].toInt());
+        ui->spinBox_2->setValue(jsonObj["TriggerThold2"].toInt());
+
+        ui->spinBox_3->setValue(jsonObj["DieTimeLength"].toInt());
+    } else {
+
     }
 }

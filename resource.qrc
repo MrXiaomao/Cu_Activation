@@ -45,5 +45,8 @@
         <file>resource/power-fault.png</file>
         <file>resource/pause.png</file>
         <file>resource/work.png</file>
+        <file>resource/work-off.png</file>
+        <file>resource/work-on.png</file>
+        <file>resource/restore.png</file>
     </qresource>
 </RCC>

@@ -16,12 +16,15 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    aboutwidget.cpp \
+    augmentedmatrix.cpp \
     commandhelper.cpp \
     coolingtimewidget.cpp \
     dataanalysiswidget.cpp \
     energycalibrationform.cpp \
     equipmentmanagementform.cpp \
     plotwidget.cpp \
+    polynomialfit.cpp \
     qcustomplot.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -32,12 +35,15 @@ SOURCES += \
     FPGASetting.cpp
 
 HEADERS += \
+    aboutwidget.h \
+    augmentedmatrix.h \
     commandhelper.h \
     coolingtimewidget.h \
     dataanalysiswidget.h \
     energycalibrationform.h \
     equipmentmanagementform.h \
     plotwidget.h \
+    polynomialfit.h \
     qcustomplot.h \
     mainwindow.h \
     rollingtimewidget.h \
@@ -48,13 +54,13 @@ HEADERS += \
 
 FORMS += \
     FPGASetting.ui \
+    aboutwidget.ui \
     coolingtimewidget.ui \
     dataanalysiswidget.ui \
     energycalibrationform.ui \
     spectrumModel.ui \
     waveformmodel.ui \
     equipmentmanagementform.ui \
-    datetimeselectwidget.ui \
     mainwindow.ui
 
 TRANSLATIONS += \
@@ -98,3 +104,21 @@ CONFIG += warn_off
 
 #开启大资源支持
 CONFIG += resources_big
+
+exists (./.git) {
+    GIT_BRANCH   = $$system(git rev-parse --abbrev-ref HEAD)
+    GIT_TIME     = $$system(git show --oneline --format=\"%ci%H\" -s HEAD)
+    APP_VERSION = "Git: $${GIT_BRANCH}: $${GIT_TIME}"
+} else {
+    GIT_BRANCH      = None
+    GIT_TIME        = None
+    APP_VERSION     = None
+}
+
+DEFINES += GIT_BRANCH=\"\\\"$$GIT_BRANCH\\\"\"
+DEFINES += GIT_TIME=\"\\\"$$GIT_TIME\\\"\"
+DEFINES += APP_VERSION=\"\\\"$$APP_VERSION\\\"\"
+
+message(GIT_BRANCH":  ""$$GIT_BRANCH")
+message(GIT_TIME":  ""$$GIT_TIME")
+message(APP_VERSION":  ""$$APP_VERSION")

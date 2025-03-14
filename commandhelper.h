@@ -22,6 +22,12 @@ typedef struct tagDetectorParameter{
 
     // 能谱模式/粒子模式死时间
     qint16 dieTimeLength;
+    // 能谱刷新时间
+    quint32 refreshTimeLength;
+    //波形长度
+    quint32 waveLength;
+    //波形触发模式
+    qint8 triggerModel;
 
     // 探测器增益
     qint8 gain;
@@ -49,9 +55,16 @@ public:
     explicit CommandHelper(QObject *parent = nullptr);
     ~CommandHelper();
 
+    static CommandHelper *instance() {
+        static CommandHelper commandHelper;
+        return &commandHelper;
+    }
+
     //void setDetectorParamter();
     void updateShowModel(bool refModel);
     void updateParamter(int stepT, int leftE[2], int rightE[2]);
+    void saveFileName(QString);
+    void setDefaultCacheDir(QString dir);
 
     enum WorkStatusFlag {
         NoWork = 0,     // 未开始
@@ -146,6 +159,9 @@ public slots:
     //开始手工测量
     void slotStartManualMeasure(DetectorParameter p);
 
+    //开始能谱测量
+    void slotStartSpectrumMeasure(DetectorParameter p);
+
     //停止手工测量
     void slotStopManualMeasure();
 
@@ -169,12 +185,15 @@ private:
     bool taskFinished = false;
 
 private:
+    QString defaultCacheDir;
+    QString currentFilename;
     int stepT = 1, leftE[2], rightE[2];
     bool refModel = false;
     unsigned int maxEnergy = 8192;
     int maxCh = 4096;
-    QVector<PariticalSpectrumFrame> spectrumFrameCachePool;
-    QVector<PariticalCountFrame> countFrameCachePool;
+    bool firstHandle = true;//是否第一次处理计数
+    std::vector<PariticalSpectrumFrame> spectrumFrameCachePool;
+    std::vector<PariticalCountFrame> countFrameCachePool;
 };
 
 #include <QThread>
@@ -227,17 +246,18 @@ private:
     LPThreadWorkProc m_pfThreadWorkProc = 0;
 
 public:
-    explicit QUiThread(LPThreadWorkProc pfThreadWorkProc = Q_NULLPTR, QObject* parent = Q_NULLPTR)
+    explicit QUiThread(QObject* parent = Q_NULLPTR, LPThreadWorkProc pfThreadWorkProc = Q_NULLPTR)
         : QThread(parent)
         , m_pfThreadWorkProc(pfThreadWorkProc)
     {
+        qDebug() << "thread create: " << this->objectName();
         connect(this, &QThread::finished, this, &QThread::deleteLater);
     }
 
     //析构函数
     ~QUiThread()
     {
-
+        qDebug() << "thread exit: " << this->objectName();
     }
 
     void setWorkThreadProc(LPThreadRunProc pfThreadRun) {

@@ -1,16 +1,25 @@
 #include "waveformmodel.h"
 #include "ui_waveformmodel.h"
-#include "commandhelper.h"
+#include <QFileDialog>
+#include <QTimer>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <QFile>
+#include <QDir>
+#include <QMessageBox>
 #include <QAction>
 #include <QToolButton>
 #include <QFileDialog>
+#include <QElapsedTimer>
 
 WaveformModel::WaveformModel(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::WaveformModel)
-    , commandHelper(new CommandHelper(this))
 {
     ui->setupUi(this);
+
+    commandhelper = CommandHelper::instance();
 
     //波形路径
     {
@@ -22,19 +31,68 @@ WaveformModel::WaveformModel(QWidget *parent)
             ui->lineEdit_path->setText(dir);
         });
     }
+
+    timer = new QTimer(this);
+    connect(timer, &QTimer::timeout, this, [=](){
+        QDateTime now = QDateTime::currentDateTime();
+        qint64 tt = timerStart.secsTo(now);
+        QTime time = QTime(0,0,0).addSecs(tt);
+        ui->label_13->setText(time.toString("HH:mm:ss"));
+    });
+
+    this->load();
+
+    ui->pushButton_save->setEnabled(false);
 }
 
 WaveformModel::~WaveformModel()
 {
-    delete commandHelper;
+    if (measuring){
+        commandhelper->slotStopManualMeasure();
+    }
+
     delete ui;   
 }
 
-void WaveformModel::on_pushButton_setup_clicked()
+void WaveformModel::load()
 {
+    QString path = QApplication::applicationDirPath() + "/config";
+    QDir dir(path);
+    if (!dir.exists())
+        dir.mkdir(path);
+    QFile file(QApplication::applicationDirPath() + "/config/wave.json");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // 读取文件内容
+        QByteArray jsonData = file.readAll();
+        file.close(); //释放资源
+
+        // 将 JSON 数据解析为 QJsonDocument
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+        QJsonObject jsonObj = jsonDoc.object();
+
+        ui->comboBox->setCurrentIndex(jsonObj["WaveformPolarity"].toInt());
+        ui->comboBox_4->setCurrentIndex(jsonObj["DetectorGain"].toInt());
+
+        ui->spinBox->setValue(jsonObj["TriggerThold1"].toInt());
+        ui->spinBox_2->setValue(jsonObj["TriggerThold2"].toInt());
+
+        ui->spinBox_3->setValue(jsonObj["DieTimeLength"].toInt());
+
+        ui->lineEdit_path->setText(jsonObj["Path"].toString());
+        ui->lineEdit_filename->setText(jsonObj["FileName"].toString());
+
+        ui->comboBox_3->setCurrentIndex(jsonObj["WaveLength"].toInt());
+    }
+}
+
+bool WaveformModel::save()
+{
+    // 保存参数
+    QJsonObject jsonObj;
+
     //波形极性
     quint8 v = ui->comboBox->currentIndex();
-    commandHelper->slotWaveformPolarity(v);
+    jsonObj["WaveformPolarity"] = v;
 
     //探测器增益
     {
@@ -69,64 +127,188 @@ void WaveformModel::on_pushButton_setup_clicked()
         } else {
             ch1 = 0x00;
         }
-        commandHelper->slotDetectorGain(ch1, ch1, ch1, ch1);
+        jsonObj["DetectorGain"] = ch1;
     }
 
-    //波形触发模式
-    quint8 mode = ui->comboBox_2->currentIndex();
-    commandHelper->slotWaveformTriggerModel(mode);
-
-    //探测器1阈值
+    //探测器1-2阈值
     {
         quint16 ch1 = (quint16)ui->spinBox->value();
         quint16 ch2 = (quint16)ui->spinBox_2->value();
-        commandHelper->slotTriggerThold1(ch1, ch2);
+        jsonObj["TriggerThold1"] = ch1;
+        jsonObj["TriggerThold2"] = ch2;
     }
 
-    //探测器2阈值
+    //探测器3-4阈值
     {
         quint16 ch3 = 0x00;
         quint16 ch4 = 0x00;
-        commandHelper->slotTriggerThold2(ch3, ch4);
-    }
-
-    //波形长度
-    {
-        /*
-        00:64
-        01:128
-        02:256
-        03:512
-        04:1024
-        默认1024
-        */
-
-        quint8 length = 0x00;
-        if (ui->comboBox_3->currentText() == "64"){
-            length = 0x00;
-        } else if (ui->comboBox_3->currentText() == "128"){
-            length = 0x01;
-        } else if (ui->comboBox_3->currentText() == "256"){
-            length = 0x02;
-        } else if (ui->comboBox_3->currentText() == "512"){
-            length = 0x03;
-        } else if (ui->comboBox_3->currentText() == "1024"){
-            length = 0x04;
-        } else {
-            length = 0x04;
-        }
-
-        commandHelper->slotWaveformLength(length);
+        jsonObj["TriggerThold3"] = ch3;
+        jsonObj["TriggerThold4"] = ch4;
     }
 
     //死时间
     {
-        quint16 dieTimelength = ui->spinBox_3->value();
-        commandHelper->slotDieTimeLength(dieTimelength);
+        quint16 dieTimeLength = ui->spinBox_3->value();
+        jsonObj["DieTimeLength"] = dieTimeLength;
     }
+
+    //波形
+    {
+        quint16 dieTimeLength = ui->spinBox_3->value();
+        jsonObj["DieTimeLength"] = dieTimeLength;
+    }
+
+    //波形长度
+    {
+        quint8 waveLength = 0x00;
+        if (ui->comboBox_3->currentText() == "64"){
+            waveLength = 0x00;
+        } else if (ui->comboBox_3->currentText() == "128"){
+            waveLength = 0x01;
+        } else if (ui->comboBox_3->currentText() == "256"){
+            waveLength = 0x02;
+        } else if (ui->comboBox_3->currentText() == "512"){
+            waveLength = 0x03;
+        } else if (ui->comboBox_3->currentText() == "1024"){
+            waveLength = 0x04;
+        } else{
+            waveLength = 0x04;
+        }
+        jsonObj["WaveLength"] = waveLength;
+    }
+
+    //路径
+    {
+        jsonObj["Path"] = ui->lineEdit_path->text();
+    }
+
+    //文件名
+    {
+        jsonObj["FileName"] = ui->lineEdit_filename->text();
+    }
+
+
+    QString path = QApplication::applicationDirPath() + "/config";
+    QDir dir(path);
+    if (!dir.exists())
+        dir.mkdir(path);
+    QFile file(QApplication::applicationDirPath() + "/config/wave.json");
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QJsonDocument jsonDoc(jsonObj);
+        file.write(jsonDoc.toJson());
+        file.close();
+    } else {
+        return false;
+    }
+
+    return true;
 }
 
 void WaveformModel::on_pushButton_start_clicked()
 {
+    QAbstractButton *btn = qobject_cast<QAbstractButton*>(sender());
+    measuring = !measuring;
+    if (measuring){
+        // 先保存参数
+        if (!this->save()){
+            measuring = !measuring;
+            return;
+        }
 
+        //手动测量
+        DetectorParameter detectorParameter;
+        detectorParameter.triggerThold1 = 0x81;
+        detectorParameter.triggerThold2 = 0x81;
+        detectorParameter.waveformPolarity = 0x00;
+        detectorParameter.dieTimeLength = 0x05;
+        detectorParameter.gain = 0x00;
+        detectorParameter.waveLength = 0x01;
+        detectorParameter.path = "./";
+        detectorParameter.filename = "test.dat";
+        detectorParameter.transferModel = 0x03;// 0x00-能谱 0x03-波形 0x05-符合模式
+        detectorParameter.triggerModel = 0x00;
+
+        // 打开 JSON 文件
+        QFile file(QApplication::applicationDirPath() + "/config/wave.json");
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            // 读取文件内容
+            QByteArray jsonData = file.readAll();
+            file.close(); //释放资源
+
+            // 将 JSON 数据解析为 QJsonDocument
+            QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+            QJsonObject jsonObj = jsonDoc.object();
+            detectorParameter.triggerThold1 = jsonObj["TriggerThold1"].toInt();
+            detectorParameter.triggerThold2 = jsonObj["TriggerThold2"].toInt();
+            detectorParameter.waveformPolarity = jsonObj["WaveformPolarity"].toInt();
+            detectorParameter.dieTimeLength = jsonObj["DieTimeLength"].toInt();
+            detectorParameter.waveLength = jsonObj["WaveLength"].toInt();
+            detectorParameter.triggerModel = jsonObj["TriggerModel"].toInt();
+            detectorParameter.gain = jsonObj["DetectorGain"].toInt();
+            detectorParameter.path = jsonObj["Path"].toString();
+            detectorParameter.filename = jsonObj["FileName"].toString();
+        }
+
+        measuring = true;
+        btn->setText(tr("停止测量"));
+        commandhelper->slotStartManualMeasure(detectorParameter);
+
+        timerStart = QDateTime::currentDateTime();
+        ui->label_7->setText(timerStart.toString("yyyy-MM-dd HH:mm:ss"));
+        timer->start(500);
+        ui->pushButton_save->setEnabled(false);
+    } else {
+        commandhelper->slotStopManualMeasure();
+        btn->setText(tr("开始测量"));
+
+        timer->stop();
+        ui->pushButton_save->setEnabled(true);
+    }
+}
+
+
+void WaveformModel::on_pushButton_save_clicked()
+{
+    //存储路径
+    //存储文件名
+    QString filename = ui->lineEdit_path->text() + "/" + ui->lineEdit_filename->text();
+    QFileInfo fInfo(filename);
+    if (fInfo.exists()){
+        if (QMessageBox::question(this, tr("提示"), tr("保存文件名已经存在，是否覆盖重写？"), QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) != QMessageBox::Yes)
+            return ;
+    }
+
+    // 保存参数
+    QString path = QApplication::applicationDirPath() + "/config";
+    QDir dir(path);
+    if (!dir.exists())
+        dir.mkdir(dir.absolutePath());
+    QFile file(QApplication::applicationDirPath() + "/config/wave.json");
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QString path, filename;
+        path = ui->lineEdit_path->text();
+        filename = ui->lineEdit_filename->text();
+        if (!filename.endsWith(".dat"))
+            filename += ".dat";
+
+        QJsonObject jsonObj;
+        jsonObj["Path"] = path;
+        jsonObj["FileName"] = filename;
+        QJsonDocument jsonDoc(jsonObj);
+        file.write(jsonDoc.toJson());
+        file.close();
+
+        commandhelper->saveFileName(path + "/" + filename);
+    }
+}
+
+void WaveformModel::closeEvent(QCloseEvent *event)
+{
+    if (measuring){
+        QMessageBox::warning(this, tr("提示"), tr("测量过程中，禁止关闭该窗口！"), QMessageBox::Ok, QMessageBox::Ok);
+        event->ignore();
+        return ;
+    }
+
+    event->accept();
 }

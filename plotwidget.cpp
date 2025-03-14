@@ -2,6 +2,7 @@
 #include "qcustomplot.h"
 #include <QGridLayout>
 #include <QtMath>
+#include <cmath>
 
 PlotWidget::PlotWidget(QWidget *parent) : QDockWidget(parent)
     , titleTextTtem(nullptr)
@@ -14,7 +15,7 @@ PlotWidget::PlotWidget(QWidget *parent) : QDockWidget(parent)
     this->setFeatures(QDockWidget::DockWidgetMovable|DockWidgetFloatable/*QDockWidget::AllDockWidgetFeatures*/);
 }
 
-void PlotWidget::initCustomPlot(int count)
+void PlotWidget::initCustomPlot()
 {
     QWidget *dockWidgetContents = new QWidget();
     dockWidgetContents->setObjectName(QString::fromUtf8("dockWidgetContents"));
@@ -37,10 +38,7 @@ void PlotWidget::initCustomPlot(int count)
     //customPlot->setAntialiasedElements(QCP::aeAll);
     customPlot->setNotAntialiasedElements(QCP::aeAll);
     // 图例名称隐藏
-    if (count > 1)
-        customPlot->legend->setVisible(true);
-    else
-        customPlot->legend->setVisible(false);
+    customPlot->legend->setVisible(false);
     // 图例名称显示位置
     customPlot->axisRect()->insetLayout()->setInsetAlignment(0, Qt::AlignTop|Qt::AlignRight);
     // 设置边界
@@ -68,7 +66,227 @@ void PlotWidget::initCustomPlot(int count)
     customPlot->xAxis->setRange(0, 4096);
     customPlot->yAxis->setRange(0, 10000);
     customPlot->yAxis->ticker()->setTickCount(5);
-    customPlot->xAxis->ticker()->setTickCount(8);
+    customPlot->xAxis->ticker()->setTickCount(16);
+    //customPlot->xAxis->ticker()->setTickStepStrategy(QCPAxisTicker::TickStepStrategy::tssMeetTickCount);
+    //customPlot->yAxis2->setPadding(10);//距离右边的距离
+
+    // 设置刻度可见
+    customPlot->xAxis->setTicks(axisVisible);
+    customPlot->xAxis2->setTicks(false);
+    customPlot->yAxis->setTicks(axisVisible);
+    customPlot->yAxis2->setTicks(false);
+    // 设置轴线可见
+    customPlot->xAxis->setVisible(axisVisible);
+    customPlot->xAxis2->setVisible(axisVisible);
+    customPlot->yAxis->setVisible(axisVisible);
+    customPlot->yAxis2->setVisible(axisVisible);
+    //customPlot->axisRect()->setupFullAxesBox();//四边安装轴并显示
+    // 设置刻度标签可见
+    customPlot->xAxis->setTickLabels(axisVisible);
+    customPlot->xAxis2->setTickLabels(false);
+    customPlot->yAxis->setTickLabels(axisVisible);
+    customPlot->yAxis2->setTickLabels(false);
+    // 设置子刻度可见
+    customPlot->xAxis->setSubTicks(false);
+    customPlot->xAxis2->setSubTicks(false);
+    customPlot->yAxis->setSubTicks(false);
+    customPlot->yAxis2->setSubTicks(false);
+    //设置轴标签名称
+    //customPlot->xAxis->setLabel(QObject::tr("计数"));
+    //customPlot->yAxis->setLabel(QObject::tr("能量/Kev"));
+    // 设置网格线颜色
+    customPlot->xAxis->grid()->setPen(QPen(QColor(180, 180, 180, 128), 1, Qt::PenStyle::DashLine));
+    customPlot->yAxis->grid()->setPen(QPen(QColor(180, 180, 180, 128), 1, Qt::PenStyle::DashLine));
+    customPlot->xAxis->grid()->setSubGridPen(QPen(QColor(50, 50, 50, 128), 1, Qt::DotLine));
+    customPlot->yAxis->grid()->setSubGridPen(QPen(QColor(50, 50, 50, 128), 1, Qt::DotLine));
+    customPlot->xAxis->grid()->setZeroLinePen(QPen(QColor(50, 50, 50, 100), 1, Qt::SolidLine));
+    customPlot->yAxis->grid()->setZeroLinePen(QPen(QColor(50, 50, 50, 100), 1, Qt::SolidLine));
+    // 设置网格线是否可见
+    customPlot->xAxis->grid()->setVisible(false);
+    customPlot->yAxis->grid()->setVisible(false);
+    // 设置子网格线是否可见
+    customPlot->xAxis->grid()->setSubGridVisible(false);
+    customPlot->yAxis->grid()->setSubGridVisible(false);
+
+    // 添加散点图
+    QCPGraph * curGraph = customPlot->addGraph(customPlot->xAxis, customPlot->yAxis);
+    curGraph->setAntialiased(false);
+    curGraph->setPen(QPen(clrLine[0]));
+    curGraph->selectionDecorator()->setPen(QPen(clrLine[0]));
+    //curGraph->setLineStyle(QCPGraph::lsLine);
+    curGraph->setLineStyle(QCPGraph::lsNone);// 隐藏线性图
+    curGraph->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssPlus, 2));//显示散点图
+
+    // 文本元素随窗口变动而变动
+//    titleTextTtem = new QCPItemText(customPlot);
+//    titleTextTtem->setColor(clrLine);
+//    titleTextTtem->position->setType(QCPItemPosition::ptAbsolute);
+//    titleTextTtem->setPositionAlignment(Qt::AlignTop | Qt::AlignLeft);
+//    titleTextTtem->setTextAlignment(Qt::AlignLeft);
+//    titleTextTtem->setFont(QFont(font().family(), 12));
+//    titleTextTtem->setPadding(QMargins(8, 0, 0, 0));
+//    titleTextTtem->position->setCoords(10.0, 10.0);//窗口坐标值
+//    titleTextTtem->setText(QString("%1").arg(title));
+//    titleTextTtem->setVisible(false);
+
+    auto createStraightLineItem = [=](QCPItemStraightLine** _line){
+        QCPItemStraightLine *line = new QCPItemStraightLine(customPlot);
+        line->setLayer("overlay");
+        line->setPen(QPen(Qt::gray, 1, Qt::DashLine));
+        line->setClipToAxisRect(true);
+        line->point1->setCoords(0, 0);
+        line->point2->setCoords(0, 0);
+        line->setVisible(false);
+        *_line = line;
+    };
+    createStraightLineItem(&lineLeft);
+    createStraightLineItem(&lineRight);
+
+    // 文本元素随坐标变动而变动
+    coordsTextItem = new QCPItemText(customPlot);
+    coordsTextItem->setColor(QColor(0,128,128,255));// 字体色
+    coordsTextItem->setPen(QColor(130,130,130,255));// 边框
+    coordsTextItem->setBrush(QBrush(QColor(255,255,225,255)));// 背景色
+    coordsTextItem->setPositionAlignment(Qt::AlignBottom | Qt::AlignLeft);
+    coordsTextItem->position->setType(QCPItemPosition::ptPlotCoords);
+    coordsTextItem->setTextAlignment(Qt::AlignLeft);
+    coordsTextItem->setFont(QFont(font().family(), 12));
+    coordsTextItem->setPadding(QMargins(5, 5, 5, 5));
+    coordsTextItem->position->setCoords(250.0, 1000.0);//X、Y轴坐标值
+    coordsTextItem->setText("峰: 239.10 = 207.37 keV\n"
+                            "半高宽: 40.15 FW[1/5]M:71.59\n"
+                            "库: Sn-113[Tin]在255.04; 0 Bq\n"
+                            "总计数面积: 623036\n"
+                            "净面积: 57994 +/-3703\n"
+                            "总计数/净计数 比率:731.18/68.06 cps");
+    coordsTextItem->setVisible(false);
+
+    textTipItem = new QCPItemText(customPlot);
+    textTipItem->setPositionAlignment(Qt::AlignBottom|Qt::AlignLeft);
+    textTipItem->position->setType(QCPItemPosition::ptAbsolute);
+    textTipItem->setFont(QFont(font().family(), 15));
+    textTipItem->setPen(QPen(Qt::black));
+    textTipItem->setBrush(Qt::white);
+    textTipItem->setVisible(false);
+
+    lineFlagItem = new QCPItemLine(customPlot);
+    lineFlagItem->setAntialiased(false);
+    lineFlagItem->start->setType(QCPItemPosition::ptPlotCoords);//QCPItemPosition::ptAbsolute);
+    lineFlagItem->end->setType(QCPItemPosition::ptPlotCoords);//QCPItemPosition::ptAbsolute);
+    lineFlagItem->setPen(QPen(QColor(255,0,255,255), 3, Qt::SolidLine));
+    lineFlagItem->setSelectedPen(QPen(QColor(255,0,255,255), 3, Qt::SolidLine));
+    lineFlagItem->setVisible(false);
+
+    dragRectItem = new QCPItemRect(customPlot);
+    dragRectItem->setAntialiased(false);
+    dragRectItem->topLeft->setType(QCPItemPosition::ptPlotCoords);//QCPItemPosition::ptAbsolute);
+    dragRectItem->bottomRight->setType(QCPItemPosition::ptPlotCoords);//QCPItemPosition::ptAbsolute);
+    dragRectItem->setPen(QPen(clrSelect, 2, Qt::DotLine));// 边框
+    dragRectItem->setBrush(Qt::NoBrush);// 背景色
+    dragRectItem->setSelectedPen(QPen(clrSelect, 2, Qt::DotLine));
+    dragRectItem->setVisible(false);
+
+    // 图形刷新
+    customPlot->replot();
+
+//    QTimer *timerUpdate = new QTimer(this);
+//    static int timerRef = 0;
+//    static int lastV = qrand() % 100 + 5000;
+//    connect(timerUpdate, &QTimer::timeout, this, [=](){
+//        // 更新数据
+//        lastV += qrand() % 100 - 50;
+//        customPlot->graph(0)->addData(timerRef++, lastV);
+
+//        // 保持图形范围合理
+//        if (timerRef >= 2048)
+//            customPlot->xAxis->setRange(timerRef - 2048, 2048, Qt::AlignLeft);
+
+//        // 重新绘制
+//        customPlot->replot();
+
+//        customPlot->yAxis->rescale(true);
+//    });
+//    timerUpdate->start(10);
+
+    connect(customPlot, SIGNAL(plottableClick(QCPAbstractPlottable*, int, QMouseEvent*)), this, SLOT(slotPlotClick(QCPAbstractPlottable*, int, QMouseEvent*)));
+    //connect(customPlot, SIGNAL(selectionChangedByUser()), this, SLOT(slotSelectionChanged()));
+    connect(customPlot, SIGNAL(beforeReplot()), this, SLOT(slotBeforeReplot()));
+    connect(customPlot, SIGNAL(afterLayout()), this, SLOT(slotBeforeReplot()));
+
+//    QTimer::singleShot(50, this, [=](){
+//        //随机数据
+//        for (int index = 0; index < customPlot->graphCount(); ++index) {
+//            int lastV = qrand() % 100 + 5000;
+//            QVector<double> keys, values;
+//            QVector<QColor> colors;
+//            for (int i=0; i<1024; i++){
+//                keys << i;
+
+//                lastV += qrand() % 100 - 50;
+//                values << lastV;
+
+//                colors << clrLine[index];
+//            }
+
+//            customPlot->graph(index)->setData(keys, values, colors);
+//        }
+
+//        customPlot->replot();
+//    });
+}
+
+void PlotWidget::initMultiCustomPlot()
+{
+    QWidget *dockWidgetContents = new QWidget();
+    dockWidgetContents->setObjectName(QString::fromUtf8("dockWidgetContents"));
+    QGridLayout *gridLayout = new QGridLayout(dockWidgetContents);
+    gridLayout->setObjectName(QString::fromUtf8("gridLayout"));
+    gridLayout->setContentsMargins(0, 0, 0, 0);
+
+    customPlot = new QCustomPlot(this);
+    //customPlot->setOpenGl(true); //不能启用硬件加速，否则多个控件数据刷新起冲突
+    customPlot->installEventFilter(this);
+//    customPlot->plotLayout()->insertRow(0);
+//    customPlot->plotLayout()->addElement(0, 0, new QCPTextElement(customPlot, title, QFont("微软雅黑", 10, QFont::Bold)));
+
+    gridLayout->addWidget(customPlot, 0, 0, 1, 1);
+    this->setWidget(dockWidgetContents);
+
+    // 设置选择容忍度，即鼠标点击点到数据点的距离
+    //customPlot->setSelectionTolerance(5);
+    // 设置全局抗锯齿
+    //customPlot->setAntialiasedElements(QCP::aeAll);
+    customPlot->setNotAntialiasedElements(QCP::aeAll);
+    // 图例名称显示
+    customPlot->legend->setVisible(true);
+    // 图例名称显示位置
+    customPlot->axisRect()->insetLayout()->setInsetAlignment(0, Qt::AlignTop|Qt::AlignRight);
+    // 设置边界
+    customPlot->setContentsMargins(0, 0, 0, 0);
+    // 设置标签倾斜角度，避免显示不下
+    customPlot->xAxis->setTickLabelRotation(-45);
+    // 背景色
+    customPlot->setBackground(QBrush(clrBackground));
+    // 图像画布边界
+    customPlot->axisRect()->setMinimumMargins(QMargins(0, 0, 0, 0));
+    // 坐标背景色
+    customPlot->axisRect()->setBackground(clrBackground);
+    // 允许拖拽，缩放
+    customPlot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectPlottables);
+    // 允许轴自适应大小
+    //customPlot->graph(0)->rescaleValueAxis(true);
+    customPlot->xAxis->rescale(false);
+    customPlot->yAxis->rescale(false);
+    // 设置刻度范围
+    QSharedPointer<QCPAxisTickerFixed> axisTickerFixed(new QCPAxisTickerFixed);
+    axisTickerFixed->setTickStep(256);//每间隔256单位一个标签
+    axisTickerFixed->setScaleStrategy(QCPAxisTickerFixed::ssMultiples);
+    //axisTickerFixed->setTickStepStrategy(QCPAxisTicker::TickStepStrategy::tssMeetTickCount);
+    customPlot->xAxis->setTicker(axisTickerFixed);
+    customPlot->xAxis->setRange(0, 4096);
+    customPlot->yAxis->setRange(0, 10000);
+    customPlot->yAxis->ticker()->setTickCount(5);
+    customPlot->xAxis->ticker()->setTickCount(16);
     //customPlot->xAxis->ticker()->setTickStepStrategy(QCPAxisTicker::TickStepStrategy::tssMeetTickCount);
     //customPlot->yAxis2->setPadding(10);//距离右边的距离
 
@@ -110,8 +328,30 @@ void PlotWidget::initCustomPlot(int count)
     customPlot->xAxis->grid()->setSubGridVisible(false);
     customPlot->yAxis->grid()->setSubGridVisible(false);
 
-    // 添加散点图
-    for (int i=0; i<count; ++i){
+    // 添加能谱图
+    for (int i=0; i<2; ++i){
+        QCPGraph * curGraph = customPlot->addGraph(customPlot->xAxis, customPlot->yAxis);
+        curGraph->setName(QString("Det %1").arg(i + 1));
+        curGraph->setAntialiased(false);
+        Q_UNUSED(curGraph);
+        curGraph->setPen(QPen(clrLine[i]));
+        curGraph->selectionDecorator()->setPen(QPen(clrLine[i]));
+        //curGraph->setLineStyle(QCPGraph::lsLine);
+        curGraph->setLineStyle(QCPGraph::lsNone);// 隐藏线性图
+        curGraph->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssPlus, 2));//显示散点图
+    }
+
+    // 添加高斯曲线图
+    QCPGraph *graphCurve = customPlot->addGraph(customPlot->xAxis, customPlot->yAxis);
+    graphCurve->setName(QString("高斯曲线"));
+    graphCurve->setAntialiased(true);
+    graphCurve->setPen(QPen(clrGauseCurve));
+    graphCurve->selectionDecorator()->setPen(QPen(clrGauseCurve));
+    graphCurve->setLineStyle(QCPGraph::lsLine);
+    graphCurve->setVisible(false);
+
+    // 添加计数图
+    for (int i=0; i<2; ++i){
         QCPGraph * curGraph = customPlot->addGraph(customPlot->xAxis, customPlot->yAxis);
         curGraph->setName(QString("Det %1").arg(i + 1));
         curGraph->setAntialiased(false);
@@ -187,37 +427,19 @@ void PlotWidget::initCustomPlot(int count)
     dragRectItem->setAntialiased(false);
     dragRectItem->topLeft->setType(QCPItemPosition::ptPlotCoords);//QCPItemPosition::ptAbsolute);
     dragRectItem->bottomRight->setType(QCPItemPosition::ptPlotCoords);//QCPItemPosition::ptAbsolute);
-    dragRectItem->setPen(QPen(clrSelect, 1, Qt::DotLine));// 边框
+    dragRectItem->setPen(QPen(clrSelect, 2, Qt::DotLine));// 边框
     dragRectItem->setBrush(Qt::NoBrush);// 背景色
-    dragRectItem->setSelectedPen(QPen(clrSelect, 1, Qt::DotLine));
+    dragRectItem->setSelectedPen(QPen(clrSelect, 2, Qt::DotLine));
     dragRectItem->setVisible(false);
-
-    // 图形刷新
-    customPlot->replot();
-
-//    QTimer *timerUpdate = new QTimer(this);
-//    static int timerRef = 0;
-//    static int lastV = qrand() % 100 + 5000;
-//    connect(timerUpdate, &QTimer::timeout, this, [=](){
-//        // 更新数据
-//        lastV += qrand() % 100 - 50;
-//        customPlot->graph(0)->addData(timerRef++, lastV);
-
-//        // 保持图形范围合理
-//        if (timerRef >= 2048)
-//            customPlot->xAxis->setRange(timerRef - 2048, 2048, Qt::AlignLeft);
-
-//        // 重新绘制
-//        customPlot->replot();
-
-//        customPlot->yAxis->rescale(true);
-//    });
-//    timerUpdate->start(10);
 
     connect(customPlot, SIGNAL(plottableClick(QCPAbstractPlottable*, int, QMouseEvent*)), this, SLOT(slotPlotClick(QCPAbstractPlottable*, int, QMouseEvent*)));
     //connect(customPlot, SIGNAL(selectionChangedByUser()), this, SLOT(slotSelectionChanged()));
     connect(customPlot, SIGNAL(beforeReplot()), this, SLOT(slotBeforeReplot()));
     connect(customPlot, SIGNAL(afterLayout()), this, SLOT(slotBeforeReplot()));
+
+    updateShowModel(false);
+    // 图形刷新
+    customPlot->replot();
 
 //    QTimer::singleShot(50, this, [=](){
 //        //随机数据
@@ -315,11 +537,11 @@ void PlotWidget::initDetailWidget()
     {
         QHBoxLayout *layout = new QHBoxLayout();
         group->setLayout(layout);
-        QRadioButton *btn1 = new QRadioButton(tr("Detector 1"), this->customPlot);
+        QRadioButton *btn1 = new QRadioButton(tr("Det 1"), this->customPlot);
         btn1->setCheckable(true);
         btn1->setChecked(true);
         layout->addWidget(btn1);
-        QRadioButton *btn2 = new QRadioButton(tr("Detector 2"), this->customPlot);
+        QRadioButton *btn2 = new QRadioButton(tr("Det 2"), this->customPlot);
         btn2->setCheckable(true);
         btn2->setChecked(false);
         layout->addWidget(btn2);
@@ -332,20 +554,16 @@ void PlotWidget::initDetailWidget()
         });
     }
     detailWidget->layout()->addWidget(group);
-
-//    QComboBox* comboBox = new QComboBox(customPlot);
-//    comboBox->setObjectName("customPlot-comboBox");
-//    comboBox->setFixedWidth(100);
-//    comboBox->addItems(QStringList() << QObject::tr("探测器1") << QObject::tr("探测器2"));
-//    comboBox->show();
-//    connect(comboBox, QOverload<int>::of(&QComboBox::activated), this, [=](int index){
-
-//    });
+    group->setFixedHeight(60);
     connect(customPlot, &QCustomPlot::afterLayout, this, [=](){
         //QPoint position = customPlot->axisRect()->topRight();
         //comboBox->move(position - QPoint(comboBox->width() - 1, 0));
         detailWidget->move(customPlot->axisRect()->topLeft() + QPoint(1, 0));
     });
+
+    // 暂时未实现，先隐藏起来
+    detailTableWidget->hide();
+    detailWidget->setFixedHeight(60);
 }
 
 QCustomPlot *PlotWidget::customPlotInstance() const
@@ -390,6 +608,8 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                         customPlot->graph(index)->setData(keys, values, colors);
                     }
 
+                    if (customPlot->graphCount() >= 3)
+                        customPlot->graph(2)->setVisible(false);
                     dragRectItem->setVisible(false);
                     coordsTextItem->setVisible(false);
                     lineFlagItem->setVisible(false);
@@ -490,14 +710,29 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                             key_from = qMin(key_from, key_to);
                             key_to = qMax(key_temp, key_to);
 
+                            double value_from = dragRectItem->topLeft->value();
+                            double value_to = dragRectItem->bottomRight->value();
+                            double value_temp = value_from;
+                            value_from = qMin(value_from, value_to);
+                            value_to = qMax(value_temp, value_to);
+
                             QCPGraph *graph = customPlot->graph(currentGraphIndex);
-                            QVector<double> keys, values;
+                            QVector<double> keys, values, curveKeys;
                             QVector<QColor> colors;
+                            int fcount = 0;
+                            std::vector<double> sx;
+                            std::vector<double> sy;
                             for (int i=0; i<graph->data()->size(); ++i){
-                                if (graph->data()->at(i)->key>=key_from && graph->data()->at(i)->key<=key_to) {
+                                if (graph->data()->at(i)->key>=key_from && graph->data()->at(i)->key<=key_to && graph->data()->at(i)->value>=value_to) {
                                     keys << (double)graph->data()->at(i)->key;
                                     values << (double)graph->data()->at(i)->value;
                                     colors << clrRang;
+
+                                    fcount++;
+                                    sx.push_back((double)graph->data()->at(i)->key);
+                                    sy.push_back((double)graph->data()->at(i)->value);
+
+                                    curveKeys << (double)graph->data()->at(i)->key;
                                 } else {
                                     keys << (double)graph->data()->at(i)->key;
                                     values << (double)graph->data()->at(i)->value;
@@ -506,21 +741,55 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                             }
 
                             // 这里需要对数据去重和排序处理
-                            customPlot->graph(0)->setData(keys, values, colors);
+                            graph->setData(keys, values, colors);
                             customPlot->replot();
 
-                            //显示拟合数据
-                            coordsTextItem->setText("峰: 239.10 = 207.37 keV\n"
-                                                    "半高宽: 40.15 FW[1/5]M:71.59\n"
-                                                    "库: Sn-113[Tin]在255.04; 0 Bq\n"
-                                                    "总计数面积: 623036\n"
-                                                    "净面积: 57994 +/-3703\n"
-                                                    "总计数/净计数 比率:731.18/68.06 cps");
-                            double key, value;
-                            graph->pixelsToCoords(e->pos().x(), e->pos().y(), key, value);
-                            coordsTextItem->position->setCoords(key, value);
-                            coordsTextItem->setVisible(true);
-                            customPlot->replot();
+                            // 高斯拟合
+                            {
+                                slotGauss(key_from, key_to);
+                                double result[3];
+                                fit_GaussCurve(fcount, sx, sy, result);
+
+//                                QString info = QString("半高宽：%1\n峰: %2 = %3")
+//                                        .arg(QString::number(result[0], 'f', 3))
+//                                        .arg(QString::number(result[1], 'f', 0))
+//                                        .arg(QString::number(result[2], 'f', 3));
+//                                //显示拟合数据
+////                              coordsTextItem->setText("峰: 239.10 = 207.37 keV\n"
+////                                                        "半高宽: 40.15 FW[1/5]M:71.59\n"
+////                                                        "库: Sn-113[Tin]在255.04; 0 Bq\n"
+////                                                        "总计数面积: 623036\n"
+////                                                        "净面积: 57994 +/-3703\n"
+////                                                        "总计数/净计数 比率:731.18/68.06 cps");
+//                                coordsTextItem->setText(info);
+//                                double key, value;
+//                                graph->pixelsToCoords(e->pos().x(), e->pos().y(), key, value);
+//                                coordsTextItem->position->setCoords(key, value);
+//                                coordsTextItem->setVisible(true);
+
+//                                //绘制拟合曲线
+//                                QCPGraph *graphCurve = customPlot->graph(2);
+//                                QVector<double> curveValues;
+//                                double a = result[2];
+//                                double u = result[1];
+//                                double FWHM = result[0];
+//                                double ln2 = log(2);
+//                                for (int i=0; i<curveKeys.size(); ++i){
+//                                    //a*exp[-4ln2(x-u)^2/FWHM^2]，a=result[2],u=result[1],FWHM=result[0].
+//                                    double x = curveKeys[i];
+//                                    double v = a*exp(-4*ln2*pow(x-u,2)/pow(FWHM, 2));
+
+//                                    curveValues.push_back(v);
+//                                }
+//                                graphCurve->setData(curveKeys, curveValues);
+//                                graphCurve->setVisible(true);
+//                                customPlot->replot();
+
+                                //计算符合能窗
+                                unsigned int minMean = (result[1] - result[0] / 2);
+                                unsigned int maxMean = (result[1] + result[0] / 2);
+                                emit sigUpdateMeanValues(currentGraphIndex, minMean, maxMean);
+                            }
                         }
                     }
 
@@ -598,15 +867,15 @@ void PlotWidget::slotUpdateCountData(PariticalCountFrame frame)
     int channelIndex = frame.channel;
     QVector<double> keys, values;
     QVector<QColor> colors;
-    for (int i=0; i<frame.timeCountRate.size(); ++i){
-        keys << i;
+    for (size_t i=0; i<frame.timeCountRate.size(); ++i){
+        keys << i * frame.stepT;
         values << frame.timeCountRate[i].CountRates;
         colors << clrLine[channelIndex];
     }
 
     //customPlot->xAxis->setRange(0, frame.timeCountRate.size());
     //customPlot->yAxis->rescale(true);
-    customPlot->graph(channelIndex)->addData(keys, values, colors);
+    customPlot->graph(2+channelIndex)->addData(keys, values, colors);
     customPlot->replot();
 }
 
@@ -618,7 +887,7 @@ void PlotWidget::slotUpdateSpectrumData(PariticalSpectrumFrame frame)
     QVector<QColor> colors;
     currentFrame[channelIndex].data.resize(frame.data.size());
     unsigned int maxEngry = 0;
-    for (int i=0; i<frame.data.size(); ++i){
+    for (size_t i=0; i<frame.data.size(); ++i){
         keys << i;
         //values << frame.data[i];
         currentFrame[channelIndex].data[i] += frame.data[i];//将能量叠加
@@ -647,8 +916,80 @@ void PlotWidget::slotUpdateSpectrumData(PariticalSpectrumFrame frame)
 
 void PlotWidget::slotResetPlot()
 {
-    for (int i=0; i<2; ++i){
+    for (int i=0; i<GRAPH_COUNT; ++i){
         currentFrame[i].data.clear();
-        //customPlot->graph(i)->d
+    }
+}
+
+void PlotWidget::updateShowModel(bool refModel)
+{
+    customPlot->graph(ENGRY_GRAPH_1)->setVisible(!refModel);
+    customPlot->graph(ENGRY_GRAPH_2)->setVisible(!refModel);
+    customPlot->graph(GAUSS_GRAPH)->setVisible(!refModel);
+    customPlot->graph(COUNT_GRAPH_1)->setVisible(refModel);
+    customPlot->graph(COUNT_GRAPH_2)->setVisible(refModel);
+}
+
+void PlotWidget::slotGauss(int leftE, int rightE)
+{
+    double key_from = dragRectItem->topLeft->key();
+    double key_to = dragRectItem->bottomRight->key();
+    double key_temp = key_from;
+    key_from = qMin(key_from, key_to);
+    key_to = qMax(key_temp, key_to);
+
+    double value_from = dragRectItem->topLeft->value();
+    double value_to = dragRectItem->bottomRight->value();
+    double value_temp = value_from;
+    value_from = qMin(value_from, value_to);
+    value_to = qMax(value_temp, value_to);
+
+    QCPGraph *graph = customPlot->graph(currentGraphIndex);
+    QVector<double> keys, values, curveKeys;
+    QVector<QColor> colors;
+    int fcount = 0;
+    std::vector<double> sx;
+    std::vector<double> sy;
+    for (int i=0; i<graph->data()->size(); ++i){
+        if (graph->data()->at(i)->key>=leftE && graph->data()->at(i)->key<=rightE) {
+            keys << (double)graph->data()->at(i)->key;
+            values << (double)graph->data()->at(i)->value;
+            colors << clrRang;
+
+            fcount++;
+            sx.push_back((double)graph->data()->at(i)->key);
+            sy.push_back((double)graph->data()->at(i)->value);
+
+            curveKeys << (double)graph->data()->at(i)->key;
+        } else {
+            keys << (double)graph->data()->at(i)->key;
+            values << (double)graph->data()->at(i)->value;
+            colors << graph->data()->at(i)->color;
+        }
+    }
+
+    // 高斯拟合
+    {
+        double result[3];
+        fit_GaussCurve(fcount, sx, sy, result);
+
+        //绘制拟合曲线
+        QCPGraph *graphCurve = customPlot->graph(2);
+        QVector<double> curveValues;
+        double a = result[2];
+        double u = result[1];
+        double FWHM = result[0];
+        double ln2 = log(2);
+        for (int i=0; i<curveKeys.size(); ++i){
+            //a*exp[-4ln2(x-u)^2/FWHM^2]，a=result[2],u=result[1],FWHM=result[0].
+            double x = curveKeys[i];
+            double v = a*exp(-4*ln2*pow(x-u,2)/pow(FWHM, 2));
+
+            curveValues.push_back(v);
+        }
+
+        graphCurve->setData(curveKeys, curveValues);
+        graphCurve->setVisible(true);
+        customPlot->replot();
     }
 }

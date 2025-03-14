@@ -347,7 +347,7 @@
          <widget class="QWidget" name="widget_right" native="true">
           <property name="maximumSize">
            <size>
-            <width>310</width>
+            <width>350</width>
             <height>16777215</height>
            </size>
           </property>
@@ -376,7 +376,7 @@
               </size>
              </property>
              <property name="currentIndex">
-              <number>0</number>
+              <number>2</number>
              </property>
              <widget class="QWidget" name="tab_3">
               <attribute name="title">
@@ -439,7 +439,17 @@
                       <number>0</number>
                      </property>
                      <item>
-                      <widget class="QSpinBox" name="spinBox_1_leftE"/>
+                      <widget class="QSpinBox" name="spinBox_1_leftE">
+                       <property name="minimum">
+                        <number>1</number>
+                       </property>
+                       <property name="maximum">
+                        <number>4096</number>
+                       </property>
+                       <property name="value">
+                        <number>400</number>
+                       </property>
+                      </widget>
                      </item>
                      <item>
                       <widget class="QLabel" name="label_38">
@@ -458,7 +468,17 @@
                       </widget>
                      </item>
                      <item>
-                      <widget class="QSpinBox" name="spinBox_1_rightE"/>
+                      <widget class="QSpinBox" name="spinBox_1_rightE">
+                       <property name="minimum">
+                        <number>1</number>
+                       </property>
+                       <property name="maximum">
+                        <number>4096</number>
+                       </property>
+                       <property name="value">
+                        <number>600</number>
+                       </property>
+                      </widget>
                      </item>
                     </layout>
                    </widget>
@@ -518,7 +538,17 @@
                    </widget>
                   </item>
                   <item row="7" column="1">
-                   <widget class="QSpinBox" name="spinBox_2"/>
+                   <widget class="QSpinBox" name="spinBox_2">
+                    <property name="minimum">
+                     <number>1</number>
+                    </property>
+                    <property name="maximum">
+                     <number>1000</number>
+                    </property>
+                    <property name="value">
+                     <number>10</number>
+                    </property>
+                   </widget>
                   </item>
                   <item row="7" column="2">
                    <widget class="QLabel" name="label_36">
@@ -542,6 +572,12 @@
                   </item>
                   <item row="1" column="1">
                    <widget class="QSpinBox" name="spinBox_step">
+                    <property name="minimum">
+                     <number>1</number>
+                    </property>
+                    <property name="maximum">
+                     <number>3600</number>
+                    </property>
                     <property name="value">
                      <number>1</number>
                     </property>
@@ -634,7 +670,17 @@
                       <number>0</number>
                      </property>
                      <item>
-                      <widget class="QSpinBox" name="spinBox_2_leftE"/>
+                      <widget class="QSpinBox" name="spinBox_2_leftE">
+                       <property name="minimum">
+                        <number>1</number>
+                       </property>
+                       <property name="maximum">
+                        <number>4096</number>
+                       </property>
+                       <property name="value">
+                        <number>400</number>
+                       </property>
+                      </widget>
                      </item>
                      <item>
                       <widget class="QLabel" name="label_39">
@@ -650,7 +696,17 @@
                       </widget>
                      </item>
                      <item>
-                      <widget class="QSpinBox" name="spinBox_2_rightE"/>
+                      <widget class="QSpinBox" name="spinBox_2_rightE">
+                       <property name="minimum">
+                        <number>1</number>
+                       </property>
+                       <property name="maximum">
+                        <number>4096</number>
+                       </property>
+                       <property name="value">
+                        <number>600</number>
+                       </property>
+                      </widget>
                      </item>
                     </layout>
                    </widget>
@@ -787,7 +843,17 @@
                    </widget>
                   </item>
                   <item row="0" column="1" colspan="2">
-                   <widget class="QSpinBox" name="spinBox_9"/>
+                   <widget class="QSpinBox" name="spinBox_9">
+                    <property name="minimum">
+                     <number>1</number>
+                    </property>
+                    <property name="maximum">
+                     <number>864000</number>
+                    </property>
+                    <property name="value">
+                     <number>3600</number>
+                    </property>
+                   </widget>
                   </item>
                   <item row="1" column="0">
                    <widget class="QLabel" name="label_28">
@@ -806,7 +872,14 @@
                    </widget>
                   </item>
                   <item row="1" column="1" colspan="4">
-                   <widget class="QSpinBox" name="spinBox_10"/>
+                   <widget class="QSpinBox" name="spinBox_10">
+                    <property name="minimum">
+                     <number>0</number>
+                    </property>
+                    <property name="maximum">
+                     <number>864000</number>
+                    </property>
+                   </widget>
                   </item>
                  </layout>
                 </widget>
@@ -882,7 +955,17 @@
                       <number>0</number>
                      </property>
                      <item>
-                      <widget class="QSpinBox" name="spinBox_15"/>
+                      <widget class="QSpinBox" name="spinBox_15">
+                       <property name="minimum">
+                        <number>1</number>
+                       </property>
+                       <property name="maximum">
+                        <number>4096</number>
+                       </property>
+                       <property name="value">
+                        <number>400</number>
+                       </property>
+                      </widget>
                      </item>
                      <item>
                       <widget class="QLabel" name="label_52">
@@ -898,7 +981,17 @@
                       </widget>
                      </item>
                      <item>
-                      <widget class="QSpinBox" name="spinBox_16"/>
+                      <widget class="QSpinBox" name="spinBox_16">
+                       <property name="minimum">
+                        <number>1</number>
+                       </property>
+                       <property name="maximum">
+                        <number>4096</number>
+                       </property>
+                       <property name="value">
+                        <number>600</number>
+                       </property>
+                      </widget>
                      </item>
                     </layout>
                    </widget>
@@ -914,13 +1007,37 @@
                    </widget>
                   </item>
                   <item row="5" column="1">
-                   <widget class="QSpinBox" name="spinBox_14"/>
+                   <widget class="QSpinBox" name="spinBox_14">
+                    <property name="minimum">
+                     <number>1</number>
+                    </property>
+                    <property name="maximum">
+                     <number>1000</number>
+                    </property>
+                    <property name="value">
+                     <number>10</number>
+                    </property>
+                   </widget>
                   </item>
                   <item row="4" column="1">
-                   <widget class="QSpinBox" name="spinBox_13"/>
+                   <widget class="QSpinBox" name="spinBox_13">
+                    <property name="minimum">
+                     <number>1</number>
+                    </property>
+                    <property name="maximum">
+                     <number>36000</number>
+                    </property>
+                   </widget>
                   </item>
                   <item row="2" column="1">
-                   <widget class="QSpinBox" name="spinBox_12"/>
+                   <widget class="QSpinBox" name="spinBox_12">
+                    <property name="minimum">
+                     <number>0</number>
+                    </property>
+                    <property name="maximum">
+                     <number>864000</number>
+                    </property>
+                   </widget>
                   </item>
                   <item row="0" column="1" colspan="2">
                    <widget class="QLineEdit" name="lineEdit_18"/>
@@ -964,7 +1081,17 @@
                       <number>0</number>
                      </property>
                      <item>
-                      <widget class="QSpinBox" name="spinBox_17"/>
+                      <widget class="QSpinBox" name="spinBox_17">
+                       <property name="minimum">
+                        <number>1</number>
+                       </property>
+                       <property name="maximum">
+                        <number>4096</number>
+                       </property>
+                       <property name="value">
+                        <number>400</number>
+                       </property>
+                      </widget>
                      </item>
                      <item>
                       <widget class="QLabel" name="label_53">
@@ -980,7 +1107,17 @@
                       </widget>
                      </item>
                      <item>
-                      <widget class="QSpinBox" name="spinBox_18"/>
+                      <widget class="QSpinBox" name="spinBox_18">
+                       <property name="minimum">
+                        <number>1</number>
+                       </property>
+                       <property name="maximum">
+                        <number>4096</number>
+                       </property>
+                       <property name="value">
+                        <number>600</number>
+                       </property>
+                      </widget>
                      </item>
                     </layout>
                    </widget>
@@ -1108,10 +1245,26 @@
                  </property>
                  <layout class="QGridLayout" name="gridLayout_10">
                   <item row="1" column="1">
-                   <widget class="QSpinBox" name="spinBox_11"/>
+                   <widget class="QSpinBox" name="spinBox_11">
+                    <property name="minimum">
+                     <number>1</number>
+                    </property>
+                    <property name="maximum">
+                     <number>864000</number>
+                    </property>
+                    <property name="value">
+                     <number>3600</number>
+                    </property>
+                   </widget>
                   </item>
                   <item row="0" column="0">
                    <widget class="QLabel" name="label_43">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
                     <property name="text">
                      <string>触发时刻：</string>
                     </property>
@@ -1145,6 +1298,12 @@
                   </item>
                   <item row="1" column="0">
                    <widget class="QLabel" name="label_49">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
                     <property name="text">
                      <string>测量时长(s)：</string>
                     </property>
@@ -1333,7 +1492,17 @@
                       <number>0</number>
                      </property>
                      <item>
-                      <widget class="QSpinBox" name="spinBox_25"/>
+                      <widget class="QSpinBox" name="spinBox_25">
+                       <property name="minimum">
+                        <number>1</number>
+                       </property>
+                       <property name="maximum">
+                        <number>4096</number>
+                       </property>
+                       <property name="value">
+                        <number>400</number>
+                       </property>
+                      </widget>
                      </item>
                      <item>
                       <widget class="QLabel" name="label_13">
@@ -1349,7 +1518,17 @@
                       </widget>
                      </item>
                      <item>
-                      <widget class="QSpinBox" name="spinBox_26"/>
+                      <widget class="QSpinBox" name="spinBox_26">
+                       <property name="minimum">
+                        <number>1</number>
+                       </property>
+                       <property name="maximum">
+                        <number>4096</number>
+                       </property>
+                       <property name="value">
+                        <number>600</number>
+                       </property>
+                      </widget>
                      </item>
                     </layout>
                    </widget>
@@ -1389,7 +1568,17 @@
                       <number>0</number>
                      </property>
                      <item>
-                      <widget class="QSpinBox" name="spinBox_23"/>
+                      <widget class="QSpinBox" name="spinBox_23">
+                       <property name="minimum">
+                        <number>1</number>
+                       </property>
+                       <property name="maximum">
+                        <number>4096</number>
+                       </property>
+                       <property name="value">
+                        <number>400</number>
+                       </property>
+                      </widget>
                      </item>
                      <item>
                       <widget class="QLabel" name="label_12">
@@ -1405,13 +1594,33 @@
                       </widget>
                      </item>
                      <item>
-                      <widget class="QSpinBox" name="spinBox_24"/>
+                      <widget class="QSpinBox" name="spinBox_24">
+                       <property name="minimum">
+                        <number>1</number>
+                       </property>
+                       <property name="maximum">
+                        <number>4096</number>
+                       </property>
+                       <property name="value">
+                        <number>600</number>
+                       </property>
+                      </widget>
                      </item>
                     </layout>
                    </widget>
                   </item>
                   <item row="2" column="1">
-                   <widget class="QSpinBox" name="spinBox_22"/>
+                   <widget class="QSpinBox" name="spinBox_22">
+                    <property name="minimum">
+                     <number>1</number>
+                    </property>
+                    <property name="maximum">
+                     <number>1000</number>
+                    </property>
+                    <property name="value">
+                     <number>10</number>
+                    </property>
+                   </widget>
                   </item>
                   <item row="0" column="0">
                    <widget class="QLabel" name="label">
@@ -1424,7 +1633,17 @@
                    </widget>
                   </item>
                   <item row="1" column="1">
-                   <widget class="QSpinBox" name="spinBox_21"/>
+                   <widget class="QSpinBox" name="spinBox_21">
+                    <property name="minimum">
+                     <number>0</number>
+                    </property>
+                    <property name="maximum">
+                     <number>864000</number>
+                    </property>
+                    <property name="value">
+                     <number>0</number>
+                    </property>
+                   </widget>
                   </item>
                   <item row="5" column="0" colspan="3">
                    <widget class="QWidget" name="widget_13" native="true">
@@ -1470,9 +1689,6 @@
                     </layout>
                    </widget>
                   </item>
-                  <item row="0" column="1">
-                   <widget class="QSpinBox" name="spinBox_20"/>
-                  </item>
                   <item row="0" column="2">
                    <widget class="QLabel" name="label_5">
                     <property name="sizePolicy">
@@ -1513,6 +1729,16 @@
                     </property>
                    </widget>
                   </item>
+                  <item row="0" column="1">
+                   <widget class="QDoubleSpinBox" name="doubleSpinBox_20">
+                    <property name="maximum">
+                     <double>9999999999.000000000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>100000.000000000000000</double>
+                    </property>
+                   </widget>
+                  </item>
                  </layout>
                 </widget>
                </item>
@@ -1528,64 +1754,59 @@
                   <string>测量参数设置</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_11">
-                  <item row="1" column="0" colspan="4">
-                   <widget class="QWidget" name="widget_17" native="true">
-                    <layout class="QHBoxLayout" name="horizontalLayout_16">
-                     <property name="leftMargin">
-                      <number>0</number>
-                     </property>
-                     <property name="topMargin">
-                      <number>0</number>
-                     </property>
-                     <property name="rightMargin">
-                      <number>0</number>
-                     </property>
-                     <property name="bottomMargin">
-                      <number>0</number>
-                     </property>
-                     <item>
-                      <spacer name="horizontalSpacer_4">
-                       <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
-                       </property>
-                       <property name="sizeHint" stdset="0">
-                        <size>
-                         <width>195</width>
-                         <height>20</height>
-                        </size>
-                       </property>
-                      </spacer>
-                     </item>
-                     <item>
-                      <widget class="QPushButton" name="pushButton_measure_3">
-                       <property name="minimumSize">
-                        <size>
-                         <width>105</width>
-                         <height>0</height>
-                        </size>
-                       </property>
-                       <property name="text">
-                        <string>开始测量</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </widget>
-                  </item>
                   <item row="0" column="0">
                    <widget class="QLabel" name="label_3">
                     <property name="layoutDirection">
                      <enum>Qt::RightToLeft</enum>
                     </property>
                     <property name="text">
-                     <string>测量时间(s)：</string>
+                     <string>测量时长(s)：</string>
                     </property>
                     <property name="alignment">
                      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                     </property>
                    </widget>
                   </item>
+                  <item row="0" column="1" colspan="2">
+                   <widget class="QSpinBox" name="spinBox_19">
+                    <property name="minimum">
+                     <number>1</number>
+                    </property>
+                    <property name="maximum">
+                     <number>864000</number>
+                    </property>
+                    <property name="value">
+                     <number>3600</number>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="4">
+                   <widget class="QPushButton" name="pushButton_measure_3">
+                    <property name="minimumSize">
+                     <size>
+                      <width>105</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <property name="text">
+                     <string>开始测量</string>
+                    </property>
+                   </widget>
+                  </item>
                   <item row="0" column="3">
+                   <widget class="QLabel" name="label_9">
+                    <property name="layoutDirection">
+                     <enum>Qt::RightToLeft</enum>
+                    </property>
+                    <property name="text">
+                     <string>量程选择：</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="4">
                    <widget class="QComboBox" name="comboBox">
                     <item>
                      <property name="text">
@@ -1609,21 +1830,18 @@
                     </item>
                    </widget>
                   </item>
-                  <item row="0" column="2">
-                   <widget class="QLabel" name="label_9">
-                    <property name="layoutDirection">
-                     <enum>Qt::RightToLeft</enum>
+                  <item row="4" column="0" colspan="4">
+                   <spacer name="horizontalSpacer_10">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
                     </property>
-                    <property name="text">
-                     <string>量程选择：</string>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>40</width>
+                      <height>20</height>
+                     </size>
                     </property>
-                    <property name="alignment">
-                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="1">
-                   <widget class="QSpinBox" name="spinBox_19"/>
+                   </spacer>
                   </item>
                  </layout>
                 </widget>
@@ -1794,9 +2012,15 @@
                      <number>0</number>
                     </property>
                     <item>
-                     <widget class="QSpinBox" name="spinBox_4">
+                     <widget class="QSpinBox" name="spinBox_leftE">
+                      <property name="minimum">
+                       <number>1</number>
+                      </property>
                       <property name="maximum">
-                       <number>2048</number>
+                       <number>4096</number>
+                      </property>
+                      <property name="value">
+                       <number>400</number>
                       </property>
                      </widget>
                     </item>
@@ -1814,128 +2038,21 @@
                      </widget>
                     </item>
                     <item>
-                     <widget class="QSpinBox" name="spinBox_5">
+                     <widget class="QSpinBox" name="spinBox_rightE">
+                      <property name="minimum">
+                       <number>1</number>
+                      </property>
                       <property name="maximum">
-                       <number>2048</number>
+                       <number>4096</number>
+                      </property>
+                      <property name="value">
+                       <number>600</number>
                       </property>
                      </widget>
                     </item>
                    </layout>
                   </widget>
                  </item>
-                </layout>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item>
-            <widget class="QWidget" name="widget_15" native="true">
-             <layout class="QVBoxLayout" name="verticalLayout_6">
-              <property name="spacing">
-               <number>0</number>
-              </property>
-              <property name="leftMargin">
-               <number>0</number>
-              </property>
-              <property name="topMargin">
-               <number>0</number>
-              </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>0</number>
-              </property>
-              <item>
-               <widget class="QWidget" name="widget_9" native="true">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>23</height>
-                 </size>
-                </property>
-                <property name="styleSheet">
-                 <string notr="true">.QWidget{
-	border: 1px solid #5e5e5e;	
-	background-color: rgb(190, 190, 190);
-}</string>
-                </property>
-                <layout class="QHBoxLayout" name="horizontalLayout_9">
-                 <property name="topMargin">
-                  <number>0</number>
-                 </property>
-                 <property name="bottomMargin">
-                  <number>0</number>
-                 </property>
-                 <item>
-                  <widget class="QLabel" name="label_tag">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="pixmap">
-                    <pixmap resource="resource.qrc">:/resource/arrow-drop-up-x16.png</pixmap>
-                   </property>
-                   <property name="scaledContents">
-                    <bool>false</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLabel" name="label_tag_">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="text">
-                    <string>硬件参数设置</string>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </widget>
-              </item>
-              <item>
-               <widget class="QWidget" name="widget_tag" native="true">
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>0</height>
-                 </size>
-                </property>
-                <layout class="QGridLayout" name="gridLayout_12">
-                 <property name="leftMargin">
-                  <number>0</number>
-                 </property>
-                 <property name="topMargin">
-                  <number>0</number>
-                 </property>
-                 <property name="rightMargin">
-                  <number>0</number>
-                 </property>
-                 <property name="bottomMargin">
-                  <number>0</number>
-                 </property>
-                 <property name="spacing">
-                  <number>0</number>
-                 </property>
                 </layout>
                </widget>
               </item>
@@ -2115,8 +2232,12 @@
    <addaction name="action_detector_connect"/>
    <addaction name="separator"/>
    <addaction name="action_devices"/>
+   <addaction name="action_config"/>
+   <addaction name="separator"/>
    <addaction name="action_refresh"/>
    <addaction name="actionaction_line_log"/>
+   <addaction name="separator"/>
+   <addaction name="action_restore"/>
    <addaction name="separator"/>
    <addaction name="actionaction_close"/>
   </widget>
@@ -2183,6 +2304,9 @@ p, li { white-space: pre-wrap; }
    </property>
   </action>
   <action name="action_power">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resource.qrc">
      <normaloff>:/resource/power-off.png</normaloff>:/resource/power-off.png</iconset>
@@ -2198,6 +2322,9 @@ p, li { white-space: pre-wrap; }
    </property>
   </action>
   <action name="action_SpectrumModel">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resource.qrc">
      <normaloff>:/resource/energy.png</normaloff>:/resource/energy.png</iconset>
@@ -2207,6 +2334,9 @@ p, li { white-space: pre-wrap; }
    </property>
   </action>
   <action name="action_WaveformModel">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resource.qrc">
      <normaloff>:/resource/wave.png</normaloff>:/resource/wave.png</iconset>
@@ -2255,6 +2385,9 @@ p, li { white-space: pre-wrap; }
    </property>
   </action>
   <action name="actionaction_line_log">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resource.qrc">
      <normaloff>:/resource/line.png</normaloff>:/resource/line.png</iconset>
@@ -2291,6 +2424,9 @@ p, li { white-space: pre-wrap; }
    </property>
   </action>
   <action name="action_detector_connect">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resource.qrc">
      <normaloff>:/resource/conect.png</normaloff>:/resource/conect.png</iconset>
@@ -2306,6 +2442,9 @@ p, li { white-space: pre-wrap; }
    <property name="checked">
     <bool>true</bool>
    </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resource.qrc">
      <normaloff>:/resource/IoTDB.png</normaloff>:/resource/IoTDB.png</iconset>
@@ -2318,6 +2457,9 @@ p, li { white-space: pre-wrap; }
    </property>
   </action>
   <action name="action_refresh">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resource.qrc">
      <normaloff>:/resource/pause.png</normaloff>:/resource/pause.png</iconset>
@@ -2327,6 +2469,35 @@ p, li { white-space: pre-wrap; }
    </property>
    <property name="toolTip">
     <string>暂停/继续</string>
+   </property>
+  </action>
+  <action name="action_start_measure">
+   <property name="text">
+    <string>开始测量</string>
+   </property>
+  </action>
+  <action name="action_config">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resource.qrc">
+     <normaloff>:/resource/canshushezhi-05.png</normaloff>:/resource/canshushezhi-05.png</iconset>
+   </property>
+   <property name="text">
+    <string>硬件设置</string>
+   </property>
+  </action>
+  <action name="action_restore">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resource.qrc">
+     <normaloff>:/resource/restore.png</normaloff>:/resource/restore.png</iconset>
+   </property>
+   <property name="text">
+    <string>恢复出厂设置</string>
    </property>
   </action>
  </widget>

@@ -29,12 +29,17 @@ MainWindow::MainWindow(QWidget *parent)
 
     emit sigUpdatePlot(tr("更新ui..."));
     connect(this, SIGNAL(sigWriteLog(const QString &, log_level)), this, SLOT(slotWriteLog(const QString &, log_level)));
-    commandhelper = new CommandHelper();
-    connect(commandhelper, &CommandHelper::sigDisplacementFault, this, [=](qint32 index){
+    commandhelper = CommandHelper::instance();
+    connect(commandhelper, &CommandHelper::sigDisplacementFault, this, [=](qint32 index){        
         ui->action_net_connect->setIcon(QIcon(":/resource/lianjie-fault.png"));
+        ui->action_net_connect->setText(tr("打开外设"));
+        ui->action_net_connect->setIconText(tr("打开外设"));
+        net_connected[index] = false;
         QString msg = QString(tr("网络故障，外设%1连接失败！").arg((index + 1)));
         ui->statusbar->showMessage(msg);
         emit sigWriteLog(msg);
+
+        slotRefreshUIStatus();
     });
     connect(commandhelper, &CommandHelper::sigDisplacementStatus, this, [=](bool on, qint32 index){
         net_connected[index] = on;
@@ -52,15 +57,22 @@ MainWindow::MainWindow(QWidget *parent)
         QString msg = QString(tr("外设%1状态：%2")).arg(index + 1).arg(on ? tr("开") : tr("关"));
         ui->statusbar->showMessage(msg);
         emit sigWriteLog(msg);
+
+        slotRefreshUIStatus();
     });
 
     // 禁用开启电源按钮
     ui->action_power->setEnabled(false);
     connect(commandhelper, &CommandHelper::sigRelayFault, this, [=](){
+        relay_on = false;
         ui->action_power->setIcon(QIcon(":/resource/lianjie-fault.png"));
+        ui->action_power->setText(tr("打开电源"));
+        ui->action_power->setIconText(tr("打开电源"));
         QString msg = QString(tr("网络故障，电源连接失败！"));
         ui->statusbar->showMessage(msg);
         emit sigWriteLog(msg);
+
+        slotRefreshUIStatus();
     });
 
     connect(commandhelper, &CommandHelper::sigRelayStatus, this, [=](bool on){
@@ -79,12 +91,17 @@ MainWindow::MainWindow(QWidget *parent)
         QString msg = QString(tr("电源状态：%1")).arg(on ? tr("开") : tr("关"));
         ui->statusbar->showMessage(msg);
         emit sigWriteLog(msg);
+
+        slotRefreshUIStatus();
     });
 
     // 禁用连接探测器按钮
     ui->action_detector_connect->setEnabled(false);
     connect(commandhelper, &CommandHelper::sigDetectorFault, this, [=](){
+        detector_connected = false;
         ui->action_detector_connect->setIcon(QIcon(":/resource/conect-fault.png"));
+        ui->action_detector_connect->setText(tr("连接探测器"));
+        ui->action_detector_connect->setIconText(tr("连接探测器"));
         QString msg = QString(tr("网络故障，探测器连接失败！"));
         ui->statusbar->showMessage(msg);
         emit sigWriteLog(msg);
@@ -109,6 +126,8 @@ MainWindow::MainWindow(QWidget *parent)
 
         // 禁用高斯拟合按钮
         ui->pushButton_gauss->setEnabled(false);
+
+        slotRefreshUIStatus();
     });
 
     connect(commandhelper, &CommandHelper::sigDetectorStatus, this, [=](bool on){
@@ -117,57 +136,44 @@ MainWindow::MainWindow(QWidget *parent)
             ui->action_detector_connect->setIcon(QIcon(":/resource/conect-on.png"));
             ui->action_detector_connect->setText(tr("断开探测器"));
             ui->action_detector_connect->setIconText(tr("断开探测器"));
-
-            //手动
-            // 禁用开始测量按钮
-            ui->pushButton_measure->setEnabled(true);
-            // 禁用刷新按钮
-            ui->pushButton_refresh->setEnabled(true);
-
-            //自动
-            // 禁用等候触发按钮
-            ui->pushButton_measure_2->setEnabled(true);
-            // 禁用刷新按钮
-            ui->pushButton_refresh_2->setEnabled(true);
-
-            //标定
-            // 禁用开始测量按钮
-            ui->pushButton_measure_3->setEnabled(true);
-            // 禁用刷新按钮
-            ui->pushButton_refresh_3->setEnabled(true);
-
-            // 禁用高斯拟合按钮
-            ui->pushButton_gauss->setEnabled(true);
         } else {
             ui->action_detector_connect->setIcon(QIcon(":/resource/conect.png"));
             ui->action_detector_connect->setText(tr("连接探测器"));
             ui->action_detector_connect->setIconText(tr("连接探测器"));
-
-            //手动
-            // 禁用开始测量按钮
-            ui->pushButton_measure->setEnabled(false);
-            // 禁用刷新按钮
-            ui->pushButton_refresh->setEnabled(false);
-
-            //自动
-            // 禁用等候触发按钮
-            ui->pushButton_measure_2->setEnabled(false);
-            // 禁用刷新按钮
-            ui->pushButton_refresh_2->setEnabled(false);
-
-            //标定
-            // 禁用开始测量按钮
-            ui->pushButton_measure_3->setEnabled(false);
-            // 禁用刷新按钮
-            ui->pushButton_refresh_3->setEnabled(false);
-
-            // 禁用高斯拟合按钮
-            ui->pushButton_gauss->setEnabled(false);
         }
+
+        //符合测量
+        ui->action_partical->setEnabled(detector_connected);
+        //波形测量
+        ui->action_WaveformModel->setEnabled(detector_connected);
+        //能谱测量
+        ui->action_SpectrumModel->setEnabled(detector_connected);
+
+        //手动
+        // 禁用开始测量按钮
+        ui->pushButton_measure->setEnabled(detector_connected);
+        // 禁用刷新按钮
+        ui->pushButton_refresh->setEnabled(detector_connected);
+
+        //自动
+        // 禁用等候触发按钮
+        ui->pushButton_measure_2->setEnabled(detector_connected);
+        // 禁用刷新按钮
+        ui->pushButton_refresh_2->setEnabled(detector_connected);
+
+        //标定
+        // 禁用开始测量按钮
+        ui->pushButton_measure_3->setEnabled(detector_connected);
+        // 禁用刷新按钮
+        ui->pushButton_refresh_3->setEnabled(detector_connected);
+
+        // 禁用高斯拟合按钮
+        //ui->pushButton_gauss->setEnabled(detector_connected);
 
         QString msg = QString(tr("探测器状态：%1")).arg(on ? tr("开") : tr("关"));
         ui->statusbar->showMessage(msg);
         emit sigWriteLog(msg);
+        slotRefreshUIStatus();
     });
 
     qRegisterMetaType<PariticalCountFrame>("PariticalCountFrame");
@@ -268,8 +274,29 @@ void MainWindow::InitMainWindowUi()
     ui->start_time_text->setDateTime(QDateTime::currentDateTime());
     ui->textEdit_log->clear();
 
-    ui->lineEdit_path->setText("./");
-    ui->lineEdit_filename->setText("test.dat");
+    QString path = QApplication::applicationDirPath() + "/config";
+    QDir dir(path);
+    if (!dir.exists())
+        dir.mkdir(path);
+    QFile file(QApplication::applicationDirPath() + "/config/user.json");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+
+        // 读取文件内容
+        QByteArray jsonData = file.readAll();
+        file.close(); //释放资源
+
+        // 将 JSON 数据解析为 QJsonDocument
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+        QJsonObject jsonObj = jsonDoc.object();
+
+        ui->lineEdit_path->setText(jsonObj["path"].toString());
+        ui->lineEdit_filename->setText(jsonObj["filename"].toString());
+        commandhelper->setDefaultCacheDir(jsonObj["cache"].toString());
+    } else {
+        ui->lineEdit_path->setText("./");
+        ui->lineEdit_filename->setText("test.dat");
+        commandhelper->setDefaultCacheDir(QApplication::applicationDirPath());
+    }
 
     // 手动测量-标定文件
     {
@@ -316,15 +343,6 @@ void MainWindow::InitMainWindowUi()
         ui->tabWidget_client->removeTab(index);
     });
 
-    ui->label_tag->setBuddy(ui->widget_tag);
-    ui->label_tag_->setBuddy(ui->widget_tag);
-    ui->label_tag->installEventFilter(this);
-    ui->label_tag_->installEventFilter(this);
-    FPGASetting *fpgaSetting = new FPGASetting(this);
-    ui->widget_tag->layout()->addWidget(fpgaSetting);
-//    ui->widget_tag->hide();
-//    ui->widget_tag->setProperty("toggled", true);
-
     // 显示计数/能谱
     ui->label_tag_2->setBuddy(ui->widget_tag_2);
     ui->label_tag_2_->setBuddy(ui->widget_tag_2);
@@ -339,8 +357,12 @@ void MainWindow::InitMainWindowUi()
         } else {
             ui->widget_gauss->show();
         }
+
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-Detector");
+        plotWidget->slotResetPlot();
+        commandhelper->updateShowModel(index == 0);
     });
-    ui->widget_gauss->hide();
+    ui->widget_gauss->show();
 
     // 任务栏信息
     QLabel *label_Idle = new QLabel(ui->statusbar);
@@ -393,6 +415,7 @@ void MainWindow::InitMainWindowUi()
     QTimer::singleShot(500, this, [=](){
        this->showMaximized();
     });
+    ui->pushButton_save->setEnabled(false);
 }
 
 void MainWindow::initCustomPlot()
@@ -404,16 +427,29 @@ void MainWindow::initCustomPlot()
     customPlotWidget_Det1_2->setObjectName(tr("real-Detector"));
     customPlotWidget_Det1_2->installEventFilter(this);
     customPlotWidget_Det1_2->setWindowTitle(tr("Detector"));
-    customPlotWidget_Det1_2->initCustomPlot(2);
+    customPlotWidget_Det1_2->initMultiCustomPlot();
     customPlotWidget_Det1_2->initDetailWidget();
     customPlotWidget_Det1_2->show();
+
+    connect(customPlotWidget_Det1_2, &PlotWidget::sigUpdateMeanValues, this, [=](unsigned int channel, unsigned int minMean, unsigned int maxMean){
+       if (channel == 0){
+           ui->spinBox_1_leftE->setValue(minMean);
+           ui->spinBox_1_rightE->setValue(maxMean);
+       } else {
+           ui->spinBox_2_leftE->setValue(minMean);
+           ui->spinBox_2_rightE->setValue(maxMean);
+       }
+
+       ui->spinBox_leftE->setValue(minMean);
+       ui->spinBox_rightE->setValue(maxMean);
+    });
 
     // result
     PlotWidget *customPlotWidget_result = new PlotWidget(ui->widget_plot);
     customPlotWidget_result->setObjectName(tr("real-Result"));
     customPlotWidget_result->installEventFilter(this);
     customPlotWidget_result->setWindowTitle(tr("符合结果"));
-    customPlotWidget_result->initCustomPlot(1);
+    customPlotWidget_result->initCustomPlot();
     customPlotWidget_result->show();
 
     ui->widget_plot->layout()->addWidget(customPlotWidget_Det1_2);
@@ -454,11 +490,11 @@ void MainWindow::slotPlowWidgetDoubleClickEvent()
 
 void MainWindow::on_action_devices_triggered()
 {
-    EquipmentManagementForm *equipmentManagementForm = new EquipmentManagementForm(this);
-    equipmentManagementForm->setAttribute(Qt::WA_DeleteOnClose, true);
-    equipmentManagementForm->setWindowFlags(equipmentManagementForm->windowFlags() |Qt::Dialog);
-    equipmentManagementForm->setWindowModality(Qt::ApplicationModal);
-    equipmentManagementForm->showNormal();
+    EquipmentManagementForm *w = new EquipmentManagementForm(this);
+    w->setAttribute(Qt::WA_DeleteOnClose, true);
+    w->setWindowFlags(w->windowFlags() |Qt::Dialog);
+    w->setWindowModality(Qt::ApplicationModal);
+    w->showNormal();
 }
 
 void MainWindow::slotWriteLog(const QString &log, log_level level/* = lower*/)
@@ -529,11 +565,11 @@ void MainWindow::on_action_SpectrumModel_triggered()
         dockWidget->show();
         dockWidget->activateWindow();
     } else {
-        SpectrumModel *spectrummodel = new SpectrumModel(this);
-        spectrummodel->setAttribute(Qt::WA_DeleteOnClose, true);
-        spectrummodel->setWindowFlags(Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint|Qt::Dialog);
-        spectrummodel->setWindowModality(Qt::ApplicationModal);
-        spectrummodel->showNormal();
+        SpectrumModel *w = new SpectrumModel(this);
+        w->setAttribute(Qt::WA_DeleteOnClose, true);
+        w->setWindowFlags(Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint|Qt::Dialog);
+        w->setWindowModality(Qt::ApplicationModal);
+        w->showNormal();
     }
 }
 
@@ -585,11 +621,11 @@ void MainWindow::on_action_WaveformModel_triggered()
         dockWidget->show();
         dockWidget->activateWindow();
     } else {
-        WaveformModel *waveformModel = new WaveformModel(this);
-        waveformModel->setAttribute(Qt::WA_DeleteOnClose, true);
-        waveformModel->setWindowFlags(Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint|Qt::Dialog);
-        waveformModel->setWindowModality(Qt::ApplicationModal);
-        waveformModel->showNormal();
+        WaveformModel *w = new WaveformModel(this);
+        w->setAttribute(Qt::WA_DeleteOnClose, true);
+        w->setWindowFlags(Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint|Qt::Dialog);
+        w->setWindowModality(Qt::ApplicationModal);
+        w->showNormal();
     }
 }
 
@@ -694,7 +730,6 @@ void MainWindow::on_action_detector_connect_triggered()
         commandhelper->openDetector(ip, port);
     } else {
         measuring = false;
-        ui->pushButton_save->setEnabled(true);
         ui->pushButton_measure->setText(tr("开始测量"));
         commandhelper->slotStopManualMeasure();
         commandhelper->closeDetector();
@@ -703,11 +738,11 @@ void MainWindow::on_action_detector_connect_triggered()
 
 void MainWindow::on_action_energycalibration_triggered()
 {
-    EnergyCalibrationForm *energyCalibrationForm = new EnergyCalibrationForm(this);
-    energyCalibrationForm->setAttribute(Qt::WA_DeleteOnClose, true);
-    energyCalibrationForm->setWindowFlags(Qt::WindowMinMaxButtonsHint|Qt::WindowCloseButtonHint|Qt::Dialog);
-    energyCalibrationForm->setWindowModality(Qt::ApplicationModal);
-    energyCalibrationForm->showNormal();
+    EnergyCalibrationForm *w = new EnergyCalibrationForm(this);
+    w->setAttribute(Qt::WA_DeleteOnClose, true);
+    w->setWindowFlags(Qt::WindowMinMaxButtonsHint|Qt::WindowCloseButtonHint|Qt::Dialog);
+    w->setWindowModality(Qt::ApplicationModal);
+    w->showNormal();
 }
 
 void MainWindow::on_pushButton_measure_clicked()
@@ -720,7 +755,7 @@ void MainWindow::on_pushButton_measure_clicked()
         detectorParameter.waveformPolarity = 0x00;
         detectorParameter.dieTimeLength = 0x05;
         detectorParameter.gain = 0x00;
-        detectorParameter.transferModel = 0x05;// 传输模式
+        detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
 
         // 打开 JSON 文件
         QFile file(QApplication::applicationDirPath() + "/config/fpga.json");
@@ -743,16 +778,21 @@ void MainWindow::on_pushButton_measure_clicked()
         detectorParameter.filename = ui->lineEdit_filename->text();
         measuring = true;
         ui->pushButton_save->setEnabled(false);
+        ui->pushButton_gauss->setEnabled(true);
+        ui->action_refresh->setEnabled(true);
+        ui->actionaction_line_log->setEnabled(true);
         ui->pushButton_measure->setText(tr("停止测量"));
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-Detector");
+        plotWidget->slotResetPlot();
+
         commandhelper->slotStartManualMeasure(detectorParameter);
     } else {
         measuring = false;
         ui->pushButton_save->setEnabled(true);
+        ui->pushButton_gauss->setEnabled(false);
         ui->pushButton_measure->setText(tr("开始测量"));
-
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-Detector");
-        plotWidget->slotResetPlot();
-
+        ui->action_refresh->setEnabled(false);
+        ui->actionaction_line_log->setEnabled(false);
         commandhelper->slotStopManualMeasure();
     }
 }
@@ -769,22 +809,37 @@ void MainWindow::on_pushButton_measure_3_clicked()
 
 void MainWindow::on_pushButton_save_clicked()
 {
-    // 保存参数
-    QJsonObject jsonObj;
+    //存储路径
+    //存储文件名
+    QString filename = ui->lineEdit_path->text() + "/" + ui->lineEdit_filename->text();
+    QFileInfo fInfo(filename);
+    if (fInfo.exists()){
+        if (QMessageBox::question(this, tr("提示"), tr("保存文件名已经存在，是否覆盖重写？"), QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) != QMessageBox::Yes)
+            return ;
+    }
 
-    QJsonObject jsonDetector;
-    QJsonObject jsonRelay;
-
+    // 保存参数    
     QString path = QApplication::applicationDirPath() + "/config";
     QDir dir(path);
     if (!dir.exists())
         dir.mkdir(path);
     QFile file(QApplication::applicationDirPath() + "/config/user.json");
     if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QString path, filename;
+        path = ui->lineEdit_path->text();
+        filename = ui->lineEdit_filename->text();
+        if (!filename.endsWith(".dat"))
+            filename += ".dat";
+
+        QJsonObject jsonObj;
+        jsonObj["path"] = path;
+        jsonObj["filename"] = filename;
         QJsonDocument jsonDoc(jsonObj);
         file.write(jsonDoc.toJson());
         file.close();
-    }
+
+        commandhelper->saveFileName(path + "/" + filename);
+    }       
 }
 
 void MainWindow::on_pushButton_refresh_clicked()
@@ -811,5 +866,92 @@ void MainWindow::on_action_refresh_triggered()
         ui->action_refresh->setIcon(QIcon(":/resource/pause.png"));
         ui->action_refresh->setText(tr("暂停刷新"));
         ui->action_refresh->setIconText(tr("暂停刷新"));
+    }
+}
+
+void MainWindow::on_pushButton_gauss_clicked()
+{
+    PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-Detector");
+    plotWidget->slotGauss(ui->spinBox_leftE->value(), ui->spinBox_rightE->value());
+}
+
+void MainWindow::on_action_config_triggered()
+{
+    FPGASetting *w = new FPGASetting(this);
+    w->setAttribute(Qt::WA_DeleteOnClose, true);
+    w->setWindowFlags(Qt::WindowMinMaxButtonsHint|Qt::WindowCloseButtonHint|Qt::Dialog);
+    w->setWindowModality(Qt::ApplicationModal);
+    w->showNormal();
+}
+
+#include "aboutwidget.h"
+void MainWindow::on_action_about_triggered()
+{
+    AboutWidget *w = new AboutWidget(this);
+    w->setAttribute(Qt::WA_DeleteOnClose, true);
+    w->setWindowFlags(Qt::WindowCloseButtonHint|Qt::Dialog);
+    w->setWindowModality(Qt::ApplicationModal);
+    w->showNormal();
+}
+
+void MainWindow::on_action_restore_triggered()
+{
+    if (QMessageBox::warning(this, tr("提示"), tr("是否恢复出厂设置？"), QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) != QMessageBox::Yes)
+        return ;
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    if (measuring){
+        QMessageBox::warning(this, tr("提示"), tr("测量过程中，禁止退出程序！"), QMessageBox::Ok, QMessageBox::Ok);
+        event->ignore();
+        return ;
+    }
+
+    event->accept();
+}
+
+void MainWindow::slotRefreshUIStatus()
+{
+    ui->action_detector_connect->setEnabled(true);
+    ui->action_power->setEnabled(net_connected[0] && net_connected[1]);
+    ui->action_detector_connect->setEnabled(relay_on);
+
+    ui->action_config->setEnabled(detector_connected);
+    ui->action_restore->setEnabled(detector_connected);
+
+    ui->action_refresh->setEnabled(measuring);
+    ui->actionaction_line_log->setEnabled(measuring);
+}
+
+void MainWindow::on_action_cachepath_triggered()
+{
+    QString cacheDir = QFileDialog::getExistingDirectory(this);
+    if (!cacheDir.isEmpty()){
+        // 保存参数
+        QString path = QApplication::applicationDirPath() + "/config";
+        QDir dir(path);
+        if (!dir.exists())
+            dir.mkdir(path);
+
+        QFile file(QApplication::applicationDirPath() + "/config/user.json");
+        if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+            // 读取文件内容
+            QByteArray jsonData = file.readAll();
+
+            // 将 JSON 数据解析为 QJsonDocument
+            QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+            QJsonObject jsonObj = jsonDoc.object();
+
+            //if (jsonObj.contains("defaultCache")){
+                jsonObj["defaultCache"] = cacheDir;
+            //}
+
+            file.write(jsonDoc.toJson());
+            file.close();
+
+        }
+
+        commandhelper->setDefaultCacheDir(cacheDir);
     }
 }

@@ -74,7 +74,7 @@ void DataAnalysisWidget::initCustomPlot()
     customPlotWidget_Det1_2->setObjectName(tr("history-Detector"));
     customPlotWidget_Det1_2->installEventFilter(this);
     customPlotWidget_Det1_2->setWindowTitle(tr("Detector"));
-    customPlotWidget_Det1_2->initCustomPlot(2);
+    customPlotWidget_Det1_2->initMultiCustomPlot();
     customPlotWidget_Det1_2->initDetailWidget();
     customPlotWidget_Det1_2->show();
 
@@ -83,7 +83,7 @@ void DataAnalysisWidget::initCustomPlot()
     customPlotWidget_result->setObjectName(tr("history-Result"));
     customPlotWidget_result->installEventFilter(this);
     customPlotWidget_result->setWindowTitle(tr("符合结果"));
-    customPlotWidget_result->initCustomPlot(1);
+    customPlotWidget_result->initCustomPlot();
     customPlotWidget_result->show();
 
     ui->widget_plot->layout()->addWidget(customPlotWidget_Det1_2);

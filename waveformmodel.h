@@ -2,12 +2,16 @@
 #define WAVEFORMMODEL_H
 
 #include <QWidget>
+#include <QDateTime>
+#include <QTimer>
+#include <QCloseEvent>
+#include "commandhelper.h"
 
 namespace Ui {
 class WaveformModel;
 }
 
-class CommandHelper;
+class QCloseEvent;
 class WaveformModel : public QWidget
 {
     Q_OBJECT
@@ -16,14 +20,23 @@ public:
     explicit WaveformModel(QWidget *parent = nullptr);
     ~WaveformModel();
 
-private slots:
-    void on_pushButton_setup_clicked();
+    bool save();
+    void load();
 
+protected:
+    virtual void closeEvent(QCloseEvent *event) override;
+
+private slots:
     void on_pushButton_start_clicked();
+
+    void on_pushButton_save_clicked();
 
 private:
     Ui::WaveformModel *ui;
-    CommandHelper *commandHelper;
+    QTimer *timer;
+    QDateTime timerStart;
+    CommandHelper *commandhelper = nullptr;//网络指令
+    bool measuring = false;
 };
 
 #endif // WAVEFORMMODEL_H

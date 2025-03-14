@@ -81,6 +81,9 @@ int main(int argc, char *argv[])
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps); // 使用高DPI位图
     QApplication a(argc, argv);
 
+    qDebug() << APP_VERSION;
+    qDebug() << GIT_BRANCH;
+
     QSplashScreen splash;
     splash.setPixmap(QPixmap(":/resource/splash.png"));
     splash.show();

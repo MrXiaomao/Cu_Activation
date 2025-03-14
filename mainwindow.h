@@ -26,6 +26,7 @@ public:
 
 protected:
     virtual bool eventFilter(QObject *watched, QEvent *event) override;
+    virtual void closeEvent(QCloseEvent *event) override;
 
 public slots:
     void slotWriteLog(const QString &log, log_level level = lower);
@@ -36,6 +37,7 @@ signals:
 
 private slots:
     void slotPlowWidgetDoubleClickEvent();
+    void slotRefreshUIStatus();
 
     void on_action_power_triggered();
 
@@ -66,6 +68,16 @@ private slots:
     void on_actionaction_close_triggered();
 
     void on_action_refresh_triggered();
+
+    void on_pushButton_gauss_clicked();
+
+    void on_action_config_triggered();
+
+    void on_action_about_triggered();
+
+    void on_action_restore_triggered();
+
+    void on_action_cachepath_triggered();
 
 private:
     Ui::MainWindow *ui = nullptr;

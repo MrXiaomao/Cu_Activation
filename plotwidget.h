@@ -11,15 +11,20 @@ class QCPItemRect;
 class QCPGraph;
 class QCPAbstractPlottable;
 class QCPItemStraightLine;
+class QCPItemCurve;
 class PlotWidget : public QDockWidget
 {
     Q_OBJECT
 public:
     explicit PlotWidget(QWidget *parent = nullptr);
 
-    void initCustomPlot(int count);
+    void initCustomPlot();
+    void initMultiCustomPlot();
+
     QCustomPlot *customPlotInstance() const;
     void initDetailWidget();
+
+    void updateShowModel(bool refModel);
 
 public slots:
     void slotPlotClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event);
@@ -30,14 +35,30 @@ public slots:
     void slotUpdateSpectrumData(PariticalSpectrumFrame frame); //能谱
 
     void slotResetPlot();
+    void slotGauss(int leftE, int rightE);
 
 protected:
     virtual bool eventFilter(QObject *watched, QEvent *event) override;
 
 signals:
     void sigMouseDoubleClickEvent();
+    void sigUpdateMeanValues(unsigned int channel, unsigned int minMean, unsigned int maxMean);
 
 private:
+    /*
+     * 5个图形
+     * 0-1 能谱图
+     * 2 高斯曲线图
+     * 3-4 计数图
+    */
+    enum {
+        ENGRY_GRAPH_1 = 0,
+        ENGRY_GRAPH_2 = 1,
+        GAUSS_GRAPH = 2,
+        COUNT_GRAPH_1 = 3,
+        COUNT_GRAPH_2 = 4,
+        GRAPH_COUNT = 5
+    };
     QCustomPlot *customPlot;
     QCPGraph *selectGraph = nullptr;
     QCPItemText *titleTextTtem;// 显示图例名称
@@ -54,13 +75,17 @@ private:
     QPoint dragStart;
 
     QColor clrBackground = QColor(255, 255, 255);
-    QColor clrLine[2] = {Qt::green, Qt::blue};
+    QColor clrLine[2] = {QColor(0, 255, 0, 200), QColor(0, 0, 255, 200)};
     QColor clrRang = QColor(255, 0, 0);
-    QColor clrSelect = QColor(0, 0, 255);
+    QColor clrSelect = QColor(0, 0, 255, 200);
+    QColor clrGauseCurve = QColor(0, 0, 255, 200);
     bool axisVisible = true;
     qint32 currentGraphIndex = 0;
 
-    PariticalSpectrumFrame currentFrame[2];
+//    std::vector<double> sxGaussRange;
+//    std::vector<double> syGaussRange;
+
+    PariticalSpectrumFrame currentFrame[GRAPH_COUNT];
 };
 
 #endif // PLOTWIDGET_H

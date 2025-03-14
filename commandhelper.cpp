@@ -1,6 +1,8 @@
 #include "commandhelper.h"
 #include "sysutils.h"
 #include <QDataStream>
+#include <QApplication>
+#include <QDateTime>
 
 CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
 {
@@ -43,7 +45,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
     initSocket(&socketDetector);
 
     // 创建数据解析线程
-    analyzeNetDataThread = new QUiThread();
+    analyzeNetDataThread = new QUiThread(this);
     analyzeNetDataThread->setObjectName("analyzeNetDataThread");
     analyzeNetDataThread->setWorkThreadProc([=](){
         slotAnalyzeNetFrame();
@@ -55,7 +57,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
     });
 
     // 图形数据刷新
-    plotUpdateThread = new QUiThread();
+    plotUpdateThread = new QUiThread(this);
     plotUpdateThread->setObjectName("plotUpdateThread");
     plotUpdateThread->setWorkThreadProc([=](){
         slotPlotUpdateFrame();
@@ -69,11 +71,11 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
 
 CommandHelper::~CommandHelper(){
     taskFinished = true;
-    analyzeNetDataThread->wait(500);
-    analyzeNetDataThread->quit();
+    //analyzeNetDataThread->exit();
+    //analyzeNetDataThread->wait(500);
+    //analyzeNetDataThread->quit();
 
-    plotUpdateThread->wait(500);
-    plotUpdateThread->quit();
+    //plotUpdateThread->wait(500);
 }
 
 void CommandHelper::initSocket(QTcpSocket** _socket)
@@ -87,6 +89,8 @@ void CommandHelper::initSocket(QTcpSocket** _socket)
 
 void CommandHelper::openDisplacement(QString ip, qint32 port, qint32 index)
 {
+    sigDisplacementStatus(true, index);
+    return;
     QTcpSocket *socketDisplacement;
     if (0 == index)
         socketDisplacement = socketDisplacement1;
@@ -598,6 +602,143 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
         QByteArray binaryData = socketDetector->readAll();
 
         //00:能谱 03:波形 05:粒子
+        if (workStatus == Preparing){
+            if (detectorParameter.transferModel == 0x00 || detectorParameter.transferModel == 0x05){
+                if (binaryData.compare(command) == 0){
+                    prepareStep++;
+                } else if (prepareStep == 5){
+                    QByteArray firstPart = binaryData.left(command.size());
+                    if (firstPart == command){
+                        // 比较成功
+                        prepareStep++;
+                    }
+                }
+
+                switch (prepareStep) {
+                case 1: // 波形极性
+                    qDebug() << QString("设置波形极性, 值=%1").arg(detectorParameter.waveformPolarity);
+                    emit slotWaveformPolarity(detectorParameter.waveformPolarity);
+                    break;
+                case 2: // 能谱模式/粒子模式死时间
+                    if (detectorParameter.transferModel == 0x00){
+                        qDebug() << QString("设置能谱刷新时间，值=%1").arg(detectorParameter.refreshTimeLength);
+                        emit slotSpectnumRefreshTimeLength(detectorParameter.refreshTimeLength);
+                    } else if (detectorParameter.transferModel == 0x03 || detectorParameter.transferModel == 0x05){
+                        qDebug() << QString("设置能谱模式/粒子模式死时间，值=%1").arg(detectorParameter.dieTimeLength);
+                        emit slotDieTimeLength(detectorParameter.dieTimeLength);
+                    }
+                    break;
+                case 3: // 探测器增益
+                    qDebug() << QString("设置增益，值=%1").arg(detectorParameter.dieTimeLength);
+                    emit slotDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00);
+                    break;
+                case 4: // 传输模式
+                    qDebug() << QString("设置传输模式，值=%1").arg(detectorParameter.transferModel);
+                    emit slotTransferModel(detectorParameter.transferModel);
+                    break;
+                case 5: // 开始测量/停止测量
+                    emit slotStart();
+                    break;
+                case 6: // 开始测量/停止测量
+                    workStatus = Measuring;
+                    binaryData.remove(0, command.size());
+                    break;
+                }
+            } else if (detectorParameter.transferModel == 0x03) {
+                if (binaryData.compare(command) == 0){
+                    prepareStep++;
+                } else if (prepareStep == 7){
+                    QByteArray firstPart = binaryData.left(command.size());
+                    if (firstPart == command){
+                        // 比较成功
+                        prepareStep++;
+                    }
+                }
+
+                switch (prepareStep) {
+                case 1: // 波形极性
+                    qDebug() << QString("设置波形极性, 值=%1").arg(detectorParameter.waveformPolarity);
+                    emit slotWaveformPolarity(detectorParameter.waveformPolarity);
+                    break;
+                case 2: // 能谱模式/粒子模式死时间
+                    qDebug() << QString("设置能谱模式/粒子模式死时间，值=%1").arg(detectorParameter.dieTimeLength);
+                    emit slotDieTimeLength(detectorParameter.dieTimeLength);
+                    break;
+                case 3: // 探测器增益
+                    qDebug() << QString("设置增益，值=%1").arg(detectorParameter.dieTimeLength);
+                    emit slotDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00);
+                    break;
+                case 4: // 波形长度
+                    qDebug() << QString("设置波形长度，值=%1").arg(detectorParameter.waveLength);
+                    emit slotWaveformLength(detectorParameter.waveLength);
+                    break;
+                case 5: // 波形触发模式
+                    qDebug() << QString("设置波形触发模式，值=%1").arg(detectorParameter.waveLength);
+                    emit slotWaveformTriggerModel(detectorParameter.triggerModel);
+                    break;
+                case 6: // 传输模式
+                    qDebug() << QString("设置传输模式，值=%1").arg(detectorParameter.transferModel);
+                    emit slotTransferModel(detectorParameter.transferModel);
+                    break;
+                case 7: // 开始测量/停止测量
+                    emit slotStart();
+                    break;
+                case 8: // 开始测量/停止测量
+                    workStatus = Measuring;
+                    binaryData.remove(0, command.size());
+                    break;
+                }
+            }
+        }
+
+        if (workStatus == Measuring) {
+            if (nullptr != pfSave){
+                pfSave->write(binaryData);
+            }
+
+            // 只有符合模式才需要做进一步数据处理
+            if (detectorParameter.transferModel == 0x05){
+                QMutexLocker locker(&mutex);
+                cachePool.push_back(binaryData);
+            }
+        }
+    });
+
+    //连接之前清空缓冲区
+    QMutexLocker locker(&mutex);
+    cachePool.clear();
+
+    //连接探测器
+    prepareStep = 0;
+    if (0 == prepareStep){
+        currentFilename = QString("%1").arg(defaultCacheDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + ".dat");
+        pfSave = new QFile(currentFilename);
+        if (pfSave->open(QIODevice::WriteOnly)) {
+            qDebug() << tr("创建缓存文件成功，文件名：%1").arg(currentFilename);
+        } else {
+            qWarning() << tr("创建缓存文件失败，文件名：%1").arg(currentFilename);
+        }
+
+        // 触发阈值
+        qDebug() << QString("设置触发阈值, 值1=%1 值2=%2").arg(detectorParameter.triggerThold1).arg(detectorParameter.triggerThold2);
+        emit slotTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2);
+    }
+}
+
+//开始能谱测量
+void CommandHelper::slotStartSpectrumMeasure(DetectorParameter p)
+{
+    workStatus = Preparing;
+    detectorParameter = p;
+
+    // 断开所有槽函数
+    disconnect(socketDetector, SIGNAL(readyRead()), this, nullptr);
+
+    //接收数据
+    connect(socketDetector, &QTcpSocket::readyRead, this, [=](){
+        QByteArray binaryData = socketDetector->readAll();
+
+        //00:能谱 03:波形 05:粒子
         if (detectorParameter.transferModel == 0x00 || detectorParameter.transferModel == 0x03){
             if (nullptr != pfSave){
                 pfSave->write(binaryData);
@@ -620,8 +761,13 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
                     emit slotWaveformPolarity(detectorParameter.waveformPolarity);
                     break;
                 case 2: // 能谱模式/粒子模式死时间
-                    qDebug() << QString("设置能谱模式/粒子模式死时间，值=%1").arg(detectorParameter.dieTimeLength);
-                    emit slotDieTimeLength(detectorParameter.dieTimeLength);
+                    if (detectorParameter.transferModel == 0x05){
+                        qDebug() << QString("设置能谱刷新时间，值=%1").arg(detectorParameter.refreshTimeLength);
+                        emit slotDieTimeLength(detectorParameter.dieTimeLength);
+                    } else if (detectorParameter.transferModel == 0x05){
+                        qDebug() << QString("设置能谱模式/粒子模式死时间，值=%1").arg(detectorParameter.dieTimeLength);
+                        emit slotDieTimeLength(detectorParameter.dieTimeLength);
+                    }
                     break;
                 case 3: // 探测器增益
                     qDebug() << QString("设置增益，值=%1").arg(detectorParameter.dieTimeLength);
@@ -632,7 +778,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
                     emit slotTransferModel(detectorParameter.transferModel);
                     break;
                 case 5: // 开始测量/停止测量
-                    emit slotStart();                    
+                    emit slotStart();
                     break;
                 case 6: // 开始测量/停止测量
                     workStatus = Measuring;
@@ -662,12 +808,12 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
         QString name = QString("%1/%2").arg(detectorParameter.path).arg(detectorParameter.filename);
         pfSave = new QFile(name);
         if (pfSave->open(QIODevice::WriteOnly)) {
-            qWarning() << tr("创建保存文件成功，文件名：%1").arg(name);
+            qDebug() << tr("能谱模式-创建保存文件成功，文件名：%1").arg(name);
         } else {
-            qWarning() << tr("创建保存文件失败，文件名：%1").arg(name);
+            qWarning() << tr("能谱模式-创建保存文件失败，文件名：%1").arg(name);
         }
 
-        if (detectorParameter.transferModel == 0x05){
+        if (detectorParameter.transferModel == 0x00){
             // 触发阈值
             qDebug() << QString("设置触发阈值, 值1=%1 值2=%2").arg(detectorParameter.triggerThold1).arg(detectorParameter.triggerThold2);
             emit slotTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2);
@@ -855,14 +1001,17 @@ void CommandHelper::slotAnalyzeNetFrame()
                     dataE.push_back(e);
                 }
 
-                if (!this->refModel){
+
+                {
                     PariticalSpectrumFrame frame;
                     frame.channel = channel;
                     frame.dataE.swap(dataE);
                     QMutexLocker locker(&mutexPlot);
                     spectrumFrameCachePool.push_back(frame);
                     //emit sigRefreshSpectrum(frame);
-                } else {
+                }
+
+                {
                     // 对输入的粒子[时间、能量]数据进行统计,给出计数率随时间变化的曲线，注意这里dataT与dataE一定是相同的长度
                     // dataT粒子的时间, 单位ns
                     // dataE粒子的能量
@@ -878,6 +1027,7 @@ void CommandHelper::slotAnalyzeNetFrame()
                     countFrameCachePool.push_back(frame);
                     //emit sigRefreshCountData(frame);
                 }
+
             }
         } else if (detectorParameter.transferModel == 0x02){
 
@@ -889,48 +1039,111 @@ void CommandHelper::slotAnalyzeNetFrame()
     }
 }
 
-#include <QDateTime>
 void CommandHelper::slotPlotUpdateFrame()
 {
     QDateTime tmStart = QDateTime::currentDateTime().addDays(-1);
+    PariticalCountFrame totalCountFrames[2]; // 系统自处理以来所有数据帧
+    PariticalCountFrame handleCountFrames[2]; // 时长内的数据帧
+    std::vector<PariticalCountFrame> unhandleCountFrames; // 时长外的数据帧
+    bool fullChannel[2] = {false, false};
+    long long lastDataT[2] = {0, 0};
+
     while (!taskFinished)
     {
-        QDateTime tmNow = QDateTime::currentDateTime();
-        if (tmStart.secsTo(tmNow) >= this->stepT){
-            tmStart = tmNow;
-            // 时间步长到了，该刷新界面了
-            if (this->refModel){
-                // 对输入的粒子[时间、能量]数据进行统计,给出计数率随时间变化的曲线，注意这里dataT与dataE一定是相同的长度
-                // dataT粒子的时间, 单位ns
-                // dataE粒子的能量
-                // stepT统计的时间步长, 单位s
-                // leftE：左区间
-                // rightE：右区间
-                // return：vector<TimeCountRate> 计数率数组
+        // 时间步长到了，该刷新界面了
+        if (this->refModel){
+            // 对输入的粒子[时间、能量]数据进行统计,给出计数率随时间变化的曲线，注意这里dataT与dataE一定是相同的长度
+            // dataT粒子的时间, 单位ns
+            // dataE粒子的能量
+            // stepT统计的时间步长, 单位s
+            // leftE：左区间
+            // rightE：右区间
+            // return：vector<TimeCountRate> 计数率数组
+            QDateTime tmNow = QDateTime::currentDateTime();
+            if (tmStart.msecsTo(tmNow) >= 500){
+                tmStart = tmNow;
 
-                QVector<PariticalCountFrame> swapFrames;
+                fullChannel[0] = false;
+                fullChannel[1] = false;
+
+                //1、把新接收的数据全部交换出来
+                std::vector<PariticalCountFrame> swapFrames;
                 {
                     QMutexLocker locker(&mutexPlot);
                     swapFrames.swap(countFrameCachePool);
                 }
 
+                //2、把新接收数据放到整体缓存池
                 if (swapFrames.size() > 0){
-                    vector<long long> dataT[2];
-                    vector<unsigned int> dataE[2];
                     for (auto frame : swapFrames){
-                        dataT[frame.channel].insert(dataT[frame.channel].end(), frame.dataT.begin(), frame.dataT.end());
-                        dataE[frame.channel].insert(dataE[frame.channel].end(), frame.dataE.begin(), frame.dataE.end());
+                        // 将数据添加到总缓存
+                        totalCountFrames[frame.channel].dataT.insert(totalCountFrames[frame.channel].dataT.end(), frame.dataT.begin(), frame.dataT.end());
+                        totalCountFrames[frame.channel].dataE.insert(totalCountFrames[frame.channel].dataE.end(), frame.dataE.begin(), frame.dataE.end());
                     }
+                }
 
-                    for (int channel = 0; channel < 2; ++channel){
+                //3、把上次未处理完的数据放到交换区头部
+                if (unhandleCountFrames.size() > 0){
+                    swapFrames.insert(swapFrames.end(), unhandleCountFrames.begin(), unhandleCountFrames.end());
+                    unhandleCountFrames.clear();
+                }
+
+                //4、处理缓存区数据
+                if (swapFrames.size() > 0){
+                    for (auto frame : swapFrames){
+                        // 根据步长，将数据添加到当前处理缓存
+                        if (lastDataT[frame.channel] == 0){
+                            lastDataT[frame.channel] = frame.dataT[0];
+                        }
+
+                        for (size_t i= 0; i<frame.dataT.size(); ++i){
+                            long long stepNs = this->stepT * 1e+8;
+                            if ((frame.dataT[i] - lastDataT[frame.channel]) > stepNs){
+                                fullChannel[frame.channel] = true;
+                                unhandleCountFrames.push_back(frame);
+                            } else {
+                                handleCountFrames[frame.channel].dataT.push_back(frame.dataT[i]);
+                                handleCountFrames[frame.channel].dataE.push_back(frame.dataE[i]);
+                            }
+                        }
+                    }
+                }
+
+
+                for (int channel = 0; channel < 2; ++channel){
+                    if (fullChannel[channel]){
+                        //数据满足时长了
+                        vector<long long> dataT[2];
+                        vector<unsigned int> dataE[2];
+                        for (auto frame : handleCountFrames){
+                            dataT[frame.channel].insert(dataT[frame.channel].end(), frame.dataT.begin(), frame.dataT.end());
+                            dataE[frame.channel].insert(dataE[frame.channel].end(), frame.dataE.begin(), frame.dataE.end());
+                        }
+
                         PariticalCountFrame frame;
                         frame.channel = channel;
-                        frame.timeCountRate = GetCountRate(dataT[channel], dataE[channel], this->stepT, this->leftE[channel], this->rightE[channel]);
+                        frame.stepT = this->stepT;
+                        if (firstHandle)
+                            frame.timeCountRate = GetCountRate(dataT[channel], dataE[channel], this->stepT, this->leftE[channel], this->rightE[channel]);
+                        else {
+                            TimeCountRate timeCountRate;
+                            timeCountRate.time = 0;
+                            timeCountRate.CountRates = GetCount(dataE[channel], this->stepT, this->leftE[channel], this->rightE[channel]);; //单位cps
+                            frame.timeCountRate.push_back(timeCountRate);
+                        }
+
+                        lastDataT[frame.channel] = 0;
+                        handleCountFrames[channel].dataE.clear();
+                        handleCountFrames[channel].dataT.clear();
                         emit sigRefreshCountData(frame);
                     }
                 }
-            } else {
-                QVector<PariticalSpectrumFrame> swapFrames;
+            }
+        } else {
+            QDateTime tmNow = QDateTime::currentDateTime();
+            if (tmStart.secsTo(tmNow) >= this->stepT){
+                tmStart = tmNow;
+                std::vector<PariticalSpectrumFrame> swapFrames;
                 {
                     QMutexLocker locker(&mutexPlot);
                     swapFrames.swap(spectrumFrameCachePool);
@@ -970,4 +1183,27 @@ void CommandHelper::updateParamter(int _stepT, int _leftE[2], int _rightE[2])
 void CommandHelper::updateShowModel(bool _refModel)
 {
     this->refModel = _refModel;
+    this->firstHandle = this->refModel;
+}
+
+#include <QMessageBox>
+void CommandHelper::saveFileName(QString dstPath)
+{
+    {
+        QFile file(dstPath);
+        if (file.exists()) {
+            file.remove();
+        }
+
+        //进行文件copy
+        if (QFile::copy(currentFilename, dstPath))
+
+        //QFile::remove(currentFilename);
+        QMessageBox::information(nullptr, tr("提示"), tr("数据保存成功！"), QMessageBox::Ok, QMessageBox::Ok);
+    }
+}
+
+void CommandHelper::setDefaultCacheDir(QString dir)
+{
+    this->defaultCacheDir = dir;
 }

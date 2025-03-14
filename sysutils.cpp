@@ -46,15 +46,16 @@ vector<int> GetSpectrum(const vector<unsigned int>& data, unsigned int maxEnergy
 // data：输入的能量数据点
 // leftE：左区间
 // rightE：右区间
-// return int：计数值
-int GetCount(const vector<int> &data, int leftE, int rightE)
+// stepT统计的时间步长, 单位s
+// return double：计数率,cps
+double GetCount(const vector<unsigned int> &data, int stepT, int leftE, int rightE)
 {
     int count = 0;
     for (int value : data)
     {
         if(value>leftE && value <=rightE) count++;
     }
-    return count;
+    return ((double)count)/stepT;
 }
 
 // 对输入的粒子[时间、能量]数据进行统计,给出计数率随时间变化的曲线，注意这里dataT与dataE一定是相同的长度
@@ -104,4 +105,59 @@ void printHistogram(const vector<int>& binEdges, const vector<int>& histogram) {
     for (size_t i = 0; i < histogram.size(); i++) {
         cout << "Bin "<<i<<"[" << binEdges[i] << ", " << binEdges[i + 1] << "): " << histogram[i] << std::endl;
     }
+}
+
+// count  待拟合数据长度
+// sx 待拟合数据x数组，
+// sy 待拟合数据y数组
+// 返回值result, result[0]为半高宽FWHM,result[1] 为峰位，result[2]为峰值。
+#include "polynomialfit.h"
+void fit_GaussCurve(int count, std::vector<double> sx, std::vector<double> sy, double* result)
+{
+    int degree = 2;
+    double* weight = new double[count];
+    // 赋初值
+    result[0] = 0.;
+    result[1] = 0.;
+    result[2] = 0.;
+    // 参考[1]陈伟,方方,莫磊,等.一种单能高斯峰解析方法[J].太赫兹科学与电子信息学报,2020,18(03):527-530.
+    // 核能谱单能峰扣除背景后，其净计数近似服从高斯分布：y(x) = a*exp[-4ln2(x-u)^2/FWHM^2]
+    // a为峰值，u为峰位道址，FWHM 为半高宽。
+    // 将高斯函数变化为多项式，取对数,整理为二次多项式形式，b=c1x^2+c2x+c3;
+    // b = lny, c1=-4ln2/(FWHM^2);c2=8ln2*u/FWHM^2; c2=-4ln2*u^2/FWHM^2+lna
+    // **需要注意的是，由于这里取对数，需要保证sy的值大于0. 因此当 输入的sy中存在0时，拟合结果会可能是错误，
+    // **这里简单的将拟合数据y为0的时候直接设置为1e-20.这对于能谱拟合是可以的，但是对于非能谱领域，需要重新考虑。
+    for(int i=0; i<count; i++)
+    {
+        if(sy[i]<1e-20) sy[i] = 1e-20;
+        sy[i] = log(sy[i]); //log()函数返回数字的自然对数。
+        weight[i] = 1.0;
+    }
+    PolynomialFit pf;
+    pf.setAttribute(degree , false , 1.0);
+    if( pf.setSample(sx,sy,count,false, weight) &&
+            pf.process() )
+    {
+        //pf.print();
+        double c1,c2,c3;
+        c1 = pf.getResult(0);
+        c2 = pf.getResult(1);
+        c3 = pf.getResult(2);
+        double FWHM = 0.0;
+        if(-4*log(2)/c1) FWHM = sqrt(-4*log(2)/c1);
+        else std::cout<<"cannot fit"<<std::endl;
+
+        double mean = -c2/2/c1;
+        double a = exp(c3+4*log(2)*mean*mean/(FWHM*FWHM));
+
+        std::cout << "FWHM = " << FWHM << std::endl;
+        std::cout << "mean = " << mean << std::endl;
+        std::cout << "a = " << a << std::endl;
+        result[0] = FWHM;
+        result[1] = mean;
+        result[2] = a;
+    }else
+        std::cout << "failed" ;
+
+    delete[] weight;
 }

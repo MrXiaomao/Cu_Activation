@@ -916,24 +916,24 @@ void CommandHelper::slotAnalyzeNetFrame()
                     //处理数据
                     const unsigned char *ptrOffset = (const unsigned char *)validFrame.constData();
                     //能谱序号
-                    SequenceNumbre = static_cast<quint32>(ptrOffset[0]) << 24 |
+                    SequenceNumber = static_cast<quint32>(ptrOffset[0]) << 24 |
                                       static_cast<quint32>(ptrOffset[1]) << 16 |
                                       static_cast<quint32>(ptrOffset[2]) << 8 |
                                       static_cast<quint32>(ptrOffset[3]);
 
                     //测量时间(单位：×10ns)
-                    ptrOffset += 4;
-                    quint32 time = static_cast<quint32>(ptrOffset[0]) << 24 |
-                                     static_cast<quint32>(ptrOffset[1]) << 16 |
-                                     static_cast<quint32>(ptrOffset[2]) << 8 |
-                                     static_cast<quint32>(ptrOffset[3]);
+//                    ptrOffset += 4;
+//                    quint32 time = static_cast<quint32>(ptrOffset[0]) << 24 |
+//                                     static_cast<quint32>(ptrOffset[1]) << 16 |
+//                                     static_cast<quint32>(ptrOffset[2]) << 8 |
+//                                     static_cast<quint32>(ptrOffset[3]);
 
-                    //通道号
-                    ptrOffset += 4;
-                    quint32 channel = static_cast<quint32>(ptrOffset[0]) << 24 |
-                                     static_cast<quint32>(ptrOffset[1]) << 16 |
-                                     static_cast<quint32>(ptrOffset[2]) << 8 |
-                                     static_cast<quint32>(ptrOffset[3]);
+//                    //通道号
+//                    ptrOffset += 4;
+//                    quint32 channel = static_cast<quint32>(ptrOffset[0]) << 24 |
+//                                     static_cast<quint32>(ptrOffset[1]) << 16 |
+//                                     static_cast<quint32>(ptrOffset[2]) << 8 |
+//                                     static_cast<quint32>(ptrOffset[3]);
 
                 }
             }
@@ -1189,7 +1189,8 @@ void CommandHelper::updateShowModel(bool _refModel)
 #include <QMessageBox>
 void CommandHelper::saveFileName(QString dstPath)
 {
-    {
+    dstPath += ".txt";
+    if (dstPath.endsWith(".dat")){
         QFile file(dstPath);
         if (file.exists()) {
             file.remove();
@@ -1200,6 +1201,102 @@ void CommandHelper::saveFileName(QString dstPath)
 
         //QFile::remove(currentFilename);
         QMessageBox::information(nullptr, tr("提示"), tr("数据保存成功！"), QMessageBox::Ok, QMessageBox::Ok);
+    } else if (dstPath.endsWith(".txt")) {
+        // 将源文件转换为文本文件
+        QFile fileSrc(currentFilename);
+        if (fileSrc.open(QIODevice::ReadOnly)) {
+            QFile fileDst(dstPath);
+            if (fileDst.open(QIODevice::WriteOnly | QIODevice::Text)) {
+                QDataStream aStream(&fileDst);
+
+                qint32 cachelen = 0;
+                qint32 framelen = 1026*8;
+                qint32 offset = 0;
+                unsigned char *buf = new unsigned char[framelen*2];
+                qint32 readlen = fileSrc.read((char*)buf, framelen);
+                while (readlen > 0){
+                    cachelen += readlen;
+
+                    while (cachelen > framelen){
+                        unsigned char* ptrOffset = (unsigned char*)buf;
+                        unsigned char* ptrHead = (unsigned char*)buf;
+                        unsigned char* ptrTail = (unsigned char*)buf + cachelen;
+                        if (ptrOffset[framelen-4] == 0x00 && ptrOffset[framelen-3] == 0x00 && ptrOffset[framelen-2] == 0xaa && ptrOffset[framelen-1] == 0xb3){
+                            if (ptrOffset[framelen-4] == 0x00 && ptrOffset[framelen-3] == 0x00 && ptrOffset[framelen-2] == 0xcc && ptrOffset[framelen-1] == 0xd3){
+                                //完整帧
+                                ptrOffset += 4;
+                                quint64 channel = static_cast<quint64>(ptrOffset[0]) << 56 |
+                                                 static_cast<quint64>(ptrOffset[1]) << 48 |
+                                                 static_cast<quint64>(ptrOffset[2]) << 40 |
+                                                 static_cast<quint64>(ptrOffset[3]) << 32 |
+                                                 static_cast<quint64>(ptrOffset[4]) << 24 |
+                                                 static_cast<quint64>(ptrOffset[5]) << 16 |
+                                                 static_cast<quint64>(ptrOffset[6]) << 8 |
+                                                 static_cast<quint64>(ptrOffset[7]);
+
+                                //通道值转换
+                                channel = (channel == 0xFFF1) ? 1 : 2;
+
+                                //粒子模式数据1024*8byte,前6字节:时间,后2字节:能量
+                                int ref = 1;
+                                ptrOffset += 8;
+
+                                vector<long long> dataT;
+                                vector<unsigned int> dataE;
+                                while (ref++<=1024){
+                                    long long t = static_cast<quint64>(ptrOffset[0]) << 40 |
+                                            static_cast<quint64>(ptrOffset[1]) << 32 |
+                                            static_cast<quint64>(ptrOffset[2]) << 24 |
+                                            static_cast<quint64>(ptrOffset[3]) << 16 |
+                                            static_cast<quint64>(ptrOffset[4]) << 8 |
+                                            static_cast<quint64>(ptrOffset[5]);
+                                    unsigned int e = static_cast<quint16>(ptrOffset[6]) << 8 | static_cast<quint16>(ptrOffset[7]);
+
+                                    aStream << channel << t << e << "\n";
+                                }
+                            } else {
+                                // 重新寻找帧头
+                                while (ptrOffset != ptrTail){
+                                    if (ptrOffset[framelen-4] == 0x00 && ptrOffset[framelen-3] == 0x00 && ptrOffset[framelen-2] == 0xaa && ptrOffset[framelen-1] == 0xb3){
+                                        break;
+                                    }
+
+                                    ptrOffset++;
+                                }
+
+                                qint32 offset = ptrOffset - ptrHead;
+                                memmove(buf, buf + offset, cachelen - offset);
+                                cachelen -= offset;
+                            }
+                        } else {
+                            // 寻找帧头
+                            // 重新寻找帧头
+                            while (ptrOffset != ptrTail){
+                                if (ptrOffset[framelen-4] == 0x00 && ptrOffset[framelen-3] == 0x00 && ptrOffset[framelen-2] == 0xaa && ptrOffset[framelen-1] == 0xb3){
+                                    break;
+                                }
+
+                                ptrOffset++;
+                            }
+
+                            qint32 offset = ptrOffset - ptrHead;
+                            memmove(buf, buf + offset, cachelen - offset);
+                            cachelen -= offset;
+                        }
+
+                        readlen = fileSrc.read((char*)buf+offset, framelen);
+                        cachelen += readlen;
+                    }
+
+                    readlen = fileSrc.read((char*)buf+offset, framelen);
+                }
+
+                delete[] buf;
+                fileDst.close();
+            }
+
+            fileSrc.close();
+        }
     }
 }
 

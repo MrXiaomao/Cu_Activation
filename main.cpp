@@ -8,27 +8,43 @@
 #include <QDateTime>
 #include <QScreen>
 #include <QSplashScreen>
+#include <QMutex>
 
 QString QtMsgTypeToString(QtMsgType type)
 {
     switch (type) {
     case QtInfoMsg:
-        return "[info]";     break;
+        return "[信息]";     break;
     case QtDebugMsg:
-        return "[debug]";    break;
+        return "[调试]";    break;
     case QtWarningMsg:
-        return "[warning]";  break;
+        return "[警告]";  break;
     case QtCriticalMsg:
-        return "[critical]"; break;
+        return "[严重]"; break;
     case QtFatalMsg:
-        return "[fatal]";    break;
+        return "[错误]";    break;
     default:
         return "Unknown";
     }
 }
 
-void LoggingHandler(QtMsgType type, const QMessageLogContext& /*context*/, const QString &msg)
+MainWindow *mw = nullptr;
+QMutex mutexMsg;
+void AppMessageHandler(QtMsgType type, const QMessageLogContext& /*context*/, const QString &msg)
 {
+    //Release 版本默认不包含context这些信息:文件名、函数名、行数，需要在.pro项目文件加入以下代码，加入后最好重新构建项目使之生效：
+    //DEFINES += QT_MESSAGELOGCONTEXT
+
+    //在.pro文件定义以下的宏，可以屏蔽相应的日志输出
+    //DEFINES += QT_NO_WARNING_OUTPUT
+    //DEFINES += QT_NO_DEBUG_OUTPUT
+    //DEFINES += QT_NO_INFO_OUTPUT
+    //文件名、函数名、行数
+    // strMsg += QString("Function: %1  File: %2  Line: %3 ").arg(context.function).arg(context.file).arg(context.line);
+
+    // 加锁
+    QMutexLocker locker(&mutexMsg);
+
     // 确保logs目录存在
     QDir dir(QDir::currentPath() + "/logs");
     if (!dir.exists()) {
@@ -49,10 +65,13 @@ void LoggingHandler(QtMsgType type, const QMessageLogContext& /*context*/, const
     QFile file(logFilePath);
     if (file.open(QIODevice::Append | QIODevice::Text)) {
         QTextStream out(&file);
-        QString logLine = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz ")
+        QString strMessage = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz ")
                           + QtMsgTypeToString(type) + ": " + msg + "\n";
-        out << logLine;
+        out << strMessage;
+        file.flush();
         file.close();
+
+        //emit mw.sigAppengMsg(strMessage, type);
     }
 }
 
@@ -91,12 +110,13 @@ int main(int argc, char *argv[])
     // 保留最近3次的日志
     cleanOldLogs(3);
     //安装日志
-    qInstallMessageHandler(LoggingHandler);
+    qInstallMessageHandler(AppMessageHandler);
 
     splash.showMessage(QObject::tr("启动中..."), Qt::AlignLeft | Qt::AlignBottom, Qt::white);
     MainWindow w;
-    QObject::connect(&w, &MainWindow::sigUpdatePlot, &splash, [&](const QString &log) {
-        splash.showMessage(log, Qt::AlignLeft | Qt::AlignBottom, Qt::white);
+    mw = &w;
+    QObject::connect(&w, &MainWindow::sigRefreshBoostMsg, &splash, [&](const QString &msg) {
+        splash.showMessage(msg, Qt::AlignLeft | Qt::AlignBottom, Qt::white);
     }/*, Qt::QueuedConnection */);
 
     QRect screenRect = QGuiApplication::primaryScreen()->availableGeometry();

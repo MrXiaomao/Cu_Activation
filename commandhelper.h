@@ -40,11 +40,11 @@ typedef struct tagDetectorParameter{
     */
     qint8 transferModel;
 
-    // 保存路径
-    QString path;
+//    // 保存路径
+//    QString path;
 
-    // 保存文件名
-    QString filename;
+//    // 保存文件名
+//    QString filename;
 } DetectorParameter;
 
 class QUiThread;
@@ -105,7 +105,7 @@ private:
     QByteArray cachePool;
     QMutex mutex;
     QMutex mutexPlot;
-    quint32 SequenceNumbre;// 帧序列号    
+    quint32 SequenceNumber;// 帧序列号
     QUiThread* analyzeNetDataThread;
     QUiThread* plotUpdateThread;
 

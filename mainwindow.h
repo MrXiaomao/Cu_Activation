@@ -29,11 +29,11 @@ protected:
     virtual void closeEvent(QCloseEvent *event) override;
 
 public slots:
-    void slotWriteLog(const QString &log, log_level level = lower);
+    void slotAppendMsg(const QString &msg, QtMsgType msgType);
 
 signals:
-    void sigUpdatePlot(const QString &log);
-    void sigWriteLog(const QString &log, log_level level = lower);
+    void sigRefreshBoostMsg(const QString &msg);
+    void sigAppengMsg(const QString &msg, QtMsgType msgType);
 
 private slots:
     void slotPlowWidgetDoubleClickEvent();
@@ -79,11 +79,14 @@ private slots:
 
     void on_action_cachepath_triggered();
 
+    void on_action_log_triggered();
+
 private:
     Ui::MainWindow *ui = nullptr;
     SpectrumModel *spectrummodel = nullptr;//能谱模型
     DataAnalysisWidget *dataAnalysisWidget = nullptr;//数据解析
     CommandHelper *commandhelper = nullptr;//网络指令
+    qint32 currentDetectorIndex = 0;
 
     bool relay_on;//电源打开标识
     bool net_connected[2] = {false, false};//外设连接标识

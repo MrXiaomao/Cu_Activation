@@ -331,9 +331,11 @@ void PlotWidget::initMultiCustomPlot()
     // 添加能谱图
     for (int i=0; i<2; ++i){
         QCPGraph * curGraph = customPlot->addGraph(customPlot->xAxis, customPlot->yAxis);
-        curGraph->setName(QString("Det %1").arg(i + 1));
+        if (0 == i)
+            curGraph->setName(tr("能谱"));
+        else
+            curGraph->setName(tr("计数"));
         curGraph->setAntialiased(false);
-        Q_UNUSED(curGraph);
         curGraph->setPen(QPen(clrLine[i]));
         curGraph->selectionDecorator()->setPen(QPen(clrLine[i]));
         //curGraph->setLineStyle(QCPGraph::lsLine);
@@ -349,19 +351,6 @@ void PlotWidget::initMultiCustomPlot()
     graphCurve->selectionDecorator()->setPen(QPen(clrGauseCurve));
     graphCurve->setLineStyle(QCPGraph::lsLine);
     graphCurve->setVisible(false);
-
-    // 添加计数图
-    for (int i=0; i<2; ++i){
-        QCPGraph * curGraph = customPlot->addGraph(customPlot->xAxis, customPlot->yAxis);
-        curGraph->setName(QString("Det %1").arg(i + 1));
-        curGraph->setAntialiased(false);
-        Q_UNUSED(curGraph);
-        curGraph->setPen(QPen(clrLine[i]));
-        curGraph->selectionDecorator()->setPen(QPen(clrLine[i]));
-        //curGraph->setLineStyle(QCPGraph::lsLine);
-        curGraph->setLineStyle(QCPGraph::lsNone);// 隐藏线性图
-        curGraph->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssPlus, 2));//显示散点图
-    }
 
     // 文本元素随窗口变动而变动
 //    titleTextTtem = new QCPItemText(customPlot);
@@ -875,7 +864,7 @@ void PlotWidget::slotUpdateCountData(PariticalCountFrame frame)
 
     //customPlot->xAxis->setRange(0, frame.timeCountRate.size());
     //customPlot->yAxis->rescale(true);
-    customPlot->graph(2+channelIndex)->addData(keys, values, colors);
+    customPlot->graph(REF_GRAPH)->addData(keys, values, colors);
     customPlot->replot();
 }
 
@@ -910,7 +899,7 @@ void PlotWidget::slotUpdateSpectrumData(PariticalSpectrumFrame frame)
 //            customPlot->yAxis->setRange(0, maxEngry);
         //customPlot->yAxis->rescale(false);
     }
-    customPlot->graph(channelIndex)->setData(keys, values, colors);
+    customPlot->graph(ENGRY_GRAPH)->setData(keys, values, colors);
     customPlot->replot();
 }
 
@@ -923,11 +912,9 @@ void PlotWidget::slotResetPlot()
 
 void PlotWidget::updateShowModel(bool refModel)
 {
-    customPlot->graph(ENGRY_GRAPH_1)->setVisible(!refModel);
-    customPlot->graph(ENGRY_GRAPH_2)->setVisible(!refModel);
+    customPlot->graph(ENGRY_GRAPH)->setVisible(!refModel);
     customPlot->graph(GAUSS_GRAPH)->setVisible(!refModel);
-    customPlot->graph(COUNT_GRAPH_1)->setVisible(refModel);
-    customPlot->graph(COUNT_GRAPH_2)->setVisible(refModel);
+    customPlot->graph(REF_GRAPH)->setVisible(refModel);
 }
 
 void PlotWidget::slotGauss(int leftE, int rightE)

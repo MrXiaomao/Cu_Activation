@@ -87,8 +87,79 @@ RESOURCES += \
 RESOURCES += \
     qm.qrc
 
+##############################################################################################################
 # 软件图标
 RC_ICONS = $$PWD/resource/logo.ico
+
+# 指定要使用的预编译头文件
+#CONFIG += precompile_header
+#PRECOMPILED_HEADER += pch.h
+
+# 定义输出目录变量
+OUTPUT_DIR_BASE = $$PWD/../../build
+
+message($${TARGET}":" "$$QT_ARCH" "$$QMAKE_CXX")
+
+# 根据编译器设置输出目录
+win32:msvc {
+    # MSVC 编译器
+    QMAKE_CXXFLAGS += -utf-8
+    QMAKE_CXXFLAGS += /MP
+
+    OUTPUT_DIR = $$OUTPUT_DIR_BASE/msvc
+    contains(QT_ARCH, x86_64) {
+        # MSVC x64
+        OUTPUT_DIR = $$OUTPUT_DIR"/x64"
+    } else {
+        # MSVC x86
+        OUTPUT_DIR = $$OUTPUT_DIR"/x86"
+    }
+}
+
+win32:mingw {
+    # MinGW 编译器
+    OUTPUT_DIR = $$OUTPUT_DIR_BASE/mingw
+    contains(QT_ARCH, x86_64) {
+        # MinGW x64
+        OUTPUT_DIR = $$OUTPUT_DIR/x64
+    } else {
+        # MinGW x86
+        OUTPUT_DIR = $$OUTPUT_DIR/x86
+    }
+}
+
+unix{
+    contains( QMAKE_CXX, "g++" ) :{
+        OUTPUT_DIR = $$OUTPUT_DIR_BASE"/g++"
+    } else : contains( QMAKE_CXX, "aarch64-linux-gnu-g++" ) :{
+        OUTPUT_DIR = $$OUTPUT_DIR_BASE"/g++"
+    } else : contains( QMAKE_CXX, "gcc" ) :{
+        OUTPUT_DIR = $$OUTPUT_DIR_BASE"/gcc"
+    } else :  contains( QMAKE_CC, "aarch64-linux-gnu-gcc" ) :{
+        OUTPUT_DIR = $$OUTPUT_DIR_BASE"/gcc"
+    } else {
+        OUTPUT_DIR = $$OUTPUT_DIR_BASE"/gcc"
+    }
+}
+
+win32:CONFIG(release, debug|release): OUTPUT_DIR = $$OUTPUT_DIR/release
+else:win32:CONFIG(debug, debug|release): OUTPUT_DIR = $$OUTPUT_DIR/debug
+
+# 设置输出目录
+message(Qt Version = $$[QT_VERSION])
+QT_VERSION = $$split(QT_VERSION, ".")
+QT_VER_MAJ = $$member(QT_VERSION, 0)
+QT_VER_MIN = $$member(QT_VERSION, 1)
+
+greaterThan(QT_MAJOR_VERSION, 5){
+    DESTDIR = $$OUTPUT_DIR/qt6/
+}
+else{
+    DESTDIR = $$OUTPUT_DIR/qt5/
+}
+message(DESTDIR = $$DESTDIR)
+
+TARGET = Cu_Activation
 
 # 避免创建空的debug和release目录
 CONFIG -= debug_and_release
@@ -105,6 +176,7 @@ CONFIG += warn_off
 #开启大资源支持
 CONFIG += resources_big
 
+#############################################################################################################
 exists (./.git) {
     GIT_BRANCH   = $$system(git rev-parse --abbrev-ref HEAD)
     GIT_TIME     = $$system(git show --oneline --format=\"%ci%H\" -s HEAD)

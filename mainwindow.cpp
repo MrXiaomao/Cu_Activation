@@ -27,7 +27,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    emit sigUpdatePlot(tr("更新ui..."));
+    emit sigRefreshBoostMsg(tr("更新ui..."));
     connect(this, SIGNAL(sigWriteLog(const QString &, log_level)), this, SLOT(slotWriteLog(const QString &, log_level)));
     commandhelper = CommandHelper::instance();
     connect(commandhelper, &CommandHelper::sigDisplacementFault, this, [=](qint32 index){        
@@ -37,7 +37,7 @@ MainWindow::MainWindow(QWidget *parent)
         net_connected[index] = false;
         QString msg = QString(tr("网络故障，外设%1连接失败！").arg((index + 1)));
         ui->statusbar->showMessage(msg);
-        emit sigWriteLog(msg);
+        emit sigAppengMsg(msg, QtCriticalMsg);
 
         slotRefreshUIStatus();
     });
@@ -56,7 +56,7 @@ MainWindow::MainWindow(QWidget *parent)
 
         QString msg = QString(tr("外设%1状态：%2")).arg(index + 1).arg(on ? tr("开") : tr("关"));
         ui->statusbar->showMessage(msg);
-        emit sigWriteLog(msg);
+        emit sigAppengMsg(msg, QtInfoMsg);
 
         slotRefreshUIStatus();
     });
@@ -70,7 +70,7 @@ MainWindow::MainWindow(QWidget *parent)
         ui->action_power->setIconText(tr("打开电源"));
         QString msg = QString(tr("网络故障，电源连接失败！"));
         ui->statusbar->showMessage(msg);
-        emit sigWriteLog(msg);
+        emit sigAppengMsg(msg, QtCriticalMsg);
 
         slotRefreshUIStatus();
     });
@@ -90,7 +90,7 @@ MainWindow::MainWindow(QWidget *parent)
 
         QString msg = QString(tr("电源状态：%1")).arg(on ? tr("开") : tr("关"));
         ui->statusbar->showMessage(msg);
-        emit sigWriteLog(msg);
+        emit sigAppengMsg(msg, QtInfoMsg);
 
         slotRefreshUIStatus();
     });
@@ -104,7 +104,7 @@ MainWindow::MainWindow(QWidget *parent)
         ui->action_detector_connect->setIconText(tr("连接探测器"));
         QString msg = QString(tr("网络故障，探测器连接失败！"));
         ui->statusbar->showMessage(msg);
-        emit sigWriteLog(msg);
+        emit sigAppengMsg(msg, QtCriticalMsg);
 
         //手动
         // 禁用开始测量按钮
@@ -172,7 +172,7 @@ MainWindow::MainWindow(QWidget *parent)
 
         QString msg = QString(tr("探测器状态：%1")).arg(on ? tr("开") : tr("关"));
         ui->statusbar->showMessage(msg);
-        emit sigWriteLog(msg);
+        emit sigAppengMsg(msg, QtInfoMsg);
         slotRefreshUIStatus();
     });
 
@@ -180,14 +180,14 @@ MainWindow::MainWindow(QWidget *parent)
     qRegisterMetaType<std::vector<TimeCountRate>>("std::vector<TimeCountRate>");
     connect(commandhelper, &CommandHelper::sigRefreshCountData, this, [=](PariticalCountFrame frame){
         if (!pause_plot){
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-Detector");
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(frame.channel+1));
             plotWidget->slotUpdateCountData(frame);
         }
     });
     qRegisterMetaType<PariticalSpectrumFrame>("PariticalSpectrumFrame");
     connect(commandhelper, &CommandHelper::sigRefreshSpectrum, this, [=](PariticalSpectrumFrame frame){
         if (!pause_plot){
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-Detector");
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(frame.channel+1));
             plotWidget->slotUpdateSpectrumData(frame);
         }
     });
@@ -213,11 +213,11 @@ MainWindow::MainWindow(QWidget *parent)
     // 禁用高斯拟合按钮
     ui->pushButton_gauss->setEnabled(false);
 
-    emit sigUpdatePlot(tr("读取参数设置ui..."));
+    emit sigRefreshBoostMsg(tr("读取参数设置ui..."));
     InitMainWindowUi();
 
     // 创建图表
-    emit sigUpdatePlot(tr("创建图形库..."));
+    emit sigRefreshBoostMsg(tr("创建图形库..."));
     initCustomPlot();
 
     QTimer::singleShot(500, this, [=](){
@@ -358,8 +358,10 @@ void MainWindow::InitMainWindowUi()
             ui->widget_gauss->show();
         }
 
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-Detector");
-        plotWidget->slotResetPlot();
+        for (int i=0; i<2; ++i){
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(i+1));
+            plotWidget->slotResetPlot();
+        }
         commandhelper->updateShowModel(index == 0);
     });
     ui->widget_gauss->show();
@@ -377,7 +379,6 @@ void MainWindow::InitMainWindowUi()
     label_Connected->setFixedWidth(300);
     label_Connected->setText(tr("状态：未连接"));
 
-
     /*设置任务栏信息*/
     QLabel *label_systemtime = new QLabel(ui->statusbar);
     label_systemtime->setObjectName("label_systemtime");
@@ -387,9 +388,8 @@ void MainWindow::InitMainWindowUi()
     ui->statusbar->addWidget(label_Idle);
     ui->statusbar->addWidget(label_Connected);
     ui->statusbar->addWidget(new QLabel(ui->statusbar), 1);
-    ui->statusbar->addPermanentWidget(label_systemtime);
-
-    this->slotWriteLog(QObject::tr("系统启动"));
+    ui->statusbar->addWidget(nullptr, 1);
+    ui->statusbar->addPermanentWidget(label_systemtime);    
 
     QTimer* timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, [=](){
@@ -416,47 +416,88 @@ void MainWindow::InitMainWindowUi()
        this->showMaximized();
     });
     ui->pushButton_save->setEnabled(false);
+
+    this->slotAppendMsg(QObject::tr("系统启动"), QtInfoMsg);
 }
 
+#include <QSplitter>
 void MainWindow::initCustomPlot()
 {
     //this->setDockNestingEnabled(true);
 
+    QSplitter *spMainWindow = new QSplitter(Qt::Vertical, nullptr);
+
+    // Det-1
+    {
+        //能谱
+        //计数
+        //拟合曲线
+        PlotWidget *customPlotWidget = new PlotWidget(spMainWindow);
+        customPlotWidget->setObjectName(tr("real-Detector-1"));
+        customPlotWidget->installEventFilter(this);
+        customPlotWidget->setWindowTitle(tr("Det 1"));
+        customPlotWidget->initMultiCustomPlot();
+        //customPlotWidget->initDetailWidget();
+        customPlotWidget->show();
+
+        connect(customPlotWidget, &PlotWidget::sigUpdateMeanValues, this, [=](unsigned int channel, unsigned int minMean, unsigned int maxMean){
+            currentDetectorIndex = channel;
+            if (channel == 0){
+                ui->spinBox_1_leftE->setValue(minMean);
+                ui->spinBox_1_rightE->setValue(maxMean);
+            }
+
+           ui->spinBox_leftE->setValue(minMean);
+           ui->spinBox_rightE->setValue(maxMean);
+        });
+        spMainWindow->addWidget(customPlotWidget);
+        connect(customPlotWidget, SIGNAL(sigMouseDoubleClickEvent()), this, SLOT(slotPlowWidgetDoubleClickEvent()));
+    }
+
     // Det
-    PlotWidget *customPlotWidget_Det1_2 = new PlotWidget(ui->widget_plot);
-    customPlotWidget_Det1_2->setObjectName(tr("real-Detector"));
-    customPlotWidget_Det1_2->installEventFilter(this);
-    customPlotWidget_Det1_2->setWindowTitle(tr("Detector"));
-    customPlotWidget_Det1_2->initMultiCustomPlot();
-    customPlotWidget_Det1_2->initDetailWidget();
-    customPlotWidget_Det1_2->show();
+    {
+        //能谱
+        //计数
+        //拟合曲线
+        PlotWidget *customPlotWidget = new PlotWidget(spMainWindow);
+        customPlotWidget->setObjectName(tr("real-Detector-2"));
+        customPlotWidget->installEventFilter(this);
+        customPlotWidget->setWindowTitle(tr("Det 2"));
+        customPlotWidget->initMultiCustomPlot();
+        //customPlotWidget->initDetailWidget();
+        customPlotWidget->show();
 
-    connect(customPlotWidget_Det1_2, &PlotWidget::sigUpdateMeanValues, this, [=](unsigned int channel, unsigned int minMean, unsigned int maxMean){
-       if (channel == 0){
-           ui->spinBox_1_leftE->setValue(minMean);
-           ui->spinBox_1_rightE->setValue(maxMean);
-       } else {
-           ui->spinBox_2_leftE->setValue(minMean);
-           ui->spinBox_2_rightE->setValue(maxMean);
-       }
+        connect(customPlotWidget, &PlotWidget::sigUpdateMeanValues, this, [=](unsigned int channel, unsigned int minMean, unsigned int maxMean){
+            currentDetectorIndex = channel;
+            if (channel == 0){
+                ui->spinBox_2_leftE->setValue(minMean);
+                ui->spinBox_2_rightE->setValue(maxMean);
+            }
 
-       ui->spinBox_leftE->setValue(minMean);
-       ui->spinBox_rightE->setValue(maxMean);
-    });
+            ui->spinBox_leftE->setValue(minMean);
+            ui->spinBox_rightE->setValue(maxMean);
+        });
+        spMainWindow->addWidget(customPlotWidget);
+        connect(customPlotWidget, SIGNAL(sigMouseDoubleClickEvent()), this, SLOT(slotPlowWidgetDoubleClickEvent()));
+    }
 
     // result
-    PlotWidget *customPlotWidget_result = new PlotWidget(ui->widget_plot);
-    customPlotWidget_result->setObjectName(tr("real-Result"));
-    customPlotWidget_result->installEventFilter(this);
-    customPlotWidget_result->setWindowTitle(tr("符合结果"));
-    customPlotWidget_result->initCustomPlot();
-    customPlotWidget_result->show();
+    {
+        PlotWidget *customPlotWidget_result = new PlotWidget(spMainWindow);
+        customPlotWidget_result->setObjectName(tr("real-Result"));
+        customPlotWidget_result->installEventFilter(this);
+        customPlotWidget_result->setWindowTitle(tr("符合结果"));
+        customPlotWidget_result->initCustomPlot();
+        customPlotWidget_result->show();
+        //ui->widget_plot->layout()->addWidget(customPlotWidget_result);
+        spMainWindow->addWidget(customPlotWidget_result);
+        connect(customPlotWidget_result, SIGNAL(sigMouseDoubleClickEvent()), this, SLOT(slotPlowWidgetDoubleClickEvent()));
+    }
 
-    ui->widget_plot->layout()->addWidget(customPlotWidget_Det1_2);
-    ui->widget_plot->layout()->addWidget(customPlotWidget_result);
-
-    connect(customPlotWidget_Det1_2, SIGNAL(sigMouseDoubleClickEvent()), this, SLOT(slotPlowWidgetDoubleClickEvent()));
-    connect(customPlotWidget_result, SIGNAL(sigMouseDoubleClickEvent()), this, SLOT(slotPlowWidgetDoubleClickEvent()));
+    spMainWindow->setStretchFactor(0, 3);
+    spMainWindow->setStretchFactor(1, 3);
+    spMainWindow->setStretchFactor(2, 2);
+    ui->widget_plot->layout()->addWidget(spMainWindow);
 }
 
 void MainWindow::slotPlowWidgetDoubleClickEvent()
@@ -497,7 +538,7 @@ void MainWindow::on_action_devices_triggered()
     w->showNormal();
 }
 
-void MainWindow::slotWriteLog(const QString &log, log_level level/* = lower*/)
+void MainWindow::slotAppendMsg(const QString &msg, QtMsgType msgType)
 {
     // 创建一个 QTextCursor
     QTextCursor cursor = ui->textEdit_log->textCursor();
@@ -507,12 +548,12 @@ void MainWindow::slotWriteLog(const QString &log, log_level level/* = lower*/)
     // 先插入时间
     cursor.insertHtml(QString("<span style='color:black;'>%1</span>").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss >> ")));
     // 再插入文本
-    if ( lower == level)
-        cursor.insertHtml(QString("<span style='color:black;'>%1</span>").arg(log));
-    else if ( higher == level)
-        cursor.insertHtml(QString("<span style='color:red;'>%1</span>").arg(log));
+    if (msgType == QtDebugMsg || msgType == QtInfoMsg)
+        cursor.insertHtml(QString("<span style='color:black;'>%1</span>").arg(msg));
+    else if (msgType == QtCriticalMsg || msgType == QtFatalMsg)
+        cursor.insertHtml(QString("<span style='color:red;'>%1</span>").arg(msg));
     else
-        cursor.insertHtml(QString("<span style='color:green;'>%1</span>").arg(log));
+        cursor.insertHtml(QString("<span style='color:green;'>%1</span>").arg(msg));
 
     // 最后插入换行符
     cursor.insertHtml("<br>");
@@ -523,54 +564,11 @@ void MainWindow::slotWriteLog(const QString &log, log_level level/* = lower*/)
 
 void MainWindow::on_action_SpectrumModel_triggered()
 {
-    if (0){
-        if (spectrummodel && spectrummodel->isVisible()){
-            return ;
-        }
-
-        //能谱测量
-        if (nullptr == spectrummodel){
-            spectrummodel = new SpectrumModel(this);
-            //spectrummodel->setAttribute(Qt::WA_DeleteOnClose, true);
-            //spectrummodel->setWindowModality(Qt::ApplicationModal);
-        }
-
-        int index = ui->tabWidget_client->addTab(spectrummodel, tr("能谱测量"));
-        ui->tabWidget_client->setCurrentIndex(index);
-
-        QDockWidget *dockWidget = new QDockWidget();
-        dockWidget->setAttribute(Qt::WA_DeleteOnClose, true);
-        dockWidget->setWindowFlags(dockWidget->windowFlags() |Qt::Dialog);
-        dockWidget->setWindowModality(Qt::ApplicationModal);
-        dockWidget->setFloating(true);
-        dockWidget->setWindowTitle(tr("能谱测量"));
-        dockWidget->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-        this->addDockWidget(Qt::NoDockWidgetArea, dockWidget);
-
-        QWidget *dockWidgetContents = new QWidget(dockWidget);
-        dockWidgetContents->setObjectName(QString::fromUtf8("dockWidgetContents"));
-        QGridLayout *gridLayout = new QGridLayout(dockWidgetContents);
-        gridLayout->setObjectName(QString::fromUtf8("gridLayout"));
-        gridLayout->setContentsMargins(0, 0, 0, 0);
-
-        SpectrumModel *spectrummodel = new SpectrumModel(dockWidget);
-        gridLayout->addWidget(spectrummodel, 0, 0, 1, 1);
-        dockWidget->setWidget(dockWidgetContents);
-        dockWidget->setGeometry(0,0,spectrummodel->width(), 361/*waveformModel->height()*/ + 12);
-
-        QRect screenRect = QGuiApplication::primaryScreen()->availableGeometry();
-        int x = (screenRect.width() - 260/*waveformModel->width()*/) / 2;
-        int y = (screenRect.height() - 361/*waveformModel->height()*/) / 2;
-        dockWidget->move(x, y);
-        dockWidget->show();
-        dockWidget->activateWindow();
-    } else {
-        SpectrumModel *w = new SpectrumModel(this);
-        w->setAttribute(Qt::WA_DeleteOnClose, true);
-        w->setWindowFlags(Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint|Qt::Dialog);
-        w->setWindowModality(Qt::ApplicationModal);
-        w->showNormal();
-    }
+    SpectrumModel *w = new SpectrumModel(this);
+    w->setAttribute(Qt::WA_DeleteOnClose, true);
+    w->setWindowFlags(Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint|Qt::Dialog);
+    w->setWindowModality(Qt::ApplicationModal);
+    w->showNormal();
 }
 
 void MainWindow::on_action_DataAnalysis_triggered()
@@ -592,41 +590,12 @@ void MainWindow::on_action_DataAnalysis_triggered()
 
 #include "waveformmodel.h"
 void MainWindow::on_action_WaveformModel_triggered()
-{
-    if (0){
-        QDockWidget *dockWidget = new QDockWidget();
-        dockWidget->setAttribute(Qt::WA_DeleteOnClose, true);
-        dockWidget->setWindowFlags(dockWidget->windowFlags() |Qt::Dialog);
-        dockWidget->setWindowModality(Qt::ApplicationModal);
-        dockWidget->setFloating(true);
-        dockWidget->setWindowTitle(tr("波形测量"));
-        dockWidget->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-        this->addDockWidget(Qt::NoDockWidgetArea, dockWidget);
-
-        QWidget *dockWidgetContents = new QWidget(dockWidget);
-        dockWidgetContents->setObjectName(QString::fromUtf8("dockWidgetContents"));
-        QGridLayout *gridLayout = new QGridLayout(dockWidgetContents);
-        gridLayout->setObjectName(QString::fromUtf8("gridLayout"));
-        gridLayout->setContentsMargins(0, 0, 0, 0);
-
-        WaveformModel *waveformModel = new WaveformModel(dockWidget);
-        gridLayout->addWidget(waveformModel, 0, 0, 1, 1);
-        dockWidget->setWidget(dockWidgetContents);
-        dockWidget->setGeometry(0,0,waveformModel->width(), 410/*waveformModel->height()*/ + 12);
-
-        QRect screenRect = QGuiApplication::primaryScreen()->availableGeometry();
-        int x = (screenRect.width() - 260/*waveformModel->width()*/) / 2;
-        int y = (screenRect.height() - 410/*waveformModel->height()*/) / 2;
-        dockWidget->move(x, y);
-        dockWidget->show();
-        dockWidget->activateWindow();
-    } else {
-        WaveformModel *w = new WaveformModel(this);
-        w->setAttribute(Qt::WA_DeleteOnClose, true);
-        w->setWindowFlags(Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint|Qt::Dialog);
-        w->setWindowModality(Qt::ApplicationModal);
-        w->showNormal();
-    }
+{   
+    WaveformModel *w = new WaveformModel(this);
+    w->setAttribute(Qt::WA_DeleteOnClose, true);
+    w->setWindowFlags(Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint|Qt::Dialog);
+    w->setWindowModality(Qt::ApplicationModal);
+    w->showNormal();
 }
 
 // 连接外设
@@ -782,8 +751,10 @@ void MainWindow::on_pushButton_measure_clicked()
         ui->action_refresh->setEnabled(true);
         ui->actionaction_line_log->setEnabled(true);
         ui->pushButton_measure->setText(tr("停止测量"));
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-Detector");
-        plotWidget->slotResetPlot();
+        for (int i=0; i<2; ++i){
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(i+1));
+            plotWidget->slotResetPlot();
+        }
 
         commandhelper->slotStartManualMeasure(detectorParameter);
     } else {
@@ -871,7 +842,7 @@ void MainWindow::on_action_refresh_triggered()
 
 void MainWindow::on_pushButton_gauss_clicked()
 {
-    PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-Detector");
+    PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(currentDetectorIndex+1));
     plotWidget->slotGauss(ui->spinBox_leftE->value(), ui->spinBox_rightE->value());
 }
 
@@ -954,4 +925,9 @@ void MainWindow::on_action_cachepath_triggered()
 
         commandhelper->setDefaultCacheDir(cacheDir);
     }
+}
+
+void MainWindow::on_action_log_triggered()
+{
+    ui->widget_log->show();
 }

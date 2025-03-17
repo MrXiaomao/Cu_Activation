@@ -52,12 +52,10 @@ private:
      * 3-4 计数图
     */
     enum {
-        ENGRY_GRAPH_1 = 0,
-        ENGRY_GRAPH_2 = 1,
+        ENGRY_GRAPH = 0,
+        REF_GRAPH = 1,
         GAUSS_GRAPH = 2,
-        COUNT_GRAPH_1 = 3,
-        COUNT_GRAPH_2 = 4,
-        GRAPH_COUNT = 5
+        GRAPH_COUNT = 3
     };
     QCustomPlot *customPlot;
     QCPGraph *selectGraph = nullptr;

@@ -340,9 +340,13 @@ void MainWindow::InitMainWindowUi()
 
         ui->lineEdit_path->setText(jsonObj["path"].toString());
         ui->lineEdit_filename->setText(jsonObj["filename"].toString());
+
+        QString cacheDir = jsonObj["defaultCache"].toString();
+        commandhelper->setDefaultCacheDir(cacheDir);
     } else {
         ui->lineEdit_path->setText("./");
         ui->lineEdit_filename->setText("test.dat");
+        commandhelper->setDefaultCacheDir("./");
     }
 
     // 手动测量-标定文件
@@ -495,8 +499,13 @@ void MainWindow::initCustomPlot()
         customPlotWidget->show();
 
         connect(customPlotWidget, &PlotWidget::sigUpdateMeanValues, this, [=](unsigned int channel, unsigned int minMean, unsigned int maxMean){
-            currentDetectorIndex = channel;
-            if (channel == 0){
+            PlotWidget *customPlotWidget = qobject_cast<PlotWidget*>(sender());
+            if (customPlotWidget->objectName() == "real-Detector-1")
+                currentDetectorIndex = 0;
+            else
+                currentDetectorIndex = 1;
+
+            if (currentDetectorIndex == 0){
                 ui->spinBox_1_leftE->setValue(minMean);
                 ui->spinBox_1_rightE->setValue(maxMean);
             }
@@ -522,8 +531,13 @@ void MainWindow::initCustomPlot()
         customPlotWidget->show();
 
         connect(customPlotWidget, &PlotWidget::sigUpdateMeanValues, this, [=](unsigned int channel, unsigned int minMean, unsigned int maxMean){
-            currentDetectorIndex = channel;
-            if (channel == 0){
+            PlotWidget *customPlotWidget = qobject_cast<PlotWidget*>(sender());
+            if (customPlotWidget->objectName() == "real-Detector-1")
+                currentDetectorIndex = 0;
+            else
+                currentDetectorIndex = 1;
+
+            if (currentDetectorIndex == 1){
                 ui->spinBox_2_leftE->setValue(minMean);
                 ui->spinBox_2_rightE->setValue(maxMean);
             }

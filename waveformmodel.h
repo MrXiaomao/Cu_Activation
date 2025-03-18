@@ -37,6 +37,7 @@ private:
     QDateTime timerStart;
     CommandHelper *commandhelper = nullptr;//网络指令
     bool measuring = false;
+    qint64 total_filesize;
 };
 
 #endif // WAVEFORMMODEL_H

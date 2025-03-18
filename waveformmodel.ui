@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>260</width>
-    <height>433</height>
+    <height>497</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -296,10 +296,10 @@
       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
-      <item row="0" column="1">
-       <widget class="QLabel" name="label_7">
+      <item row="1" column="1">
+       <widget class="QLabel" name="label_13">
         <property name="text">
-         <string>0000-00-00 00:00:00</string>
+         <string>00:00:00</string>
         </property>
        </widget>
       </item>
@@ -313,6 +313,13 @@
         </property>
        </widget>
       </item>
+      <item row="0" column="1">
+       <widget class="QLabel" name="label_7">
+        <property name="text">
+         <string>0000-00-00 00:00:00</string>
+        </property>
+       </widget>
+      </item>
       <item row="1" column="0">
        <widget class="QLabel" name="label_12">
         <property name="text">
@@ -323,10 +330,20 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
-       <widget class="QLabel" name="label_13">
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_14">
         <property name="text">
-         <string>00:00:00</string>
+         <string>接收字节：</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLabel" name="label_size">
+        <property name="text">
+         <string>0 bytes</string>
         </property>
        </widget>
       </item>

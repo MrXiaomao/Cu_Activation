@@ -43,6 +43,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
     });
 
     initSocket(&socketDetector);
+    socketDetector->setSocketOption(QAbstractSocket::LowDelayOption, 1);
 
     // 创建数据解析线程
     analyzeNetDataThread = new QUiThread(this);
@@ -74,6 +75,7 @@ CommandHelper::~CommandHelper(){
 
     auto closeSocket = [&](QTcpSocket* socket){
         if (socket){
+            socket->disconnectFromHost();
             socket->close();
             delete socket;
             socket = nullptr;
@@ -702,8 +704,10 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
         }
 
         if (workStatus == Measuring) {
-            if (nullptr != pfSave){
+            if (nullptr != pfSave && binaryData.size() > 0){
                 pfSave->write(binaryData);
+                pfSave->flush();
+                emit sigRecvData(binaryData.size());
             }
 
             // 只有符合模式才需要做进一步数据处理
@@ -772,12 +776,6 @@ void CommandHelper::slotStopManualMeasure()
     qint64 writeLen = socketDetector->write(command);
     while (!writeLen){
         writeLen = socketDetector->write(command);
-    }
-
-    if (nullptr != pfSave){
-        pfSave->close();
-        delete pfSave;
-        pfSave = nullptr;
     }
 }
 
@@ -911,10 +909,10 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
             }
 
             // 只有符合模式才需要做进一步数据处理
-            if (detectorParameter.transferModel == 0x05){
-                QMutexLocker locker(&mutexCache);
-                cachePool.push_back(binaryData);
-            }
+//            if (detectorParameter.transferModel == 0x05){
+//                QMutexLocker locker(&mutexCache);
+//                cachePool.push_back(binaryData);
+//            }
         }
     });
 
@@ -977,12 +975,6 @@ void CommandHelper::slotStopAutoMeasure()
     while (!writeLen){
         writeLen = socketDetector->write(command);
     }
-
-    if (nullptr != pfSave){
-        pfSave->close();
-        delete pfSave;
-        pfSave = nullptr;
-    }
 }
 
 #include <QThread>
@@ -998,6 +990,12 @@ void CommandHelper::slotAnalyzeNetFrame()
 {
     while (!taskFinished)
     {
+        detectorParameter.transferModel = 0x05;
+        QFile file("C:/Users/Administrator/Desktop/川大项目/缓存目录/2025-03-18 192940.dat");
+        if (file.open(QIODevice::ReadOnly)) {
+            cachePool = file.readAll();
+            file.close();
+        }
         {
             QMutexLocker locker(&mutexCache);
             if (cachePool.size() <= 0){
@@ -1064,12 +1062,21 @@ void CommandHelper::slotAnalyzeNetFrame()
                 }
             }
         } else if (detectorParameter.transferModel == 0x05){
-            qint32 minPkgSize = 1026 * 8;
+            const quint32 minPkgSize = 1026 * 8;
             bool isNual = false;
             while (true){
                 int size = handlerPool.size();
                 if (size >= minPkgSize){
                     // 寻找包头
+                    QByteArray ht;
+                    ht.push_back((quint8)handlerPool.at(0));
+                    ht.push_back((quint8)handlerPool.at(1));
+                    ht.push_back((quint8)handlerPool.at(2));
+                    ht.push_back((quint8)handlerPool.at(3));
+                    ht.push_back((quint8)handlerPool.at(minPkgSize-4));
+                    ht.push_back((quint8)handlerPool.at(minPkgSize-3));
+                    ht.push_back((quint8)handlerPool.at(minPkgSize-2));
+                    ht.push_back((quint8)handlerPool.at(minPkgSize-1));
                     if ((quint8)handlerPool.at(0) == 0x00 && (quint8)handlerPool.at(1) == 0x00 && (quint8)handlerPool.at(2) == 0xaa && (quint8)handlerPool.at(3) == 0xb3){
                         // 寻找包尾(正常情况包尾正确)
                         if ((quint8)handlerPool.at(minPkgSize-4) == 0x00 && (quint8)handlerPool.at(minPkgSize-3) == 0x00 && (quint8)handlerPool.at(minPkgSize-2) == 0xcc && (quint8)handlerPool.at(minPkgSize-1) == 0xd3){
@@ -1078,17 +1085,36 @@ void CommandHelper::slotAnalyzeNetFrame()
                         } else {
                             handlerPool.remove(0, 1);
                         }
-                    } else if (handlerPool.size() == 12){
-                        //12 34 00 0F FF 10 00 11 00 00 AB CD
-                        //判断停止测量指令
-                        if ((quint8)handlerPool.at(0) == 0x12 && (quint8)handlerPool.at(1) == 0x34
+                    } else if ((quint8)handlerPool.at(0) == 0x12 && (quint8)handlerPool.at(1) == 0x34
                                 && (quint8)handlerPool.at(10) == 0xab && (quint8)handlerPool.at(11) == 0xcd){
-                            handlerPool.remove(0, 12);
-                            emit sigMeasureStop();
-                            break;
-                        } else {
-                            handlerPool.remove(0, 1);
+                        handlerPool.remove(0, 12);
+                        //通过指令来判断测量是否停止
+                        if (nullptr != pfSave){
+                            pfSave->close();
+                            delete pfSave;
+                            pfSave = nullptr;
                         }
+
+                        emit sigMeasureStop();
+                        break;
+                    } else {
+                        handlerPool.remove(0, 1);
+                    }
+                } else if (handlerPool.size() == 12){
+                    //12 34 00 0F FF 10 00 11 00 00 AB CD
+                    //通过指令来判断测量是否停止
+                    if ((quint8)handlerPool.at(0) == 0x12 && (quint8)handlerPool.at(1) == 0x34
+                            && (quint8)handlerPool.at(10) == 0xab && (quint8)handlerPool.at(11) == 0xcd){
+                        handlerPool.remove(0, 12);
+
+                        if (nullptr != pfSave){
+                            pfSave->close();
+                            delete pfSave;
+                            pfSave = nullptr;
+                        }
+
+                        emit sigMeasureStop();
+                        break;
                     } else {
                         handlerPool.remove(0, 1);
                     }

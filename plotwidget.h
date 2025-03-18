@@ -74,7 +74,7 @@ private:
 
     QColor clrBackground = QColor(255, 255, 255);
     QColor clrLine[2] = {QColor(0, 255, 0, 200), QColor(0, 255, 0, 200)};
-    QColor clrRang = QColor(255, 0, 0);
+    QColor clrRang = QColor(255, 0, 0, 255);
     QColor clrSelect = QColor(0, 0, 255, 200);
     QColor clrGauseCurve = QColor(0, 0, 255, 200);
     bool axisVisible = true;

@@ -100,6 +100,8 @@ signals:
     void sigMeasureStart(qint8 mode);
     void sigMeasureStop();
 
+    void sigRecvData(qint32);
+
 private:
     QByteArray frame;
     QByteArray command;

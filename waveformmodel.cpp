@@ -40,8 +40,29 @@ WaveformModel::WaveformModel(QWidget *parent)
         ui->label_13->setText(time.toString("HH:mm:ss"));
     });
 
-    this->load();
+    connect(commandhelper, &CommandHelper::sigRecvData, this, [=](qint32 size){
+        auto cal = [=](qint64 sz){
+            double num = (double)sz;
+            QStringList list;
+            list << "KB" << "MB" << "GB" << "TB";
 
+            QStringListIterator i(list);
+            QString unit("bytes");
+
+            while(num >= 1024.0 && i.hasNext())
+             {
+                unit = i.next();
+                num /= 1024.0;
+            }
+
+            return QString().setNum(num,'f',2)+" "+unit;
+        };
+
+        total_filesize += size;
+        ui->label_size->setText(cal(total_filesize));
+    });
+
+    this->load();
     ui->pushButton_save->setEnabled(false);
 }
 
@@ -244,6 +265,9 @@ void WaveformModel::on_pushButton_start_clicked()
             detectorParameter.triggerModel = jsonObj["TriggerModel"].toInt();
             detectorParameter.gain = jsonObj["DetectorGain"].toInt();
         }
+
+        total_filesize = 0;
+        ui->label_size->setText("0 bytes");
 
         measuring = true;
         btn->setText(tr("停止测量"));

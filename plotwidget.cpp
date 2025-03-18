@@ -702,8 +702,8 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                             double value_from = dragRectItem->topLeft->value();
                             double value_to = dragRectItem->bottomRight->value();
                             double value_temp = value_from;
-                            value_from = qMin(value_from, value_to);
-                            value_to = qMax(value_temp, value_to);
+                            value_from = qMax(value_from, value_to);
+                            value_to = qMin(value_temp, value_to);
 
                             QCPGraph *graph = customPlot->graph(currentGraphIndex);
                             QVector<double> keys, values, curveKeys;
@@ -711,8 +711,10 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                             int fcount = 0;
                             std::vector<double> sx;
                             std::vector<double> sy;
+                            bool inArea = false;
                             for (int i=0; i<graph->data()->size(); ++i){
                                 if (graph->data()->at(i)->key>=key_from && graph->data()->at(i)->key<=key_to && graph->data()->at(i)->value>=value_to) {
+                                    inArea = true;
                                     keys << (double)graph->data()->at(i)->key;
                                     values << (double)graph->data()->at(i)->value;
                                     colors << clrRang;
@@ -735,7 +737,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
 
                             // 高斯拟合
                             {
-                                slotGauss(key_from, key_to);
+                                //slotGauss(key_from, key_to);
                                 double result[3];
                                 fit_GaussCurve(fcount, sx, sy, result);
 

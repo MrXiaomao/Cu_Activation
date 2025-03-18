@@ -16,6 +16,8 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    cachedirconfigwidget.cpp \
+    function.cpp \
     aboutwidget.cpp \
     augmentedmatrix.cpp \
     commandhelper.cpp \
@@ -28,13 +30,14 @@ SOURCES += \
     qcustomplot.cpp \
     main.cpp \
     mainwindow.cpp \
-    rollingtimewidget.cpp \
     spectrumModel.cpp \
     sysutils.cpp \
     waveformmodel.cpp \
     FPGASetting.cpp
 
 HEADERS += \
+    cachedirconfigwidget.h \
+    function.h \
     aboutwidget.h \
     augmentedmatrix.h \
     commandhelper.h \
@@ -46,7 +49,6 @@ HEADERS += \
     polynomialfit.h \
     qcustomplot.h \
     mainwindow.h \
-    rollingtimewidget.h \
     spectrumModel.h \
     sysutils.h \
     waveformmodel.h \
@@ -55,6 +57,7 @@ HEADERS += \
 FORMS += \
     FPGASetting.ui \
     aboutwidget.ui \
+    cachedirconfigwidget.ui \
     coolingtimewidget.ui \
     dataanalysiswidget.ui \
     energycalibrationform.ui \

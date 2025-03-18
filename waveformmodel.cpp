@@ -223,8 +223,6 @@ void WaveformModel::on_pushButton_start_clicked()
         detectorParameter.dieTimeLength = 0x05;
         detectorParameter.gain = 0x00;
         detectorParameter.waveLength = 0x01;
-        detectorParameter.path = "./";
-        detectorParameter.filename = "test.dat";
         detectorParameter.transferModel = 0x03;// 0x00-能谱 0x03-波形 0x05-符合模式
         detectorParameter.triggerModel = 0x00;
 
@@ -245,8 +243,6 @@ void WaveformModel::on_pushButton_start_clicked()
             detectorParameter.waveLength = jsonObj["WaveLength"].toInt();
             detectorParameter.triggerModel = jsonObj["TriggerModel"].toInt();
             detectorParameter.gain = jsonObj["DetectorGain"].toInt();
-            detectorParameter.path = jsonObj["Path"].toString();
-            detectorParameter.filename = jsonObj["FileName"].toString();
         }
 
         measuring = true;

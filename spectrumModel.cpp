@@ -195,8 +195,6 @@ void SpectrumModel::on_pushButton_start_clicked()
         detectorParameter.waveformPolarity = 0x00;
         detectorParameter.refreshTimeLength = 0x01;
         detectorParameter.gain = 0x00;
-        detectorParameter.path = "./";
-        detectorParameter.filename = "test.dat";
         detectorParameter.transferModel = 0x00;// 0x00-能谱 0x03-波形 0x05-符合模式
 
         // 打开 JSON 文件
@@ -214,8 +212,6 @@ void SpectrumModel::on_pushButton_start_clicked()
             detectorParameter.waveformPolarity = jsonObj["WaveformPolarity"].toInt();
             detectorParameter.refreshTimeLength = jsonObj["RefreshTimeLength"].toInt();
             detectorParameter.gain = jsonObj["DetectorGain"].toInt();
-            detectorParameter.path = jsonObj["Path"].toString();
-            detectorParameter.filename = jsonObj["FileName"].toString();
         }
 
         measuring = true;

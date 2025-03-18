@@ -40,11 +40,8 @@ typedef struct tagDetectorParameter{
     */
     qint8 transferModel;
 
-//    // 保存路径
-//    QString path;
-
-//    // 保存文件名
-//    QString filename;
+    // 测量模式
+    qint8 measureModel;
 } DetectorParameter;
 
 class QUiThread;
@@ -99,11 +96,16 @@ signals:
     void sigDoTasks();
     void sigAnalyzeFrame();
 
+    //自动测量正式开始
+    void sigMeasureStart(qint8 mode);
+    void sigMeasureStop();
+
 private:
     QByteArray frame;
     QByteArray command;
     QByteArray cachePool;
-    QMutex mutex;
+    QByteArray handlerPool;
+    QMutex mutexCache;
     QMutex mutexPlot;
     quint32 SequenceNumber;// 帧序列号
     QUiThread* analyzeNetDataThread;
@@ -154,16 +156,16 @@ public slots:
     void slotTransferModel(quint8 mode);
 
     //开始测量
-    void slotStart();
+    void slotStart(qint8 mode);
 
     //开始手工测量
     void slotStartManualMeasure(DetectorParameter p);
-
-    //开始能谱测量
-    void slotStartSpectrumMeasure(DetectorParameter p);
-
     //停止手工测量
     void slotStopManualMeasure();
+
+    //开始自动测量
+    void slotStartAutoMeasure(DetectorParameter p);
+    void slotStopAutoMeasure();
 
 public slots:
     void slotDoTasks();

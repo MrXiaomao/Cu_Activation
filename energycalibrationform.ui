@@ -6,21 +6,9 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>788</width>
-    <height>500</height>
+    <width>1156</width>
+    <height>679</height>
    </rect>
-  </property>
-  <property name="minimumSize">
-   <size>
-    <width>0</width>
-    <height>500</height>
-   </size>
-  </property>
-  <property name="maximumSize">
-   <size>
-    <width>16777215</width>
-    <height>500</height>
-   </size>
   </property>
   <property name="windowTitle">
    <string>能量刻度</string>
@@ -77,7 +65,7 @@
       <item>
        <widget class="QTableWidget" name="tableWidget">
         <attribute name="verticalHeaderVisible">
-         <bool>false</bool>
+         <bool>true</bool>
         </attribute>
         <row>
          <property name="text">
@@ -89,19 +77,39 @@
           <string>2</string>
          </property>
         </row>
+        <row>
+         <property name="text">
+          <string>3</string>
+         </property>
+        </row>
+        <row>
+         <property name="text">
+          <string>4</string>
+         </property>
+        </row>
+        <row>
+         <property name="text">
+          <string>5</string>
+         </property>
+        </row>
+        <row>
+         <property name="text">
+          <string>6</string>
+         </property>
+        </row>
         <column>
          <property name="text">
-          <string>通道</string>
+          <string>X</string>
          </property>
         </column>
         <column>
          <property name="text">
-          <string>能量</string>
+          <string>Y</string>
          </property>
         </column>
         <item row="0" column="0">
          <property name="text">
-          <string>1</string>
+          <string>0.1</string>
          </property>
          <property name="textAlignment">
           <set>AlignCenter</set>
@@ -109,7 +117,7 @@
         </item>
         <item row="0" column="1">
          <property name="text">
-          <string>25.84</string>
+          <string>5.81395</string>
          </property>
          <property name="textAlignment">
           <set>AlignCenter</set>
@@ -117,7 +125,7 @@
         </item>
         <item row="1" column="0">
          <property name="text">
-          <string>2</string>
+          <string>0.2</string>
          </property>
          <property name="textAlignment">
           <set>AlignCenter</set>
@@ -125,7 +133,71 @@
         </item>
         <item row="1" column="1">
          <property name="text">
-          <string>26.76</string>
+          <string>3.09598</string>
+         </property>
+         <property name="textAlignment">
+          <set>AlignCenter</set>
+         </property>
+        </item>
+        <item row="2" column="0">
+         <property name="text">
+          <string>0.3</string>
+         </property>
+         <property name="textAlignment">
+          <set>AlignCenter</set>
+         </property>
+        </item>
+        <item row="2" column="1">
+         <property name="text">
+          <string>2.06612</string>
+         </property>
+         <property name="textAlignment">
+          <set>AlignCenter</set>
+         </property>
+        </item>
+        <item row="3" column="0">
+         <property name="text">
+          <string>0.4</string>
+         </property>
+         <property name="textAlignment">
+          <set>AlignCenter</set>
+         </property>
+        </item>
+        <item row="3" column="1">
+         <property name="text">
+          <string>1.44928</string>
+         </property>
+         <property name="textAlignment">
+          <set>AlignCenter</set>
+         </property>
+        </item>
+        <item row="4" column="0">
+         <property name="text">
+          <string>0.5</string>
+         </property>
+         <property name="textAlignment">
+          <set>AlignCenter</set>
+         </property>
+        </item>
+        <item row="4" column="1">
+         <property name="text">
+          <string>1.00000</string>
+         </property>
+         <property name="textAlignment">
+          <set>AlignCenter</set>
+         </property>
+        </item>
+        <item row="5" column="0">
+         <property name="text">
+          <string>0.6</string>
+         </property>
+         <property name="textAlignment">
+          <set>AlignCenter</set>
+         </property>
+        </item>
+        <item row="5" column="1">
+         <property name="text">
+          <string>0.63331</string>
          </property>
          <property name="textAlignment">
           <set>AlignCenter</set>
@@ -138,7 +210,7 @@
         <item>
          <widget class="QLabel" name="label">
           <property name="text">
-           <string>通道：</string>
+           <string>X：</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -146,19 +218,12 @@
          </widget>
         </item>
         <item>
-         <widget class="QSpinBox" name="spinBox_ch">
-          <property name="maximum">
-           <number>9999</number>
-          </property>
-          <property name="value">
-           <number>1</number>
-          </property>
-         </widget>
+         <widget class="QDoubleSpinBox" name="doubleSpinBox_x"/>
         </item>
         <item>
          <widget class="QLabel" name="label_2">
           <property name="text">
-           <string>能量：</string>
+           <string>Y：</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -166,7 +231,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="doubleSpinBox_e">
+         <widget class="QDoubleSpinBox" name="doubleSpinBox_y">
           <property name="maximum">
            <double>999999.989999999990687</double>
           </property>
@@ -194,6 +259,13 @@
          </widget>
         </item>
         <item>
+         <widget class="QPushButton" name="pushButton_clear">
+          <property name="text">
+           <string>清空</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QPushButton" name="pushButton_2">
           <property name="text">
            <string>拟合</string>
@@ -205,20 +277,23 @@
       <item>
        <widget class="QGroupBox" name="groupBox">
         <property name="title">
-         <string>拟合方式</string>
+         <string>拟合函数</string>
         </property>
         <layout class="QGridLayout" name="gridLayout">
          <item row="0" column="0">
           <widget class="QRadioButton" name="radioButton">
            <property name="text">
-            <string>直线</string>
+            <string>span{1,x}</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
          <item row="0" column="1">
           <widget class="QRadioButton" name="radioButton_2">
            <property name="text">
-            <string>曲线</string>
+            <string>span{1/x, 1, x}</string>
            </property>
           </widget>
          </item>

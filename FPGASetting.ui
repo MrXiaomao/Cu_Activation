@@ -80,6 +80,11 @@
      </item>
      <item>
       <property name="text">
+       <string>2.52</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
        <string>5.01</string>
       </property>
      </item>

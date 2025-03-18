@@ -71,11 +71,19 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
 
 CommandHelper::~CommandHelper(){
     taskFinished = true;
-    //analyzeNetDataThread->exit();
-    //analyzeNetDataThread->wait(500);
-    //analyzeNetDataThread->quit();
 
-    //plotUpdateThread->wait(500);
+    auto closeSocket = [&](QTcpSocket* socket){
+        if (socket){
+            socket->close();
+            delete socket;
+            socket = nullptr;
+        }
+    };
+
+    closeSocket(socketDisplacement1);
+    closeSocket(socketDisplacement2);
+    closeSocket(socketRelay);
+    closeSocket(socketDetector);
 }
 
 void CommandHelper::initSocket(QTcpSocket** _socket)
@@ -553,7 +561,7 @@ void CommandHelper::slotTransferModel(quint8 mode)
 }
 
 //启动测量
-void CommandHelper::slotStart()
+void CommandHelper::slotStart(qint8 mode)
 {
     //清空
     command.clear();
@@ -578,7 +586,7 @@ void CommandHelper::slotStart()
     dataStream << (quint8)0x00;
 
     //00:停止 01:软件触发 02:硬件触发
-    dataStream << (quint8)0x01;
+    dataStream << (quint8)mode;//0x01;
 
     dataStream << (quint8)0xab;
     dataStream << (quint8)0xcd;
@@ -637,9 +645,10 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
                     emit slotTransferModel(detectorParameter.transferModel);
                     break;
                 case 5: // 开始测量/停止测量
-                    emit slotStart();
+                    emit slotStart(0x01);
                     break;
                 case 6: // 开始测量/停止测量
+                    emit sigMeasureStart(detectorParameter.measureModel);
                     workStatus = Measuring;
                     binaryData.remove(0, command.size());
                     break;
@@ -681,9 +690,10 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
                     emit slotTransferModel(detectorParameter.transferModel);
                     break;
                 case 7: // 开始测量/停止测量
-                    emit slotStart();
+                    emit slotStart(0x01);
                     break;
                 case 8: // 开始测量/停止测量
+                    emit sigMeasureStart(detectorParameter.measureModel);
                     workStatus = Measuring;
                     binaryData.remove(0, command.size());
                     break;
@@ -698,15 +708,16 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
 
             // 只有符合模式才需要做进一步数据处理
             if (detectorParameter.transferModel == 0x05){
-                QMutexLocker locker(&mutex);
+                QMutexLocker locker(&mutexCache);
                 cachePool.push_back(binaryData);
             }
         }
     });
 
     //连接之前清空缓冲区
-    QMutexLocker locker(&mutex);
+    QMutexLocker locker(&mutexCache);
     cachePool.clear();
+    handlerPool.clear();
 
     //连接探测器
     prepareStep = 0;
@@ -722,102 +733,6 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
         // 触发阈值
         qDebug() << QString("设置触发阈值, 值1=%1 值2=%2").arg(detectorParameter.triggerThold1).arg(detectorParameter.triggerThold2);
         emit slotTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2);
-    }
-}
-
-//开始能谱测量
-void CommandHelper::slotStartSpectrumMeasure(DetectorParameter p)
-{
-    workStatus = Preparing;
-    detectorParameter = p;
-
-    // 断开所有槽函数
-    disconnect(socketDetector, SIGNAL(readyRead()), this, nullptr);
-
-    //接收数据
-    connect(socketDetector, &QTcpSocket::readyRead, this, [=](){
-        QByteArray binaryData = socketDetector->readAll();
-
-        //00:能谱 03:波形 05:粒子
-        if (detectorParameter.transferModel == 0x00 || detectorParameter.transferModel == 0x03){
-            if (nullptr != pfSave){
-                pfSave->write(binaryData);
-            }
-        } else if (detectorParameter.transferModel == 0x05){
-            if (workStatus == Preparing){
-                if (binaryData.compare(command) == 0){
-                    prepareStep++;
-                } else if (prepareStep == 5){
-                    QByteArray firstPart = binaryData.left(command.size());
-                    if (firstPart == command){
-                        // 比较成功
-                        prepareStep++;
-                    }
-                }
-
-                switch (prepareStep) {
-                case 1: // 波形极性
-                    qDebug() << QString("设置波形极性, 值=%1").arg(detectorParameter.waveformPolarity);
-                    emit slotWaveformPolarity(detectorParameter.waveformPolarity);
-                    break;
-                case 2: // 能谱模式/粒子模式死时间
-                    if (detectorParameter.transferModel == 0x05){
-                        qDebug() << QString("设置能谱刷新时间，值=%1").arg(detectorParameter.refreshTimeLength);
-                        emit slotDieTimeLength(detectorParameter.dieTimeLength);
-                    } else if (detectorParameter.transferModel == 0x05){
-                        qDebug() << QString("设置能谱模式/粒子模式死时间，值=%1").arg(detectorParameter.dieTimeLength);
-                        emit slotDieTimeLength(detectorParameter.dieTimeLength);
-                    }
-                    break;
-                case 3: // 探测器增益
-                    qDebug() << QString("设置增益，值=%1").arg(detectorParameter.dieTimeLength);
-                    emit slotDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00);
-                    break;
-                case 4: // 传输模式
-                    qDebug() << QString("设置传输模式，值=%1").arg(detectorParameter.transferModel);
-                    emit slotTransferModel(detectorParameter.transferModel);
-                    break;
-                case 5: // 开始测量/停止测量
-                    emit slotStart();
-                    break;
-                case 6: // 开始测量/停止测量
-                    workStatus = Measuring;
-                    binaryData.remove(0, command.size());
-                    break;
-                }
-            }
-
-            if (workStatus == Measuring) {
-                if (nullptr != pfSave){
-                    pfSave->write(binaryData);
-                }
-
-                QMutexLocker locker(&mutex);
-                cachePool.push_back(binaryData);
-            }
-        }
-    });
-
-    //连接之前清空缓冲区
-    QMutexLocker locker(&mutex);
-    cachePool.clear();
-
-    //连接探测器
-    prepareStep = 0;
-    if (0 == prepareStep){
-        QString name = QString("%1/%2").arg(detectorParameter.path).arg(detectorParameter.filename);
-        pfSave = new QFile(name);
-        if (pfSave->open(QIODevice::WriteOnly)) {
-            qDebug() << tr("能谱模式-创建保存文件成功，文件名：%1").arg(name);
-        } else {
-            qWarning() << tr("能谱模式-创建保存文件失败，文件名：%1").arg(name);
-        }
-
-        if (detectorParameter.transferModel == 0x00){
-            // 触发阈值
-            qDebug() << QString("设置触发阈值, 值1=%1 值2=%2").arg(detectorParameter.triggerThold1).arg(detectorParameter.triggerThold2);
-            emit slotTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2);
-        }
     }
 }
 
@@ -854,7 +769,214 @@ void CommandHelper::slotStopManualMeasure()
     dataStream << (quint8)0xab;
     dataStream << (quint8)0xcd;
 
-    socketDetector->write(command);
+    qint64 writeLen = socketDetector->write(command);
+    while (!writeLen){
+        writeLen = socketDetector->write(command);
+    }
+
+    if (nullptr != pfSave){
+        pfSave->close();
+        delete pfSave;
+        pfSave = nullptr;
+    }
+}
+
+//开始能谱测量
+void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
+{
+    workStatus = Preparing;
+    detectorParameter = p;
+
+    // 断开所有槽函数
+    disconnect(socketDetector, SIGNAL(readyRead()), this, nullptr);
+
+    //接收数据
+    connect(socketDetector, &QTcpSocket::readyRead, this, [=](){
+        QByteArray binaryData = socketDetector->readAll();
+
+        //00:能谱 03:波形 05:粒子
+        if (workStatus == Preparing){
+            if (detectorParameter.transferModel == 0x00 || detectorParameter.transferModel == 0x05){
+                if (binaryData.compare(command) == 0){
+                    prepareStep++;
+                } else if (prepareStep == 5){
+                    //清空
+                    command.clear();
+
+                    QDataStream dataStream(&command, QIODevice::WriteOnly);
+                    dataStream << (quint8)0x12;
+                    dataStream << (quint8)0x34;
+                    dataStream << (quint8)0x00;
+                    dataStream << (quint8)0xaa;
+                    dataStream << (quint8)0x00;
+                    dataStream << (quint8)0x0c;
+
+                    dataStream << (quint8)0x00;
+                    dataStream << (quint8)0x00;
+                    dataStream << (quint8)0x00;
+                    dataStream << (quint8)0x00;
+
+                    dataStream << (quint8)0xab;
+                    dataStream << (quint8)0xcd;
+
+                    QByteArray firstPart = binaryData.left(command.size());
+                    if (firstPart == command){
+                        // 比较成功
+                        prepareStep++;
+                    }
+                }
+
+                switch (prepareStep) {
+                case 1: // 波形极性
+                    qDebug() << QString("设置波形极性, 值=%1").arg(detectorParameter.waveformPolarity);
+                    emit slotWaveformPolarity(detectorParameter.waveformPolarity);
+                    break;
+                case 2: // 能谱模式/粒子模式死时间
+                    if (detectorParameter.transferModel == 0x00){
+                        qDebug() << QString("设置能谱刷新时间，值=%1").arg(detectorParameter.refreshTimeLength);
+                        emit slotSpectnumRefreshTimeLength(detectorParameter.refreshTimeLength);
+                    } else if (detectorParameter.transferModel == 0x03 || detectorParameter.transferModel == 0x05){
+                        qDebug() << QString("设置能谱模式/粒子模式死时间，值=%1").arg(detectorParameter.dieTimeLength);
+                        emit slotDieTimeLength(detectorParameter.dieTimeLength);
+                    }
+                    break;
+                case 3: // 探测器增益
+                    qDebug() << QString("设置增益，值=%1").arg(detectorParameter.dieTimeLength);
+                    emit slotDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00);
+                    break;
+                case 4: // 传输模式
+                    qDebug() << QString("设置传输模式，值=%1").arg(detectorParameter.transferModel);
+                    emit slotTransferModel(detectorParameter.transferModel);
+                    break;
+                case 5: // 开始测量/停止测量
+                    emit slotStart(0x02);
+                    break;
+                case 6: // 开始测量/停止测量
+                    workStatus = Measuring;
+                    emit sigMeasureStart(detectorParameter.measureModel);
+                    binaryData.remove(0, command.size());
+                    break;
+                }
+            } else if (detectorParameter.transferModel == 0x03) {
+                if (binaryData.compare(command) == 0){
+                    prepareStep++;
+                } else if (prepareStep == 7){
+                    QByteArray firstPart = binaryData.left(command.size());
+                    if (firstPart == command){
+                        // 比较成功
+                        prepareStep++;
+                    }
+                }
+
+                switch (prepareStep) {
+                case 1: // 波形极性
+                    qDebug() << QString("设置波形极性, 值=%1").arg(detectorParameter.waveformPolarity);
+                    emit slotWaveformPolarity(detectorParameter.waveformPolarity);
+                    break;
+                case 2: // 能谱模式/粒子模式死时间
+                    qDebug() << QString("设置能谱模式/粒子模式死时间，值=%1").arg(detectorParameter.dieTimeLength);
+                    emit slotDieTimeLength(detectorParameter.dieTimeLength);
+                    break;
+                case 3: // 探测器增益
+                    qDebug() << QString("设置增益，值=%1").arg(detectorParameter.dieTimeLength);
+                    emit slotDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00);
+                    break;
+                case 4: // 波形长度
+                    qDebug() << QString("设置波形长度，值=%1").arg(detectorParameter.waveLength);
+                    emit slotWaveformLength(detectorParameter.waveLength);
+                    break;
+                case 5: // 波形触发模式
+                    qDebug() << QString("设置波形触发模式，值=%1").arg(detectorParameter.waveLength);
+                    emit slotWaveformTriggerModel(detectorParameter.triggerModel);
+                    break;
+                case 6: // 传输模式
+                    qDebug() << QString("设置传输模式，值=%1").arg(detectorParameter.transferModel);
+                    emit slotTransferModel(detectorParameter.transferModel);
+                    break;
+                case 7: // 开始测量/停止测量
+                    emit slotStart(0x02);
+                    break;
+                case 8: // 开始测量/停止测量
+                    emit sigMeasureStart(detectorParameter.measureModel);
+                    workStatus = Measuring;
+                    binaryData.remove(0, command.size());
+                    break;
+                }
+            }
+        }
+
+        if (workStatus == Measuring) {
+            if (nullptr != pfSave){
+                pfSave->write(binaryData);
+            }
+
+            // 只有符合模式才需要做进一步数据处理
+            if (detectorParameter.transferModel == 0x05){
+                QMutexLocker locker(&mutexCache);
+                cachePool.push_back(binaryData);
+            }
+        }
+    });
+
+    //连接之前清空缓冲区
+    QMutexLocker locker(&mutexCache);
+    cachePool.clear();
+    handlerPool.clear();
+
+    //连接探测器
+    prepareStep = 0;
+    if (0 == prepareStep){
+        currentFilename = QString("%1").arg(defaultCacheDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + ".dat");
+        pfSave = new QFile(currentFilename);
+        if (pfSave->open(QIODevice::WriteOnly)) {
+            qDebug() << tr("创建缓存文件成功，文件名：%1").arg(currentFilename);
+        } else {
+            qWarning() << tr("创建缓存文件失败，文件名：%1").arg(currentFilename);
+        }
+
+        // 触发阈值
+        qDebug() << QString("设置触发阈值, 值1=%1 值2=%2").arg(detectorParameter.triggerThold1).arg(detectorParameter.triggerThold2);
+        emit slotTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2);
+    }
+}
+
+void CommandHelper::slotStopAutoMeasure()
+{
+    if (nullptr == socketDetector)
+        return;
+
+    //清空
+    command.clear();
+
+    QDataStream dataStream(&command, QIODevice::WriteOnly);
+    dataStream << (quint8)0x12;
+    dataStream << (quint8)0x34;
+    dataStream << (quint8)0x00;
+    dataStream << (quint8)0x0f;
+    dataStream << (quint8)0xff;
+    dataStream << (quint8)0x10;
+
+    quint8 ch1 = 0x00;
+    quint8 ch2 = 0x00;
+    quint8 ch3 = 0x00;
+    quint8 ch4 = 0x00;
+
+    //是否开启相应通道,0关闭，1开启    CH4在高位，    CH3在低位
+    dataStream << (quint8)((ch4 & 0x10) | (ch3 & 0x01));
+    //是否开启相应通道,0关闭，1开启    CH2在高位，    CH1在低位
+    dataStream << (quint8)((ch2 & 0x10) | (ch1 & 0x01));
+    dataStream << (quint8)0x00;
+
+    //00:停止 01:软件触发 02:硬件触发
+    dataStream << (quint8)0x00;
+
+    dataStream << (quint8)0xab;
+    dataStream << (quint8)0xcd;
+
+    qint64 writeLen = socketDetector->write(command);
+    while (!writeLen){
+        writeLen = socketDetector->write(command);
+    }
 
     if (nullptr != pfSave){
         pfSave->close();
@@ -876,10 +998,15 @@ void CommandHelper::slotAnalyzeNetFrame()
 {
     while (!taskFinished)
     {
-        QMutexLocker locker(&mutex);
-        if (cachePool.size() <= 0){
-            QThread::msleep(5);
-            continue;
+        {
+            QMutexLocker locker(&mutexCache);
+            if (cachePool.size() <= 0){
+                QThread::msleep(1);
+                continue;
+            } else {
+                handlerPool.append(cachePool);
+                cachePool.clear();
+            }
         }
 
         QByteArray validFrame;
@@ -892,16 +1019,16 @@ void CommandHelper::slotAnalyzeNetFrame()
                 qint32 minPkgSize = 8192 * 4;
                 bool isNual = false;
                 while (true){
-                    if (cachePool.size() >= minPkgSize){
+                    if (handlerPool.size() >= minPkgSize){
                         // 寻找包头
-                        if ((quint8)cachePool.at(0) == 0x00 && (quint8)cachePool.at(0) == 0x00 && (quint8)cachePool.at(0) == 0xaa && (quint8)cachePool.at(0) == 0xb3){
+                        if ((quint8)handlerPool.at(0) == 0x00 && (quint8)handlerPool.at(0) == 0x00 && (quint8)handlerPool.at(0) == 0xaa && (quint8)handlerPool.at(0) == 0xb3){
                             // 寻找包尾(正常情况包尾正确)
-                            if ((quint8)cachePool.at(minPkgSize-4) == 0x00 && (quint8)cachePool.at(minPkgSize-3) == 0x00 && (quint8)cachePool.at(minPkgSize-2) == 0xcc && (quint8)cachePool.at(minPkgSize-1) == 0xd3){
+                            if ((quint8)handlerPool.at(minPkgSize-4) == 0x00 && (quint8)handlerPool.at(minPkgSize-3) == 0x00 && (quint8)handlerPool.at(minPkgSize-2) == 0xcc && (quint8)handlerPool.at(minPkgSize-1) == 0xd3){
                                 isNual = true;
                             }
                         } else {
                             // 前面几个字节是开始测量的返回码
-                            cachePool.remove(0, 1);
+                            handlerPool.remove(0, 1);
                         }
                     }
                 }
@@ -909,9 +1036,8 @@ void CommandHelper::slotAnalyzeNetFrame()
 
                 if (isNual){
                     //复制有效数据
-                    validFrame.append(cachePool.data(), minPkgSize);
-                    cachePool.remove(0, minPkgSize);
-                    locker.unlock();
+                    validFrame.append(handlerPool.data(), minPkgSize);
+                    handlerPool.remove(0, minPkgSize);
 
                     //处理数据
                     const unsigned char *ptrOffset = (const unsigned char *)validFrame.constData();
@@ -941,17 +1067,30 @@ void CommandHelper::slotAnalyzeNetFrame()
             qint32 minPkgSize = 1026 * 8;
             bool isNual = false;
             while (true){
-                int size = cachePool.size();
+                int size = handlerPool.size();
                 if (size >= minPkgSize){
                     // 寻找包头
-                    if ((quint8)cachePool.at(0) == 0x00 && (quint8)cachePool.at(1) == 0x00 && (quint8)cachePool.at(2) == 0xaa && (quint8)cachePool.at(3) == 0xb3){
+                    if ((quint8)handlerPool.at(0) == 0x00 && (quint8)handlerPool.at(1) == 0x00 && (quint8)handlerPool.at(2) == 0xaa && (quint8)handlerPool.at(3) == 0xb3){
                         // 寻找包尾(正常情况包尾正确)
-                        if ((quint8)cachePool.at(minPkgSize-4) == 0x00 && (quint8)cachePool.at(minPkgSize-3) == 0x00 && (quint8)cachePool.at(minPkgSize-2) == 0xcc && (quint8)cachePool.at(minPkgSize-1) == 0xd3){
+                        if ((quint8)handlerPool.at(minPkgSize-4) == 0x00 && (quint8)handlerPool.at(minPkgSize-3) == 0x00 && (quint8)handlerPool.at(minPkgSize-2) == 0xcc && (quint8)handlerPool.at(minPkgSize-1) == 0xd3){
                             isNual = true;
                             break;
+                        } else {
+                            handlerPool.remove(0, 1);
+                        }
+                    } else if (handlerPool.size() == 12){
+                        //12 34 00 0F FF 10 00 11 00 00 AB CD
+                        //判断停止测量指令
+                        if ((quint8)handlerPool.at(0) == 0x12 && (quint8)handlerPool.at(1) == 0x34
+                                && (quint8)handlerPool.at(10) == 0xab && (quint8)handlerPool.at(11) == 0xcd){
+                            handlerPool.remove(0, 12);
+                            emit sigMeasureStop();
+                            break;
+                        } else {
+                            handlerPool.remove(0, 1);
                         }
                     } else {
-                        cachePool.remove(0, 1);
+                        handlerPool.remove(0, 1);
                     }
                 } else {
                     break;
@@ -960,9 +1099,8 @@ void CommandHelper::slotAnalyzeNetFrame()
 
             if (isNual){
                 //复制有效数据
-                validFrame.append(cachePool.data(), minPkgSize);
-                cachePool.remove(0, minPkgSize);
-                locker.unlock();
+                validFrame.append(handlerPool.data(), minPkgSize);
+                handlerPool.remove(0, minPkgSize);
 
                 //处理数据
                 const unsigned char *ptrOffset = (const unsigned char *)validFrame.constData();
@@ -1029,10 +1167,10 @@ void CommandHelper::slotAnalyzeNetFrame()
                 }
 
             }
-        } else if (detectorParameter.transferModel == 0x02){
+        } else if (detectorParameter.transferModel == 0x03){
 
         } else {
-            cachePool.clear();
+            handlerPool.clear();
         }
 
         QThread::msleep(5);
@@ -1167,7 +1305,7 @@ void CommandHelper::slotPlotUpdateFrame()
             }
         }
 
-        QThread::msleep(500);
+        QThread::msleep(5);
     }
 }
 
@@ -1189,7 +1327,6 @@ void CommandHelper::updateShowModel(bool _refModel)
 #include <QMessageBox>
 void CommandHelper::saveFileName(QString dstPath)
 {
-    dstPath += ".txt";
     if (dstPath.endsWith(".dat")){
         QFile file(dstPath);
         if (file.exists()) {
@@ -1197,10 +1334,11 @@ void CommandHelper::saveFileName(QString dstPath)
         }
 
         //进行文件copy
-        if (QFile::copy(currentFilename, dstPath))
-
+        if (QFile::copy(currentFilename, dstPath))        
+            QMessageBox::information(nullptr, tr("提示"), tr("数据保存成功！"), QMessageBox::Ok, QMessageBox::Ok);
+        else
+            QMessageBox::information(nullptr, tr("提示"), tr("数据保存失败！"), QMessageBox::Ok, QMessageBox::Ok);
         //QFile::remove(currentFilename);
-        QMessageBox::information(nullptr, tr("提示"), tr("数据保存成功！"), QMessageBox::Ok, QMessageBox::Ok);
     } else if (dstPath.endsWith(".txt")) {
         // 将源文件转换为文本文件
         QFile fileSrc(currentFilename);

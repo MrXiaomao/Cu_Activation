@@ -1,3 +1,6 @@
 /release
 /build
 /debug
+/temp
+/config
+/*.autosave

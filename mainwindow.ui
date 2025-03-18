@@ -494,7 +494,7 @@ p, li { white-space: pre-wrap; }
               </size>
              </property>
              <property name="currentIndex">
-              <number>1</number>
+              <number>0</number>
              </property>
              <widget class="QWidget" name="tab_3">
               <attribute name="title">
@@ -767,7 +767,7 @@ p, li { white-space: pre-wrap; }
                    </widget>
                   </item>
                   <item row="9" column="1">
-                   <widget class="QWidget" name="widget" native="true">
+                   <widget class="QWidget" name="widget_9" native="true">
                     <property name="sizePolicy">
                      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                       <horstretch>0</horstretch>
@@ -2397,7 +2397,7 @@ p, li { white-space: pre-wrap; }
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="action_net_connect"/>
+   <addaction name="action_displacement"/>
    <addaction name="action_power"/>
    <addaction name="action_detector_connect"/>
    <addaction name="separator"/>
@@ -2498,7 +2498,7 @@ p, li { white-space: pre-wrap; }
     <string>版本信息</string>
    </property>
   </action>
-  <action name="action_net_connect">
+  <action name="action_displacement">
    <property name="icon">
     <iconset resource="resource.qrc">
      <normaloff>:/resource/lianjie.png</normaloff>:/resource/lianjie.png</iconset>

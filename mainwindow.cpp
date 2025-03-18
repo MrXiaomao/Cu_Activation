@@ -22,207 +22,148 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
-    , relay_on(false)
-    , detector_connected(false)
 {
     ui->setupUi(this);
 
     emit sigRefreshBoostMsg(tr("更新ui..."));
+    // 电源
+    this->setProperty("relay_on", false);
+    this->setProperty("relay_fault", false);
+    //外设
+    this->setProperty("displacement_1_on", false);
+    this->setProperty("displacement_2_on", false);
+    this->setProperty("displacement_1_fault", false);
+    this->setProperty("displacement_2_fault", false);
+    //探测器
+    this->setProperty("detector_fault", false);
+    this->setProperty("detector_on", false);
+    //测量
+    this->setProperty("measuring", false);
+    //测量模式
+    this->setProperty("measure-model", 0x00);
+    //暂停刷新
+    this->setProperty("pause_plot", false);
+
     connect(this, SIGNAL(sigWriteLog(const QString &, log_level)), this, SLOT(slotWriteLog(const QString &, log_level)));
+    connect(this, SIGNAL(sigRefreshUi()), this, SLOT(slotRefreshUi()));
+
     commandhelper = CommandHelper::instance();
-    connect(commandhelper, &CommandHelper::sigDisplacementFault, this, [=](qint32 index){        
-        ui->action_net_connect->setIcon(QIcon(":/resource/lianjie-fault.png"));
-        ui->action_net_connect->setText(tr("打开外设"));
-        ui->action_net_connect->setIconText(tr("打开外设"));
-        net_connected[index] = false;
-        QString msg = QString(tr("网络故障，外设%1连接失败！").arg((index + 1)));
-        ui->statusbar->showMessage(msg);
-        emit sigAppengMsg(msg, QtCriticalMsg);
-
-        slotRefreshUIStatus();
-    });
-    connect(commandhelper, &CommandHelper::sigDisplacementStatus, this, [=](bool on, qint32 index){
-        net_connected[index] = on;
-        if (on){
-            ui->action_power->setEnabled(true);
-            ui->action_net_connect->setIcon(QIcon(":/resource/lianjie-on.png"));
-            ui->action_net_connect->setText(tr("关闭外设"));
-            ui->action_net_connect->setIconText(tr("关闭外设"));
-
-            //外设连接成功，主动连接电源
-            if (net_connected[0] && net_connected[1]){
-                QFile file(QApplication::applicationDirPath() + "/config/ip.json");
-                if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-                    // 读取文件内容
-                    QByteArray jsonData = file.readAll();
-                    file.close(); //释放资源
-
-                    // 将 JSON 数据解析为 QJsonDocument
-                    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-                    QJsonObject jsonObj = jsonDoc.object();
-
-                    QString ip = "192.168.10.253";
-                    qint32 port = 1030;
-                    QJsonObject jsonDetector;
-                    if (jsonObj.contains("Relay")){
-                        jsonDetector = jsonObj["Relay"].toObject();
-                        ip = jsonDetector["ip"].toString();
-                        port = jsonDetector["port"].toInt();
-                    }
-
-                    commandhelper->openRelay(ip, port);
-                }
-            }
+    //外设状态
+    connect(commandhelper, &CommandHelper::sigDisplacementFault, this, [=](qint32 index){
+        if (index == 0){
+            this->setProperty("displacement_1_fault", true);
+            this->setProperty("displacement_1_on", false);
         } else {
-            ui->action_net_connect->setIcon(QIcon(":/resource/lianjie.png"));
-            ui->action_net_connect->setText(tr("打开外设"));
-            ui->action_net_connect->setIconText(tr("打开外设"));
+            this->setProperty("displacement_2_fault", true);
+            this->setProperty("displacement_1_on", false);
+        }
+
+        emit sigRefreshUi();
+    });
+
+    connect(commandhelper, &CommandHelper::sigDisplacementStatus, this, [=](bool on, qint32 index){
+        if (index == 0){
+            this->setProperty("displacement_1_fault", false);
+            this->setProperty("displacement_1_on", on);
+        } else {
+            this->setProperty("displacement_2_fault", false);
+            this->setProperty("displacement_2_on", on);
+        }
+
+        //外设连接成功，主动连接电源
+        if (this->property("displacement_1_on").toBool() && this->property("displacement_2_on").toBool()){
+            QFile file(QApplication::applicationDirPath() + "/config/ip.json");
+            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                // 读取文件内容
+                QByteArray jsonData = file.readAll();
+                file.close(); //释放资源
+
+                // 将 JSON 数据解析为 QJsonDocument
+                QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+                QJsonObject jsonObj = jsonDoc.object();
+
+                QString ip = "192.168.10.253";
+                qint32 port = 1030;
+                QJsonObject jsonDetector;
+                if (jsonObj.contains("Relay")){
+                    jsonDetector = jsonObj["Relay"].toObject();
+                    ip = jsonDetector["ip"].toString();
+                    port = jsonDetector["port"].toInt();
+                }
+
+                commandhelper->openRelay(ip, port);
+            }
         }
 
         QString msg = QString(tr("外设%1状态：%2")).arg(index + 1).arg(on ? tr("开") : tr("关"));
         ui->statusbar->showMessage(msg);
         emit sigAppengMsg(msg, QtInfoMsg);
-
-        slotRefreshUIStatus();
+        emit sigRefreshUi();
     });
 
     // 禁用开启电源按钮
     ui->action_power->setEnabled(false);
     connect(commandhelper, &CommandHelper::sigRelayFault, this, [=](){
-        relay_on = false;
-        ui->action_power->setIcon(QIcon(":/resource/lianjie-fault.png"));
-        ui->action_power->setText(tr("打开电源"));
-        ui->action_power->setIconText(tr("打开电源"));
-
-        detector_connected = false;
-        ui->action_detector_connect->setIcon(QIcon(":/resource/conect.png"));
-        ui->action_detector_connect->setText(tr("连接探测器"));
-        ui->action_detector_connect->setIconText(tr("连接探测器"));
+        this->setProperty("relay_fault", true);
+        this->setProperty("relay_on", false);
 
         QString msg = QString(tr("网络故障，电源连接失败！"));
         ui->statusbar->showMessage(msg);
         emit sigAppengMsg(msg, QtCriticalMsg);
-
-        slotRefreshUIStatus();
+        emit sigRefreshUi();
     });
 
     connect(commandhelper, &CommandHelper::sigRelayStatus, this, [=](bool on){
-        relay_on = on;
-        if (relay_on){
-            ui->action_detector_connect->setEnabled(true);
-            ui->action_power->setIcon(QIcon(":/resource/power-on.png"));
-            ui->action_power->setText(tr("关闭电源"));
-            ui->action_power->setIconText(tr("关闭电源"));
-        } else {
-            ui->action_power->setIcon(QIcon(":/resource/power-off.png"));
-            ui->action_power->setText(tr("打开电源"));
-            ui->action_power->setIconText(tr("打开电源"));
-
-            detector_connected = false;
-            ui->action_detector_connect->setIcon(QIcon(":/resource/conect.png"));
-            ui->action_detector_connect->setText(tr("连接探测器"));
-            ui->action_detector_connect->setIconText(tr("连接探测器"));
-        }
+        this->setProperty("relay_fault", false);
+        this->setProperty("relay_on", on);
 
         QString msg = QString(tr("电源状态：%1")).arg(on ? tr("开") : tr("关"));
         ui->statusbar->showMessage(msg);
         emit sigAppengMsg(msg, QtInfoMsg);
-
-        slotRefreshUIStatus();
+        emit sigRefreshUi();
     });
 
     // 自动测量开始
     connect(commandhelper, &CommandHelper::sigMeasureStart, this, [=](qint8 mode){
-        measuring = true;
-        if (mode == 0x00){
-            ui->pushButton_measure->setText(tr("停止测量"));
-            ui->pushButton_measure->setEnabled(true);
-        } else if (mode == 0x01){
-            ui->pushButton_measure_2->setText(tr("停止测量"));
-            ui->pushButton_measure_2->setEnabled(true);
+        this->setProperty("measuring", true);
+        this->setProperty("measure-model", mode);
+        if (mode == 0x01)
             ui->start_time_text->setDateTime(QDateTime::currentDateTime());
-        }
+        QString msg = tr("测量正式开始");
+        ui->statusbar->showMessage(msg);
+        emit sigAppengMsg(msg, QtInfoMsg);
+        emit sigRefreshUi();
+    });
+
+    // 测量停止
+    connect(commandhelper, &CommandHelper::sigMeasureStop, this, [=](){
+        this->setProperty("measuring", false);
+        QString msg = tr("测量已停止");
+        ui->statusbar->showMessage(msg);
+        emit sigAppengMsg(msg, QtInfoMsg);
+        emit sigRefreshUi();
     });
 
     // 禁用连接探测器按钮
     ui->action_detector_connect->setEnabled(false);
     connect(commandhelper, &CommandHelper::sigDetectorFault, this, [=](){
-        detector_connected = false;
-        ui->action_detector_connect->setIcon(QIcon(":/resource/conect-fault.png"));
-        ui->action_detector_connect->setText(tr("连接探测器"));
-        ui->action_detector_connect->setIconText(tr("连接探测器"));
+        this->setProperty("detector_fault", true);
+        this->setProperty("detector_on", false);
+
         QString msg = QString(tr("网络故障，探测器连接失败！"));
         ui->statusbar->showMessage(msg);
         emit sigAppengMsg(msg, QtCriticalMsg);
-
-        //手动
-        // 禁用开始测量按钮
-        ui->pushButton_measure->setEnabled(false);
-        // 禁用刷新按钮
-        ui->pushButton_refresh->setEnabled(false);
-
-        //自动
-        // 禁用等候触发按钮
-        ui->pushButton_measure_2->setEnabled(false);
-        // 禁用刷新按钮
-        ui->pushButton_refresh_2->setEnabled(false);
-
-        //标定
-        // 禁用开始测量按钮
-        ui->pushButton_measure_3->setEnabled(false);
-        // 禁用刷新按钮
-        ui->pushButton_refresh_3->setEnabled(false);
-
-        // 禁用高斯拟合按钮
-        ui->pushButton_gauss->setEnabled(false);
-
-        slotRefreshUIStatus();
+        emit sigRefreshUi();
     });
 
     connect(commandhelper, &CommandHelper::sigDetectorStatus, this, [=](bool on){
-        detector_connected = on;
-        if (detector_connected){
-            ui->action_detector_connect->setIcon(QIcon(":/resource/conect-on.png"));
-            ui->action_detector_connect->setText(tr("断开探测器"));
-            ui->action_detector_connect->setIconText(tr("断开探测器"));
-        } else {
-            ui->action_detector_connect->setIcon(QIcon(":/resource/conect.png"));
-            ui->action_detector_connect->setText(tr("连接探测器"));
-            ui->action_detector_connect->setIconText(tr("连接探测器"));
-        }
-
-        //符合测量
-        ui->action_partical->setEnabled(detector_connected);
-        //波形测量
-        ui->action_WaveformModel->setEnabled(detector_connected);
-        //能谱测量
-        ui->action_SpectrumModel->setEnabled(detector_connected);
-
-        //手动
-        // 禁用开始测量按钮
-        ui->pushButton_measure->setEnabled(detector_connected);
-        // 禁用刷新按钮
-        ui->pushButton_refresh->setEnabled(detector_connected);
-
-        //自动
-        // 禁用等候触发按钮
-        ui->pushButton_measure_2->setEnabled(detector_connected);
-        // 禁用刷新按钮
-        ui->pushButton_refresh_2->setEnabled(detector_connected);
-
-        //标定
-        // 禁用开始测量按钮
-        ui->pushButton_measure_3->setEnabled(detector_connected);
-        // 禁用刷新按钮
-        ui->pushButton_refresh_3->setEnabled(detector_connected);
-
-        // 禁用高斯拟合按钮
-        //ui->pushButton_gauss->setEnabled(detector_connected);
+        this->setProperty("detector_fault", true);
+        this->setProperty("detector_on", on);
 
         QString msg = QString(tr("探测器状态：%1")).arg(on ? tr("开") : tr("关"));
         ui->statusbar->showMessage(msg);
         emit sigAppengMsg(msg, QtInfoMsg);
-        slotRefreshUIStatus();
+        emit sigRefreshUi();
     });
 
     qRegisterMetaType<PariticalCountFrame>("PariticalCountFrame");
@@ -241,26 +182,7 @@ MainWindow::MainWindow(QWidget *parent)
         }
     });
 
-    //手动
-    // 禁用开始测量按钮
-    ui->pushButton_measure->setEnabled(false);
-    // 禁用刷新按钮
-    ui->pushButton_refresh->setEnabled(false);
-
-    //自动
-    // 禁用等候触发按钮
-    ui->pushButton_measure_2->setEnabled(false);
-    // 禁用刷新按钮
-    ui->pushButton_refresh_2->setEnabled(false);
-
-    //标定
-    // 禁用开始测量按钮
-    ui->pushButton_measure_3->setEnabled(false);
-    // 禁用刷新按钮
-    ui->pushButton_refresh_3->setEnabled(false);
-
-    // 禁用高斯拟合按钮
-    ui->pushButton_gauss->setEnabled(false);
+    emit sigRefreshUi();
 
     // 创建图表
     emit sigRefreshBoostMsg(tr("创建图形库..."));
@@ -276,12 +198,6 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    if (commandhelper)
-    {
-        delete commandhelper;
-        commandhelper = nullptr;
-    }
-
     delete ui;
 }
 
@@ -667,7 +583,7 @@ void MainWindow::on_action_WaveformModel_triggered()
 }
 
 // 连接外设
-void MainWindow::on_action_net_connect_triggered()
+void MainWindow::on_action_displacement_triggered()
 {
     QFile file(QApplication::applicationDirPath() + "/config/ip.json");
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -694,7 +610,7 @@ void MainWindow::on_action_net_connect_triggered()
             port = jsonDisplacement["port"].toInt();
 
             //位移平台
-            if (!net_connected[i]){
+            if (!this->property("displacement_1_on").toBool() || !this->property("displacement_2_on").toBool()){
                 commandhelper->openDisplacement(ip, port, i);
             } else {
                 commandhelper->closeRelay();
@@ -730,18 +646,17 @@ void MainWindow::on_action_power_triggered()
         port = jsonDetector["port"].toInt();
     }
 
-    if (!relay_on){
+    if (!this->property("relay_on").toBool()){
         commandhelper->openRelay(ip, port);
     } else {
         commandhelper->closeRelay();
     }
 }
 
-
 // 打开探测器
 void MainWindow::on_action_detector_connect_triggered()
 {
-    if (!detector_connected){
+    if (!this->property("detector_on").toBool()){
         QFile file(QApplication::applicationDirPath() + "/config/ip.json");
         if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             QMessageBox::information(this, tr("提示"), tr("请先配置远程设备信息！"));
@@ -767,8 +682,6 @@ void MainWindow::on_action_detector_connect_triggered()
 
         commandhelper->openDetector(ip, port);
     } else {
-        measuring = false;
-        ui->pushButton_measure->setText(tr("开始测量"));
         commandhelper->slotStopManualMeasure();
         commandhelper->closeDetector();
     }
@@ -785,7 +698,7 @@ void MainWindow::on_action_energycalibration_triggered()
 
 void MainWindow::on_pushButton_measure_clicked()
 {
-    if (!measuring){
+    if (!this->property("measuring").toBool()){
         //手动测量
         DetectorParameter detectorParameter;
         detectorParameter.triggerThold1 = 0x81;
@@ -832,26 +745,34 @@ void MainWindow::on_pushButton_measure_clicked()
 
         QTimer::singleShot(3000, this, [=](){
             //指定时间未收到开始测量指令，则按钮恢复初始状态
-            if (!measuring){
+            if (!this->property("measuring").toBool()){
                 ui->pushButton_measure->setEnabled(true);
             }
         });
     } else {
-        measuring = false;
-        ui->pushButton_save->setEnabled(true);
-        ui->pushButton_gauss->setEnabled(false);
-        ui->pushButton_measure->setText(tr("开始测量"));
-        ui->action_refresh->setEnabled(false);
-        ui->actionaction_line_log->setEnabled(false);
-        ui->pushButton_measure_2->setEnabled(true);
-        commandhelper->slotStopManualMeasure();
+//        measuring = false;
+//        ui->pushButton_save->setEnabled(true);
+//        ui->pushButton_gauss->setEnabled(false);
+//        ui->pushButton_measure->setText(tr("开始测量"));
+//        ui->action_refresh->setEnabled(false);
+//        ui->actionaction_line_log->setEnabled(false);
+//        ui->pushButton_measure_2->setEnabled(true);
+        ui->pushButton_measure->setEnabled(false);
+        commandhelper->slotStopAutoMeasure();
+
+        QTimer::singleShot(5000, this, [=](){
+            //指定时间未收到开始测量指令，则按钮恢复初始状态
+            if (!this->property("measuring").toBool()){
+                ui->pushButton_measure->setEnabled(true);
+            }
+        });
     }
 }
 
 void MainWindow::on_pushButton_measure_2_clicked()
 {
     //自动测量
-    if (!measuring){
+    if (!this->property("measuring").toBool()){
         //手动测量
         DetectorParameter detectorParameter;
         detectorParameter.triggerThold1 = 0x81;
@@ -900,19 +821,26 @@ void MainWindow::on_pushButton_measure_2_clicked()
 
         QTimer::singleShot(60000, this, [=](){
             //指定时间未收到开始测量指令，则按钮恢复初始状态
-            if (!measuring){
+            if (!this->property("measuring").toBool()){
                 ui->pushButton_measure_2->setEnabled(true);
             }
         });
-    } else {
-        measuring = false;
-        ui->pushButton_save->setEnabled(true);
-        ui->pushButton_gauss->setEnabled(false);
-        ui->pushButton_measure_2->setText(tr("开始测量"));
-        ui->action_refresh->setEnabled(false);
-        ui->actionaction_line_log->setEnabled(false);
-        ui->pushButton_measure->setEnabled(true);
+    } else {        
+//        ui->pushButton_save->setEnabled(true);
+//        ui->pushButton_gauss->setEnabled(false);
+//        ui->pushButton_measure_2->setText(tr("开始测量"));
+//        ui->action_refresh->setEnabled(false);
+//        ui->actionaction_line_log->setEnabled(false);
+
+        ui->pushButton_measure_2->setEnabled(false);
         commandhelper->slotStopAutoMeasure();
+
+        QTimer::singleShot(5000, this, [=](){
+            //指定时间未收到开始测量指令，则按钮恢复初始状态
+            if (!this->property("measuring").toBool()){
+                ui->pushButton_measure_2->setEnabled(true);
+            }
+        });
     }
 }
 
@@ -1016,26 +944,13 @@ void MainWindow::on_action_restore_triggered()
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    if (measuring){
+    if (this->property("measuring").toBool()){
         QMessageBox::warning(this, tr("提示"), tr("测量过程中，禁止退出程序！"), QMessageBox::Ok, QMessageBox::Ok);
         event->ignore();
         return ;
     }
 
     event->accept();
-}
-
-void MainWindow::slotRefreshUIStatus()
-{
-    ui->action_detector_connect->setEnabled(true);
-    ui->action_power->setEnabled(net_connected[0] && net_connected[1]);
-    ui->action_detector_connect->setEnabled(relay_on);
-
-    ui->action_config->setEnabled(detector_connected);
-    ui->action_restore->setEnabled(detector_connected);
-
-    ui->action_refresh->setEnabled(measuring);
-    ui->actionaction_line_log->setEnabled(measuring);
 }
 
 #include "cachedirconfigwidget.h"
@@ -1051,4 +966,136 @@ void MainWindow::on_action_cachepath_triggered()
 void MainWindow::on_action_log_triggered()
 {
     ui->widget_log->show();
+}
+
+void MainWindow::slotRefreshUi()
+{
+    //外设
+    if (this->property("displacement_1_fault").toBool() || this->property("displacement_2_fault").toBool()){
+        ui->action_displacement->setIcon(QIcon(":/resource/lianjie-fault.png"));
+        ui->action_displacement->setText(tr("打开外设"));
+        ui->action_displacement->setIconText(tr("打开外设"));
+    } else {
+        if (!this->property("displacement_1_on").toBool() || !this->property("displacement_2_on").toBool()){
+            ui->action_displacement->setIcon(QIcon(":/resource/lianjie.png"));
+            ui->action_displacement->setText(tr("打开外设"));
+            ui->action_displacement->setIconText(tr("打开外设"));
+        } else {
+            ui->action_power->setEnabled(true);
+
+            ui->action_displacement->setIcon(QIcon(":/resource/lianjie-on.png"));
+            ui->action_displacement->setText(tr("关闭外设"));
+            ui->action_displacement->setIconText(tr("关闭外设"));
+        }
+    }
+
+    // 电源
+    if (this->property("relay_fault").toBool()){
+        ui->action_power->setIcon(QIcon(":/resource/power-fault.png"));
+        ui->action_power->setText(tr("打开电源"));
+        ui->action_power->setIconText(tr("打开电源"));
+    } else {
+        if (!this->property("relay_on").toBool()){
+            ui->action_power->setIcon(QIcon(":/resource/power-off.png"));
+            ui->action_power->setText(tr("打开电源"));
+            ui->action_power->setIconText(tr("打开电源"));
+
+            ui->action_detector_connect->setEnabled(false);
+        } else {
+            ui->action_power->setIcon(QIcon(":/resource/power-on.png"));
+            ui->action_power->setText(tr("关闭电源"));
+            ui->action_power->setIconText(tr("关闭电源"));
+
+            ui->action_detector_connect->setEnabled(true);
+        }
+    }
+
+    //探测器
+    if (this->property("detector_fault").toBool()){
+        ui->action_detector_connect->setIcon(QIcon(":/resource/conect-fault.png"));
+        ui->action_detector_connect->setText(tr("打开探测器"));
+        ui->action_detector_connect->setIconText(tr("打开探测器"));
+
+        ui->action_config->setEnabled(false);
+    } else {
+        if (!this->property("detector_on").toBool()){
+            ui->action_config->setEnabled(false);
+            ui->action_detector_connect->setIcon(QIcon(":/resource/conect.png"));
+            ui->action_detector_connect->setText(tr("打开探测器"));
+            ui->action_detector_connect->setIconText(tr("打开探测器"));
+        } else {
+            ui->action_config->setEnabled(true);
+            ui->action_detector_connect->setIcon(QIcon(":/resource/conect-on.png"));
+            ui->action_detector_connect->setText(tr("关闭探测器"));
+            ui->action_detector_connect->setIconText(tr("关闭探测器"));
+        }
+    }
+
+    //测量
+    if (this->property("measuring").toBool()){
+        ui->action_refresh->setEnabled(true);
+        if (this->property("measur-model").toInt() == 0x00){//手动测量
+            ui->pushButton_measure->setText(tr("停止测量"));
+            ui->pushButton_measure->setEnabled(true);
+            ui->pushButton_refresh->setEnabled(true);
+
+            //公共
+            ui->pushButton_save->setEnabled(false);
+            ui->pushButton_gauss->setEnabled(true);
+
+            //自动测量
+            ui->pushButton_measure_2->setEnabled(false);
+            ui->pushButton_refresh_2->setEnabled(false);
+
+            //标定测量
+            ui->pushButton_measure_3->setEnabled(false);
+            ui->pushButton_refresh_3->setEnabled(false);
+        } else if (this->property("measur-model").toInt() == 0x01){//自动测量
+            ui->pushButton_measure_2->setText(tr("停止测量"));
+            ui->pushButton_measure_2->setEnabled(true);
+
+            //公共
+            ui->pushButton_save->setEnabled(false);
+            ui->pushButton_gauss->setEnabled(true);
+
+            //手动测量
+            ui->pushButton_measure->setEnabled(false);
+            ui->pushButton_refresh->setEnabled(true);
+
+            //标定测量
+            ui->pushButton_measure_3->setEnabled(false);
+        }  else if (this->property("measur-model").toInt() == 0x01){//标定测量
+            ui->pushButton_measure_3->setText(tr("停止测量"));
+            ui->pushButton_measure_3->setEnabled(true);
+
+            //公共
+            ui->pushButton_save->setEnabled(false);
+            ui->pushButton_gauss->setEnabled(true);
+
+            //手动测量
+            ui->pushButton_measure->setEnabled(false);
+            ui->pushButton_refresh->setEnabled(true);
+
+            //自动测量
+            ui->pushButton_measure_2->setEnabled(false);
+        }
+    } else {
+        ui->action_refresh->setEnabled(false);
+
+        //公共
+        ui->pushButton_save->setEnabled(true);
+        ui->pushButton_gauss->setEnabled(false);
+
+        ui->pushButton_refresh->setEnabled(false);
+        ui->pushButton_refresh_2->setEnabled(false);
+        ui->pushButton_refresh_3->setEnabled(false);
+
+        ui->pushButton_measure->setText(tr("开始测量"));
+        ui->pushButton_measure_2->setText(tr("开始测量"));
+        ui->pushButton_measure_3->setText(tr("开始测量"));
+
+        ui->pushButton_measure->setEnabled(true);
+        ui->pushButton_measure_2->setEnabled(true);
+        ui->pushButton_measure_3->setEnabled(true);
+    }
 }

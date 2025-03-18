@@ -30,14 +30,15 @@ protected:
 
 public slots:
     void slotAppendMsg(const QString &msg, QtMsgType msgType);
+    void slotRefreshUi();
 
 signals:
+    void sigRefreshUi();
     void sigRefreshBoostMsg(const QString &msg);
     void sigAppengMsg(const QString &msg, QtMsgType msgType);
 
 private slots:
     void slotPlowWidgetDoubleClickEvent();
-    void slotRefreshUIStatus();
 
     void on_action_power_triggered();
 
@@ -57,7 +58,7 @@ private slots:
 
     void on_pushButton_measure_3_clicked();
 
-    void on_action_net_connect_triggered();
+    void on_action_displacement_triggered();
 
     void on_action_detector_connect_triggered();
 
@@ -88,10 +89,11 @@ private:
     CommandHelper *commandhelper = nullptr;//网络指令
     qint32 currentDetectorIndex = 0;
 
-    bool relay_on;//电源打开标识
-    bool net_connected[2] = {false, false};//外设连接标识
-    bool detector_connected;//探测器连接标识
-    bool measuring = false;
+//    bool reay_on = false, relay_fault = false;//电源打开标识
+//    bool net_connected[2] = {false, false};//外设连接标识
+//    bool displacement_on[2] = {false, false};//外设连接标识
+//    bool detector_connected;//探测器连接标识
+//    bool measuring = false;
     bool pause_plot = false;//图像暂停刷新
 };
 #endif // MAINWINDOW_H

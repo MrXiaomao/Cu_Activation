@@ -24,7 +24,7 @@ public:
     QCustomPlot *customPlotInstance() const;
     void initDetailWidget();
 
-    void updateShowModel(bool refModel);
+    void switchShowModel(bool refModel);
 
 public slots:
     void slotPlotClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event);

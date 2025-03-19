@@ -44,8 +44,8 @@ MainWindow::MainWindow(QWidget *parent)
     //暂停刷新
     this->setProperty("pause_plot", false);
 
-    connect(this, SIGNAL(sigWriteLog(const QString &, log_level)), this, SLOT(slotWriteLog(const QString &, log_level)));
     connect(this, SIGNAL(sigRefreshUi()), this, SLOT(slotRefreshUi()));
+    connect(this, SIGNAL(sigAppengMsg(const QString &, QtMsgType)), this, SLOT(slotAppendMsg(const QString &, QtMsgType)));
 
     commandhelper = CommandHelper::instance();
     //外设状态
@@ -157,7 +157,7 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(commandhelper, &CommandHelper::sigDetectorStatus, this, [=](bool on){
-        this->setProperty("detector_fault", true);
+        this->setProperty("detector_fault", false);
         this->setProperty("detector_on", on);
 
         QString msg = QString(tr("探测器状态：%1")).arg(on ? tr("开") : tr("关"));
@@ -194,6 +194,8 @@ MainWindow::MainWindow(QWidget *parent)
     QTimer::singleShot(500, this, [=](){
        this->showMaximized();
     });
+
+    commandhelper->startWork();
 }
 
 MainWindow::~MainWindow()
@@ -320,7 +322,8 @@ void MainWindow::InitMainWindowUi()
     connect(grp, QOverload<int>::of(&QButtonGroup::buttonClicked), this, [=](int index){
         for (int i=0; i<2; ++i){
             PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(i+1));
-            plotWidget->slotResetPlot();
+            //plotWidget->slotResetPlot();
+            plotWidget->switchShowModel(index == 0);
         }
 
         if (0 == index){
@@ -335,10 +338,8 @@ void MainWindow::InitMainWindowUi()
             plotWidget->hide();
             ui->widget_result->hide();
         }
-
-        commandhelper->updateShowModel(index == 0);
     });
-    emit grp->buttonClicked(1);
+    emit grp->buttonClicked(0);
 
     // 任务栏信息
     QLabel *label_Idle = new QLabel(ui->statusbar);
@@ -362,7 +363,7 @@ void MainWindow::InitMainWindowUi()
     ui->statusbar->addWidget(label_Idle);
     ui->statusbar->addWidget(label_Connected);
     ui->statusbar->addWidget(new QLabel(ui->statusbar), 1);
-    ui->statusbar->addWidget(nullptr, 1);
+    ui->statusbar->addPermanentWidget(nullptr, 1);
     ui->statusbar->addPermanentWidget(label_systemtime);    
 
     QTimer* timer = new QTimer(this);
@@ -601,19 +602,26 @@ void MainWindow::on_action_displacement_triggered()
 
     QString ip = "192.168.10.253";
     qint32 port = 1030;
+    bool on = this->property("displacement_1_on").toBool() && this->property("displacement_2_on").toBool();
     if (jsonObj.contains("Displacement")){
         QJsonArray jsonDisplacements = jsonObj["Displacement"].toArray();
         QJsonObject jsonDisplacement;
+
+        //断开连接之前先关闭电源
+        if (on){
+            commandhelper->closeDetector();
+            commandhelper->closeRelay();
+        }
+
         for (int i=0; i<jsonDisplacements.size(); ++i){
             jsonDisplacement = jsonDisplacements.at(0).toObject();
             ip = jsonDisplacement["ip"].toString();
             port = jsonDisplacement["port"].toInt();
 
             //位移平台
-            if (!this->property("displacement_1_on").toBool() || !this->property("displacement_2_on").toBool()){
+            if (!on){
                 commandhelper->openDisplacement(ip, port, i);
             } else {
-                commandhelper->closeRelay();
                 commandhelper->closeDisplacement(i);
             }
         }
@@ -950,6 +958,12 @@ void MainWindow::closeEvent(QCloseEvent *event)
         return ;
     }
 
+    qInstallMessageHandler(nullptr);
+    commandhelper->closeDetector();
+    commandhelper->closeRelay();
+    commandhelper->closeDisplacement(0);
+    commandhelper->closeDisplacement(1);
+
     event->accept();
 }
 
@@ -1001,6 +1015,9 @@ void MainWindow::slotRefreshUi()
             ui->action_power->setIconText(tr("打开电源"));
 
             ui->action_detector_connect->setEnabled(false);
+            if (!this->property("displacement_1_on").toBool() && !this->property("displacement_2_on").toBool()){
+                ui->action_power->setEnabled(false);
+            }
         } else {
             ui->action_power->setIcon(QIcon(":/resource/power-on.png"));
             ui->action_power->setText(tr("关闭电源"));

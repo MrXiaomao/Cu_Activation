@@ -43,8 +43,11 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
     });
 
     initSocket(&socketDetector);
-    socketDetector->setSocketOption(QAbstractSocket::LowDelayOption, 1);
+    socketDetector->setSocketOption(QAbstractSocket::LowDelayOption, 1);//优化Socket以实现低延迟
+}
 
+void CommandHelper::startWork()
+{
     // 创建数据解析线程
     analyzeNetDataThread = new QUiThread(this);
     analyzeNetDataThread->setObjectName("analyzeNetDataThread");
@@ -627,30 +630,30 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
                 switch (prepareStep) {
                 case 1: // 波形极性
                     qInfo() << QString("设置波形极性, 值=%1").arg(detectorParameter.waveformPolarity);
-                    emit slotWaveformPolarity(detectorParameter.waveformPolarity);
+                    slotWaveformPolarity(detectorParameter.waveformPolarity);
                     break;
                 case 2: // 能谱模式/粒子模式死时间
                     if (detectorParameter.transferModel == 0x00){
                         qInfo() << QString("设置能谱刷新时间，值=%1").arg(detectorParameter.refreshTimeLength);
-                        emit slotSpectnumRefreshTimeLength(detectorParameter.refreshTimeLength);
+                        slotSpectnumRefreshTimeLength(detectorParameter.refreshTimeLength);
                     } else if (detectorParameter.transferModel == 0x03 || detectorParameter.transferModel == 0x05){
                         qInfo() << QString("设置能谱模式/粒子模式死时间，值=%1").arg(detectorParameter.dieTimeLength);
-                        emit slotDieTimeLength(detectorParameter.dieTimeLength);
+                        slotDieTimeLength(detectorParameter.dieTimeLength);
                     }
                     break;
                 case 3: // 探测器增益
                     qInfo() << QString("设置增益，值=%1").arg(detectorParameter.dieTimeLength);
-                    emit slotDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00);
+                    slotDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00);
                     break;
                 case 4: // 传输模式
                     qInfo() << QString("设置传输模式，值=%1").arg(detectorParameter.transferModel);
-                    emit slotTransferModel(detectorParameter.transferModel);
+                    slotTransferModel(detectorParameter.transferModel);
                     break;
                 case 5: // 开始测量/停止测量
-                    emit slotStart(0x01);
+                    slotStart(0x01);
                     break;
                 case 6: // 开始测量/停止测量
-                    emit sigMeasureStart(detectorParameter.measureModel);
+                    sigMeasureStart(detectorParameter.measureModel);
                     workStatus = Measuring;
                     binaryData.remove(0, command.size());
                     break;
@@ -669,30 +672,30 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
                 switch (prepareStep) {
                 case 1: // 波形极性
                     qInfo() << QString("设置波形极性, 值=%1").arg(detectorParameter.waveformPolarity);
-                    emit slotWaveformPolarity(detectorParameter.waveformPolarity);
+                    slotWaveformPolarity(detectorParameter.waveformPolarity);
                     break;
                 case 2: // 能谱模式/粒子模式死时间
                     qInfo() << QString("设置能谱模式/粒子模式死时间，值=%1").arg(detectorParameter.dieTimeLength);
-                    emit slotDieTimeLength(detectorParameter.dieTimeLength);
+                    slotDieTimeLength(detectorParameter.dieTimeLength);
                     break;
                 case 3: // 探测器增益
                     qInfo() << QString("设置增益，值=%1").arg(detectorParameter.dieTimeLength);
-                    emit slotDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00);
+                    slotDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00);
                     break;
                 case 4: // 波形长度
                     qInfo() << QString("设置波形长度，值=%1").arg(detectorParameter.waveLength);
-                    emit slotWaveformLength(detectorParameter.waveLength);
+                    slotWaveformLength(detectorParameter.waveLength);
                     break;
                 case 5: // 波形触发模式
                     qInfo() << QString("设置波形触发模式，值=%1").arg(detectorParameter.waveLength);
-                    emit slotWaveformTriggerModel(detectorParameter.triggerModel);
+                    slotWaveformTriggerModel(detectorParameter.triggerModel);
                     break;
                 case 6: // 传输模式
                     qInfo() << QString("设置传输模式，值=%1").arg(detectorParameter.transferModel);
-                    emit slotTransferModel(detectorParameter.transferModel);
+                    slotTransferModel(detectorParameter.transferModel);
                     break;
                 case 7: // 开始测量/停止测量
-                    emit slotStart(0x01);
+                    slotStart(0x01);
                     break;
                 case 8: // 开始测量/停止测量
                     emit sigMeasureStart(detectorParameter.measureModel);
@@ -727,6 +730,12 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     prepareStep = 0;
     if (0 == prepareStep){
         currentFilename = QString("%1").arg(defaultCacheDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + ".dat");
+        if (nullptr != pfSave){
+            pfSave->close();
+            delete pfSave;
+            pfSave = nullptr;
+        }
+
         pfSave = new QFile(currentFilename);
         if (pfSave->open(QIODevice::WriteOnly)) {
             qInfo() << tr("创建缓存文件成功，文件名：%1").arg(currentFilename);
@@ -736,7 +745,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
 
         // 触发阈值
         qDebug() << QString("设置触发阈值, 值1=%1 值2=%2").arg(detectorParameter.triggerThold1).arg(detectorParameter.triggerThold2);
-        emit slotTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2);
+        slotTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2);
     }
 }
 
@@ -827,27 +836,27 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
                 switch (prepareStep) {
                 case 1: // 波形极性
                     qDebug() << QString("设置波形极性, 值=%1").arg(detectorParameter.waveformPolarity);
-                    emit slotWaveformPolarity(detectorParameter.waveformPolarity);
+                    slotWaveformPolarity(detectorParameter.waveformPolarity);
                     break;
                 case 2: // 能谱模式/粒子模式死时间
                     if (detectorParameter.transferModel == 0x00){
                         qDebug() << QString("设置能谱刷新时间，值=%1").arg(detectorParameter.refreshTimeLength);
-                        emit slotSpectnumRefreshTimeLength(detectorParameter.refreshTimeLength);
+                        slotSpectnumRefreshTimeLength(detectorParameter.refreshTimeLength);
                     } else if (detectorParameter.transferModel == 0x03 || detectorParameter.transferModel == 0x05){
                         qDebug() << QString("设置能谱模式/粒子模式死时间，值=%1").arg(detectorParameter.dieTimeLength);
-                        emit slotDieTimeLength(detectorParameter.dieTimeLength);
+                        slotDieTimeLength(detectorParameter.dieTimeLength);
                     }
                     break;
                 case 3: // 探测器增益
                     qDebug() << QString("设置增益，值=%1").arg(detectorParameter.dieTimeLength);
-                    emit slotDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00);
+                    slotDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00);
                     break;
                 case 4: // 传输模式
                     qDebug() << QString("设置传输模式，值=%1").arg(detectorParameter.transferModel);
-                    emit slotTransferModel(detectorParameter.transferModel);
+                    slotTransferModel(detectorParameter.transferModel);
                     break;
                 case 5: // 开始测量/停止测量
-                    emit slotStart(0x02);
+                    slotStart(0x02);
                     break;
                 case 6: // 开始测量/停止测量
                     workStatus = Measuring;
@@ -869,30 +878,30 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
                 switch (prepareStep) {
                 case 1: // 波形极性
                     qDebug() << QString("设置波形极性, 值=%1").arg(detectorParameter.waveformPolarity);
-                    emit slotWaveformPolarity(detectorParameter.waveformPolarity);
+                    slotWaveformPolarity(detectorParameter.waveformPolarity);
                     break;
                 case 2: // 能谱模式/粒子模式死时间
                     qDebug() << QString("设置能谱模式/粒子模式死时间，值=%1").arg(detectorParameter.dieTimeLength);
-                    emit slotDieTimeLength(detectorParameter.dieTimeLength);
+                    slotDieTimeLength(detectorParameter.dieTimeLength);
                     break;
                 case 3: // 探测器增益
                     qDebug() << QString("设置增益，值=%1").arg(detectorParameter.dieTimeLength);
-                    emit slotDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00);
+                    slotDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00);
                     break;
                 case 4: // 波形长度
                     qDebug() << QString("设置波形长度，值=%1").arg(detectorParameter.waveLength);
-                    emit slotWaveformLength(detectorParameter.waveLength);
+                    slotWaveformLength(detectorParameter.waveLength);
                     break;
                 case 5: // 波形触发模式
                     qDebug() << QString("设置波形触发模式，值=%1").arg(detectorParameter.waveLength);
-                    emit slotWaveformTriggerModel(detectorParameter.triggerModel);
+                    slotWaveformTriggerModel(detectorParameter.triggerModel);
                     break;
                 case 6: // 传输模式
                     qDebug() << QString("设置传输模式，值=%1").arg(detectorParameter.transferModel);
-                    emit slotTransferModel(detectorParameter.transferModel);
+                    slotTransferModel(detectorParameter.transferModel);
                     break;
                 case 7: // 开始测量/停止测量
-                    emit slotStart(0x02);
+                    slotStart(0x02);
                     break;
                 case 8: // 开始测量/停止测量
                     emit sigMeasureStart(detectorParameter.measureModel);
@@ -925,6 +934,12 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
     prepareStep = 0;
     if (0 == prepareStep){
         currentFilename = QString("%1").arg(defaultCacheDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + ".dat");
+        if (nullptr != pfSave){
+            pfSave->close();
+            delete pfSave;
+            pfSave = nullptr;
+        }
+
         pfSave = new QFile(currentFilename);
         if (pfSave->open(QIODevice::WriteOnly)) {
             qDebug() << tr("创建缓存文件成功，文件名：%1").arg(currentFilename);
@@ -934,7 +949,7 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
 
         // 触发阈值
         qDebug() << QString("设置触发阈值, 值1=%1 值2=%2").arg(detectorParameter.triggerThold1).arg(detectorParameter.triggerThold2);
-        emit slotTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2);
+        slotTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2);
     }
 }
 
@@ -988,6 +1003,16 @@ void CommandHelper::slotDoTasks()
 
 void CommandHelper::slotAnalyzeNetFrame()
 {
+    detectorParameter.transferModel = 0x05;
+    leftE[0] = 400; leftE[1] = 400;
+    rightE[0] = 600; rightE[1] = 600;
+
+    QFile qFile("C:/Users/Administrator/Desktop/川大项目/缓存目录/2025-03-19 093103.dat");
+    if (qFile.open(QIODevice::ReadOnly)){
+        handlerPool = qFile.readAll();
+        qFile.close();
+    }
+
     while (!taskFinished)
     {
         {

@@ -57,7 +57,7 @@ public:
         return &commandHelper;
     }
 
-    //void setDetectorParamter();
+    void startWork();
     void updateShowModel(bool refModel);
     void updateParamter(int stepT, int leftE[2], int rightE[2]);
     void saveFileName(QString);
@@ -100,6 +100,7 @@ signals:
     void sigMeasureStart(qint8 mode);
     void sigMeasureStop();
 
+    //网络包数大小
     void sigRecvData(qint32);
 
 private:
@@ -118,9 +119,6 @@ protected:
     quint8 crc();
 
 public slots:
-//    void openPower(QString ip, qint32 port);
-//    void closePower(QString ip, qint32 port);
-
     void openRelay(QString ip, qint32 port);
     void closeRelay();
 
@@ -254,14 +252,12 @@ public:
         : QThread(parent)
         , m_pfThreadWorkProc(pfThreadWorkProc)
     {
-        qDebug() << "thread create: " << this->objectName();
         connect(this, &QThread::finished, this, &QThread::deleteLater);
     }
 
     //析构函数
     ~QUiThread()
-    {
-        qDebug() << "thread exit: " << this->objectName();
+    {        
     }
 
     void setWorkThreadProc(LPThreadRunProc pfThreadRun) {

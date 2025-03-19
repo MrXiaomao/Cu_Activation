@@ -426,7 +426,7 @@ void PlotWidget::initMultiCustomPlot()
     connect(customPlot, SIGNAL(beforeReplot()), this, SLOT(slotBeforeReplot()));
     connect(customPlot, SIGNAL(afterLayout()), this, SLOT(slotBeforeReplot()));
 
-    updateShowModel(false);
+    switchShowModel(false);
     // 图形刷新
     customPlot->replot();
 
@@ -912,7 +912,7 @@ void PlotWidget::slotResetPlot()
     }
 }
 
-void PlotWidget::updateShowModel(bool refModel)
+void PlotWidget::switchShowModel(bool refModel)
 {
     customPlot->graph(ENGRY_GRAPH)->setVisible(!refModel);
     customPlot->graph(GAUSS_GRAPH)->setVisible(!refModel);

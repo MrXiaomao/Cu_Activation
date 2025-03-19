@@ -167,7 +167,6 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     qRegisterMetaType<PariticalCountFrame>("PariticalCountFrame");
-    qRegisterMetaType<std::vector<TimeCountRate>>("std::vector<TimeCountRate>");
     connect(commandhelper, &CommandHelper::sigRefreshCountData, this, [=](PariticalCountFrame frame){
         if (!pause_plot){
             PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(frame.channel+1));
@@ -321,14 +320,18 @@ void MainWindow::InitMainWindowUi()
     grp->addButton(ui->radioButton_spectrum, 1);
     connect(grp, QOverload<int>::of(&QButtonGroup::buttonClicked), this, [=](int index){
         for (int i=0; i<2; ++i){
+            if (i == 0){
+                int stepT = ui->spinBox_step->value();
+                int leftE[2] = {ui->spinBox_1_leftE->value(), ui->spinBox_2_leftE->value()};
+                int rightE[2] = {ui->spinBox_1_rightE->value(), ui->spinBox_2_rightE->value()};
+                commandhelper->updateParamter(stepT, leftE, rightE);
+            }
             PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(i+1));
-            //plotWidget->slotResetPlot();
             plotWidget->switchShowModel(index == 0);
         }
 
         if (0 == index){
             ui->widget_gauss->hide();
-
             PlotWidget* plotWidget = this->findChild<PlotWidget*>(tr("real-Result"));
             plotWidget->show();
             ui->widget_result->show();
@@ -415,7 +418,7 @@ void MainWindow::initCustomPlot()
         //customPlotWidget->initDetailWidget();
         customPlotWidget->show();
 
-        connect(customPlotWidget, &PlotWidget::sigUpdateMeanValues, this, [=](unsigned int channel, unsigned int minMean, unsigned int maxMean){
+        connect(customPlotWidget, &PlotWidget::sigUpdateMeanValues, this, [=](unsigned int minMean, unsigned int maxMean){
             PlotWidget *customPlotWidget = qobject_cast<PlotWidget*>(sender());
             if (customPlotWidget->objectName() == "real-Detector-1")
                 currentDetectorIndex = 0;
@@ -447,7 +450,7 @@ void MainWindow::initCustomPlot()
         //customPlotWidget->initDetailWidget();
         customPlotWidget->show();
 
-        connect(customPlotWidget, &PlotWidget::sigUpdateMeanValues, this, [=](unsigned int channel, unsigned int minMean, unsigned int maxMean){
+        connect(customPlotWidget, &PlotWidget::sigUpdateMeanValues, this, [=](unsigned int minMean, unsigned int maxMean){
             PlotWidget *customPlotWidget = qobject_cast<PlotWidget*>(sender());
             if (customPlotWidget->objectName() == "real-Detector-1")
                 currentDetectorIndex = 0;
@@ -657,6 +660,15 @@ void MainWindow::on_action_power_triggered()
     if (!this->property("relay_on").toBool()){
         commandhelper->openRelay(ip, port);
     } else {
+        //如果正在测量，停止测量
+        if (!this->property("measuring").toBool()){
+            if (this->property("measure-model").toUInt() == 0x00)
+                commandhelper->slotStopManualMeasure();
+            else
+                commandhelper->slotStopAutoMeasure();
+
+            commandhelper->closeDetector();
+        }
         commandhelper->closeRelay();
     }
 }
@@ -733,12 +745,13 @@ void MainWindow::on_pushButton_measure_clicked()
             detectorParameter.dieTimeLength = jsonObj["DieTimeLength"].toInt();
             detectorParameter.gain = jsonObj["DetectorGain"].toInt();
         }
+
         ui->pushButton_save->setEnabled(false);
         ui->pushButton_gauss->setEnabled(true);
         ui->action_refresh->setEnabled(true);
-        ui->actionaction_line_log->setEnabled(true);
-        //ui->pushButton_measure->setText(tr("停止测量"));
+        ui->action_line_log->setEnabled(true);
         ui->pushButton_measure->setEnabled(false);
+
         for (int i=0; i<2; ++i){
             PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(i+1));
             plotWidget->slotResetPlot();
@@ -758,19 +771,12 @@ void MainWindow::on_pushButton_measure_clicked()
             }
         });
     } else {
-//        measuring = false;
-//        ui->pushButton_save->setEnabled(true);
-//        ui->pushButton_gauss->setEnabled(false);
-//        ui->pushButton_measure->setText(tr("开始测量"));
-//        ui->action_refresh->setEnabled(false);
-//        ui->actionaction_line_log->setEnabled(false);
-//        ui->pushButton_measure_2->setEnabled(true);
         ui->pushButton_measure->setEnabled(false);
         commandhelper->slotStopAutoMeasure();
 
         QTimer::singleShot(5000, this, [=](){
-            //指定时间未收到开始测量指令，则按钮恢复初始状态
-            if (!this->property("measuring").toBool()){
+            //指定时间未收到停止测量指令，则按钮恢复初始状态
+            if (this->property("measuring").toBool()){
                 ui->pushButton_measure->setEnabled(true);
             }
         });
@@ -811,7 +817,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         ui->pushButton_save->setEnabled(false);
         ui->pushButton_gauss->setEnabled(true);
         ui->action_refresh->setEnabled(true);
-        ui->actionaction_line_log->setEnabled(true);
+        ui->action_line_log->setEnabled(true);
         ui->pushButton_measure->setEnabled(false);
         ui->pushButton_measure_2->setText(tr("等待触发"));
         ui->pushButton_measure_2->setEnabled(false);
@@ -833,19 +839,13 @@ void MainWindow::on_pushButton_measure_2_clicked()
                 ui->pushButton_measure_2->setEnabled(true);
             }
         });
-    } else {        
-//        ui->pushButton_save->setEnabled(true);
-//        ui->pushButton_gauss->setEnabled(false);
-//        ui->pushButton_measure_2->setText(tr("开始测量"));
-//        ui->action_refresh->setEnabled(false);
-//        ui->actionaction_line_log->setEnabled(false);
-
+    } else {
         ui->pushButton_measure_2->setEnabled(false);
         commandhelper->slotStopAutoMeasure();
 
         QTimer::singleShot(5000, this, [=](){
             //指定时间未收到开始测量指令，则按钮恢复初始状态
-            if (!this->property("measuring").toBool()){
+            if (this->property("measuring").toBool()){
                 ui->pushButton_measure_2->setEnabled(true);
             }
         });
@@ -900,7 +900,7 @@ void MainWindow::on_pushButton_refresh_clicked()
     commandhelper->updateParamter(stepT, leftE, rightE);
 }
 
-void MainWindow::on_actionaction_close_triggered()
+void MainWindow::on_action_close_triggered()
 {
     this->close();
 }
@@ -1059,6 +1059,7 @@ void MainWindow::slotRefreshUi()
             //公共
             ui->pushButton_save->setEnabled(false);
             ui->pushButton_gauss->setEnabled(true);
+            ui->action_line_log->setEnabled(true);
 
             //自动测量
             ui->pushButton_measure_2->setEnabled(false);
@@ -1074,6 +1075,7 @@ void MainWindow::slotRefreshUi()
             //公共
             ui->pushButton_save->setEnabled(false);
             ui->pushButton_gauss->setEnabled(true);
+            ui->action_line_log->setEnabled(true);
 
             //手动测量
             ui->pushButton_measure->setEnabled(false);
@@ -1088,6 +1090,7 @@ void MainWindow::slotRefreshUi()
             //公共
             ui->pushButton_save->setEnabled(false);
             ui->pushButton_gauss->setEnabled(true);
+            ui->action_line_log->setEnabled(true);
 
             //手动测量
             ui->pushButton_measure->setEnabled(false);
@@ -1102,6 +1105,7 @@ void MainWindow::slotRefreshUi()
         //公共
         ui->pushButton_save->setEnabled(true);
         ui->pushButton_gauss->setEnabled(false);
+        ui->action_line_log->setEnabled(false);
 
         ui->pushButton_refresh->setEnabled(false);
         ui->pushButton_refresh_2->setEnabled(false);

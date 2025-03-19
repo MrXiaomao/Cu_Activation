@@ -639,7 +639,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
 
                         isDragging = true;
                     }else {
-                        if (e->modifiers() & Qt::ControlModifier){
+                        if (e->modifiers() & Qt::ControlModifier && customPlot->graph(ENGRY_GRAPH)->visible()){
                             dragRectItem->setProperty("bottom", e->pos().y());
                             dragRectItem->setProperty("right", e->pos().x());
 
@@ -690,7 +690,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                 if (e->button() == Qt::LeftButton) {
                     setCursor(Qt::ArrowCursor);
 
-                    if (e->modifiers() & Qt::ControlModifier){
+                    if (e->modifiers() & Qt::ControlModifier && customPlot->graph(ENGRY_GRAPH)->visible()){
                         if (dragRectItem->visible()){
                             //颜色更新
                             double key_from = dragRectItem->topLeft->key();
@@ -737,49 +737,27 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
 
                             // 高斯拟合
                             {
+                                //显示拟合曲线
                                 //slotGauss(key_from, key_to);
                                 double result[3];
                                 fit_GaussCurve(fcount, sx, sy, result);
 
-//                                QString info = QString("半高宽：%1\n峰: %2 = %3")
-//                                        .arg(QString::number(result[0], 'f', 3))
-//                                        .arg(QString::number(result[1], 'f', 0))
-//                                        .arg(QString::number(result[2], 'f', 3));
-//                                //显示拟合数据
-////                              coordsTextItem->setText("峰: 239.10 = 207.37 keV\n"
-////                                                        "半高宽: 40.15 FW[1/5]M:71.59\n"
-////                                                        "库: Sn-113[Tin]在255.04; 0 Bq\n"
-////                                                        "总计数面积: 623036\n"
-////                                                        "净面积: 57994 +/-3703\n"
-////                                                        "总计数/净计数 比率:731.18/68.06 cps");
-//                                coordsTextItem->setText(info);
-//                                double key, value;
-//                                graph->pixelsToCoords(e->pos().x(), e->pos().y(), key, value);
-//                                coordsTextItem->position->setCoords(key, value);
-//                                coordsTextItem->setVisible(true);
+                                //显示拟合数据
+                                QString info = QString("半高宽：%1\n峰: %2 = %3")
+                                        .arg(QString::number(result[0], 'f', 3))
+                                        .arg(QString::number(result[1], 'f', 0))
+                                        .arg(QString::number(result[2], 'f', 3));
 
-//                                //绘制拟合曲线
-//                                QCPGraph *graphCurve = customPlot->graph(2);
-//                                QVector<double> curveValues;
-//                                double a = result[2];
-//                                double u = result[1];
-//                                double FWHM = result[0];
-//                                double ln2 = log(2);
-//                                for (int i=0; i<curveKeys.size(); ++i){
-//                                    //a*exp[-4ln2(x-u)^2/FWHM^2]，a=result[2],u=result[1],FWHM=result[0].
-//                                    double x = curveKeys[i];
-//                                    double v = a*exp(-4*ln2*pow(x-u,2)/pow(FWHM, 2));
-
-//                                    curveValues.push_back(v);
-//                                }
-//                                graphCurve->setData(curveKeys, curveValues);
-//                                graphCurve->setVisible(true);
-//                                customPlot->replot();
+                                coordsTextItem->setText(info);
+                                double key, value;
+                                graph->pixelsToCoords(e->pos().x(), e->pos().y(), key, value);
+                                coordsTextItem->position->setCoords(key, value);
+                                coordsTextItem->setVisible(true);
 
                                 //计算符合能窗
                                 unsigned int minMean = (result[1] - result[0] / 2);
                                 unsigned int maxMean = (result[1] + result[0] / 2);
-                                emit sigUpdateMeanValues(currentGraphIndex, minMean, maxMean);
+                                emit sigUpdateMeanValues(minMean, maxMean);
                             }
                         }
                     }
@@ -856,17 +834,11 @@ void PlotWidget::slotUpdateCountData(PariticalCountFrame frame)
 {
     QCustomPlot *customPlot = customPlotInstance();
     int channelIndex = frame.channel;
-    QVector<double> keys, values;
-    QVector<QColor> colors;
-    for (size_t i=0; i<frame.timeCountRate.size(); ++i){
-        keys << i * frame.stepT;
-        values << frame.timeCountRate[i].CountRates;
-        colors << clrLine[channelIndex];
-    }
-
-    //customPlot->xAxis->setRange(0, frame.timeCountRate.size());
-    //customPlot->yAxis->rescale(true);
+    double keys = frame.dataT;
+    double values = frame.dataE;
+    QColor colors = clrLine[channelIndex];
     customPlot->graph(REF_GRAPH)->addData(keys, values, colors);
+    customPlot->graph(REF_GRAPH)->setVisible(true);
     customPlot->replot();
 }
 
@@ -876,16 +848,16 @@ void PlotWidget::slotUpdateSpectrumData(PariticalSpectrumFrame frame)
     int channelIndex = frame.channel;
     QVector<double> keys, values;
     QVector<QColor> colors;
-    currentFrame[channelIndex].data.resize(frame.data.size());
+    currentFrame[channelIndex].dataE.resize(frame.dataE.size());
     unsigned int maxEngry = 0;
-    for (size_t i=0; i<frame.data.size(); ++i){
+    for (size_t i=0; i<frame.dataE.size(); ++i){
         keys << i;
         //values << frame.data[i];
-        currentFrame[channelIndex].data[i] += frame.data[i];//将能量叠加
-        values << currentFrame[channelIndex].data.at(i);
+        currentFrame[channelIndex].dataE[i] += frame.dataE[i];//将能量叠加
+        values << currentFrame[channelIndex].dataE.at(i);
         colors << clrLine[channelIndex];
 
-        maxEngry = qMax((unsigned int)maxEngry, (unsigned int)currentFrame[channelIndex].data.at(i));
+        maxEngry = qMax((unsigned int)maxEngry, (unsigned int)currentFrame[channelIndex].dataE.at(i));
     }
 
     //maxEngry = 10000;
@@ -908,7 +880,7 @@ void PlotWidget::slotUpdateSpectrumData(PariticalSpectrumFrame frame)
 void PlotWidget::slotResetPlot()
 {
     for (int i=0; i<GRAPH_COUNT; ++i){
-        currentFrame[i].data.clear();
+        currentFrame[i].dataE.clear();
     }
 }
 

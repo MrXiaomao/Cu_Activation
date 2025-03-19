@@ -76,7 +76,7 @@ void AppMessageHandler(QtMsgType type, const QMessageLogContext& /*context*/, co
     }
 }
 
-#define TYPE_FLAG 1
+#define TYPE_FLAG 0
 
 #if 1 == TYPE_FLAG
     #define OUTPUT_QT_HELP_EXAMPLE      // Qt帮助示例输出

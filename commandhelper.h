@@ -190,12 +190,18 @@ private:
     QString defaultCacheDir;
     QString currentFilename;
     int stepT = 1, leftE[2], rightE[2];
+    qint64 lastClockT = 0;
     bool refModel = false;
     unsigned int maxEnergy = 8192;
     int maxCh = 4096;
-    bool firstHandle = true;//是否第一次处理计数
-    std::vector<PariticalSpectrumFrame> spectrumFrameCachePool;
-    std::vector<PariticalCountFrame> countFrameCachePool;
+    quint32 currentClockStepNs[2];//fpga时钟步长（数据包的时长）
+    quint32 currentRefreshStepNs[2];//ui时钟步长（界面刷新时长）
+    PariticalSpectrumFrame totalCountFrames[2]; // 系统自处理以来所有数据帧
+    PariticalSpectrumFrame handleCountFrames[2]; // 保存当前时长内的时间、能谱信息，一旦达到1s时长，将交给接口处理
+    std::vector<PariticalCountFrame> cacheCountFrames; // 保存自测试开始以来所有的计数信息
+    std::vector<PariticalSpectrumFrame> spectrumFrameCachePool;//开始测量依赖所有能谱数据
+    std::vector<PariticalCountFrame> countFrameCachePool;//开始测量以来所有计数
+    std::vector<PariticalCountFrame> currentCountFrameCachePool;//当然步长内的计数
 };
 
 #include <QThread>

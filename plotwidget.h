@@ -42,7 +42,7 @@ protected:
 
 signals:
     void sigMouseDoubleClickEvent();
-    void sigUpdateMeanValues(unsigned int channel, unsigned int minMean, unsigned int maxMean);
+    void sigUpdateMeanValues(unsigned int minMean, unsigned int maxMean);
 
 private:
     /*
@@ -79,9 +79,6 @@ private:
     QColor clrGauseCurve = QColor(0, 0, 255, 200);
     bool axisVisible = true;
     qint32 currentGraphIndex = 0;
-
-//    std::vector<double> sxGaussRange;
-//    std::vector<double> syGaussRange;
 
     PariticalSpectrumFrame currentFrame[GRAPH_COUNT];
 };

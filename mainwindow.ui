@@ -2351,7 +2351,7 @@ p, li { white-space: pre-wrap; }
     </property>
     <addaction name="action_DataAnalysis"/>
     <addaction name="separator"/>
-    <addaction name="actionaction_close"/>
+    <addaction name="action_close"/>
    </widget>
    <widget class="QMenu" name="menu_4">
     <property name="title">
@@ -2405,11 +2405,11 @@ p, li { white-space: pre-wrap; }
    <addaction name="action_config"/>
    <addaction name="separator"/>
    <addaction name="action_refresh"/>
-   <addaction name="actionaction_line_log"/>
+   <addaction name="action_line_log"/>
    <addaction name="separator"/>
    <addaction name="action_restore"/>
    <addaction name="separator"/>
-   <addaction name="actionaction_close"/>
+   <addaction name="action_close"/>
   </widget>
   <action name="action_devices">
    <property name="icon">
@@ -2510,7 +2510,7 @@ p, li { white-space: pre-wrap; }
     <string>连接外设</string>
    </property>
   </action>
-  <action name="actionaction_line_log">
+  <action name="action_line_log">
    <property name="enabled">
     <bool>false</bool>
    </property>
@@ -2522,7 +2522,7 @@ p, li { white-space: pre-wrap; }
     <string>线性/对数</string>
    </property>
   </action>
-  <action name="actionaction_close">
+  <action name="action_close">
    <property name="icon">
     <iconset resource="resource.qrc">
      <normaloff>:/resource/exit.png</normaloff>:/resource/exit.png</iconset>

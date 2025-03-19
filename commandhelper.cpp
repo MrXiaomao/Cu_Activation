@@ -1003,15 +1003,15 @@ void CommandHelper::slotDoTasks()
 
 void CommandHelper::slotAnalyzeNetFrame()
 {
-    detectorParameter.transferModel = 0x05;
-    leftE[0] = 400; leftE[1] = 400;
-    rightE[0] = 600; rightE[1] = 600;
+//    detectorParameter.transferModel = 0x05;
+//    leftE[0] = 3000; leftE[1] = 3000;
+//    rightE[0] = 4000; rightE[1] = 4000;
 
-    QFile qFile("C:/Users/Administrator/Desktop/川大项目/缓存目录/2025-03-19 093103.dat");
-    if (qFile.open(QIODevice::ReadOnly)){
-        handlerPool = qFile.readAll();
-        qFile.close();
-    }
+//    QFile qFile("C:/Users/Administrator/Desktop/川大项目/缓存目录/2025-03-19 093103.dat");
+//    if (qFile.open(QIODevice::ReadOnly)){
+//        handlerPool = qFile.readAll();
+//        qFile.close();
+//    }
 
     while (!taskFinished)
     {
@@ -1021,7 +1021,6 @@ void CommandHelper::slotAnalyzeNetFrame()
                 if (handlerPool.size() < 12){
                     // 数据单位最小值为12（一个指令长度）
                     QThread::msleep(1);
-                    continue;
                 }
             } else {
                 handlerPool.append(cachePool);
@@ -1087,7 +1086,7 @@ void CommandHelper::slotAnalyzeNetFrame()
             const quint32 minPkgSize = 1026 * 8;
             bool isNual = false;
             while (true){
-                int size = handlerPool.size();
+                quint32 size = handlerPool.size();
                 if (size >= minPkgSize){
                     // 寻找包头
                     if ((quint8)handlerPool.at(0) == 0x00 && (quint8)handlerPool.at(1) == 0x00 && (quint8)handlerPool.at(2) == 0xaa && (quint8)handlerPool.at(3) == 0xb3){
@@ -1151,7 +1150,7 @@ void CommandHelper::slotAnalyzeNetFrame()
                 ptrOffset += 8;
 
                 vector<long long> dataT;
-                vector<unsigned int> dataE;
+                vector<unsigned short> dataE;
                 while (ref++<=1024){
                     long long t = static_cast<quint64>(ptrOffset[0]) << 40 |
                             static_cast<quint64>(ptrOffset[1]) << 32 |
@@ -1163,36 +1162,18 @@ void CommandHelper::slotAnalyzeNetFrame()
                     ptrOffset += 8;
 
                     dataT.push_back(t);
-                    dataE.push_back(e);
+                    dataE.push_back(e);                   
                 }
 
-
+                //数据分拣完毕
                 {
                     PariticalSpectrumFrame frame;
                     frame.channel = channel;
-                    frame.dataE.swap(dataE);
+                    frame.dataT.insert(frame.dataT.end(), dataT.begin(), dataT.end());
+                    frame.dataE.insert(frame.dataE.end(), dataE.begin(), dataE.end());
                     QMutexLocker locker(&mutexPlot);
                     spectrumFrameCachePool.push_back(frame);
-                    //emit sigRefreshSpectrum(frame);
                 }
-
-                {
-                    // 对输入的粒子[时间、能量]数据进行统计,给出计数率随时间变化的曲线，注意这里dataT与dataE一定是相同的长度
-                    // dataT粒子的时间, 单位ns
-                    // dataE粒子的能量
-                    // stepT统计的时间步长, 单位s
-                    // leftE：左区间
-                    // rightE：右区间
-                    // return：vector<TimeCountRate> 计数率数组
-                    PariticalCountFrame frame;
-                    frame.channel = channel;
-                    frame.dataT.swap(dataT);
-                    frame.dataE.swap(dataE);
-                    QMutexLocker locker(&mutexPlot);
-                    countFrameCachePool.push_back(frame);
-                    //emit sigRefreshCountData(frame);
-                }
-
             }
         } else if (detectorParameter.transferModel == 0x03){
 
@@ -1207,16 +1188,20 @@ void CommandHelper::slotAnalyzeNetFrame()
 void CommandHelper::slotPlotUpdateFrame()
 {
     QDateTime tmStart = QDateTime::currentDateTime().addDays(-1);
-    PariticalCountFrame totalCountFrames[2]; // 系统自处理以来所有数据帧
-    PariticalCountFrame handleCountFrames[2]; // 时长内的数据帧
-    std::vector<PariticalCountFrame> unhandleCountFrames; // 时长外的数据帧
-    bool fullChannel[2] = {false, false};
-    long long lastDataT[2] = {0, 0};
+    PariticalSpectrumFrame totalCountFrames[2]; // 系统自处理以来所有数据帧
+    PariticalSpectrumFrame handleCountFrames[2]; // 保存当前时长内的时间、能谱信息，一旦达到1s时长，将交给接口处理
+    std::vector<PariticalSpectrumFrame> unhandleCountFrames; // 保存当前时长内的时间、能谱信息，一旦达到1s时长，将交给接口处理
+    std::vector<PariticalCountFrame> cacheCountFrames; // 保存自测试开始以来所有的计数信息
+    quint64 currentStepBaseNs[2] = {(quint64)1e8, (quint64)1e8};
+    currentClockStepNs[0] = 1;
+    currentClockStepNs[1] = 1;
+    currentRefreshStepNs[0] = 1;
+    currentRefreshStepNs[1] = 1;
 
     while (!taskFinished)
     {
         // 时间步长到了，该刷新界面了
-        if (this->refModel){
+        if (1/*this->refModel*/){
             // 对输入的粒子[时间、能量]数据进行统计,给出计数率随时间变化的曲线，注意这里dataT与dataE一定是相同的长度
             // dataT粒子的时间, 单位ns
             // dataE粒子的能量
@@ -1225,17 +1210,14 @@ void CommandHelper::slotPlotUpdateFrame()
             // rightE：右区间
             // return：vector<TimeCountRate> 计数率数组
             QDateTime tmNow = QDateTime::currentDateTime();
-            if (tmStart.msecsTo(tmNow) >= 500){
+            if (tmStart.msecsTo(tmNow) >= 50){
                 tmStart = tmNow;
 
-                fullChannel[0] = false;
-                fullChannel[1] = false;
-
-                //1、把新接收的数据全部交换出来
-                std::vector<PariticalCountFrame> swapFrames;
+                //1、把分拣之后的数据全部交换出来
+                std::vector<PariticalSpectrumFrame> swapFrames;
                 {
                     QMutexLocker locker(&mutexPlot);
-                    swapFrames.swap(countFrameCachePool);
+                    swapFrames.swap(spectrumFrameCachePool);
                 }
 
                 //2、把新接收数据放到整体缓存池
@@ -1247,25 +1229,52 @@ void CommandHelper::slotPlotUpdateFrame()
                     }
                 }
 
-                //3、把上次未处理完的数据放到交换区头部
-                if (unhandleCountFrames.size() > 0){
-                    swapFrames.insert(swapFrames.end(), unhandleCountFrames.begin(), unhandleCountFrames.end());
-                    unhandleCountFrames.clear();
-                }
-
-                //4、处理缓存区数据
+                //3、处理缓存区数据
                 if (swapFrames.size() > 0){
                     for (auto frame : swapFrames){
                         // 根据步长，将数据添加到当前处理缓存
-                        if (lastDataT[frame.channel] == 0){
-                            lastDataT[frame.channel] = frame.dataT[0];
-                        }
+                        for (size_t i= 0; i<frame.dataT.size(); ++i){                            
+                            if (frame.dataT[i] > currentStepBaseNs[frame.channel] * currentClockStepNs[frame.channel]){
+                                {
+                                    //数据满足时长了
+                                    vector<long long> dataT[2];
+                                    vector<unsigned short> dataE[2];
+                                    dataT[frame.channel].insert(dataT[frame.channel].end(), handleCountFrames[frame.channel].dataT.begin(), handleCountFrames[frame.channel].dataT.end());
+                                    dataE[frame.channel].insert(dataE[frame.channel].end(), handleCountFrames[frame.channel].dataE.begin(), handleCountFrames[frame.channel].dataE.end());
 
-                        for (size_t i= 0; i<frame.dataT.size(); ++i){
-                            long long stepNs = this->stepT * 1e+8;
-                            if ((frame.dataT[i] - lastDataT[frame.channel]) > stepNs){
-                                fullChannel[frame.channel] = true;
-                                unhandleCountFrames.push_back(frame);
+                                    PariticalCountFrame cacheFrame;
+                                    cacheFrame.channel = frame.channel;
+                                    cacheFrame.dataT = currentClockStepNs[frame.channel];
+                                    cacheFrame.dataE = GetCount(dataE[frame.channel], this->leftE[frame.channel], this->rightE[frame.channel]);; //单位cps
+                                    cacheCountFrames.push_back(cacheFrame);
+
+                                    //qDebug() << "[" << this->leftE[frame.channel] << ", " <<this->rightE[frame.channel] << "]" << cacheFrame.dataT << " : " << cacheFrame.dataE;
+                                    handleCountFrames[frame.channel].dataE.clear();
+                                    handleCountFrames[frame.channel].dataT.clear();
+
+                                    //this->stepT
+                                    currentCountFrameCachePool.push_back(cacheFrame);
+                                    countFrameCachePool.push_back(cacheFrame);
+                                    qint64 tt = frame.dataT[i] - currentStepBaseNs[frame.channel] * currentRefreshStepNs[frame.channel] * this->stepT;
+                                    qDebug() << tt << "," << cacheFrame.dataT << "," << this->stepT;
+                                    if (frame.dataT[i] > currentStepBaseNs[frame.channel] * currentRefreshStepNs[frame.channel] * this->stepT){
+                                        PariticalCountFrame sFrame;
+                                        sFrame.channel = frame.channel;
+                                        sFrame.dataT = currentRefreshStepNs[frame.channel] * this->stepT;
+                                        sFrame.dataE = 0;
+                                        for (auto a : currentCountFrameCachePool){
+                                            sFrame.dataE += a.dataE;
+                                        }
+
+                                        currentRefreshStepNs[frame.channel]++;
+                                        currentCountFrameCachePool.clear();
+                                        emit sigRefreshCountData(sFrame);
+                                    }
+                                }
+
+                                currentClockStepNs[frame.channel]++;
+                                handleCountFrames[frame.channel].dataT.push_back(frame.dataT[i]);
+                                handleCountFrames[frame.channel].dataE.push_back(frame.dataE[i]);
                             } else {
                                 handleCountFrames[frame.channel].dataT.push_back(frame.dataT[i]);
                                 handleCountFrames[frame.channel].dataE.push_back(frame.dataE[i]);
@@ -1273,40 +1282,10 @@ void CommandHelper::slotPlotUpdateFrame()
                         }
                     }
                 }
-
-
-                for (int channel = 0; channel < 2; ++channel){
-                    if (fullChannel[channel]){
-                        //数据满足时长了
-                        vector<long long> dataT[2];
-                        vector<unsigned int> dataE[2];
-                        for (auto frame : handleCountFrames){
-                            dataT[frame.channel].insert(dataT[frame.channel].end(), frame.dataT.begin(), frame.dataT.end());
-                            dataE[frame.channel].insert(dataE[frame.channel].end(), frame.dataE.begin(), frame.dataE.end());
-                        }
-
-                        PariticalCountFrame frame;
-                        frame.channel = channel;
-                        frame.stepT = this->stepT;
-                        if (firstHandle)
-                            frame.timeCountRate = GetCountRate(dataT[channel], dataE[channel], this->stepT, this->leftE[channel], this->rightE[channel]);
-                        else {
-                            TimeCountRate timeCountRate;
-                            timeCountRate.time = 0;
-                            timeCountRate.CountRates = GetCount(dataE[channel], this->stepT, this->leftE[channel], this->rightE[channel]);; //单位cps
-                            frame.timeCountRate.push_back(timeCountRate);
-                        }
-
-                        lastDataT[frame.channel] = 0;
-                        handleCountFrames[channel].dataE.clear();
-                        handleCountFrames[channel].dataT.clear();
-                        emit sigRefreshCountData(frame);
-                    }
-                }
             }
         } else {
             QDateTime tmNow = QDateTime::currentDateTime();
-            if (tmStart.secsTo(tmNow) >= this->stepT){
+            if (tmStart.secsTo(tmNow) >= 1){
                 tmStart = tmNow;
                 std::vector<PariticalSpectrumFrame> swapFrames;
                 {
@@ -1316,7 +1295,7 @@ void CommandHelper::slotPlotUpdateFrame()
 
                 if (swapFrames.size() > 0){
                     vector<long long> dataT[2];
-                    vector<unsigned int> dataE[2];
+                    vector<unsigned short> dataE[2];
                     for (auto frame : swapFrames){
                         dataT[frame.channel].insert(dataT[frame.channel].end(), frame.dataT.begin(), frame.dataT.end());
                         dataE[frame.channel].insert(dataE[frame.channel].end(), frame.dataE.begin(), frame.dataE.end());
@@ -1325,7 +1304,7 @@ void CommandHelper::slotPlotUpdateFrame()
                     for (int channel = 0; channel < 2; ++channel){
                         PariticalSpectrumFrame frame;
                         frame.channel = channel;
-                        frame.data = GetSpectrum(dataE[frame.channel], maxEnergy, maxCh);
+                        frame.dataE = GetSpectrum(dataE[frame.channel], maxEnergy, maxCh);
                         emit sigRefreshSpectrum(frame);
                     }
                 }
@@ -1348,7 +1327,6 @@ void CommandHelper::updateParamter(int _stepT, int _leftE[2], int _rightE[2])
 void CommandHelper::updateShowModel(bool _refModel)
 {
     this->refModel = _refModel;
-    this->firstHandle = this->refModel;
 }
 
 #include <QMessageBox>

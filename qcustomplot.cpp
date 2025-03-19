@@ -20957,6 +20957,14 @@ QCPGraphData::QCPGraphData(double key, double value) :
 {
 }
 
+QCPGraphData::QCPGraphData(double key, double value, QColor color) :
+    key(key),
+    value(value),
+    color(color)
+{
+
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////// QCPGraph
@@ -21252,6 +21260,11 @@ void QCPGraph::addData(const QVector<double> &keys, const QVector<double> &value
 void QCPGraph::addData(double key, double value)
 {
   mDataContainer->add(QCPGraphData(key, value));
+}
+
+void QCPGraph::addData(double key, double value, QColor colors)
+{
+    mDataContainer->add(QCPGraphData(key, value, colors));
 }
 
 /*!

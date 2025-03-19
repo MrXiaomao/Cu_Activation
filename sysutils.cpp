@@ -6,8 +6,8 @@ SysUtils::SysUtils()
 }
 
 // 计算直方图
-vector<int> computeHistogram(const vector<unsigned int>& data, const vector<int>& binEdges) {
-    vector<int> histogram(binEdges.size() - 1, 0); // 初始化直方图，大小为 binEdges.size() - 1
+vector<unsigned short> computeHistogram(const vector<unsigned short>& data, const vector<int>& binEdges) {
+    vector<unsigned short> histogram(binEdges.size() - 1, 0); // 初始化直方图，大小为 binEdges.size() - 1
 
     // 遍历数据，统计每个 bin 的频数
     for (int value : data) {
@@ -29,7 +29,7 @@ vector<int> computeHistogram(const vector<unsigned int>& data, const vector<int>
 // data:能量点数组
 // maxEnergy: 多道中最大道址对应的能量值。
 // ch: 多道道数
-vector<int> GetSpectrum(const vector<unsigned int>& data, unsigned int maxEnergy, int ch)
+vector<unsigned short> GetSpectrum(const vector<unsigned short>& data, unsigned int maxEnergy, int ch)
 {
     // 自动算出多道计数器的能量bin。
     vector<int> binEdges;
@@ -38,7 +38,7 @@ vector<int> GetSpectrum(const vector<unsigned int>& data, unsigned int maxEnergy
         binEdges.push_back(binWidth*i);
     }
     // 计算能谱
-    vector<int> spectrum = computeHistogram(data, binEdges);
+    vector<unsigned short> spectrum = computeHistogram(data, binEdges);
     return spectrum;
 }
 
@@ -48,7 +48,7 @@ vector<int> GetSpectrum(const vector<unsigned int>& data, unsigned int maxEnergy
 // rightE：右区间
 // stepT统计的时间步长, 单位s
 // return double：计数率,cps
-double GetCount(const vector<unsigned int> &data, int stepT, int leftE, int rightE)
+double GetCount(const vector<unsigned short> &data, int leftE, int rightE, int stepT)
 {
     int count = 0;
     for (int value : data)
@@ -65,7 +65,11 @@ double GetCount(const vector<unsigned int> &data, int stepT, int leftE, int righ
 // leftE：左区间
 // rightE：右区间
 // return：vector<TimeCountRate> 计数率数组
-vector<TimeCountRate> GetCountRate(const vector<long long> &dataT, const vector<unsigned int> &dataE, int stepT, int leftE, int rightE)
+struct TimeCountRate{
+    int time; //单位s
+    double CountRates; //单位cps
+};
+vector<TimeCountRate> GetCountRate(const vector<long long> &dataT, const vector<unsigned short> &dataE, int stepT, int leftE, int rightE)
 {
     long long delaT = stepT;
     delaT *= 1E9;//单位转化 s转化ns

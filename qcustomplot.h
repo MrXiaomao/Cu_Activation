@@ -5467,7 +5467,8 @@ class QCP_LIB_DECL QCPGraphData
 public:
   QCPGraphData();
   QCPGraphData(double key, double value);
-  
+  QCPGraphData(double key, double value, QColor color);
+
   inline double sortKey() const { return key; }
   inline static QCPGraphData fromSortKey(double sortKey) { return QCPGraphData(sortKey, 0); }
   inline static bool sortKeyIsMainKey() { return true; }
@@ -5546,7 +5547,8 @@ public:
   void addData(const QVector<double> &keys, const QVector<double> &values, bool alreadySorted=false);
   void addData(const QVector<double> &keys, const QVector<double> &values, const QVector<QColor> &colors, bool alreadySorted=false);
   void addData(double key, double value);
-  
+  void addData(double key, double value, QColor colors);
+
   // reimplemented virtual methods:
   virtual double selectTest(const QPointF &pos, bool onlySelectable, QVariant *details=nullptr) const Q_DECL_OVERRIDE;
   virtual QCPRange getKeyRange(bool &foundRange, QCP::SignDomain inSignDomain=QCP::sdBoth) const Q_DECL_OVERRIDE;

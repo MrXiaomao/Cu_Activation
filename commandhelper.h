@@ -64,6 +64,12 @@ public:
     void saveFileName(QString);
     void setDefaultCacheDir(QString dir);
 
+    enum Detector{
+        Detector_1 = 0,
+        Detector_2 = 1,
+        Detector_Count = 2
+    };
+
     enum WorkStatusFlag {
         NoWork = 0,     // 未开始
         Preparing = 1,  // 准备过程中...
@@ -91,8 +97,8 @@ signals:
     void sigDetectorStatus(bool on);
     void sigDetectorFault();//故障，一般指网络不通
 
-    void sigRefreshCountData(PariticalCountFrame);// 计数
-    void sigRefreshSpectrum(PariticalSpectrumFrame);// 能谱
+    void sigRefreshCountData(quint8, StepTimeCount);// 计数
+    void sigRefreshSpectrum(quint8, StepTimeEnergy);// 能谱
 
     void sigDoTasks();
     void sigAnalyzeFrame();
@@ -201,16 +207,16 @@ private:
     quint32 currentClockStepNs[2];//fpga时钟步长（数据包的时长）
     quint32 currentRefreshStepNs[2];//ui时钟步长（界面刷新时长）
 
-    PariticalSpectrumFrame currentStepSpectrumFrame[2]; // 保存当前时长内的时间、能谱信息，一旦达到1s时长，将交给接口处理
+    std::deque<DetTimeEnergy> totalSpectrumFrames;//开始测量以来所有能谱数据
+    std::deque<DetTimeEnergy> currentSpectrumFrames;//网络新接收的能谱数据（一般指未处理，未分步长的数据）
 
-    std::vector<PariticalCountFrame> totalStepCountFrames; // 保存自测试开始以来所有的计数信息(按步长统计)
-    std::vector<PariticalSpectrumFrame> totalStepSpectrumFrames; // 保存自测试开始以来所有的能谱信息
+    StepTimeEnergy preStepSpectrumFrame[2]; // 预处理能谱信息，一旦达到1s时长，将交给接口处理
 
-    std::vector<PariticalSpectrumFrame> totalSpectrumFrames;//开始测量以来所有能谱数据
-    std::vector<PariticalSpectrumFrame> currentSpectrumFrames;//当前接收的能谱数据（一般指未处理，未分步长的数据）
+    std::deque<StepTimeCount> totalStepCountFrames[2]; // 保存自测试开始以来所有的计数信息(按步长统计)
+    std::deque<StepTimeEnergy> totalStepSpectrumFrames[2]; // 保存自测试开始以来所有的能谱信息
 
-    std::vector<PariticalCountFrame> currentStepCountFrames;//当前步长内的计数
-    std::vector<PariticalSpectrumFrame> currentStepSpectrumFrames;//当前步长内的能谱信息
+    std::deque<StepTimeCount> currentStepCountFrames;//当前步长内的计数
+    std::deque<StepTimeEnergy> currentStepSpectrumFrames;//当前步长内的能谱信息
 };
 
 #include <QThread>

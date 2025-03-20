@@ -2,41 +2,65 @@
 #define SYSUTILS_H
 
 #include <vector>
+#include <queue>
+#include <deque>
 #include <iostream>
 
 using namespace std;
+
+//fpga时间+能量
 struct TimeEnergy{
     unsigned long long time; // 单位ns，八个字节int
     unsigned short energy; // 单位暂无,两个字节无符号数
+    TimeEnergy(){}
     TimeEnergy(unsigned long long time, unsigned short energy){
         this->time = time;
         this->energy = energy;
     }
 };
 
-struct StepTimeEnergy{
-    unsigned long long time; // 单位s
-    unsigned short energy; // 单位暂无,两个字节无符号数
-    StepTimeEnergy(unsigned long long time, unsigned short energy){
-        this->time = time;
-        this->energy = energy;
-    }
+//通道+(fpga时间+能量...序列)
+struct DetTimeEnergy{
+    unsigned char channel;
+    std::deque<TimeEnergy> timeEnergy;
 };
 
-typedef struct tagPariticalCountFrame{
-    unsigned long long channel;
-    unsigned long stepT;
-    unsigned long long dataT;
-    unsigned short dataE;
-}PariticalCountFrame;
+//步长+计数
+struct StepTimeCount{
+    unsigned long long time; // 单位s
+    unsigned short count; // 计数
+    StepTimeCount(){}
+    StepTimeCount(unsigned long long time, unsigned short count){
+        this->time = time;
+        this->count = count;
+    }
+};
+//步长+能量
+struct StepTimeEnergy{
+    unsigned long long time; // 单位s
+    vector<unsigned short> energy; // 单位暂无,两个字节无符号数
+};
+
+//通道+(步长+能量/计数...序列)
+struct DetStepTimeEnergy{
+    unsigned char channel;
+    std::deque<StepTimeEnergy> timeEnergy;
+};
+
+//typedef struct tagPariticalCountFrame{
+//    unsigned long long channel;
+//    unsigned long stepT;
+//    unsigned long long dataT;
+//    unsigned short dataE;
+//}PariticalCountFrame;
 
 
-typedef struct tagPariticalSpectrumFrame{
-    unsigned long long channel;
-    unsigned long stepT;
-    std::vector<unsigned long long> dataT;
-    std::vector<unsigned short> dataE;
-}PariticalSpectrumFrame;
+//typedef struct tagPariticalSpectrumFrame{
+//    unsigned long long channel;
+//    unsigned long stepT;
+//    std::vector<unsigned long long> dataT;
+//    std::vector<unsigned short> dataE;
+//}PariticalSpectrumFrame;
 
 // 根据输入能量数据，绘制出能谱，
 // data:能量点数组

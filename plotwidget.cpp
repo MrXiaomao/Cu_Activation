@@ -852,7 +852,6 @@ void PlotWidget::slotUpdateSpectrumData(PariticalSpectrumFrame frame)
     unsigned int maxEngry = 0;
     for (size_t i=0; i<frame.dataE.size(); ++i){
         keys << i;
-        //values << frame.data[i];
         currentFrame[channelIndex].dataE[i] += frame.dataE[i];//将能量叠加
         values << currentFrame[channelIndex].dataE.at(i);
         colors << clrLine[channelIndex];
@@ -881,7 +880,11 @@ void PlotWidget::slotResetPlot()
 {
     for (int i=0; i<GRAPH_COUNT; ++i){
         currentFrame[i].dataE.clear();
+
+        customPlot->graph(i)->data()->clear();// ->data()->data().clear();// setData(QVector<double>(), QVector<double>());
     }
+
+    customPlot->replot();
 }
 
 void PlotWidget::switchShowModel(bool refModel)

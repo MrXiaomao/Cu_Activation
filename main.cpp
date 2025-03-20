@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
     // 保留最近3次的日志
     cleanOldLogs(3);
     //安装日志
-    qInstallMessageHandler(AppMessageHandler);
+    //qInstallMessageHandler(AppMessageHandler);
 
     splash.showMessage(QObject::tr("启动中..."), Qt::AlignLeft | Qt::AlignBottom, Qt::white);
     MainWindow w;

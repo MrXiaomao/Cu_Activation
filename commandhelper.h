@@ -58,8 +58,8 @@ public:
     }
 
     void startWork();
-    void updateShowModel(bool refModel);
-    void updateParamter(int stepT, int leftE[2], int rightE[2]);
+    void switchShowModel(bool refModel);
+    void updateParamter(int stepT, int leftE[2], int rightE[2], bool reset = false);
     void saveFileName(QString);
     void setDefaultCacheDir(QString dir);
 
@@ -108,8 +108,9 @@ private:
     QByteArray command;
     QByteArray cachePool;
     QByteArray handlerPool;
-    QMutex mutexCache;
-    QMutex mutexPlot;
+    QMutex mutexCache;//缓冲池交换网络数据所用 cachePool
+    QMutex mutexPlot;//缓冲池交换帧数据所用 spectrumFrameCachePool
+    QMutex mutexReset;//更新数据所用，一般用于开始测量，需要重置数据项
     quint32 SequenceNumber;// 帧序列号
     QUiThread* analyzeNetDataThread;
     QUiThread* plotUpdateThread;
@@ -183,7 +184,6 @@ private:
     QFile *pfSave = nullptr;
     qint8 prepareStep = 0;
     void initSocket(QTcpSocket** socket);
-
     bool taskFinished = false;
 
 private:
@@ -194,14 +194,19 @@ private:
     bool refModel = false;
     unsigned int maxEnergy = 8192;
     int maxCh = 4096;
+
     quint32 currentClockStepNs[2];//fpga时钟步长（数据包的时长）
     quint32 currentRefreshStepNs[2];//ui时钟步长（界面刷新时长）
-    PariticalSpectrumFrame totalCountFrames[2]; // 系统自处理以来所有数据帧
-    PariticalSpectrumFrame handleCountFrames[2]; // 保存当前时长内的时间、能谱信息，一旦达到1s时长，将交给接口处理
-    std::vector<PariticalCountFrame> cacheCountFrames; // 保存自测试开始以来所有的计数信息
-    std::vector<PariticalSpectrumFrame> spectrumFrameCachePool;//开始测量依赖所有能谱数据
-    std::vector<PariticalCountFrame> countFrameCachePool;//开始测量以来所有计数
-    std::vector<PariticalCountFrame> currentCountFrameCachePool;//当然步长内的计数
+
+    PariticalSpectrumFrame currentStepSpectrumFrame[2]; // 保存当前时长内的时间、能谱信息，一旦达到1s时长，将交给接口处理
+
+    std::vector<PariticalCountFrame> totalStepCountFrames; // 保存自测试开始以来所有的计数信息(按步长统计)
+    std::vector<PariticalSpectrumFrame> totalStepSpectrumFrames; // 保存自测试开始以来所有的计数信息
+
+    std::vector<PariticalSpectrumFrame> totalSpectrumFrames;//开始测量以来所有能谱数据
+
+    std::vector<PariticalSpectrumFrame> currentSpectrumFrames;//当前接收的能谱数据（一般指未处理）
+    std::vector<PariticalCountFrame> currentStepCountFrames;//当前步长内的计数
 };
 
 #include <QThread>

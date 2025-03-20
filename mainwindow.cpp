@@ -319,13 +319,8 @@ void MainWindow::InitMainWindowUi()
     grp->addButton(ui->radioButton_ref, 0);
     grp->addButton(ui->radioButton_spectrum, 1);
     connect(grp, QOverload<int>::of(&QButtonGroup::buttonClicked), this, [=](int index){
+        commandhelper->switchShowModel(index == 0);
         for (int i=0; i<2; ++i){
-            if (i == 0){
-                int stepT = ui->spinBox_step->value();
-                int leftE[2] = {ui->spinBox_1_leftE->value(), ui->spinBox_2_leftE->value()};
-                int rightE[2] = {ui->spinBox_1_rightE->value(), ui->spinBox_2_rightE->value()};
-                commandhelper->updateParamter(stepT, leftE, rightE);
-            }
             PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(i+1));
             plotWidget->switchShowModel(index == 0);
         }
@@ -761,7 +756,7 @@ void MainWindow::on_pushButton_measure_clicked()
         int stepT = ui->spinBox_step->value();
         int leftE[2] = {ui->spinBox_1_leftE->value(), ui->spinBox_2_leftE->value()};
         int rightE[2] = {ui->spinBox_1_rightE->value(), ui->spinBox_2_rightE->value()};
-        commandhelper->updateParamter(stepT, leftE, rightE);
+        commandhelper->updateParamter(stepT, leftE, rightE, true);
         commandhelper->slotStartManualMeasure(detectorParameter);
 
         QTimer::singleShot(3000, this, [=](){
@@ -830,7 +825,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         int stepT = ui->spinBox_step_2->value();
         int leftE[2] = {ui->spinBox_1_leftE->value(), ui->spinBox_2_leftE_2->value()};
         int rightE[2] = {ui->spinBox_1_rightE_2->value(), ui->spinBox_2_rightE_2->value()};
-        commandhelper->updateParamter(stepT, leftE, rightE);
+        commandhelper->updateParamter(stepT, leftE, rightE, true);
         commandhelper->slotStartAutoMeasure(detectorParameter);
 
         QTimer::singleShot(60000, this, [=](){
@@ -897,6 +892,14 @@ void MainWindow::on_pushButton_refresh_clicked()
     int stepT = ui->spinBox_step->value();
     int leftE[2] = {ui->spinBox_1_leftE->value(), ui->spinBox_2_leftE->value()};
     int rightE[2] = {ui->spinBox_1_rightE->value(), ui->spinBox_2_rightE->value()};
+
+    if (ui->radioButton_ref->isChecked()){
+        for (int i=0; i<2; ++i){
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(i+1));
+            plotWidget->slotResetPlot();
+        }
+    }
+
     commandhelper->updateParamter(stepT, leftE, rightE);
 }
 
@@ -1051,6 +1054,13 @@ void MainWindow::slotRefreshUi()
     //测量
     if (this->property("measuring").toBool()){
         ui->action_refresh->setEnabled(true);
+
+        //测量过程中不允许修改能床幅值
+        ui->spinBox_1_leftE->setEnabled(false);
+        ui->spinBox_1_rightE->setEnabled(false);
+        ui->spinBox_2_leftE->setEnabled(false);
+        ui->spinBox_2_rightE->setEnabled(false);
+
         if (this->property("measur-model").toInt() == 0x00){//手动测量
             ui->pushButton_measure->setText(tr("停止测量"));
             ui->pushButton_measure->setEnabled(true);
@@ -1101,6 +1111,10 @@ void MainWindow::slotRefreshUi()
         }
     } else {
         ui->action_refresh->setEnabled(false);
+        ui->spinBox_1_leftE->setEnabled(true);
+        ui->spinBox_1_rightE->setEnabled(true);
+        ui->spinBox_2_leftE->setEnabled(true);
+        ui->spinBox_2_rightE->setEnabled(true);
 
         //公共
         ui->pushButton_save->setEnabled(true);
@@ -1119,4 +1133,6 @@ void MainWindow::slotRefreshUi()
         ui->pushButton_measure_2->setEnabled(true);
         ui->pushButton_measure_3->setEnabled(true);
     }
+
+    ui->pushButton_refresh->setEnabled(true);
 }

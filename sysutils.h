@@ -6,12 +6,26 @@
 
 using namespace std;
 struct TimeEnergy{
-    long long time; // 单位ns
-    int Energy; // 单位暂无
+    unsigned long long time; // 单位ns，八个字节int
+    unsigned short energy; // 单位暂无,两个字节无符号数
+    TimeEnergy(unsigned long long time, unsigned short energy){
+        this->time = time;
+        this->energy = energy;
+    }
+};
+
+struct StepTimeEnergy{
+    unsigned long long time; // 单位s
+    unsigned short energy; // 单位暂无,两个字节无符号数
+    StepTimeEnergy(unsigned long long time, unsigned short energy){
+        this->time = time;
+        this->energy = energy;
+    }
 };
 
 typedef struct tagPariticalCountFrame{
     unsigned long long channel;
+    unsigned long stepT;
     unsigned long long dataT;
     unsigned short dataE;
 }PariticalCountFrame;
@@ -19,6 +33,7 @@ typedef struct tagPariticalCountFrame{
 
 typedef struct tagPariticalSpectrumFrame{
     unsigned long long channel;
+    unsigned long stepT;
     std::vector<unsigned long long> dataT;
     std::vector<unsigned short> dataE;
 }PariticalSpectrumFrame;

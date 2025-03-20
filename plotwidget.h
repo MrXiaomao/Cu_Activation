@@ -25,6 +25,7 @@ public:
     void initDetailWidget();
 
     void switchShowModel(bool refModel);
+    void switchDataModel(bool log);
 
 public slots:
     void slotPlotClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event);
@@ -70,6 +71,7 @@ private:
     bool showAxis = false;//是否显示轴线
     bool isDragging = false;
     bool isPressed = false;
+    bool isLogarithmic = false;//对数模型
     QPoint dragStart;
 
     QColor clrBackground = QColor(255, 255, 255);

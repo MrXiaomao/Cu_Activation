@@ -39,6 +39,7 @@ void PlotWidget::initCustomPlot()
     customPlot->setNotAntialiasedElements(QCP::aeAll);
     // 图例名称隐藏
     customPlot->legend->setVisible(false);
+    customPlot->legend->setFillOrder(QCPLayoutGrid::foColumnsFirst);//设置图例在一行中显示
     // 图例名称显示位置
     customPlot->axisRect()->insetLayout()->setInsetAlignment(0, Qt::AlignTop|Qt::AlignRight);
     // 设置边界
@@ -64,11 +65,16 @@ void PlotWidget::initCustomPlot()
     //axisTickerFixed->setTickStepStrategy(QCPAxisTicker::TickStepStrategy::tssMeetTickCount);
     customPlot->xAxis->setTicker(axisTickerFixed);
     customPlot->xAxis->setRange(0, 4096);
-    customPlot->yAxis->setRange(0, 10000);
+    customPlot->yAxis->setRange(-50, 10000);
     customPlot->yAxis->ticker()->setTickCount(5);
     customPlot->xAxis->ticker()->setTickCount(16);
     //customPlot->xAxis->ticker()->setTickStepStrategy(QCPAxisTicker::TickStepStrategy::tssMeetTickCount);
     //customPlot->yAxis2->setPadding(10);//距离右边的距离
+
+//    QSharedPointer<QCPAxisTickerText> xAxisTickerText(new QCPAxisTickerText);
+//    xAxisTickerText->setSubTickCount(10);
+//    xAxisTickerText->setTickCount(4096);
+//    customPlot->xAxis->setTicker(xAxisTickerText);
 
     // 设置刻度可见
     customPlot->xAxis->setTicks(axisVisible);
@@ -87,12 +93,12 @@ void PlotWidget::initCustomPlot()
     customPlot->yAxis->setTickLabels(axisVisible);
     customPlot->yAxis2->setTickLabels(false);
     // 设置子刻度可见
-    customPlot->xAxis->setSubTicks(false);
+    customPlot->xAxis->setSubTicks(axisVisible);
     customPlot->xAxis2->setSubTicks(false);
-    customPlot->yAxis->setSubTicks(false);
+    customPlot->yAxis->setSubTicks(axisVisible);
     customPlot->yAxis2->setSubTicks(false);
     //设置轴标签名称
-    //customPlot->xAxis->setLabel(QObject::tr("计数"));
+    //customPlot->xAxis->setLabel(QObject::tr("时间"));
     //customPlot->yAxis->setLabel(QObject::tr("能量/Kev"));
     // 设置网格线颜色
     customPlot->xAxis->grid()->setPen(QPen(QColor(180, 180, 180, 128), 1, Qt::PenStyle::DashLine));
@@ -258,7 +264,7 @@ void PlotWidget::initMultiCustomPlot()
     //customPlot->setAntialiasedElements(QCP::aeAll);
     customPlot->setNotAntialiasedElements(QCP::aeAll);
     // 图例名称显示
-    customPlot->legend->setVisible(true);
+    customPlot->legend->setVisible(false);
     // 图例名称显示位置
     customPlot->axisRect()->insetLayout()->setInsetAlignment(0, Qt::AlignTop|Qt::AlignRight);
     // 设置边界
@@ -284,11 +290,16 @@ void PlotWidget::initMultiCustomPlot()
     //axisTickerFixed->setTickStepStrategy(QCPAxisTicker::TickStepStrategy::tssMeetTickCount);
     customPlot->xAxis->setTicker(axisTickerFixed);
     customPlot->xAxis->setRange(0, 4096);
-    customPlot->yAxis->setRange(0, 10000);
+    customPlot->yAxis->setRange(-50, 10000);
     customPlot->yAxis->ticker()->setTickCount(5);
     customPlot->xAxis->ticker()->setTickCount(16);
     //customPlot->xAxis->ticker()->setTickStepStrategy(QCPAxisTicker::TickStepStrategy::tssMeetTickCount);
     //customPlot->yAxis2->setPadding(10);//距离右边的距离
+
+//    QSharedPointer<QCPAxisTickerText> xAxisTickerText(new QCPAxisTickerText);
+//    xAxisTickerText->setSubTickCount(10);
+//    xAxisTickerText->setTickCount(4096);
+//    customPlot->xAxis->setTicker(xAxisTickerText);
 
     // 设置刻度可见    
     customPlot->xAxis->setTicks(axisVisible);
@@ -307,9 +318,9 @@ void PlotWidget::initMultiCustomPlot()
     customPlot->yAxis->setTickLabels(axisVisible);
     customPlot->yAxis2->setTickLabels(false);
     // 设置子刻度可见
-    customPlot->xAxis->setSubTicks(false);
+    customPlot->xAxis->setSubTicks(axisVisible);
     customPlot->xAxis2->setSubTicks(false);
-    customPlot->yAxis->setSubTicks(false);
+    customPlot->yAxis->setSubTicks(axisVisible);
     customPlot->yAxis2->setSubTicks(false);
     //设置轴标签名称
     //customPlot->xAxis->setLabel(QObject::tr("计数"));
@@ -425,6 +436,13 @@ void PlotWidget::initMultiCustomPlot()
     //connect(customPlot, SIGNAL(selectionChangedByUser()), this, SLOT(slotSelectionChanged()));
     connect(customPlot, SIGNAL(beforeReplot()), this, SLOT(slotBeforeReplot()));
     connect(customPlot, SIGNAL(afterLayout()), this, SLOT(slotBeforeReplot()));
+
+    //connect(customPlot, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(mousePress()));
+    connect(customPlot, &QCustomPlot::mouseWheel, this, [=](QWheelEvent*){
+        customPlot->yAxis->setRangeLower(-200);
+        customPlot->xAxis->setRangeLower(0);
+    });
+
 
     switchShowModel(false);
     // 图形刷新
@@ -830,14 +848,18 @@ void PlotWidget::slotSelectionChanged() {
     customPlot->replot(); // 重新绘制图形以显示更改
 }
 
+#include <QtMath>
+#include <math.h>
 void PlotWidget::slotUpdateCountData(PariticalCountFrame frame)
 {
     QCustomPlot *customPlot = customPlotInstance();
     int channelIndex = frame.channel;
-    double keys = frame.dataT;
-    double values = frame.dataE;
+    double key = frame.dataT;
+    double value = frame.dataE;
+    if (isLogarithmic)
+        value = log(value);
     QColor colors = clrLine[channelIndex];
-    customPlot->graph(REF_GRAPH)->addData(keys, values, colors);
+    customPlot->graph(REF_GRAPH)->addData(key, value, colors);
     customPlot->graph(REF_GRAPH)->setVisible(true);
     customPlot->replot();
 }
@@ -853,7 +875,10 @@ void PlotWidget::slotUpdateSpectrumData(PariticalSpectrumFrame frame)
     for (size_t i=0; i<frame.dataE.size(); ++i){
         keys << i;
         currentFrame[channelIndex].dataE[i] += frame.dataE[i];//将能量叠加
-        values << currentFrame[channelIndex].dataE.at(i);
+        if (isLogarithmic)
+            values << log(currentFrame[channelIndex].dataE.at(i));
+        else
+            values << currentFrame[channelIndex].dataE.at(i);
         colors << clrLine[channelIndex];
 
         maxEngry = qMax((unsigned int)maxEngry, (unsigned int)currentFrame[channelIndex].dataE.at(i));
@@ -892,6 +917,48 @@ void PlotWidget::switchShowModel(bool refModel)
     customPlot->graph(ENGRY_GRAPH)->setVisible(!refModel);
     customPlot->graph(GAUSS_GRAPH)->setVisible(!refModel);
     customPlot->graph(REF_GRAPH)->setVisible(refModel);
+
+
+    customPlot->legend->item(ENGRY_GRAPH)->setVisible(!refModel);
+    customPlot->legend->item(GAUSS_GRAPH)->setVisible(!refModel);
+    customPlot->legend->item(REF_GRAPH)->setVisible(refModel);
+
+    if (refModel){
+        //设置轴标签名称
+        //customPlot->xAxis->setLabel(QObject::tr("时间"));
+        //customPlot->yAxis->setLabel(QObject::tr("计数"));
+    } else {
+        //设置轴标签名称
+        //customPlot->xAxis->setLabel(QObject::tr("时间"));
+        //customPlot->yAxis->setLabel(QObject::tr("能量/Kev"));
+    }
+
+    customPlot->replot();
+}
+
+void PlotWidget::switchDataModel(bool log)
+{
+    /*
+        对于参数formatCode可以参考QT的Qstring::number
+        f 普通数字格式，范围过大时出现刻度重叠问题。默认保留小数点后六位，使用void QCPAxis::setNumberPrecision ( int precision)来控制保留多少位的小数点
+        g 较小的数采用普通数字格式，较大的数采用科学计数（形如 5e6）.使用void QCPAxis::setNumberPrecision ( int precision)来控制多大的数字后采用科学计数。
+        b qcustomplot独有的格式beautiful。和其他连用 如gb，较小的数采用普通数字格式，较大的数采用科学计数(形如 )。使用void QCPAxis::setNumberPrecision ( int precision)。来控制多大的数字后面采用科学计数
+        c qcustomplot独有的格式将点符号乘号修改成x符号乘号
+    */
+    isLogarithmic = log;
+    if (isLogarithmic){
+        customPlot->yAxis->setScaleType(QCPAxis::ScaleType::stLogarithmic);
+        customPlot->yAxis->setRange(0.1, 100); // 设置y轴的显示范围
+        customPlot->yAxis->setNumberFormat("eb");//使用科学计数法表示刻度
+        customPlot->yAxis->setNumberPrecision(0);//小数点后面小数位数
+    } else {
+        customPlot->yAxis->setScaleType(QCPAxis::ScaleType::stLinear);
+        customPlot->yAxis->setRange(-100, 10000);
+        customPlot->yAxis->setNumberFormat("f");
+        customPlot->yAxis->setNumberPrecision(0);
+    }
+
+    customPlot->replot();
 }
 
 void PlotWidget::slotGauss(int leftE, int rightE)

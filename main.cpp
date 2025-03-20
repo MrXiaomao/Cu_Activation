@@ -9,6 +9,7 @@
 #include <QScreen>
 #include <QSplashScreen>
 #include <QMutex>
+#include <QTranslator>
 
 QString QtMsgTypeToString(QtMsgType type)
 {
@@ -72,7 +73,7 @@ void AppMessageHandler(QtMsgType type, const QMessageLogContext& /*context*/, co
         file.close();
 
         if (mw)
-            emit mw->sigAppengMsg(strMessage, type);
+            emit mw->sigAppengMsg(msg + "\n", type);
     }
 }
 
@@ -194,6 +195,21 @@ int main(int argc, char *argv[])
     qInstallMessageHandler(myMessageOutputForFile);
 #endif
 
+    QTranslator translator;
+    if (translator.load(QLocale(), QLatin1String("Cu_Activation"), QLatin1String("_zh_CN.qm"), QLatin1String(":/i18n"))){
+        a.installTranslator(&translator);
+    }
+
+    QTranslator qtBaseTranslator;
+    if (qtBaseTranslator.load(":/qm/qt_zh_CN.qm")){
+        a.installTranslator(&qtBaseTranslator);
+    }
+
+    QTranslator qtWidgetTranslator;
+    if (qtWidgetTranslator.load(":/qm/widgets.qm")){
+        a.installTranslator(&qtWidgetTranslator);
+    }
+
     ///
     QSplashScreen splash;
     splash.setPixmap(QPixmap(":/resource/splash.png"));
@@ -202,7 +218,7 @@ int main(int argc, char *argv[])
     // 保留最近3次的日志
     cleanOldLogs(3);
     //安装日志
-    //qInstallMessageHandler(AppMessageHandler);
+    qInstallMessageHandler(AppMessageHandler);
 
     splash.showMessage(QObject::tr("启动中..."), Qt::AlignLeft | Qt::AlignBottom, Qt::white);
     MainWindow w;

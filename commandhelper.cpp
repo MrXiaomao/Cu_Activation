@@ -5,6 +5,7 @@
 #include <QDateTime>
 
 CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
+  , coincidenceAnalyzer(new CoincidenceAnalyzer)
 {
     initSocket(&socketDisplacement1);
     initSocket(&socketDisplacement2);
@@ -89,6 +90,9 @@ CommandHelper::~CommandHelper(){
     closeSocket(socketDisplacement2);
     closeSocket(socketRelay);
     closeSocket(socketDetector);
+
+    delete coincidenceAnalyzer;
+    coincidenceAnalyzer = nullptr;
 }
 
 void CommandHelper::initSocket(QTcpSocket** _socket)
@@ -604,6 +608,7 @@ void CommandHelper::slotStart(qint8 mode)
 #include <QThread>
 void CommandHelper::slotStartManualMeasure(DetectorParameter p)
 {
+    coincidenceAnalyzer->initialize();
     workStatus = Preparing;
     detectorParameter = p;
 
@@ -808,6 +813,7 @@ void CommandHelper::slotStopManualMeasure()
 //开始能谱测量
 void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
 {
+    coincidenceAnalyzer->initialize();
     workStatus = Preparing;
     detectorParameter = p;
 
@@ -1020,15 +1026,15 @@ void CommandHelper::slotDoTasks()
 
 void CommandHelper::slotAnalyzeNetFrame()
 {
-    detectorParameter.transferModel = 0x05;
-    leftE[0] = 3000; leftE[1] = 3000;
-    rightE[0] = 4000; rightE[1] = 4000;
+//    detectorParameter.transferModel = 0x05;
+//    leftE[0] = 3000; leftE[1] = 3000;
+//    rightE[0] = 4000; rightE[1] = 4000;
 
-    QFile qFile("C:/Users/Administrator/Desktop/川大项目/缓存目录/2025-03-19 093103.dat");
-    if (qFile.open(QIODevice::ReadOnly)){
-        handlerPool = qFile.readAll();
-        qFile.close();
-    }
+//    QFile qFile("C:/Users/Administrator/Desktop/川大项目/缓存目录/2025-03-19 093103.dat");
+//    if (qFile.open(QIODevice::ReadOnly)){
+//        handlerPool = qFile.readAll();
+//        qFile.close();
+//    }
 
     while (!taskFinished)
     {
@@ -1242,40 +1248,105 @@ void CommandHelper::slotPlotUpdateFrame()
                         for (size_t i= 0; i<frame.dataT.size(); ++i){                            
                             if (frame.dataT[i] > currentStepBaseNs[frame.channel] * currentClockStepNs[frame.channel]){                                
                                 //判断中间是否丢包
-                                int lostFrameCount = (frame.dataT[i] - currentStepBaseNs[frame.channel] * currentClockStepNs[frame.channel]) / currentStepBaseNs[frame.channel];
-                                if (lostFrameCount > 1){
-                                    for (int i=0; i<lostFrameCount; ++i){
-                                        long long dataT = currentStepBaseNs[frame.channel] * currentClockStepNs[frame.channel] * (i+1);
+                                quint32 clockStepNs = frame.dataT[i] / currentStepBaseNs[frame.channel];
+                                qDebug() << currentClockStepNs[frame.channel] << "" << clockStepNs;
+                                if (clockStepNs > currentClockStepNs[frame.channel]){
+                                    //丢包了
+                                    for (quint32 i=currentClockStepNs[frame.channel]; i<clockStepNs; ++i){
+                                        long long dataT = currentStepBaseNs[frame.channel] * i;
                                         unsigned short dataE = 0;
                                         currentStepSpectrumFrame[frame.channel].dataT.push_back(dataT);
                                         currentStepSpectrumFrame[frame.channel].dataE.push_back(dataE);
-                                    }
-                                }
 
-                                //数据满足时长了
-                                vector<long long> dataT[2];
-                                vector<unsigned short> dataE[2];
-                                dataT[frame.channel].insert(dataT[frame.channel].end(), currentStepSpectrumFrame[frame.channel].dataT.begin(), currentStepSpectrumFrame[frame.channel].dataT.end());
-                                dataE[frame.channel].insert(dataE[frame.channel].end(), currentStepSpectrumFrame[frame.channel].dataE.begin(), currentStepSpectrumFrame[frame.channel].dataE.end());
+                                        //空包填充
+                                        currentClockStepNs[frame.channel]++;
+                                        currentStepSpectrumFrame[frame.channel].dataT.push_back(dataT);
+                                        currentStepSpectrumFrame[frame.channel].dataE.push_back(dataE);
+
+                                        //计数
+                                        PariticalCountFrame cacheCountFrame;
+                                        cacheCountFrame.channel = frame.channel;
+                                        cacheCountFrame.stepT = i;//currentClockStepNs[frame.channel];
+                                        cacheCountFrame.dataT = i;//currentClockStepNs[frame.channel];
+                                        cacheCountFrame.dataE = 0; //单位cps
+                                        totalStepCountFrames.push_back(cacheCountFrame);
+
+                                        //能谱
+                                        PariticalSpectrumFrame cacheSpectrumFrame;
+                                        cacheSpectrumFrame.channel = frame.channel;
+                                        cacheSpectrumFrame.stepT = i;//currentClockStepNs[frame.channel];
+                                        //cacheSpectrumFrame.dataT.push_back(currentClockStepNs[frame.channel]);
+                                        //cacheSpectrumFrame.dataE = GetSpectrum(currentStepSpectrumFrame[frame.channel].dataE, maxEnergy, maxCh);
+                                        cacheSpectrumFrame.dataT.insert(cacheSpectrumFrame.dataT.begin(), currentStepSpectrumFrame[frame.channel].dataT.begin(), currentStepSpectrumFrame[frame.channel].dataT.end());
+                                        cacheSpectrumFrame.dataE.insert(cacheSpectrumFrame.dataE.begin(), currentStepSpectrumFrame[frame.channel].dataE.begin(), currentStepSpectrumFrame[frame.channel].dataE.end());
+                                        totalStepSpectrumFrames.push_back(cacheSpectrumFrame);
+
+                                        //符合
+                                    }
+                                } else {
+
+                                }
+                                /////////////////////////////////////////////////////////////////////////////////////////
 
                                 //计数
-                                PariticalCountFrame cacheFrame;
-                                cacheFrame.channel = frame.channel;
-                                cacheFrame.dataT = currentClockStepNs[frame.channel];
-                                cacheFrame.dataE = GetCount(dataE[frame.channel], this->leftE[frame.channel], this->rightE[frame.channel]);; //单位cps
-                                totalStepCountFrames.push_back(cacheFrame);
+                                PariticalCountFrame cacheCountFrame;
+                                cacheCountFrame.channel = frame.channel;
+                                cacheCountFrame.stepT = clockStepNs;//currentClockStepNs[frame.channel];
+                                cacheCountFrame.dataT = clockStepNs;//currentClockStepNs[frame.channel];
+                                cacheCountFrame.dataE = GetCount(currentStepSpectrumFrame[frame.channel].dataE, this->leftE[frame.channel], this->rightE[frame.channel]); //单位cps
+                                totalStepCountFrames.push_back(cacheCountFrame);
+                                /////////////////////////////////////////////////////////////////////////////////////////
 
                                 //能谱
-                                PariticalSpectrumFrame cacheFrame2;
-                                cacheFrame2.channel = frame.channel;
-                                cacheFrame2.dataT.push_back(currentClockStepNs[frame.channel]);
-                                cacheFrame2.dataE = GetSpectrum(dataE[frame.channel], maxEnergy, maxCh);
-                                totalStepSpectrumFrames.push_back(cacheFrame2);
+                                PariticalSpectrumFrame cacheSpectrumFrame;
+                                cacheSpectrumFrame.channel = frame.channel;
+                                cacheSpectrumFrame.stepT = clockStepNs;//currentClockStepNs[frame.channel];
+                                //cacheSpectrumFrame.dataT.push_back(currentClockStepNs[frame.channel]);
+                                //cacheSpectrumFrame.dataE = GetSpectrum(currentStepSpectrumFrame[frame.channel].dataE, maxEnergy, maxCh);
+                                cacheSpectrumFrame.dataT.insert(cacheSpectrumFrame.dataT.begin(), currentStepSpectrumFrame[frame.channel].dataT.begin(), currentStepSpectrumFrame[frame.channel].dataT.end());
+                                cacheSpectrumFrame.dataE.insert(cacheSpectrumFrame.dataE.begin(), currentStepSpectrumFrame[frame.channel].dataE.begin(), currentStepSpectrumFrame[frame.channel].dataE.end());
+                                totalStepSpectrumFrames.push_back(cacheSpectrumFrame);
+                                /////////////////////////////////////////////////////////////////////////////////////////
+
+                                //符合结果
+                                //注意：这里需要注意，第2个探测器必须等到第1个探测器的的数据到了，才能一起进行计算
+//                                vector<TimeEnergy> data1_2, data2_2;
+//                                for (int i=0; i<cacheSpectrumFrame.dataT.size(); ++i){
+
+//                                }
+//                                data1_2.push_back({900LL,500});
+//                                CoinResult result = coincidenceAnalyzer->Coincidence(data1_2, data2_2, leftE[0], rightE[0], timeWidth);
+//                                //删除容器中已经处理的数据点
+//                                if (result.dataPoint1 <= (int)data1_2.size()) {
+//                                    data1_2.erase(data1_2.begin(), data1_2.begin() + result.dataPoint1);
+//                                } else {
+//                                    data1_2.clear(); // 如果N大于容器的大小，清空容器
+//                                }
+//                                if (result.dataPoint2 <= (int)data2_2.size()) {
+//                                    data2_2.erase(data2_2.begin(), data2_2.begin() + result.dataPoint2);
+//                                } else {
+//                                    data2_2.clear(); // 如果N大于容器的大小，清空容器
+//                                }
+
+                                // 准备计算
+//                                int nanoseconds = 1000000000LL; //1s = 1E9ns
+//                                int time1_elapseFPGA;//计算FPGA当前最大时间与上一时刻的时间差,单位：秒
+//                                int time2_elapseFPGA;//计算FPGA当前最大时间与上一时刻的时间差,单位：秒
+//                                time1_elapseFPGA = data1_2.back().time/nanoseconds - coincidenceAnalyzer->GetcountCoin();//计算FPGA当前最大时间与上一时刻的时间差
+//                                time2_elapseFPGA = data2_2.back().time/nanoseconds - coincidenceAnalyzer->GetcountCoin();//计算FPGA当前最大时间与上一时刻的时间差
+//                                long long lastTime1 = data1_2.back().time;
+//                                long long lastTime2 = data2_2.back().time;
+//                                time1_elapseFPGA = lastTime1/nanoseconds - coincidenceAnalyzer->GetcountCoin();//计算FPGA当前最大时间与上一时刻的时间差
+//                                time2_elapseFPGA = lastTime2/nanoseconds - coincidenceAnalyzer->GetcountCoin();//计算FPGA当前最大时间与上一时刻的时间差
+                                /////////////////////////////////////////////////////////////////////////////////////////
 
                                 currentStepSpectrumFrame[frame.channel].dataE.clear();
                                 currentStepSpectrumFrame[frame.channel].dataT.clear();
 
-                                currentStepCountFrames.push_back(cacheFrame);
+                                currentStepCountFrames.push_back(cacheCountFrame);
+                                currentStepSpectrumFrames.push_back(cacheSpectrumFrame);
+                                /////////////////////////////////////////////////////////////////////////////////////////
+
                                 if (frame.dataT[i] > currentStepBaseNs[frame.channel] * currentRefreshStepNs[frame.channel] * this->stepT){
                                     //计数
                                     if (this->refModel){
@@ -1293,22 +1364,10 @@ void CommandHelper::slotPlotUpdateFrame()
                                         emit sigRefreshCountData(sFrame);
                                     } else {
                                         //能谱
-                                        PariticalSpectrumFrame sFrame;
-                                        sFrame.channel = frame.channel;
-                                        sFrame.dataT.push_back(currentRefreshStepNs[frame.channel] * this->stepT);
-                                        //sFrame.dataE = 0;
-                                        for (auto a : currentStepCountFrames){
-                                            sFrame.dataE += a.dataE; // 求和
-                                        }
-
-                                        //求均值
-                                        sFrame.dataE = sFrame.dataE / this->stepT;
-
-                                        currentStepCountFrames.clear();
-
                                         PariticalSpectrumFrame frame;
-                                        frame.channel = channel;
-                                        frame.dataE = GetSpectrum(dataE[frame.channel], maxEnergy, maxCh);
+                                        frame.channel = frame.channel;
+                                        frame.dataE = GetSpectrum(currentStepSpectrumFrames[frame.channel].dataE, maxEnergy, maxCh);
+                                        currentStepSpectrumFrames.clear();
                                         emit sigRefreshSpectrum(frame);
                                     }
 
@@ -1376,6 +1435,7 @@ void CommandHelper::updateParamter(int _stepT, int _leftE[2], int _rightE[2], bo
     currentStepSpectrumFrame[1].dataE.clear();
 
     currentStepCountFrames.clear();
+    currentStepSpectrumFrames.clear();
 
     if (reset){
         totalStepCountFrames.clear();
@@ -1397,9 +1457,27 @@ void CommandHelper::updateParamter(int _stepT, int _leftE[2], int _rightE[2], bo
                 currentStepCountFrames.clear();
                 emit sigRefreshCountData(sFrame);
 
+                //未处理的数据一定要放回缓存
                 currentStepCountFrames.push_back(frame);
             } else {
                 currentStepCountFrames.push_back(frame);
+            }
+        }
+    } else {
+        for (auto frame : totalStepSpectrumFrames){
+            if (frame.stepT > currentRefreshStepNs[frame.channel] * this->stepT){
+                PariticalSpectrumFrame sFrame;
+                sFrame.channel = frame.channel;
+                sFrame.dataE = GetSpectrum(currentStepSpectrumFrames[frame.channel].dataE, maxEnergy, maxCh);
+
+                currentRefreshStepNs[frame.channel]++;
+                currentStepSpectrumFrames.clear();
+                emit sigRefreshSpectrum(sFrame);
+
+                //未处理的数据一定要放回缓存
+                currentStepSpectrumFrames.push_back(frame);
+            } else {
+                currentStepSpectrumFrames.push_back(frame);
             }
         }
     }

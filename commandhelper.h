@@ -7,6 +7,7 @@
 #include <QFile>
 
 #include "sysutils.h"
+#include "coincidenceanalyzer.h"
 typedef struct tagDetectorParameter{
     // 触发阈值
     qint16 triggerThold1, triggerThold2;
@@ -114,6 +115,7 @@ private:
     quint32 SequenceNumber;// 帧序列号
     QUiThread* analyzeNetDataThread;
     QUiThread* plotUpdateThread;
+    CoincidenceAnalyzer* coincidenceAnalyzer;
 
 protected:
     void makeFrame();
@@ -190,6 +192,7 @@ private:
     QString defaultCacheDir;
     QString currentFilename;
     int stepT = 1, leftE[2], rightE[2];
+    int timeWidth = 50;//时间窗宽度，单位ns(符合分辨时间)
     qint64 lastClockT = 0;
     bool refModel = false;
     unsigned int maxEnergy = 8192;
@@ -201,12 +204,13 @@ private:
     PariticalSpectrumFrame currentStepSpectrumFrame[2]; // 保存当前时长内的时间、能谱信息，一旦达到1s时长，将交给接口处理
 
     std::vector<PariticalCountFrame> totalStepCountFrames; // 保存自测试开始以来所有的计数信息(按步长统计)
-    std::vector<PariticalSpectrumFrame> totalStepSpectrumFrames; // 保存自测试开始以来所有的计数信息
+    std::vector<PariticalSpectrumFrame> totalStepSpectrumFrames; // 保存自测试开始以来所有的能谱信息
 
     std::vector<PariticalSpectrumFrame> totalSpectrumFrames;//开始测量以来所有能谱数据
+    std::vector<PariticalSpectrumFrame> currentSpectrumFrames;//当前接收的能谱数据（一般指未处理，未分步长的数据）
 
-    std::vector<PariticalSpectrumFrame> currentSpectrumFrames;//当前接收的能谱数据（一般指未处理）
     std::vector<PariticalCountFrame> currentStepCountFrames;//当前步长内的计数
+    std::vector<PariticalSpectrumFrame> currentStepSpectrumFrames;//当前步长内的能谱信息
 };
 
 #include <QThread>

@@ -18,6 +18,9 @@
 #include <QFile>
 #include <QDir>
 #include <QMessageBox>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonDocument>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -43,6 +46,8 @@ MainWindow::MainWindow(QWidget *parent)
     this->setProperty("measure-model", 0x00);
     //暂停刷新
     this->setProperty("pause_plot", false);
+    //线性模型
+    this->setProperty("ScaleLogarithmicType", false);
 
     connect(this, SIGNAL(sigRefreshUi()), this, SLOT(slotRefreshUi()));
     connect(this, SIGNAL(sigAppengMsg(const QString &, QtMsgType)), this, SLOT(slotAppendMsg(const QString &, QtMsgType)));
@@ -149,6 +154,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(commandhelper, &CommandHelper::sigDetectorFault, this, [=](){
         this->setProperty("detector_fault", true);
         this->setProperty("detector_on", false);
+        this->setProperty("measuring", false);
 
         QString msg = QString(tr("网络故障，探测器连接失败！"));
         ui->statusbar->showMessage(msg);
@@ -159,6 +165,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(commandhelper, &CommandHelper::sigDetectorStatus, this, [=](bool on){
         this->setProperty("detector_fault", false);
         this->setProperty("detector_on", on);
+        if (!on)
+            this->setProperty("measuring", false);
 
         QString msg = QString(tr("探测器状态：%1")).arg(on ? tr("开") : tr("关"));
         ui->statusbar->showMessage(msg);
@@ -168,6 +176,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     qRegisterMetaType<PariticalCountFrame>("PariticalCountFrame");
     connect(commandhelper, &CommandHelper::sigRefreshCountData, this, [=](PariticalCountFrame frame){
+        bool pause_plot = this->property("pause_plot").toBool();
         if (!pause_plot){
             PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(frame.channel+1));
             plotWidget->slotUpdateCountData(frame);
@@ -175,6 +184,7 @@ MainWindow::MainWindow(QWidget *parent)
     });
     qRegisterMetaType<PariticalSpectrumFrame>("PariticalSpectrumFrame");
     connect(commandhelper, &CommandHelper::sigRefreshSpectrum, this, [=](PariticalSpectrumFrame frame){
+        bool pause_plot = this->property("pause_plot").toBool();
         if (!pause_plot){
             PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(frame.channel+1));
             plotWidget->slotUpdateSpectrumData(frame);
@@ -268,7 +278,7 @@ void MainWindow::InitMainWindowUi()
 
     // 手动测量-标定文件
     {
-        QAction *action = ui->lineEdit_9->addAction(QIcon(":/resource/open.png"), QLineEdit::TrailingPosition);
+        QAction *action = ui->lineEdit_file->addAction(QIcon(":/resource/open.png"), QLineEdit::TrailingPosition);
         QToolButton* button = qobject_cast<QToolButton*>(action->associatedWidgets().last());
         button->setCursor(QCursor(Qt::PointingHandCursor));
         connect(button, &QToolButton::pressed, this, [=](){
@@ -276,18 +286,18 @@ void MainWindow::InitMainWindowUi()
             QString fileName = QFileDialog::getOpenFileName(this, tr("打开文件"), lastDir, tr("所有文件（*.*）"));
             if (!fileName.isEmpty()){
                 lastDir = fileName;
-                ui->lineEdit_9->setText(fileName);
+                ui->lineEdit_file->setText(fileName);
             }
         });
     }
     // 自动测量-标定文件
     {
-        QAction *action = ui->lineEdit_18->addAction(QIcon(":/resource/open.png"), QLineEdit::TrailingPosition);
+        QAction *action = ui->lineEdit_file_2->addAction(QIcon(":/resource/open.png"), QLineEdit::TrailingPosition);
         QToolButton* button = qobject_cast<QToolButton*>(action->associatedWidgets().last());
         button->setCursor(QCursor(Qt::PointingHandCursor));
         connect(button, &QToolButton::pressed, this, [=](){
             QString dir = QFileDialog::getOpenFileName(this);
-            ui->lineEdit_18->setText(dir);
+            ui->lineEdit_file_2->setText(dir);
         });
     }
 
@@ -390,6 +400,7 @@ void MainWindow::InitMainWindowUi()
     });
     ui->pushButton_save->setEnabled(false);
 
+    this->load();
     this->slotAppendMsg(QObject::tr("系统启动"), QtInfoMsg);
 }
 
@@ -529,7 +540,7 @@ void MainWindow::slotAppendMsg(const QString &msg, QtMsgType msgType)
     cursor.movePosition(QTextCursor::End);
 
     // 先插入时间
-    cursor.insertHtml(QString("<span style='color:black;'>%1</span>").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss >> ")));
+    cursor.insertHtml(QString("<span style='color:black;'>%1</span>").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz >> ")));
     // 再插入文本
     if (msgType == QtDebugMsg || msgType == QtInfoMsg)
         cursor.insertHtml(QString("<span style='color:black;'>%1</span>").arg(msg));
@@ -714,6 +725,8 @@ void MainWindow::on_action_energycalibration_triggered()
 void MainWindow::on_pushButton_measure_clicked()
 {
     if (!this->property("measuring").toBool()){
+        this->save();
+
         //手动测量
         DetectorParameter detectorParameter;
         detectorParameter.triggerThold1 = 0x81;
@@ -744,7 +757,6 @@ void MainWindow::on_pushButton_measure_clicked()
         ui->pushButton_save->setEnabled(false);
         ui->pushButton_gauss->setEnabled(true);
         ui->action_refresh->setEnabled(true);
-        ui->action_line_log->setEnabled(true);
         ui->pushButton_measure->setEnabled(false);
 
         for (int i=0; i<2; ++i){
@@ -782,6 +794,8 @@ void MainWindow::on_pushButton_measure_2_clicked()
 {
     //自动测量
     if (!this->property("measuring").toBool()){
+        this->save();
+
         //手动测量
         DetectorParameter detectorParameter;
         detectorParameter.triggerThold1 = 0x81;
@@ -812,7 +826,6 @@ void MainWindow::on_pushButton_measure_2_clicked()
         ui->pushButton_save->setEnabled(false);
         ui->pushButton_gauss->setEnabled(true);
         ui->action_refresh->setEnabled(true);
-        ui->action_line_log->setEnabled(true);
         ui->pushButton_measure->setEnabled(false);
         ui->pushButton_measure_2->setText(tr("等待触发"));
         ui->pushButton_measure_2->setEnabled(false);
@@ -850,11 +863,13 @@ void MainWindow::on_pushButton_measure_2_clicked()
 void MainWindow::on_pushButton_measure_3_clicked()
 {
     //标定测量
+    this->save();
 }
 
 void MainWindow::on_pushButton_save_clicked()
 {
-    //存储路径
+    this->save();
+
     //存储文件名
     QString filename = ui->lineEdit_path->text() + "/" + ui->lineEdit_filename->text();
     QFileInfo fInfo(filename);
@@ -889,6 +904,8 @@ void MainWindow::on_pushButton_save_clicked()
 
 void MainWindow::on_pushButton_refresh_clicked()
 {
+    this->save();
+
     int stepT = ui->spinBox_step->value();
     int leftE[2] = {ui->spinBox_1_leftE->value(), ui->spinBox_2_leftE->value()};
     int rightE[2] = {ui->spinBox_1_rightE->value(), ui->spinBox_2_rightE->value()};
@@ -910,12 +927,13 @@ void MainWindow::on_action_close_triggered()
 
 void MainWindow::on_action_refresh_triggered()
 {
-    pause_plot = !pause_plot;
-    if (pause_plot){
+    if (!this->property("pause_plot").toBool()){
+        this->setProperty("pause_plot", true);
         ui->action_refresh->setIcon(QIcon(":/resource/work.png"));
         ui->action_refresh->setText(tr("恢复刷新"));
         ui->action_refresh->setIconText(tr("恢复刷新"));
     } else {
+        this->setProperty("pause_plot", false);
         ui->action_refresh->setIcon(QIcon(":/resource/pause.png"));
         ui->action_refresh->setText(tr("暂停刷新"));
         ui->action_refresh->setIconText(tr("暂停刷新"));
@@ -924,6 +942,8 @@ void MainWindow::on_action_refresh_triggered()
 
 void MainWindow::on_pushButton_gauss_clicked()
 {
+    this->save();
+
     PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(currentDetectorIndex+1));
     plotWidget->slotGauss(ui->spinBox_leftE->value(), ui->spinBox_rightE->value());
 }
@@ -947,10 +967,59 @@ void MainWindow::on_action_about_triggered()
     w->showNormal();
 }
 
+std::function<bool(const QString &,const QString &)> CopyDirectoryFiles = [](const QString &fromDir,const QString &toDir)
+{
+    QDir sourceDir(fromDir);
+    QDir targetDir(toDir);
+
+    if(!targetDir.exists())
+    {
+        if(!targetDir.mkdir(targetDir.absolutePath()))
+        {
+            return false;
+        }
+    }
+
+    QFileInfoList list = sourceDir.entryInfoList();
+    for(int i = 0; i < list.size(); i++)
+    {
+        QFileInfo fileInfo = list.at(i);
+        if(fileInfo.fileName()=="." || fileInfo.fileName()=="..")
+        {
+            continue;
+        }
+
+        if(fileInfo.isDir())
+        {
+            if(!CopyDirectoryFiles(fileInfo.filePath(),targetDir.filePath(fileInfo.fileName())))
+            {
+                return false;
+            }
+        }
+        else
+        {
+            if(targetDir.exists(fileInfo.fileName()))
+            {
+                targetDir.remove(fileInfo.fileName());        //有相同的，直接删除
+            }
+            if(!QFile::copy(fileInfo.filePath(),targetDir.filePath(fileInfo.fileName())))
+            {
+                return false;
+            }
+        }
+    }
+
+    return true;
+};
+
 void MainWindow::on_action_restore_triggered()
 {
     if (QMessageBox::warning(this, tr("提示"), tr("是否恢复出厂设置？"), QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) != QMessageBox::Yes)
         return ;
+
+    qInfo() << tr("恢复出厂设置");
+    if (CopyDirectoryFiles("./config/default", "./config/"))
+        this->load();
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -1069,7 +1138,6 @@ void MainWindow::slotRefreshUi()
             //公共
             ui->pushButton_save->setEnabled(false);
             ui->pushButton_gauss->setEnabled(true);
-            ui->action_line_log->setEnabled(true);
 
             //自动测量
             ui->pushButton_measure_2->setEnabled(false);
@@ -1085,7 +1153,6 @@ void MainWindow::slotRefreshUi()
             //公共
             ui->pushButton_save->setEnabled(false);
             ui->pushButton_gauss->setEnabled(true);
-            ui->action_line_log->setEnabled(true);
 
             //手动测量
             ui->pushButton_measure->setEnabled(false);
@@ -1100,7 +1167,6 @@ void MainWindow::slotRefreshUi()
             //公共
             ui->pushButton_save->setEnabled(false);
             ui->pushButton_gauss->setEnabled(true);
-            ui->action_line_log->setEnabled(true);
 
             //手动测量
             ui->pushButton_measure->setEnabled(false);
@@ -1110,29 +1176,250 @@ void MainWindow::slotRefreshUi()
             ui->pushButton_measure_2->setEnabled(false);
         }
     } else {
+        ui->pushButton_measure->setText(tr("开始测量"));
+        ui->pushButton_measure_2->setText(tr("开始测量"));
+        ui->pushButton_measure_3->setText(tr("开始测量"));
+
         ui->action_refresh->setEnabled(false);
         ui->spinBox_1_leftE->setEnabled(true);
         ui->spinBox_1_rightE->setEnabled(true);
         ui->spinBox_2_leftE->setEnabled(true);
         ui->spinBox_2_rightE->setEnabled(true);
 
-        //公共
-        ui->pushButton_save->setEnabled(true);
-        ui->pushButton_gauss->setEnabled(false);
-        ui->action_line_log->setEnabled(false);
+        if (this->property("detector_on").toBool()){
+            //公共
+            ui->pushButton_save->setEnabled(true);
+            ui->pushButton_gauss->setEnabled(false);
 
-        ui->pushButton_refresh->setEnabled(false);
-        ui->pushButton_refresh_2->setEnabled(false);
-        ui->pushButton_refresh_3->setEnabled(false);
+            ui->pushButton_refresh->setEnabled(false);
+            ui->pushButton_refresh_2->setEnabled(false);
+            ui->pushButton_refresh_3->setEnabled(false);
 
-        ui->pushButton_measure->setText(tr("开始测量"));
-        ui->pushButton_measure_2->setText(tr("开始测量"));
-        ui->pushButton_measure_3->setText(tr("开始测量"));
+            ui->pushButton_measure->setEnabled(true);
+            ui->pushButton_measure_2->setEnabled(true);
+            ui->pushButton_measure_3->setEnabled(true);
+        } else {
+            //公共
+            ui->pushButton_save->setEnabled(false);
+            ui->pushButton_gauss->setEnabled(false);
 
-        ui->pushButton_measure->setEnabled(true);
-        ui->pushButton_measure_2->setEnabled(true);
-        ui->pushButton_measure_3->setEnabled(true);
+            ui->pushButton_refresh->setEnabled(false);
+            ui->pushButton_refresh_2->setEnabled(false);
+            ui->pushButton_refresh_3->setEnabled(false);
+
+            ui->pushButton_measure->setEnabled(false);
+            ui->pushButton_measure_2->setEnabled(false);
+            ui->pushButton_measure_3->setEnabled(false);
+        }
     }
+}
 
-    ui->pushButton_refresh->setEnabled(true);
+void MainWindow::load()
+{
+    QString path = QApplication::applicationDirPath() + "/config";
+    QDir dir(path);
+    if (!dir.exists())
+        dir.mkdir(path);
+
+    QFile file(QApplication::applicationDirPath() + "/config/user.json");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // 读取文件内容
+        QByteArray jsonData = file.readAll();
+        file.close();
+
+        // 将 JSON 数据解析为 QJsonDocument
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+        QJsonObject jsonObj = jsonDoc.object();
+
+        //手动
+        QJsonObject jsonObjM1;
+        if (jsonObj.contains("M1")){
+            jsonObjM1 = jsonObj["M1"].toObject();
+            //测量时长
+            ui->spinBox_timelength->setValue(jsonObjM1["timelength"].toInt());
+            //量程选取
+            ui->comboBox_range->setCurrentIndex(jsonObjM1["range"].toInt());
+            //冷却时长
+            ui->spinBox_cool_timelength->setValue(jsonObjM1["cool_timelength"].toInt());
+            //时间步长
+            ui->spinBox_step->setValue(jsonObjM1["step"].toInt());
+            //符合分辨时间
+            ui->spinBox_resolving_time->setValue(jsonObjM1["resolving_time"].toInt());
+            //标定文件
+            ui->lineEdit_file->setText(jsonObjM1["file"].toString());
+        }
+
+        //自动
+        QJsonObject jsonObjM2;
+        if (jsonObj.contains("M2")){
+            jsonObjM2 = jsonObj["M2"].toObject();
+            //测量时长
+            ui->spinBox_timelength_2->setValue(jsonObjM2["timelength"].toInt());
+            //量程选取
+            ui->comboBox_range_2->setCurrentIndex(jsonObjM2["range"].toInt());
+            //冷却时长
+            ui->spinBox_cool_timelength_2->setValue(jsonObjM2["cool_timelength"].toInt());
+            //时间步长
+            ui->spinBox_step_2->setValue(jsonObjM2["step"].toInt());
+            //符合分辨时间
+            ui->spinBox_resolving_time_2->setValue(jsonObjM2["resolving_time"].toInt());
+        }
+
+        //标定
+        QJsonObject jsonObjM3;
+        if (jsonObj.contains("M3")){
+            jsonObjM3 = jsonObj["M3"].toObject();
+            //测量时长
+            ui->spinBox_timelength_3->setValue(jsonObjM3["timelength"].toInt());
+            //量程选取
+            ui->comboBox_range_3->setCurrentIndex(jsonObjM3["range"].toInt());
+            //冷却时长
+            ui->spinBox_cool_timelength_3->setValue(jsonObjM3["cool_timelength"].toInt());
+            //符合分辨时间
+            ui->spinBox_resolving_time_3->setValue(jsonObjM3["resolving_time"].toInt());
+            //中子产额
+            ui->spinBox_neutron_yield->setValue(jsonObjM3["neutron_yield"].toInt());
+        }
+
+        //公共
+        QJsonObject jsonObjPub;
+        if (jsonObj.contains("Public")){
+            jsonObjPub = jsonObj["Public"].toObject();
+            //高斯拟合
+            ui->spinBox_leftE->setValue(jsonObjPub["leftE"].toInt());
+            ui->spinBox_rightE->setValue(jsonObjPub["rightE"].toInt());
+            //保存数据
+            ui->lineEdit_path->setText(jsonObjPub["path"].toString());
+            ui->lineEdit_filename->setText(jsonObjPub["filename"].toString());
+        }
+    }
+}
+
+void MainWindow::save()
+{
+    QString path = QApplication::applicationDirPath() + "/config";
+    QDir dir(path);
+    if (!dir.exists())
+        dir.mkdir(path);
+
+    QFile file(QApplication::applicationDirPath() + "/config/user.json");
+    if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+        // 读取文件内容
+        QByteArray jsonData = file.readAll();
+        file.close();
+
+        // 将 JSON 数据解析为 QJsonDocument
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+        QJsonObject jsonObj = jsonDoc.object();
+
+        //手动
+        QJsonObject jsonObjM1;
+        if (jsonObj.contains("M1")){
+            jsonObjM1 = jsonObj["M1"].toObject();
+        } else {
+            jsonObj.insert("M1", jsonObjM1);
+        }
+        //测量时长
+        jsonObjM1["timelength"] = ui->spinBox_timelength->value();
+        //量程选取
+        jsonObjM1["range"] = ui->comboBox_range->currentIndex();
+        //冷却时长
+        jsonObjM1["cool_timelength"] = ui->spinBox_cool_timelength->value();
+        //时间步长
+        jsonObjM1["step"] = ui->spinBox_step->value();
+        //符合分辨时间
+        jsonObjM1["resolving_time"] = ui->spinBox_resolving_time->value();
+        //标定文件
+        jsonObjM1["file"] = ui->lineEdit_file->text();
+
+        //自动
+        QJsonObject jsonObjM2;
+        if (jsonObj.contains("M2")){
+            jsonObjM2 = jsonObj["M2"].toObject();
+        } else {
+            jsonObj.insert("M2", jsonObjM2);
+        }
+        //测量时长
+        jsonObjM2["timelength"] = ui->spinBox_timelength_2->value();
+        //量程选取
+        jsonObjM2["range"] = ui->comboBox_range_2->currentIndex();
+        //冷却时长
+        jsonObjM2["cool_timelength"] = ui->spinBox_cool_timelength_2->value();
+        //时间步长
+        jsonObjM2["step"] = ui->spinBox_step_2->value();
+        //符合分辨时间
+        jsonObjM2["resolving_time"] = ui->spinBox_resolving_time_2->value();
+
+        //标定
+        QJsonObject jsonObjM3;
+        if (jsonObj.contains("M3")){
+            jsonObjM3 = jsonObj["M3"].toObject();
+        } else {
+            jsonObj.insert("M3", jsonObjM3);
+        }
+        //测量时长
+        jsonObjM3["timelength"] = ui->spinBox_timelength_3->value();
+        //量程选取
+        jsonObjM3["range"] = ui->comboBox_range_3->currentIndex();
+        //冷却时长
+        jsonObjM3["cool_timelength"] = ui->spinBox_cool_timelength_3->value();
+        //符合分辨时间
+        jsonObjM3["resolving_time"] = ui->spinBox_resolving_time_3->value();
+        //中子产额
+        jsonObjM3["neutron_yield"] = ui->spinBox_neutron_yield->value();
+
+        //公共
+        QJsonObject jsonObjPub;
+        if (jsonObj.contains("Public")){
+            jsonObjPub = jsonObj["Public"].toObject();
+        } else {
+            jsonObj.insert("Public", jsonObjPub);
+        }
+        //高斯拟合
+        jsonObjPub["leftE"] = ui->spinBox_leftE->value();
+        jsonObjPub["rightE"] = ui->spinBox_rightE->value();
+        //保存数据
+        jsonObjPub["path"] = ui->lineEdit_path->text();
+        jsonObjPub["filename"] = ui->lineEdit_filename->text();
+
+        file.open(QIODevice::WriteOnly | QIODevice::Text);
+        QJsonDocument jsonDocNew(jsonObj);
+        file.write(jsonDocNew.toJson());
+        file.close();
+    }
+}
+
+void MainWindow::on_pushButton_refresh_2_clicked()
+{
+    this->save();
+}
+
+void MainWindow::on_pushButton_refresh_3_clicked()
+{
+    this->save();
+}
+
+void MainWindow::on_action_line_log_triggered()
+{
+    if (this->property("ScaleLogarithmicType").toBool()){
+        this->setProperty("ScaleLogarithmicType", false);
+        for (int i=0; i<2; ++i){
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(i+1));
+            plotWidget->switchDataModel(false);
+        }
+
+        ui->action_line_log->setText(tr("对数"));
+        ui->action_line_log->setIconText(tr("对数"));
+        ui->action_line_log->setIcon(QIcon(":/resource/mathlog.png"));
+    } else {
+        this->setProperty("ScaleLogarithmicType", true);
+        for (int i=0; i<2; ++i){
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(i+1));
+            plotWidget->switchDataModel(true);
+        }
+
+        ui->action_line_log->setText(tr("线性"));
+        ui->action_line_log->setIconText(tr("线性"));
+        ui->action_line_log->setIcon(QIcon(":/resource/line.png"));
+    }
 }

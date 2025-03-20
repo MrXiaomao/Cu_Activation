@@ -656,7 +656,7 @@ p, li { white-space: pre-wrap; }
                    </widget>
                   </item>
                   <item row="7" column="1">
-                   <widget class="QSpinBox" name="spinBox_2">
+                   <widget class="QSpinBox" name="spinBox_resolving_time">
                     <property name="minimum">
                      <number>1</number>
                     </property>
@@ -709,7 +709,7 @@ p, li { white-space: pre-wrap; }
                    </widget>
                   </item>
                   <item row="0" column="1" colspan="2">
-                   <widget class="QLineEdit" name="lineEdit_9"/>
+                   <widget class="QLineEdit" name="lineEdit_file"/>
                   </item>
                   <item row="8" column="0">
                    <widget class="QLabel" name="label_37">
@@ -937,7 +937,7 @@ p, li { white-space: pre-wrap; }
                    </widget>
                   </item>
                   <item row="0" column="4">
-                   <widget class="QComboBox" name="comboBox_2">
+                   <widget class="QComboBox" name="comboBox_range">
                     <item>
                      <property name="text">
                       <string>0~1E4</string>
@@ -961,7 +961,7 @@ p, li { white-space: pre-wrap; }
                    </widget>
                   </item>
                   <item row="0" column="1" colspan="2">
-                   <widget class="QSpinBox" name="spinBox_9">
+                   <widget class="QSpinBox" name="spinBox_timelength">
                     <property name="minimum">
                      <number>1</number>
                     </property>
@@ -990,7 +990,7 @@ p, li { white-space: pre-wrap; }
                    </widget>
                   </item>
                   <item row="1" column="1" colspan="4">
-                   <widget class="QSpinBox" name="spinBox_10">
+                   <widget class="QSpinBox" name="spinBox_cool_timelength">
                     <property name="minimum">
                      <number>0</number>
                     </property>
@@ -1115,7 +1115,7 @@ p, li { white-space: pre-wrap; }
                    </widget>
                   </item>
                   <item row="5" column="1">
-                   <widget class="QSpinBox" name="spinBox_14">
+                   <widget class="QSpinBox" name="spinBox_resolving_time_2">
                     <property name="minimum">
                      <number>1</number>
                     </property>
@@ -1128,7 +1128,7 @@ p, li { white-space: pre-wrap; }
                    </widget>
                   </item>
                   <item row="0" column="1" colspan="2">
-                   <widget class="QLineEdit" name="lineEdit_18"/>
+                   <widget class="QLineEdit" name="lineEdit_file_2"/>
                   </item>
                   <item row="7" column="2">
                    <widget class="QLabel" name="label_56">
@@ -1285,7 +1285,7 @@ p, li { white-space: pre-wrap; }
                    </widget>
                   </item>
                   <item row="2" column="1">
-                   <widget class="QSpinBox" name="spinBox_12">
+                   <widget class="QSpinBox" name="spinBox_step_2">
                     <property name="minimum">
                      <number>0</number>
                     </property>
@@ -1390,7 +1390,7 @@ p, li { white-space: pre-wrap; }
                    </widget>
                   </item>
                   <item row="1" column="1">
-                   <widget class="QSpinBox" name="spinBox_11">
+                   <widget class="QSpinBox" name="spinBox_timelength_2">
                     <property name="minimum">
                      <number>1</number>
                     </property>
@@ -1413,7 +1413,7 @@ p, li { white-space: pre-wrap; }
                    </widget>
                   </item>
                   <item row="1" column="3" colspan="2">
-                   <widget class="QComboBox" name="comboBox_3">
+                   <widget class="QComboBox" name="comboBox_range_2">
                     <item>
                      <property name="text">
                       <string>0~1E4</string>
@@ -1447,7 +1447,7 @@ p, li { white-space: pre-wrap; }
                    </widget>
                   </item>
                   <item row="2" column="1" colspan="3">
-                   <widget class="QSpinBox" name="spinBox_step_2">
+                   <widget class="QSpinBox" name="spinBox_cool_timelength_2">
                     <property name="minimum">
                      <number>1</number>
                     </property>
@@ -1726,7 +1726,7 @@ p, li { white-space: pre-wrap; }
                    </widget>
                   </item>
                   <item row="2" column="1">
-                   <widget class="QSpinBox" name="spinBox_22">
+                   <widget class="QSpinBox" name="spinBox_resolving_time_3">
                     <property name="minimum">
                      <number>1</number>
                     </property>
@@ -1833,12 +1833,15 @@ p, li { white-space: pre-wrap; }
                    </widget>
                   </item>
                   <item row="0" column="1">
-                   <widget class="QDoubleSpinBox" name="doubleSpinBox_20">
+                   <widget class="QSpinBox" name="spinBox_neutron_yield">
+                    <property name="minimum">
+                     <number>1</number>
+                    </property>
                     <property name="maximum">
-                     <double>9999999999.000000000000000</double>
+                     <number>99999999</number>
                     </property>
                     <property name="value">
-                     <double>100000.000000000000000</double>
+                     <number>100000</number>
                     </property>
                    </widget>
                   </item>
@@ -1871,7 +1874,7 @@ p, li { white-space: pre-wrap; }
                    </widget>
                   </item>
                   <item row="0" column="1">
-                   <widget class="QSpinBox" name="spinBox_19">
+                   <widget class="QSpinBox" name="spinBox_timelength_3">
                     <property name="minimum">
                      <number>1</number>
                     </property>
@@ -1897,7 +1900,7 @@ p, li { white-space: pre-wrap; }
                    </widget>
                   </item>
                   <item row="0" column="3" colspan="2">
-                   <widget class="QComboBox" name="comboBox">
+                   <widget class="QComboBox" name="comboBox_range_3">
                     <item>
                      <property name="text">
                       <string>0~1E4</string>
@@ -1934,7 +1937,7 @@ p, li { white-space: pre-wrap; }
                    </widget>
                   </item>
                   <item row="1" column="1" colspan="3">
-                   <widget class="QSpinBox" name="spinBox_21">
+                   <widget class="QSpinBox" name="spinBox_cool_timelength_3">
                     <property name="minimum">
                      <number>0</number>
                     </property>
@@ -2512,14 +2515,14 @@ p, li { white-space: pre-wrap; }
   </action>
   <action name="action_line_log">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="icon">
     <iconset resource="resource.qrc">
-     <normaloff>:/resource/line.png</normaloff>:/resource/line.png</iconset>
+     <normaloff>:/resource/mathlog.png</normaloff>:/resource/mathlog.png</iconset>
    </property>
    <property name="text">
-    <string>线性/对数</string>
+    <string>对数</string>
    </property>
   </action>
   <action name="action_close">
@@ -2616,7 +2619,7 @@ p, li { white-space: pre-wrap; }
   </action>
   <action name="action_restore">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="icon">
     <iconset resource="resource.qrc">

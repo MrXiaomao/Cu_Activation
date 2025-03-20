@@ -17,6 +17,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
     cachedirconfigwidget.cpp \
+    coincidenceanalyzer.cpp \
     function.cpp \
     aboutwidget.cpp \
     augmentedmatrix.cpp \
@@ -37,6 +38,7 @@ SOURCES += \
 
 HEADERS += \
     cachedirconfigwidget.h \
+    coincidenceanalyzer.h \
     function.h \
     aboutwidget.h \
     augmentedmatrix.h \

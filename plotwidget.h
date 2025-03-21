@@ -3,6 +3,7 @@
 
 #include <QDockWidget>
 #include "sysutils.h"
+#include "coincidenceanalyzer.h"
 
 class QCustomPlot;
 class QCPItemText;
@@ -32,8 +33,20 @@ public slots:
     void slotSelectionChanged();
     void slotBeforeReplot();
 
-    void slotUpdateCountData(PariticalCountFrame frame); //计数
-    void slotUpdateSpectrumData(PariticalSpectrumFrame frame); //能谱
+//    void slotUpdateCountData(PariticalCountFrame frame); //计数
+//    void slotUpdateSpectrumData(PariticalSpectrumFrame frame); //能谱
+
+    //单次刷新
+    void slotCoincidenceResult(quint32 time, CoincidenceResult);
+    void slotSingleSpectrum(SingleSpectrum);
+    void slotCurrentPoint(quint32 time, CurrentPoint);
+
+    //批量刷新
+    void slotCoincidenceResults(vector<CoincidenceResult>);
+    void slotSingleSpectrums(vector<SingleSpectrum>);
+    void slotCurrentPoints(vector<CurrentPoint>);
+
+    void slotSingleSpectrumsAndCurrentPoints(quint8 channel, vector<SingleSpectrum>, vector<CurrentPoint>);
 
     void slotResetPlot();
     void slotGauss(int leftE, int rightE);
@@ -82,7 +95,7 @@ private:
     bool axisVisible = true;
     qint32 currentGraphIndex = 0;
 
-    PariticalSpectrumFrame currentFrame[GRAPH_COUNT];
+    //PariticalSpectrumFrame currentFrame[GRAPH_COUNT];
 };
 
 #endif // PLOTWIDGET_H

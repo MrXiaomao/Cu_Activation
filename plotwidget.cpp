@@ -59,12 +59,12 @@ void PlotWidget::initCustomPlot()
     customPlot->xAxis->rescale(false);
     customPlot->yAxis->rescale(false);
     // 设置刻度范围
-    QSharedPointer<QCPAxisTickerFixed> axisTickerFixed(new QCPAxisTickerFixed);
-    axisTickerFixed->setTickStep(256);//每间隔256单位一个标签
-    axisTickerFixed->setScaleStrategy(QCPAxisTickerFixed::ssMultiples);
+    //QSharedPointer<QCPAxisTickerFixed> axisTickerFixed(new QCPAxisTickerFixed);
+    //axisTickerFixed->setTickStep(256);//每间隔256单位一个标签
+    //axisTickerFixed->setScaleStrategy(QCPAxisTickerFixed::ssMultiples);
     //axisTickerFixed->setTickStepStrategy(QCPAxisTicker::TickStepStrategy::tssMeetTickCount);
-    customPlot->xAxis->setTicker(axisTickerFixed);
-    customPlot->xAxis->setRange(0, 4096);
+    //customPlot->xAxis->setTicker(axisTickerFixed);
+    customPlot->xAxis->setRange(0, 180);
     customPlot->yAxis->setRange(-50, 10000);
     customPlot->yAxis->ticker()->setTickCount(5);
     customPlot->xAxis->ticker()->setTickCount(16);
@@ -850,61 +850,226 @@ void PlotWidget::slotSelectionChanged() {
 
 #include <QtMath>
 #include <math.h>
-void PlotWidget::slotUpdateCountData(PariticalCountFrame frame)
+//void PlotWidget::slotUpdateCountData(PariticalCountFrame frame)
+//{
+//    QCustomPlot *customPlot = customPlotInstance();
+//    int channelIndex = frame.channel;
+//    double key = frame.dataT;
+//    double value = frame.dataE;
+//    if (isLogarithmic)
+//        value = log(value);
+//    QColor colors = clrLine[channelIndex];
+//    customPlot->graph(REF_GRAPH)->addData(key, value, colors);
+//    customPlot->graph(REF_GRAPH)->setVisible(true);
+//    customPlot->replot();
+//}
+
+//void PlotWidget::slotUpdateSpectrumData(PariticalSpectrumFrame frame)
+//{
+//    QCustomPlot *customPlot = customPlotInstance();
+//    int channelIndex = frame.channel;
+//    QVector<double> keys, values;
+//    QVector<QColor> colors;
+//    currentFrame[channelIndex].dataE.resize(frame.dataE.size());
+//    unsigned int maxEngry = 0;
+//    for (size_t i=0; i<frame.dataE.size(); ++i){
+//        keys << i;
+//        currentFrame[channelIndex].dataE[i] += frame.dataE[i];//将能量叠加
+//        if (isLogarithmic)
+//            values << log(currentFrame[channelIndex].dataE.at(i));
+//        else
+//            values << currentFrame[channelIndex].dataE.at(i);
+//        colors << clrLine[channelIndex];
+
+//        maxEngry = qMax((unsigned int)maxEngry, (unsigned int)currentFrame[channelIndex].dataE.at(i));
+//    }
+
+//    //maxEngry = 10000;
+//    //动态调整轴范围
+//    {
+////        const QCPRange xRange = customPlot->xAxis->range();
+////        if ((xRange.upper - xRange.lower) != frame.data.size())
+////            customPlot->xAxis->setRange(0, frame.data.size());
+
+////        const QCPRange yRange = customPlot->yAxis->range();
+////        maxEngry = (unsigned int)(((double)maxEngry) / 10000) * 10000 + 10000;
+////        if (maxEngry != yRange.upper)
+////            customPlot->yAxis->setRange(0, maxEngry);
+//        //customPlot->yAxis->rescale(false);
+//    }
+//    customPlot->graph(ENGRY_GRAPH)->setData(keys, values, colors);
+//    customPlot->replot();
+//}
+
+void PlotWidget::slotCoincidenceResult(quint32 time, CoincidenceResult result)
 {
-    QCustomPlot *customPlot = customPlotInstance();
-    int channelIndex = frame.channel;
-    double key = frame.dataT;
-    double value = frame.dataE;
-    if (isLogarithmic)
-        value = log(value);
-    QColor colors = clrLine[channelIndex];
-    customPlot->graph(REF_GRAPH)->addData(key, value, colors);
-    customPlot->graph(REF_GRAPH)->setVisible(true);
+    double key = time;
+    double value = result.ConCount_multiple;
+    QColor colors = clrLine[0];
+    customPlot->graph(0)->addData(key, value, colors);
     customPlot->replot();
 }
 
-void PlotWidget::slotUpdateSpectrumData(PariticalSpectrumFrame frame)
+void PlotWidget::slotSingleSpectrum(SingleSpectrum result)
 {
-    QCustomPlot *customPlot = customPlotInstance();
-    int channelIndex = frame.channel;
+    long channel = 0;
+    if (this->objectName() == "real-Detector-1"){
+        channel = 0;
+     } else {
+        channel = 1;
+    }
+
     QVector<double> keys, values;
     QVector<QColor> colors;
-    currentFrame[channelIndex].dataE.resize(frame.dataE.size());
-    unsigned int maxEngry = 0;
-    for (size_t i=0; i<frame.dataE.size(); ++i){
-        keys << i;
-        currentFrame[channelIndex].dataE[i] += frame.dataE[i];//将能量叠加
-        if (isLogarithmic)
-            values << log(currentFrame[channelIndex].dataE.at(i));
+
+    QCPGraph *graph = customPlot->graph(0);
+    if (graph->data()->size() > 0){
+        for (int i=0; i<graph->data()->size(); ++i){
+            keys << i+1;
+            values << (graph->data()->at(i)->value + result.spectrum[channel][i]);
+            colors << clrLine[channel];
+        }
+    } else{
+        for (int i=0; i<MULTI_CHANNEL; ++i){
+            keys << i+1;
+            values << result.spectrum[channel][i];
+            colors << clrLine[0];
+        }
+    }
+
+    customPlot->graph(0)->setData(keys, values);
+    customPlot->replot();
+}
+
+void PlotWidget::slotCurrentPoint(quint32 time, CurrentPoint result)
+{
+    double key = time;
+    double value = result.dataPoint1;
+    if (this->objectName() == "real-Detector-2")
+        value = result.dataPoint2;
+    QColor colors = clrLine[0];
+    customPlot->graph(1)->addData(key, value, colors);
+    customPlot->replot();
+}
+
+void PlotWidget::slotCoincidenceResults(vector<CoincidenceResult> r)
+{
+    QVector<double> keys, values;
+    QVector<QColor> colors;
+    //qint32 time = customPlot->graph(0)->data()->size();
+
+    for (int i=0; i<r.size(); ++i){
+        keys << (i+1);
+        values << r[i].ConCount_single;
+        colors << clrLine[0];
+    }
+
+    customPlot->graph(0)->setData(keys, values, colors);
+    customPlot->replot();
+}
+
+void PlotWidget::slotSingleSpectrums(vector<SingleSpectrum> r)
+{
+    long channel = 0;
+    if (this->objectName() == "real-Detector-1"){
+        channel = 0;
+     } else {
+        channel = 1;
+    }
+
+    QVector<double> keys, values;
+    QVector<QColor> colors;
+
+    QCPGraph *graph = customPlot->graph(0);
+    for (int j=0; j<r.size(); ++j){
+        if (graph->data()->size() > 0){
+            for (int i=0; i<MULTI_CHANNEL; ++i){
+                keys << i+1;
+                values << (graph->data()->at(i)->value + r[j].spectrum[channel][i]);
+                colors << clrLine[channel];
+            }
+        } else{
+            for (int i=0; i<MULTI_CHANNEL; ++i){
+                keys << i+1;
+                values << r[j].spectrum[channel][i];
+                colors << clrLine[0];
+            }
+        }
+    }
+
+    customPlot->graph(0)->setData(keys, values, colors);
+    customPlot->replot();
+}
+
+void PlotWidget::slotCurrentPoints(vector<CurrentPoint> r)
+{
+    long channel = 0;
+    if (this->objectName() == "real-Detector-1"){
+        channel = 0;
+     } else {
+        channel = 1;
+    }
+
+    QVector<double> keys, values;
+    QVector<QColor> colors;
+    for (int i=0; i<r.size(); ++i){
+        keys << i+1;
+        if (channel == 0x00)
+            values << r[i].dataPoint1;
         else
-            values << currentFrame[channelIndex].dataE.at(i);
-        colors << clrLine[channelIndex];
-
-        maxEngry = qMax((unsigned int)maxEngry, (unsigned int)currentFrame[channelIndex].dataE.at(i));
+            values << r[i].dataPoint2;
+        colors << clrLine[0];
     }
 
-    //maxEngry = 10000;
-    //动态调整轴范围
+    customPlot->graph(1)->setData(keys, values, colors);
+    customPlot->replot();
+}
+
+void PlotWidget::slotSingleSpectrumsAndCurrentPoints(quint8 channel, vector<SingleSpectrum> r1, vector<CurrentPoint> r2)
+{
     {
-//        const QCPRange xRange = customPlot->xAxis->range();
-//        if ((xRange.upper - xRange.lower) != frame.data.size())
-//            customPlot->xAxis->setRange(0, frame.data.size());
+        QVector<double> keys, values;
+        QVector<QColor> colors;
+        values.resize(MULTI_CHANNEL);
+        for (int i=0; i<MULTI_CHANNEL; ++i){
+            keys << i+1;
+            colors << clrLine[channel];
+            if (customPlot->graph(0)->data()->size() > 0)
+                values[i] = customPlot->graph(0)->data()->at(i)->value;
+             else
+                values[i] = 0;
+        }
 
-//        const QCPRange yRange = customPlot->yAxis->range();
-//        maxEngry = (unsigned int)(((double)maxEngry) / 10000) * 10000 + 10000;
-//        if (maxEngry != yRange.upper)
-//            customPlot->yAxis->setRange(0, maxEngry);
-        //customPlot->yAxis->rescale(false);
+        for (int j=0; j<r1.size(); ++j){
+            for (int i=0; i<MULTI_CHANNEL; ++i){
+                values[i] += r1[j].spectrum[channel][i];
+            }
+        }
+        customPlot->graph(0)->setData(keys, values, colors);
     }
-    customPlot->graph(ENGRY_GRAPH)->setData(keys, values, colors);
+
+    {
+        QVector<double> keys, values;
+        QVector<QColor> colors;
+        for (int i=0; i<r2.size(); ++i){
+            keys << i+1;
+            if (channel == 0x00)
+                values << r2[i].dataPoint1;
+            else
+                values << r2[i].dataPoint2;
+            colors << clrLine[0];
+        }
+
+        customPlot->graph(1)->setData(keys, values, colors);
+    }
+
     customPlot->replot();
 }
 
 void PlotWidget::slotResetPlot()
 {
     for (int i=0; i<GRAPH_COUNT; ++i){
-        currentFrame[i].dataE.clear();
+        //currentFrame[i].dataE.clear();
 
         customPlot->graph(i)->data()->clear();// ->data()->data().clear();// setData(QVector<double>(), QVector<double>());
     }
@@ -927,10 +1092,12 @@ void PlotWidget::switchShowModel(bool refModel)
         //设置轴标签名称
         //customPlot->xAxis->setLabel(QObject::tr("时间"));
         //customPlot->yAxis->setLabel(QObject::tr("计数"));
+        customPlot->xAxis->setRange(0, 180); // 设置x轴的显示范围
     } else {
         //设置轴标签名称
         //customPlot->xAxis->setLabel(QObject::tr("时间"));
         //customPlot->yAxis->setLabel(QObject::tr("能量/Kev"));
+        customPlot->xAxis->setRange(0, MULTI_CHANNEL); // 设置x轴的显示范围
     }
 
     customPlot->replot();

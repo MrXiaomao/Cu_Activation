@@ -60,7 +60,7 @@ public:
 
     void startWork();
     void switchShowModel(bool refModel);
-    void updateParamter(int stepT, int leftE[2], int rightE[2], bool reset = false);
+    void updateParamter(int stepT, int leftE[2], int rightE[2], int timewidth = 50, bool reset = false);
     void saveFileName(QString);
     void setDefaultCacheDir(QString dir);
 
@@ -99,6 +99,12 @@ signals:
 
     void sigRefreshCountData(quint8, StepTimeCount);// 计数
     void sigRefreshSpectrum(quint8, StepTimeEnergy);// 能谱
+    void sigRefreshConformData(StepTimeEnergy);// 能谱
+
+    void sigCoincidenceResult(quint32, CoincidenceResult);
+    void sigSingleSpectrum(SingleSpectrum);
+    void sigCurrentPoint(quint32, CurrentPoint);
+    void sigPlot(vector<SingleSpectrum>, vector<CurrentPoint>, vector<CoincidenceResult>);
 
     void sigDoTasks();
     void sigAnalyzeFrame();
@@ -122,6 +128,7 @@ private:
     QUiThread* analyzeNetDataThread;
     QUiThread* plotUpdateThread;
     CoincidenceAnalyzer* coincidenceAnalyzer;
+    //void analyzerCalback(deque<SingleSpectrum>, vector<CurrentPoint>, vector<CoincidenceResult>);
 
 protected:
     void makeFrame();
@@ -207,16 +214,16 @@ private:
     quint32 currentClockStepNs[2];//fpga时钟步长（数据包的时长）
     quint32 currentRefreshStepNs[2];//ui时钟步长（界面刷新时长）
 
-    std::deque<DetTimeEnergy> totalSpectrumFrames;//开始测量以来所有能谱数据
-    std::deque<DetTimeEnergy> currentSpectrumFrames;//网络新接收的能谱数据（一般指未处理，未分步长的数据）
+    std::vector<DetTimeEnergy> totalSpectrumFrames;//开始测量以来所有能谱数据
+    std::vector<DetTimeEnergy> currentSpectrumFrames;//网络新接收的能谱数据（一般指未处理，未分步长的数据）
 
     StepTimeEnergy preStepSpectrumFrame[2]; // 预处理能谱信息，一旦达到1s时长，将交给接口处理
 
-    std::deque<StepTimeCount> totalStepCountFrames[2]; // 保存自测试开始以来所有的计数信息(按步长统计)
-    std::deque<StepTimeEnergy> totalStepSpectrumFrames[2]; // 保存自测试开始以来所有的能谱信息
+    std::vector<StepTimeCount> totalStepCountFrames[2]; // 保存自测试开始以来所有的计数信息(按步长统计)
+    std::vector<StepTimeEnergy> totalStepSpectrumFrames[2]; // 保存自测试开始以来所有的能谱信息
 
-    std::deque<StepTimeCount> currentStepCountFrames;//当前步长内的计数
-    std::deque<StepTimeEnergy> currentStepSpectrumFrames;//当前步长内的能谱信息
+    std::vector<StepTimeCount> currentStepCountFrames;//当前步长内的计数
+    std::vector<StepTimeEnergy> currentStepSpectrumFrames;//当前步长内的能谱信息
 };
 
 #include <QThread>

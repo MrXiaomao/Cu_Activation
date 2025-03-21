@@ -130,12 +130,17 @@ MainWindow::MainWindow(QWidget *parent)
 
     // 自动测量开始
     connect(commandhelper, &CommandHelper::sigMeasureStart, this, [=](qint8 mode){
+        lastRecvDataTime = QDateTime::currentDateTime();
+        QTimer* timerException = this->findChild<QTimer*>("exceptionCheckClock");
+        timerException->start(5000);
+
         this->setProperty("measuring", true);
         this->setProperty("measure-model", mode);
         if (mode == 0x01)
             ui->start_time_text->setDateTime(QDateTime::currentDateTime());
         QString msg = tr("测量正式开始");
         ui->statusbar->showMessage(msg);
+
         emit sigAppengMsg(msg, QtInfoMsg);
         emit sigRefreshUi();
     });
@@ -174,23 +179,73 @@ MainWindow::MainWindow(QWidget *parent)
         emit sigRefreshUi();
     });
 
-    qRegisterMetaType<PariticalCountFrame>("PariticalCountFrame");
-    connect(commandhelper, &CommandHelper::sigRefreshCountData, this, [=](PariticalCountFrame frame){
+//    qRegisterMetaType<StepTimeCount>("StepTimeCount");
+//    connect(commandhelper, &CommandHelper::sigRefreshCountData, this, [=](quint8 channel, StepTimeCount stepTimeCount){
+//        bool pause_plot = this->property("pause_plot").toBool();
+//        if (!pause_plot){
+//            PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(channel+1));
+//            plotWidget->slotUpdateCountData(stepTimeCount);
+//        }
+//    });
+//    qRegisterMetaType<StepTimeEnergy>("StepTimeEnergy");
+//    connect(commandhelper, &CommandHelper::sigRefreshSpectrum, this, [=](quint8 channel, StepTimeEnergy stepTimeEnergy){
+//        bool pause_plot = this->property("pause_plot").toBool();
+//        if (!pause_plot){
+//            PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(channel+1));
+//            plotWidget->slotUpdateSpectrumData(stepTimeEnergy);
+//        }
+//    });
+    qRegisterMetaType<SingleSpectrum>("SingleSpectrum");
+    connect(commandhelper, &CommandHelper::sigSingleSpectrum, this, [=](SingleSpectrum result){
         bool pause_plot = this->property("pause_plot").toBool();
         if (!pause_plot){
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(frame.channel+1));
-            plotWidget->slotUpdateCountData(frame);
+            for (int channel=0; channel<2; ++channel){
+                PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(channel+1));
+                plotWidget->slotSingleSpectrum(result);
+            }
         }
     });
-    qRegisterMetaType<PariticalSpectrumFrame>("PariticalSpectrumFrame");
-    connect(commandhelper, &CommandHelper::sigRefreshSpectrum, this, [=](PariticalSpectrumFrame frame){
+    qRegisterMetaType<CurrentPoint>("CurrentPoint");
+    connect(commandhelper, &CommandHelper::sigCurrentPoint, this, [=](quint32 time, CurrentPoint result){
         bool pause_plot = this->property("pause_plot").toBool();
         if (!pause_plot){
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(frame.channel+1));
-            plotWidget->slotUpdateSpectrumData(frame);
+            for (int channel=0; channel<2; ++channel){
+                PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(channel+1));
+                plotWidget->slotCurrentPoint(time, result);
+            }
+        }
+    });
+    qRegisterMetaType<CoincidenceResult>("CoincidenceResult");
+    connect(commandhelper, &CommandHelper::sigCoincidenceResult, this, [=](quint32 time, CoincidenceResult result){
+        bool pause_plot = this->property("pause_plot").toBool();
+        if (!pause_plot){
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-Result");
+            plotWidget->slotCoincidenceResult(time, result);
         }
     });
 
+    qDebug() << "main Thread: " << QThread::currentThreadId();
+    qRegisterMetaType<vector<SingleSpectrum>>("vector<SingleSpectrum>");
+    qRegisterMetaType<vector<CurrentPoint>>("vector<CurrentPoint>");
+    qRegisterMetaType<vector<CoincidenceResult>>("vector<CoincidenceResult>");
+    connect(commandhelper, &CommandHelper::sigPlot, this, [=](vector<SingleSpectrum> r1, vector<CurrentPoint> r2, vector<CoincidenceResult> r3){
+        lastRecvDataTime = QDateTime::currentDateTime();
+        bool pause_plot = this->property("pause_plot").toBool();
+        if (!pause_plot){
+            PlotWidget* plotWidget1 = this->findChild<PlotWidget*>("real-Detector-1");
+            PlotWidget* plotWidget2 = this->findChild<PlotWidget*>("real-Detector-2");
+            PlotWidget* plotWidget3 = this->findChild<PlotWidget*>("real-Result");
+
+            qDebug() << "main sigPlot: " << QThread::currentThreadId();
+            plotWidget1->slotSingleSpectrumsAndCurrentPoints(0, r1, r2);
+            plotWidget2->slotSingleSpectrumsAndCurrentPoints(1, r1, r2);
+            plotWidget3->slotCoincidenceResults(r3);
+
+            ui->lcdNumber_3->display(r3.back().CountRate1);
+            ui->lcdNumber_4->display(r3.back().CountRate2);
+            ui->lcdNumber_5->display(r3.back().ConCount_single);
+        }
+    }, Qt::DirectConnection/*防止堵塞*/);
     emit sigRefreshUi();
 
     // 创建图表
@@ -328,10 +383,11 @@ void MainWindow::InitMainWindowUi()
     QButtonGroup *grp = new QButtonGroup(this);
     grp->addButton(ui->radioButton_ref, 0);
     grp->addButton(ui->radioButton_spectrum, 1);
-    connect(grp, QOverload<int>::of(&QButtonGroup::buttonClicked), this, [=](int index){
+    connect(grp, QOverload<int>::of(&QButtonGroup::buttonClicked), this, [=](int index){        
         commandhelper->switchShowModel(index == 0);
-        for (int i=0; i<2; ++i){
+        for (int i=0; i<2; ++i){            
             PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(i+1));
+            plotWidget->slotResetPlot();
             plotWidget->switchShowModel(index == 0);
         }
 
@@ -347,7 +403,7 @@ void MainWindow::InitMainWindowUi()
             ui->widget_result->hide();
         }
     });
-    emit grp->buttonClicked(0);
+    emit grp->buttonClicked(1);
 
     // 任务栏信息
     QLabel *label_Idle = new QLabel(ui->statusbar);
@@ -375,6 +431,7 @@ void MainWindow::InitMainWindowUi()
     ui->statusbar->addPermanentWidget(label_systemtime);    
 
     QTimer* timer = new QTimer(this);
+    timer->setObjectName("systemClock");
     connect(timer, &QTimer::timeout, this, [=](){
         static QDateTime startTime = QDateTime::currentDateTime();
         // 获取当前时间
@@ -392,8 +449,26 @@ void MainWindow::InitMainWindowUi()
         QString dayOfWeekString = dayNames.at(dayOfWeekNumber);
 
         this->findChild<QLabel*>("label_systemtime")->setText(QString(QObject::tr("系统时间：")) + currentDateTime.toString("yyyy/MM/dd hh:mm:ss ") + dayOfWeekString);
+        this->setProperty("measuring", true);
+
+        qDebug() << "main timer: " << QThread::currentThreadId();
     });
     timer->start(500);
+
+    QTimer* timerException = new QTimer(this);
+    timerException->setObjectName("exceptionCheckClock");
+    connect(timerException, &QTimer::timeout, this, [=](){
+        // 获取当前时间
+        QDateTime currentDateTime = QDateTime::currentDateTime();
+        if (this->property("measuring").toBool()){
+            if (lastRecvDataTime.secsTo(currentDateTime) > 3){
+                timerException->stop();
+                emit sigAppengMsg(tr("探测器故障"), QtCriticalMsg);
+                QMessageBox::critical(this, tr("错误"), tr("探测器故障，请检查！"));
+            }
+        }
+    });
+    timer->stop();
 
     QTimer::singleShot(500, this, [=](){
        this->showMaximized();
@@ -440,7 +515,7 @@ void MainWindow::initCustomPlot()
            ui->spinBox_rightE->setValue(maxMean);
         });
         spMainWindow->addWidget(customPlotWidget);
-        connect(customPlotWidget, SIGNAL(sigMouseDoubleClickEvent()), this, SLOT(slotPlowWidgetDoubleClickEvent()));
+        //connect(customPlotWidget, SIGNAL(sigMouseDoubleClickEvent()), this, SLOT(slotPlowWidgetDoubleClickEvent()));
     }
 
     // Det
@@ -472,7 +547,7 @@ void MainWindow::initCustomPlot()
             ui->spinBox_rightE->setValue(maxMean);
         });
         spMainWindow->addWidget(customPlotWidget);
-        connect(customPlotWidget, SIGNAL(sigMouseDoubleClickEvent()), this, SLOT(slotPlowWidgetDoubleClickEvent()));
+        //connect(customPlotWidget, SIGNAL(sigMouseDoubleClickEvent()), this, SLOT(slotPlowWidgetDoubleClickEvent()));
     }
 
     // result
@@ -485,7 +560,7 @@ void MainWindow::initCustomPlot()
         customPlotWidget_result->show();
         //ui->widget_plot->layout()->addWidget(customPlotWidget_result);
         spMainWindow->addWidget(customPlotWidget_result);
-        connect(customPlotWidget_result, SIGNAL(sigMouseDoubleClickEvent()), this, SLOT(slotPlowWidgetDoubleClickEvent()));
+        //connect(customPlotWidget_result, SIGNAL(sigMouseDoubleClickEvent()), this, SLOT(slotPlowWidgetDoubleClickEvent()));
     }
 
     spMainWindow->setStretchFactor(0, 3);
@@ -768,7 +843,8 @@ void MainWindow::on_pushButton_measure_clicked()
         int stepT = ui->spinBox_step->value();
         int leftE[2] = {ui->spinBox_1_leftE->value(), ui->spinBox_2_leftE->value()};
         int rightE[2] = {ui->spinBox_1_rightE->value(), ui->spinBox_2_rightE->value()};
-        commandhelper->updateParamter(stepT, leftE, rightE, true);
+        int timewidth = ui->spinBox_resolving_time->value();
+        commandhelper->updateParamter(stepT, leftE, rightE, timewidth, true);
         commandhelper->slotStartManualMeasure(detectorParameter);
 
         QTimer::singleShot(3000, this, [=](){
@@ -838,7 +914,8 @@ void MainWindow::on_pushButton_measure_2_clicked()
         int stepT = ui->spinBox_step_2->value();
         int leftE[2] = {ui->spinBox_1_leftE->value(), ui->spinBox_2_leftE_2->value()};
         int rightE[2] = {ui->spinBox_1_rightE_2->value(), ui->spinBox_2_rightE_2->value()};
-        commandhelper->updateParamter(stepT, leftE, rightE, true);
+        int timewidth = ui->spinBox_resolving_time->value();
+        commandhelper->updateParamter(stepT, leftE, rightE, timewidth, true);
         commandhelper->slotStartAutoMeasure(detectorParameter);
 
         QTimer::singleShot(60000, this, [=](){
@@ -917,7 +994,8 @@ void MainWindow::on_pushButton_refresh_clicked()
         }
     }
 
-    commandhelper->updateParamter(stepT, leftE, rightE);
+    int timewidth = ui->spinBox_resolving_time->value();
+    commandhelper->updateParamter(stepT, leftE, rightE, timewidth);
 }
 
 void MainWindow::on_action_close_triggered()
@@ -1405,6 +1483,7 @@ void MainWindow::on_action_line_log_triggered()
         this->setProperty("ScaleLogarithmicType", false);
         for (int i=0; i<2; ++i){
             PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(i+1));
+            plotWidget->slotResetPlot();
             plotWidget->switchDataModel(false);
         }
 

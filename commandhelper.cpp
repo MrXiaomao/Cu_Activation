@@ -43,6 +43,17 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
         socketRelay->write(command);
     });
 
+    //coincidenceAnalyzer->set_callback(std::bind(&CommandHelper::analyzerCalback, this, placeholders::_1, placeholders::_2, placeholders::_3));
+    coincidenceAnalyzer->set_callback([=](vector<SingleSpectrum> r1, vector<CurrentPoint> r2, vector<CoincidenceResult> r3) {
+        long count = r1.size();
+        if (count <= 0)
+            return;
+
+        // 读取数据
+        qDebug() << "set_callback: " << QThread::currentThreadId();
+        sigPlot(r1, r2, r3);
+    });
+
     initSocket(&socketDetector);
     socketDetector->setSocketOption(QAbstractSocket::LowDelayOption, 1);//优化Socket以实现低延迟
 }
@@ -738,14 +749,14 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     currentRefreshStepNs[0] = 1;//ui时钟步长（界面刷新时长）
     currentRefreshStepNs[1] = 1;
 
-    currentStepSpectrumFrame[0].dataT.clear(); // 保存当前时长内的时间、能谱信息，一旦达到1s时长，将交给接口处理
-    currentStepSpectrumFrame[0].dataE.clear();
-    currentStepSpectrumFrame[1].dataT.clear();
-    currentStepSpectrumFrame[1].dataE.clear();
+//    currentStepSpectrumFrame[0].dataT.clear(); // 保存当前时长内的时间、能谱信息，一旦达到1s时长，将交给接口处理
+//    currentStepSpectrumFrame[0].dataE.clear();
+//    currentStepSpectrumFrame[1].dataT.clear();
+//    currentStepSpectrumFrame[1].dataE.clear();
 
     currentSpectrumFrames.clear();
     currentStepCountFrames.clear();
-    totalStepCountFrames.clear();
+//    totalStepCountFrames.clear();
     totalSpectrumFrames.clear();
 
     //连接探测器
@@ -1180,10 +1191,12 @@ void CommandHelper::slotAnalyzeNetFrame()
                             static_cast<quint64>(ptrOffset[3]) << 16 |
                             static_cast<quint64>(ptrOffset[4]) << 8 |
                             static_cast<quint64>(ptrOffset[5]);
+                    t *= 10;
                     unsigned int e = static_cast<quint16>(ptrOffset[6]) << 8 | static_cast<quint16>(ptrOffset[7]);
                     ptrOffset += 8;
 
-                    temp.push_back(TimeEnergy(t, e));
+                    if (t != 0x00)
+                        temp.push_back(TimeEnergy(t, e));
                 }
 
                 //数据分拣完毕
@@ -1214,6 +1227,7 @@ void CommandHelper::slotPlotUpdateFrame()
     currentRefreshStepNs[0] = 1;
     currentRefreshStepNs[1] = 1;
 
+    vector<TimeEnergy> data1_2, data2_2;
     while (!taskFinished)
     {
         // 时间步长到了，该刷新界面了
@@ -1230,7 +1244,7 @@ void CommandHelper::slotPlotUpdateFrame()
                 tmStart = tmNow;
 
                 //1、把分拣之后的数据全部交换出来，让网络继续接收处理
-                std::deque<DetTimeEnergy> swapFrames;
+                std::vector<DetTimeEnergy> swapFrames;
                 {
                     QMutexLocker locker(&mutexPlot);
                     totalSpectrumFrames.insert(totalSpectrumFrames.end(), currentSpectrumFrames.begin(), currentSpectrumFrames.end());
@@ -1242,13 +1256,13 @@ void CommandHelper::slotPlotUpdateFrame()
                 if (swapFrames.size() > 0){
                     while (!swapFrames.empty()){
                         DetTimeEnergy detTimeEnergy = swapFrames.front();
-                        swapFrames.pop_front();
+                        swapFrames.erase(swapFrames.begin());
                         quint8 channel = detTimeEnergy.channel;
 
                         // 根据步长，将数据添加到当前处理缓存
                         while (!detTimeEnergy.timeEnergy.empty()){
                             TimeEnergy timeEnergy = detTimeEnergy.timeEnergy.front();
-                            detTimeEnergy.timeEnergy.pop_front();
+                            detTimeEnergy.timeEnergy.erase(detTimeEnergy.timeEnergy.begin());
 
                             if (timeEnergy.time > currentStepBaseNs[channel] * currentClockStepNs[channel]){
                                 //满足1s时间步长
@@ -1262,7 +1276,7 @@ void CommandHelper::slotPlotUpdateFrame()
                                         unsigned short e = 0;
 
                                         //空包填充
-                                        preStepSpectrumFrame[channel].timeEnergy.push_back(StepTimeEnergy(t, e));
+                                        preStepSpectrumFrame[channel].energy.push_back(e);
 
 //                                        //计数
 //                                        DetStepTimeEnergy cacheCountFrame;
@@ -1404,11 +1418,12 @@ void CommandHelper::slotPlotUpdateFrame()
             }
         } else {
             QDateTime tmNow = QDateTime::currentDateTime();
-            if (tmStart.secsTo(tmNow) >= 1){
+            if (tmStart.msecsTo(tmNow) >= 500){
                 tmStart = tmNow;
-                std::deque<DetTimeEnergy> swapFrames;
+                std::vector<DetTimeEnergy> swapFrames;
                 {
                     QMutexLocker locker(&mutexPlot);
+
                     swapFrames.swap(currentSpectrumFrames);
                 }
 
@@ -1418,33 +1433,32 @@ void CommandHelper::slotPlotUpdateFrame()
                     vector<TimeEnergy> data1_2, data2_2;
                     while (!swapFrames.empty()){
                         DetTimeEnergy detTimeEnergy = swapFrames.front();
-                        swapFrames.pop_front();
+                        swapFrames.erase(swapFrames.begin());
 
                         // 根据步长，将数据添加到当前处理缓存
                         quint8 channel = detTimeEnergy.channel;
+                        if (channel != 0x00 && channel != 0x01){
+                            qDebug() << "error";
+                        }
                         while (!detTimeEnergy.timeEnergy.empty()){
                             TimeEnergy timeEnergy = detTimeEnergy.timeEnergy.front();
-                            detTimeEnergy.timeEnergy.pop_front();
+                            detTimeEnergy.timeEnergy.erase(detTimeEnergy.timeEnergy.begin());
                             if (channel == 0x00){
-                                data1_2.push_back(data1_2.begin(), detTimeEnergy.timeEnergy.begin(), detTimeEnergy.timeEnergy.end());
+                                data1_2.push_back(timeEnergy);
                             } else {
-                                data2_2.push_back(data1_2.begin(), detTimeEnergy.timeEnergy.begin(), detTimeEnergy.timeEnergy.end());
+                                data2_2.push_back(timeEnergy);
                             }
                         }
+
+                        //totalSpectrumFrames.emplace_back(detTimeEnergy);
                     }
 
-                    coincidenceAnalyzer->calculate(data1_2, data2_2, leftE[0], rightE[0], leftE[1], rightE[1], timeWidth);
-                    // 读取数据
-                    vector<CoincidenceResult> r1 = coincidenceAnalyzer->GetCoinResult();
-                    if (r1.size() > 0){
-                    }
+                    if (data1_2.size() > 0 && data2_2.size() > 0 ){
+                        coincidenceAnalyzer->calculate(data1_2, data2_2, leftE[0], rightE[0], leftE[1], rightE[1], timeWidth);
+                        data1_2.clear();
+                        data2_2.clear();
 
-                    queue<SingleSpectrum> r2 = coincidenceAnalyzer->GetSpectrum();
-                    if (r2.size() > 0){
-                    }
-
-                    vector<CurrentPoint> r3 = coincidenceAnalyzer->GetPointPerSeconds();
-                    if (r3.size() > 0){
+                        qDebug() << "slotPlotUpdateFrame threadId: " << QThread::currentThreadId();
                     }
                 }
             }
@@ -1454,7 +1468,7 @@ void CommandHelper::slotPlotUpdateFrame()
     }
 }
 
-void CommandHelper::updateParamter(int _stepT, int _leftE[2], int _rightE[2], bool reset/* = false*/)
+void CommandHelper::updateParamter(int _stepT, int _leftE[2], int _rightE[2], int _timewidth/* = 50*/, bool reset/* = false*/)
 {
     QMutexLocker locker(&mutexReset);
     this->stepT = _stepT;
@@ -1462,6 +1476,7 @@ void CommandHelper::updateParamter(int _stepT, int _leftE[2], int _rightE[2], bo
     this->leftE[1] = _leftE[1];
     this->rightE[0] = _rightE[0];
     this->rightE[1] = _rightE[1];
+    this->timeWidth = _timewidth;
 
     currentRefreshStepNs[0] = 1;//ui时钟步长（界面刷新时长）
     currentRefreshStepNs[1] = 1;

@@ -6,7 +6,10 @@
 #include <vector>
 #include <algorithm> // 包含 std::find_if
 #include <queue>
+#include <deque>
+#include <functional>
 #include "sysutils.h"
+#include <mutex>
 
 #define MULTI_CHANNEL 4096 //能谱多道的道数
 #define MAX_ENERGY 8192 //最大能量
@@ -15,12 +18,6 @@
 #define MAX_REMAIN_SPECTRUM 3600 //最大存留能谱数目
 
 using namespace std;
-
-
-//struct TimeEnergy{
-//    long long time; // 单位ns，八个字节int
-//    unsigned short energy; // 单位暂无,两个字节无符号数
-//};
 
 // 符合计数的结果
 struct CoincidenceResult{
@@ -36,9 +33,9 @@ struct CurrentPoint{
 };
 
 struct SingleSpectrum{ //存放每秒钟的能谱数据。1s产生一个能谱
-    int time; //时刻，以FPGA时钟进行计时，给出当前的能谱对应的时刻，第1个谱对应time=1。
-    int spectrum1[MULTI_CHANNEL] = {0}; //探测器1能谱
-    int spectrum2[MULTI_CHANNEL] = {0}; //探测器2能谱
+    int time; //时刻(单位s)，以FPGA时钟进行计时，给出当前的能谱对应的时刻，第1个谱对应time=1。
+    int spectrum[2][MULTI_CHANNEL] = {0, 0}; //探测器1能谱
+    //int spectrum2[MULTI_CHANNEL] = {0}; //探测器2能谱
 };
 
 class CoincidenceAnalyzer
@@ -52,7 +49,7 @@ public:
         // 清除向量中的所有元素并释放内存空间
         vector<CoincidenceResult>().swap(coinResult);
 
-        queue<SingleSpectrum> emptySpec;
+        vector<SingleSpectrum> emptySpec;
         swap(AllSpectrum, emptySpec);
 
         vector<CurrentPoint>().swap(AllPoint);
@@ -66,7 +63,7 @@ public:
         return coinResult;
     }
 
-    inline queue<SingleSpectrum> GetSpectrum(){
+    inline vector<SingleSpectrum> GetSpectrum(){
         return AllSpectrum;
     }
 
@@ -78,6 +75,8 @@ public:
             unsigned short E_left1, unsigned short E_right1,
             unsigned short E_left2, unsigned short E_right2,
             int windowWidthT);
+
+    void set_callback(std::function<void(vector<SingleSpectrum>, vector<CurrentPoint>, vector<CoincidenceResult>)> func);
 
 private:
     // 统计给出两个探测器各自当前一秒钟测量数据的能谱，当前一秒钟没有测量信号，则能谱全为零
@@ -111,8 +110,10 @@ private:
     int countCoin; //符合计数曲线的数据点个数,一个数据点对应1s.
     vector<CoincidenceResult> coinResult; //将所有处理的数据都存放在这个容器中，FPGA时钟每一秒钟产生一个点
     // vector<SingleSpectrum> AllSpectrum;
-    queue<SingleSpectrum> AllSpectrum;  //将处理的能谱数据都存放在这个容器中，FPGA时钟每一秒钟产生一个能谱，只存放最近一个小时的能谱。单端队列
+    vector<SingleSpectrum> AllSpectrum;  //将处理的能谱数据都存放在这个容器中，FPGA时钟每一秒钟产生一个能谱，只存放最近一个小时的能谱。单端队列
     vector<CurrentPoint> AllPoint; //每一秒内的各探测器的数据点个数
+    vector<TimeEnergy> unusedData1, unusedData2;//用于存储未处理完的数据信息
+    std::function<void(vector<SingleSpectrum>, vector<CurrentPoint>, vector<CoincidenceResult>)> m_pfunc;
+    mutex mtx;
 };
-
 #endif // COINCIDENCEANALYZER_H

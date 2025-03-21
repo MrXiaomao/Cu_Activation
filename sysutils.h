@@ -12,17 +12,20 @@ using namespace std;
 struct TimeEnergy{
     unsigned long long time; // 单位ns，八个字节int
     unsigned short energy; // 单位暂无,两个字节无符号数
-    TimeEnergy(){}
+    TimeEnergy(){
+        this->time = 0;
+        this->energy = 0;
+    }
     TimeEnergy(unsigned long long time, unsigned short energy){
         this->time = time;
         this->energy = energy;
-    }
+    };
 };
 
 //通道+(fpga时间+能量...序列)
 struct DetTimeEnergy{
     unsigned char channel;
-    std::deque<TimeEnergy> timeEnergy;
+    std::vector<TimeEnergy> timeEnergy;
 };
 
 //步长+计数

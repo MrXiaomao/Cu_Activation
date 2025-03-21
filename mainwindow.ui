@@ -354,22 +354,22 @@
                </spacer>
               </item>
               <item>
-               <widget class="QRadioButton" name="radioButton_ref">
-                <property name="text">
-                 <string>显示计数</string>
-                </property>
-                <property name="checked">
-                 <bool>false</bool>
-                </property>
-               </widget>
-              </item>
-              <item>
                <widget class="QRadioButton" name="radioButton_spectrum">
                 <property name="text">
                  <string>显示能谱</string>
                 </property>
                 <property name="checked">
                  <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QRadioButton" name="radioButton_ref">
+                <property name="text">
+                 <string>显示计数</string>
+                </property>
+                <property name="checked">
+                 <bool>false</bool>
                 </property>
                </widget>
               </item>
@@ -661,7 +661,7 @@ p, li { white-space: pre-wrap; }
                      <number>1</number>
                     </property>
                     <property name="maximum">
-                     <number>1000</number>
+                     <number>50000000</number>
                     </property>
                     <property name="value">
                      <number>10</number>

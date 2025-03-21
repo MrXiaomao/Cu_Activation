@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QDateTime>
 #include "commandhelper.h"
 
 QT_BEGIN_NAMESPACE
@@ -94,5 +95,6 @@ private:
     DataAnalysisWidget *dataAnalysisWidget = nullptr;//数据解析
     CommandHelper *commandhelper = nullptr;//网络指令
     qint32 currentDetectorIndex = 0;
+    QDateTime lastRecvDataTime;//探测器上一次接收数据时间
 };
 #endif // MAINWINDOW_H

@@ -1,5 +1,7 @@
 #include "coincidenceanalyzer.h"
 #include <queue>
+#include <QDebug>
+
 using namespace std;
 
 struct particle_data
@@ -23,11 +25,35 @@ countCoin(0)
 
 }
 
-void CoincidenceAnalyzer::calculate(vector<TimeEnergy> data1, vector<TimeEnergy> data2,
+void CoincidenceAnalyzer::set_callback(std::function<void(vector<SingleSpectrum>, vector<CurrentPoint>, vector<CoincidenceResult>)> func)
+{
+    m_pfunc = func;
+}
+
+void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy> _data2,
               unsigned short E_left1, unsigned short E_right1,
               unsigned short E_left2, unsigned short E_right2,
               int windowWidthT)
 {
+    mtx.lock();
+    vector<TimeEnergy> data1;
+    vector<TimeEnergy> data2;
+    if (unusedData1.size() > 0){
+        data1.insert(data1.end(), unusedData1.begin(), unusedData1.end());
+        unusedData1.clear();
+    }
+    data1.insert(data1.end(), _data1.begin(), _data1.end());
+    if (unusedData2.size() > 0){
+        data2.insert(data2.end(), unusedData2.begin(), unusedData2.end());
+        unusedData2.clear();
+    }
+    data2.insert(data2.end(), _data2.begin(), _data2.end());
+
+    if (data1.size()<=0 || data2.size() <= 0){
+        mtx.unlock();
+        return;
+    }
+
     // 准备计算
     int time1_elapseFPGA;//计算FPGA当前最大时间与上一时刻的时间差,单位：秒
     int time2_elapseFPGA;//计算FPGA当前最大时间与上一时刻的时间差,单位：秒
@@ -38,8 +64,11 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> data1, vector<TimeEnergy>
     //必须存够1秒的数据才进行处理
     while(time1_elapseFPGA >= deltaT && time2_elapseFPGA >= deltaT)
     {
+        qDebug() << "countCoin[" << countCoin << "] " << data1.size() << "...." << data2.size();
+
         //先计算出当前一秒的数据点个数
         GetDataPoint(data1, data2);
+        qDebug() << "AllPoint[" << countCoin << "] " << AllPoint.back().dataPoint1 << "...." << AllPoint.back().dataPoint2;
 
         //对当前一秒数据处理给出能谱
         calculateAllSpectrum(data1,data2);
@@ -63,7 +92,16 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> data1, vector<TimeEnergy>
         long long lastTime2 = data2.back().time;
         time1_elapseFPGA = lastTime1/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
         time2_elapseFPGA = lastTime2/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
+
+        m_pfunc(AllSpectrum, AllPoint, coinResult);
     }
+
+    //将容器中未经处理的数据点添加到缓存保存起来，下次优先处理
+    if (data1.size() > 0)
+        unusedData1.insert(unusedData1.end(), data1.begin(), data1.end());
+    if (data2.size() > 0)
+        unusedData2.insert(unusedData2.end(), data2.begin(), data2.end());
+    mtx.unlock();
 }
 
 /* calculateAllSpectrum:统计给出两个探测器各自当前一秒钟测量数据的能谱，当前一秒钟没有测量信号，则能谱全为零
@@ -88,7 +126,7 @@ void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> data1, vector<
 
         for(int i = 0; i<MULTI_CHANNEL; i++)
         {
-            spec_temp.spectrum1[i] = spectrum1[i];
+            spec_temp.spectrum[0][i] = spectrum1[i];
         }
     }
     if(length2>0)
@@ -102,11 +140,11 @@ void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> data1, vector<
 
         for(int i = 0; i<MULTI_CHANNEL; i++)
         {
-            spec_temp.spectrum2[i] = spectrum2[i];
+            spec_temp.spectrum[1][i] = spectrum2[i];
         }
     }
-    if(AllSpectrum.size() >= MAX_REMAIN_SPECTRUM) AllSpectrum.pop(); //当超过最大能谱数目时，则先进先出
-    AllSpectrum.push(spec_temp);
+    if(AllSpectrum.size() >= MAX_REMAIN_SPECTRUM) AllSpectrum.erase(AllSpectrum.begin()); //当超过最大能谱数目时，则先进先出
+    AllSpectrum.push_back(spec_temp);
 }
 
 // 根据输入能量数据，绘制出能谱，
@@ -150,7 +188,11 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
     int count1 = 0;
     for (int i=0; i<length1; i++)
     {
+#ifdef QT_NO_DEBUG
         if(data1.at(i).energy>E_left1 && data1.at(i).energy <=E_right1) count1++;
+#else
+        count1++;
+#endif
     }
     tmpCoinResult.CountRate1 = count1;
 
@@ -158,12 +200,18 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
     int count2 = 0;
     for (int i=0; i<length2; i++)
     {
+#ifdef QT_NO_DEBUG
         if(data2.at(i).energy>E_left2 && data2.at(i).energy <=E_right2) count2++;
+#else
+        count2++;
+#endif
     }
     tmpCoinResult.CountRate2 = count2;
 
     if(length1>0 || length2>0){
-        if(length1==0 || length2==0) coinResult.back().ConCount_single = 0;
+        if(length1==0 || length2==0)
+            if (coinResult.size() > 0)
+                coinResult.back().ConCount_single = 0;
     }
 
     //当任一一个探测器没有信号，则说明没有符合事件
@@ -196,7 +244,7 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
 
     // 使用临时队列遍历
     priority_queue<particle_data> temp(q); // 复制原队列到临时队列
-    int startTime = 0; //符合事件的起始时刻
+    long long startTime = 0; //符合事件的起始时刻
     unsigned char type = 0b00; //用来判断是否存在不同探头的符合事件
     int count = 0; //符合事件中的信号个数
 
@@ -205,7 +253,7 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
        temp.pop(); // 弹出元素以遍历下一个元素
 
        // 判断时间窗内有没有新的事件产生
-       if(temp_data.time - startTime > windowWidthT)
+       if (temp_data.time - startTime > windowWidthT)
        {
           //先处理上一事件
           if(type==0b11){

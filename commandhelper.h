@@ -42,7 +42,7 @@ typedef struct tagDetectorParameter{
     qint8 transferModel;
 
     // 测量模式
-    qint8 measureModel;
+    qint8 measureModel;//00-手动测量 01-自动测量 02-标定测量 03-波形测量 04-能谱测量
 } DetectorParameter;
 
 class QUiThread;
@@ -63,6 +63,7 @@ public:
     void updateParamter(int stepT, int leftE[2], int rightE[2], int timewidth = 50, bool reset = false);
     void saveFileName(QString);
     void setDefaultCacheDir(QString dir);
+    bool isConnected();//探测器是否连接
 
     enum Detector{
         Detector_1 = 0,

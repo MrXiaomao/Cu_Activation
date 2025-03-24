@@ -96,5 +96,6 @@ private:
     CommandHelper *commandhelper = nullptr;//网络指令
     qint32 currentDetectorIndex = 0;
     QDateTime lastRecvDataTime;//探测器上一次接收数据时间
+    QDateTime measureStartTime;//探测器测量开始时间
 };
 #endif // MAINWINDOW_H

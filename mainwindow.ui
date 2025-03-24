@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1525</width>
-    <height>1034</height>
+    <width>1576</width>
+    <height>748</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -176,16 +176,22 @@
                  <item>
                   <widget class="QLCDNumber" name="lcdNumber">
                    <property name="sizePolicy">
-                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                      <horstretch>0</horstretch>
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
-                   <property name="smallDecimalPoint">
-                    <bool>false</bool>
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>30</height>
+                    </size>
                    </property>
                    <property name="digitCount">
-                    <number>6</number>
+                    <number>9</number>
+                   </property>
+                   <property name="segmentStyle">
+                    <enum>QLCDNumber::Flat</enum>
                    </property>
                    <property name="intValue" stdset="0">
                     <number>0</number>
@@ -211,13 +217,25 @@
                  <item>
                   <widget class="QLCDNumber" name="lcdNumber_2">
                    <property name="sizePolicy">
-                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                      <horstretch>0</horstretch>
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>30</height>
+                    </size>
+                   </property>
+                   <property name="frameShape">
+                    <enum>QFrame::Box</enum>
+                   </property>
                    <property name="digitCount">
-                    <number>6</number>
+                    <number>9</number>
+                   </property>
+                   <property name="segmentStyle">
+                    <enum>QLCDNumber::Flat</enum>
                    </property>
                   </widget>
                  </item>
@@ -238,15 +256,24 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QLCDNumber" name="lcdNumber_3">
+                  <widget class="QLCDNumber" name="lcdNumber_CountRate1">
                    <property name="sizePolicy">
-                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                      <horstretch>0</horstretch>
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>30</height>
+                    </size>
+                   </property>
                    <property name="digitCount">
-                    <number>6</number>
+                    <number>9</number>
+                   </property>
+                   <property name="segmentStyle">
+                    <enum>QLCDNumber::Flat</enum>
                    </property>
                   </widget>
                  </item>
@@ -267,15 +294,24 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QLCDNumber" name="lcdNumber_4">
+                  <widget class="QLCDNumber" name="lcdNumber_CountRate2">
                    <property name="sizePolicy">
-                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                      <horstretch>0</horstretch>
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>30</height>
+                    </size>
+                   </property>
                    <property name="digitCount">
-                    <number>6</number>
+                    <number>9</number>
+                   </property>
+                   <property name="segmentStyle">
+                    <enum>QLCDNumber::Flat</enum>
                    </property>
                   </widget>
                  </item>
@@ -296,15 +332,24 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QLCDNumber" name="lcdNumber_5">
+                  <widget class="QLCDNumber" name="lcdNumber_ConCount_single">
                    <property name="sizePolicy">
-                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                      <horstretch>0</horstretch>
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>30</height>
+                    </size>
+                   </property>
                    <property name="digitCount">
-                    <number>6</number>
+                    <number>9</number>
+                   </property>
+                   <property name="segmentStyle">
+                    <enum>QLCDNumber::Flat</enum>
                    </property>
                   </widget>
                  </item>
@@ -327,13 +372,22 @@
                  <item>
                   <widget class="QLCDNumber" name="lcdNumber_6">
                    <property name="sizePolicy">
-                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                      <horstretch>0</horstretch>
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>30</height>
+                    </size>
+                   </property>
                    <property name="digitCount">
-                    <number>6</number>
+                    <number>9</number>
+                   </property>
+                   <property name="segmentStyle">
+                    <enum>QLCDNumber::Flat</enum>
                    </property>
                   </widget>
                  </item>
@@ -961,7 +1015,7 @@ p, li { white-space: pre-wrap; }
                     </item>
                     <item>
                      <property name="text">
-                      <string>1E10~13</string>
+                      <string>1E10~1E13</string>
                      </property>
                     </item>
                    </widget>
@@ -1437,7 +1491,7 @@ p, li { white-space: pre-wrap; }
                     </item>
                     <item>
                      <property name="text">
-                      <string>1E10~13</string>
+                      <string>1E10~1E13</string>
                      </property>
                     </item>
                    </widget>
@@ -2343,7 +2397,7 @@ p, li { white-space: pre-wrap; }
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1525</width>
+     <width>1576</width>
      <height>23</height>
     </rect>
    </property>
@@ -2457,9 +2511,6 @@ p, li { white-space: pre-wrap; }
    </property>
   </action>
   <action name="action_SpectrumModel">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="icon">
     <iconset resource="resource.qrc">
      <normaloff>:/resource/energy.png</normaloff>:/resource/energy.png</iconset>
@@ -2469,9 +2520,6 @@ p, li { white-space: pre-wrap; }
    </property>
   </action>
   <action name="action_WaveformModel">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="icon">
     <iconset resource="resource.qrc">
      <normaloff>:/resource/wave.png</normaloff>:/resource/wave.png</iconset>
@@ -2571,12 +2619,6 @@ p, li { white-space: pre-wrap; }
    </property>
   </action>
   <action name="action_partical">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
    <property name="enabled">
     <bool>false</bool>
    </property>
@@ -2612,9 +2654,6 @@ p, li { white-space: pre-wrap; }
    </property>
   </action>
   <action name="action_config">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="icon">
     <iconset resource="resource.qrc">
      <normaloff>:/resource/canshushezhi-05.png</normaloff>:/resource/canshushezhi-05.png</iconset>

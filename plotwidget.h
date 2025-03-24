@@ -2,6 +2,7 @@
 #define PLOTWIDGET_H
 
 #include <QDockWidget>
+#include <QMutex>
 #include "sysutils.h"
 #include "coincidenceanalyzer.h"
 
@@ -96,6 +97,7 @@ private:
     qint32 currentGraphIndex = 0;
 
     //PariticalSpectrumFrame currentFrame[GRAPH_COUNT];
+    QMutex mutexRefreshPlot;
 };
 
 #endif // PLOTWIDGET_H

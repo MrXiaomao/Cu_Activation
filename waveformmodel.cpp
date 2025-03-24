@@ -63,15 +63,38 @@ WaveformModel::WaveformModel(QWidget *parent)
     });
 
     connect(commandhelper, &CommandHelper::sigRecvPkgCount, this, [=](qint32 count){
-        ui->label_size->setText(QString::number(count));
+        static qint32 total_ref = 0;
+        total_ref += count;
+        ui->label_ref->setText(QString::number(total_ref));
+    });
+
+    connect(commandhelper, &CommandHelper::sigMeasureStart, this, [=](qint8 mode){
+        measuring = true;
+        ui->pushButton_start->setText(tr("停止测量"));
+
+        timerStart = QDateTime::currentDateTime();
+        ui->label_7->setText(timerStart.toString("yyyy-MM-dd HH:mm:ss"));
+        timer->start(500);
+        ui->pushButton_start->setEnabled(true);
+        ui->pushButton_save->setEnabled(false);
+    });
+
+    connect(commandhelper, &CommandHelper::sigMeasureStop, this, [=](){
+        timer->stop();
+        measuring = false;
+        ui->pushButton_start->setText(tr("开始测量"));
+        ui->pushButton_save->setEnabled(true);
+        ui->pushButton_start->setEnabled(true);
     });
 
     this->load();
     ui->pushButton_save->setEnabled(false);
+    ui->pushButton_start->setEnabled(commandhelper->isConnected());
 }
 
 WaveformModel::~WaveformModel()
 {
+    disconnect(commandhelper, nullptr, this, nullptr);
     if (measuring){
         commandhelper->slotStopManualMeasure();
     }
@@ -232,8 +255,7 @@ bool WaveformModel::save()
 void WaveformModel::on_pushButton_start_clicked()
 {
     QAbstractButton *btn = qobject_cast<QAbstractButton*>(sender());
-    measuring = !measuring;
-    if (measuring){
+    if (!measuring){
         // 先保存参数
         if (!this->save()){
             measuring = !measuring;
@@ -250,6 +272,7 @@ void WaveformModel::on_pushButton_start_clicked()
         detectorParameter.waveLength = 0x01;
         detectorParameter.transferModel = 0x03;// 0x00-能谱 0x03-波形 0x05-符合模式
         detectorParameter.triggerModel = 0x00;
+        detectorParameter.measureModel = 0x02;
 
         // 打开 JSON 文件
         QFile file(QApplication::applicationDirPath() + "/config/wave.json");
@@ -272,21 +295,32 @@ void WaveformModel::on_pushButton_start_clicked()
 
         total_filesize = 0;
         ui->label_size->setText("0 bytes");
-
-        measuring = true;
-        btn->setText(tr("停止测量"));
         commandhelper->slotStartManualMeasure(detectorParameter);
 
-        timerStart = QDateTime::currentDateTime();
-        ui->label_7->setText(timerStart.toString("yyyy-MM-dd HH:mm:ss"));
-        timer->start(500);
         ui->pushButton_save->setEnabled(false);
-    } else {
-        commandhelper->slotStopManualMeasure();
-        btn->setText(tr("开始测量"));
+        ui->pushButton_start->setEnabled(false);
 
-        timer->stop();
-        ui->pushButton_save->setEnabled(true);
+        QTimer::singleShot(3000, this, [=](){
+            //指定时间未收到开始测量指令，则按钮恢复初始状态
+            if (!measuring){
+                ui->pushButton_start->setEnabled(true);
+            }
+        });
+    } else {
+        ui->pushButton_save->setEnabled(false);
+        ui->pushButton_start->setEnabled(false);
+        commandhelper->slotStopManualMeasure();
+
+        QTimer::singleShot(5000, this, [=](){
+            //指定时间未收到停止测量指令，则按钮恢复初始状态
+            if (measuring){
+                //测试
+                measuring = false;
+                ui->pushButton_start->setText("开始测量");
+
+                ui->pushButton_start->setEnabled(true);
+            }
+        });
     }
 }
 

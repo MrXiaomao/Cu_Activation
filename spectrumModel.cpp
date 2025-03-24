@@ -41,8 +41,9 @@ SpectrumModel::SpectrumModel(QWidget *parent)
         ui->label_5->setText(time.toString("HH:mm:ss"));
     });
 
-    ui->pushButton_save->setEnabled(false);
     this->load();
+    ui->pushButton_save->setEnabled(false);
+    ui->pushButton_start->setEnabled(commandhelper->isConnected());
 }
 
 SpectrumModel::~SpectrumModel()

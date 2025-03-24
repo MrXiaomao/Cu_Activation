@@ -122,6 +122,10 @@ MainWindow::MainWindow(QWidget *parent)
         this->setProperty("relay_fault", false);
         this->setProperty("relay_on", on);
 
+        if (!on){
+            //电源关闭，设备断电，测量强制停止
+            this->setProperty("measuring", false);
+        }
         QString msg = QString(tr("电源状态：%1")).arg(on ? tr("开") : tr("关"));
         ui->statusbar->showMessage(msg);
         emit sigAppengMsg(msg, QtInfoMsg);
@@ -130,9 +134,12 @@ MainWindow::MainWindow(QWidget *parent)
 
     // 自动测量开始
     connect(commandhelper, &CommandHelper::sigMeasureStart, this, [=](qint8 mode){
+        if (mode == 0x02 || mode == 0x03)
+            return;//波形测量、能谱测量
+
         lastRecvDataTime = QDateTime::currentDateTime();
-        QTimer* timerException = this->findChild<QTimer*>("exceptionCheckClock");
-        timerException->start(5000);
+        QTimer* exceptionCheckTimer = this->findChild<QTimer*>("exceptionCheckTimer");
+        exceptionCheckTimer->start(5000);
 
         this->setProperty("measuring", true);
         this->setProperty("measure-model", mode);
@@ -142,8 +149,16 @@ MainWindow::MainWindow(QWidget *parent)
         ui->statusbar->showMessage(msg);
 
         //开启测量时钟
-        QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
-        measureTimer->start(ui->spinBox_timelength->value());
+        if (mode == 0x01 || mode == 0x02){//手动/自动测量
+            //测量倒计时时钟
+            QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
+            measureTimer->start();
+
+            //测量时长时钟
+            measureStartTime = lastRecvDataTime;
+            QTimer* measureRefTimer = this->findChild<QTimer*>("measureRefTimer");
+            measureRefTimer->start(500);
+        }
 
         emit sigAppengMsg(msg, QtInfoMsg);
         emit sigRefreshUi();
@@ -153,6 +168,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(commandhelper, &CommandHelper::sigMeasureStop, this, [=](){
         QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
         measureTimer->stop();
+
+        QTimer* measureRefTimer = this->findChild<QTimer*>("measureRefTimer");
+        measureRefTimer->stop();
 
         this->setProperty("measuring", false);
         QString msg = tr("测量已停止");
@@ -192,22 +210,6 @@ MainWindow::MainWindow(QWidget *parent)
         emit sigRefreshUi();
     });
 
-//    qRegisterMetaType<StepTimeCount>("StepTimeCount");
-//    connect(commandhelper, &CommandHelper::sigRefreshCountData, this, [=](quint8 channel, StepTimeCount stepTimeCount){
-//        bool pause_plot = this->property("pause_plot").toBool();
-//        if (!pause_plot){
-//            PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(channel+1));
-//            plotWidget->slotUpdateCountData(stepTimeCount);
-//        }
-//    });
-//    qRegisterMetaType<StepTimeEnergy>("StepTimeEnergy");
-//    connect(commandhelper, &CommandHelper::sigRefreshSpectrum, this, [=](quint8 channel, StepTimeEnergy stepTimeEnergy){
-//        bool pause_plot = this->property("pause_plot").toBool();
-//        if (!pause_plot){
-//            PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(channel+1));
-//            plotWidget->slotUpdateSpectrumData(stepTimeEnergy);
-//        }
-//    });
     qRegisterMetaType<SingleSpectrum>("SingleSpectrum");
     connect(commandhelper, &CommandHelper::sigSingleSpectrum, this, [=](SingleSpectrum result){
         bool pause_plot = this->property("pause_plot").toBool();
@@ -254,11 +256,12 @@ MainWindow::MainWindow(QWidget *parent)
             plotWidget2->slotSingleSpectrumsAndCurrentPoints(1, r1, r2);
             plotWidget3->slotCoincidenceResults(r3);
 
-            ui->lcdNumber_3->display(r3.back().CountRate1);
-            ui->lcdNumber_4->display(r3.back().CountRate2);
-            ui->lcdNumber_5->display(r3.back().ConCount_single);
+            ui->lcdNumber_CountRate1->display(r3.back().CountRate1);
+            ui->lcdNumber_CountRate2->display(r3.back().CountRate2);
+            ui->lcdNumber_ConCount_single->display(r3.back().ConCount_single);
         }
     }, Qt::DirectConnection/*防止堵塞*/);
+
     emit sigRefreshUi();
 
     // 创建图表
@@ -416,7 +419,7 @@ void MainWindow::InitMainWindowUi()
             ui->widget_result->hide();
         }
     });
-    emit grp->buttonClicked(1);
+    emit grp->buttonClicked(1);//默认能谱模式
 
     // 任务栏信息
     QLabel *label_Idle = new QLabel(ui->statusbar);
@@ -440,13 +443,12 @@ void MainWindow::InitMainWindowUi()
     ui->statusbar->addWidget(label_Idle);
     ui->statusbar->addWidget(label_Connected);
     ui->statusbar->addWidget(new QLabel(ui->statusbar), 1);
-    ui->statusbar->addPermanentWidget(nullptr, 1);
+    ui->statusbar->addWidget(nullptr, 1);
     ui->statusbar->addPermanentWidget(label_systemtime);    
 
-    QTimer* timer = new QTimer(this);
-    timer->setObjectName("systemClock");
-    connect(timer, &QTimer::timeout, this, [=](){
-        static QDateTime startTime = QDateTime::currentDateTime();
+    QTimer* systemClockTimer = new QTimer(this);
+    systemClockTimer->setObjectName("systemClockTimer");
+    connect(systemClockTimer, &QTimer::timeout, this, [=](){
         // 获取当前时间
         QDateTime currentDateTime = QDateTime::currentDateTime();
 
@@ -462,11 +464,8 @@ void MainWindow::InitMainWindowUi()
         QString dayOfWeekString = dayNames.at(dayOfWeekNumber);
 
         this->findChild<QLabel*>("label_systemtime")->setText(QString(QObject::tr("系统时间：")) + currentDateTime.toString("yyyy/MM/dd hh:mm:ss ") + dayOfWeekString);
-        this->setProperty("measuring", true);
-
-        qDebug() << "main timer: " << QThread::currentThreadId();
     });
-    timer->start(500);
+    systemClockTimer->start(500);
 
     QTimer* measureTimer = new QTimer(this);
     measureTimer->setObjectName("measureTimer");
@@ -483,25 +482,36 @@ void MainWindow::InitMainWindowUi()
         QMessageBox::information(this, tr("提醒"), tr("定时测量倒计时结束，自动停止测量！"));
     });
 
-    QTimer* timerException = new QTimer(this);
-    timerException->setObjectName("exceptionCheckClock");
-    connect(timerException, &QTimer::timeout, this, [=](){
+    QTimer* measureRefTimer = new QTimer(this);
+    measureRefTimer->setObjectName("measureRefTimer");
+    connect(measureRefTimer, &QTimer::timeout, this, [=](){
+        QDateTime currentDateTime = QDateTime::currentDateTime();
+        qint64 days = currentDateTime.daysTo(measureStartTime);
+        if (days >= 1){
+            ui->lcdNumber->display(QString::number(days) + tr("天 ") + QTime(0,0,0).addSecs(currentDateTime.secsTo(measureStartTime) - days * 24 * 60 * 60).toString("hh:mm:ss"));
+        } else{
+            ui->lcdNumber->display(QTime(0,0,0).addSecs(currentDateTime.secsTo(measureStartTime)).toString("hh:mm:ss"));
+        }
+    });
+
+    QTimer* exceptionCheckTimer = new QTimer(this);
+    exceptionCheckTimer->setObjectName("exceptionCheckTimer");
+    connect(exceptionCheckTimer, &QTimer::timeout, this, [=](){
         // 获取当前时间
         QDateTime currentDateTime = QDateTime::currentDateTime();
         if (this->property("measuring").toBool()){
             if (lastRecvDataTime.secsTo(currentDateTime) > 3){
-                timerException->stop();
+                exceptionCheckTimer->stop();
                 emit sigAppengMsg(tr("探测器故障"), QtCriticalMsg);
                 QMessageBox::critical(this, tr("错误"), tr("探测器故障，请检查！"));
             }
         }
     });
-    timer->stop();
+    exceptionCheckTimer->stop();
 
     QTimer::singleShot(500, this, [=](){
        this->showMaximized();
     });
-    ui->pushButton_save->setEnabled(false);
 
     this->load();
     this->slotAppendMsg(QObject::tr("系统启动"), QtInfoMsg);
@@ -839,6 +849,7 @@ void MainWindow::on_pushButton_measure_clicked()
         detectorParameter.gain = 0x00;
         detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
         detectorParameter.measureModel = 0x00;
+        this->setProperty("measur-model", detectorParameter.measureModel);
 
         // 打开 JSON 文件
         QFile file(QApplication::applicationDirPath() + "/config/fpga.json");
@@ -872,6 +883,8 @@ void MainWindow::on_pushButton_measure_clicked()
         int leftE[2] = {ui->spinBox_1_leftE->value(), ui->spinBox_2_leftE->value()};
         int rightE[2] = {ui->spinBox_1_rightE->value(), ui->spinBox_2_rightE->value()};
         int timewidth = ui->spinBox_resolving_time->value();
+        QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
+        measureTimer->setInterval(ui->spinBox_timelength_3->value() * 1000);
         commandhelper->updateParamter(stepT, leftE, rightE, timewidth, false);
         commandhelper->slotStartManualMeasure(detectorParameter);
 
@@ -909,6 +922,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         detectorParameter.gain = 0x00;
         detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
         detectorParameter.measureModel = 0x01;
+        this->setProperty("measur-model", detectorParameter.measureModel);
 
         // 打开 JSON 文件
         QFile file(QApplication::applicationDirPath() + "/config/fpga.json");
@@ -943,6 +957,9 @@ void MainWindow::on_pushButton_measure_2_clicked()
         int leftE[2] = {ui->spinBox_1_leftE->value(), ui->spinBox_2_leftE_2->value()};
         int rightE[2] = {ui->spinBox_1_rightE_2->value(), ui->spinBox_2_rightE_2->value()};
         int timewidth = ui->spinBox_resolving_time->value();
+        QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
+        measureTimer->setInterval(ui->spinBox_timelength_3->value() * 1000);
+
         commandhelper->updateParamter(stepT, leftE, rightE, timewidth, false);
         commandhelper->slotStartAutoMeasure(detectorParameter);
 
@@ -1210,22 +1227,22 @@ void MainWindow::slotRefreshUi()
         ui->action_detector_connect->setText(tr("打开探测器"));
         ui->action_detector_connect->setIconText(tr("打开探测器"));
 
-        ui->action_config->setEnabled(false);
+        //ui->action_config->setEnabled(false);
     } else {
         if (!this->property("detector_on").toBool()){
-            ui->action_partical->setEnabled(false);
-            ui->action_SpectrumModel->setEnabled(false);
-            ui->action_WaveformModel->setEnabled(false);
-            ui->action_config->setEnabled(false);
+            //ui->action_partical->setEnabled(false);
+            //ui->action_SpectrumModel->setEnabled(false);
+            //ui->action_WaveformModel->setEnabled(false);
+            //ui->action_config->setEnabled(false);
             ui->action_detector_connect->setIcon(QIcon(":/resource/conect.png"));
             ui->action_detector_connect->setText(tr("打开探测器"));
             ui->action_detector_connect->setIconText(tr("打开探测器"));
         } else {
-            ui->action_partical->setEnabled(true);
-            ui->action_SpectrumModel->setEnabled(true);
-            ui->action_WaveformModel->setEnabled(true);
+            //ui->action_partical->setEnabled(true);
+            //ui->action_SpectrumModel->setEnabled(true);
+            //ui->action_WaveformModel->setEnabled(true);
+            //ui->action_config->setEnabled(true);
 
-            ui->action_config->setEnabled(true);
             ui->action_detector_connect->setIcon(QIcon(":/resource/conect-on.png"));
             ui->action_detector_connect->setText(tr("关闭探测器"));
             ui->action_detector_connect->setIconText(tr("关闭探测器"));
@@ -1272,7 +1289,7 @@ void MainWindow::slotRefreshUi()
 
             //标定测量
             ui->pushButton_measure_3->setEnabled(false);
-        }  else if (this->property("measur-model").toInt() == 0x01){//标定测量
+        }  else if (this->property("measur-model").toInt() == 0x02){//标定测量
             ui->pushButton_measure_3->setText(tr("停止测量"));
             ui->pushButton_measure_3->setEnabled(true);
 
@@ -1429,7 +1446,7 @@ void MainWindow::save()
         if (jsonObj.contains("M1")){
             jsonObjM1 = jsonObj["M1"].toObject();
         } else {
-            jsonObj.insert("M1", jsonObjM1);
+            //jsonObj.insert("M1", jsonObjM1);
         }
         //测量时长
         jsonObjM1["timelength"] = ui->spinBox_timelength->value();
@@ -1443,13 +1460,16 @@ void MainWindow::save()
         jsonObjM1["resolving_time"] = ui->spinBox_resolving_time->value();
         //标定文件
         jsonObjM1["file"] = ui->lineEdit_file->text();
+        if (!jsonObj.contains("M1")){
+            jsonObj.insert("M1", jsonObjM1);
+        }
 
         //自动
         QJsonObject jsonObjM2;
         if (jsonObj.contains("M2")){
             jsonObjM2 = jsonObj["M2"].toObject();
         } else {
-            jsonObj.insert("M2", jsonObjM2);
+            //jsonObj.insert("M2", jsonObjM2);
         }
         //测量时长
         jsonObjM2["timelength"] = ui->spinBox_timelength_2->value();
@@ -1461,13 +1481,16 @@ void MainWindow::save()
         jsonObjM2["step"] = ui->spinBox_step_2->value();
         //符合分辨时间
         jsonObjM2["resolving_time"] = ui->spinBox_resolving_time_2->value();
+        if (!jsonObj.contains("M2")){
+            jsonObj.insert("M2", jsonObjM2);
+        }
 
         //标定
         QJsonObject jsonObjM3;
         if (jsonObj.contains("M3")){
             jsonObjM3 = jsonObj["M3"].toObject();
         } else {
-            jsonObj.insert("M3", jsonObjM3);
+            //jsonObj.insert("M3", jsonObjM3);
         }
         //测量时长
         jsonObjM3["timelength"] = ui->spinBox_timelength_3->value();
@@ -1479,6 +1502,9 @@ void MainWindow::save()
         jsonObjM3["resolving_time"] = ui->spinBox_resolving_time_3->value();
         //中子产额
         jsonObjM3["neutron_yield"] = ui->spinBox_neutron_yield->value();
+        if (!jsonObj.contains("M3")){
+            jsonObj.insert("M3", jsonObjM3);
+        }
 
         //公共
         QJsonObject jsonObjPub;

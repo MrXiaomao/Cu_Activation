@@ -260,7 +260,10 @@ void EnergyCalibrationForm::calculate(int no)
 
     if(no == 1)
     {
-        fixedTextTtem->setText(QString("y = %1 + %2 * x").arg(C[0]).arg(C[1]));
+        if (C[1] > 0)
+            fixedTextTtem->setText(QString("y = %1 + %2 * x").arg(C[0]).arg(C[1]));
+        else
+            fixedTextTtem->setText(QString("y = %1 - %2 * x").arg(C[0]).arg(qAbs(C[1])));
     }
     else
     {

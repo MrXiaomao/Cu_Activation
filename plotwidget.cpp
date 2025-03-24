@@ -4,6 +4,9 @@
 #include <QtMath>
 #include <cmath>
 
+#define RANGE_SCARRE_UPPER 0.8
+#define RANGE_SCARRE_LOWER 0.4
+
 PlotWidget::PlotWidget(QWidget *parent) : QDockWidget(parent)
     , titleTextTtem(nullptr)
     , coordsTextItem(nullptr)
@@ -450,6 +453,8 @@ void PlotWidget::initMultiCustomPlot()
 
 
     switchShowModel(false);
+    switchDataModel(false);
+
     // 图形刷新
     customPlot->replot();
 
@@ -598,9 +603,10 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
 
                     isPressed = true;
                     dragStart = e->pos();
-                    customPlot->replot();
+                    //customPlot->replot();
                 } else if (e->button() == Qt::RightButton) {
                     // 右键恢复
+                    QMutexLocker locker(&mutexRefreshPlot);
                     isPressed = false;
                     isDragging = false;
                     unsigned int maxEngry = 0;
@@ -642,6 +648,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                 if (isPressed){
                     if (!isDragging) {
                         if (e->modifiers() & Qt::ControlModifier){
+                            QMutexLocker locker(&mutexRefreshPlot);
                             QCPGraph *graph = customPlot->graph(0);
 
                             dragRectItem->setProperty("top", dragStart.y());
@@ -663,6 +670,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                         isDragging = true;
                     }else {
                         if (e->modifiers() & Qt::ControlModifier && customPlot->graph(ENGRY_GRAPH)->visible()){
+                            QMutexLocker locker(&mutexRefreshPlot);
                             dragRectItem->setProperty("bottom", e->pos().y());
                             dragRectItem->setProperty("right", e->pos().x());
 
@@ -715,6 +723,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
 
                     if (e->modifiers() & Qt::ControlModifier && customPlot->graph(ENGRY_GRAPH)->visible()){
                         if (dragRectItem->visible()){
+                            QMutexLocker locker(&mutexRefreshPlot);
                             //颜色更新
                             double key_from = dragRectItem->topLeft->key();
                             double key_to = dragRectItem->bottomRight->key();
@@ -802,6 +811,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
 #include <QTimer>
 void PlotWidget::slotPlotClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event)
 {
+    QMutexLocker locker(&mutexRefreshPlot);
     QCPGraph *graph = qobject_cast<QCPGraph*>(plottable);//customPlot->graph(0);
     QSharedPointer<QCPGraphDataContainer> data = graph->data();
     const QCPGraphData *ghd = data->at(dataIndex);
@@ -841,6 +851,7 @@ void PlotWidget::slotBeforeReplot()
 }
 
 void PlotWidget::slotSelectionChanged() {
+    QMutexLocker locker(&mutexRefreshPlot);
     QList<QCPAbstractPlottable*> selectedPlottables = customPlot->selectedPlottables();
     foreach (QCPAbstractPlottable *plottable, selectedPlottables) {
         if (QCPCurve *curve = qobject_cast<QCPCurve*>(plottable)) {
@@ -855,59 +866,9 @@ void PlotWidget::slotSelectionChanged() {
 
 #include <QtMath>
 #include <math.h>
-//void PlotWidget::slotUpdateCountData(PariticalCountFrame frame)
-//{
-//    QCustomPlot *customPlot = customPlotInstance();
-//    int channelIndex = frame.channel;
-//    double key = frame.dataT;
-//    double value = frame.dataE;
-//    if (isLogarithmic)
-//        value = log(value);
-//    QColor colors = clrLine[channelIndex];
-//    customPlot->graph(REF_GRAPH)->addData(key, value, colors);
-//    customPlot->graph(REF_GRAPH)->setVisible(true);
-//    customPlot->replot();
-//}
-
-//void PlotWidget::slotUpdateSpectrumData(PariticalSpectrumFrame frame)
-//{
-//    QCustomPlot *customPlot = customPlotInstance();
-//    int channelIndex = frame.channel;
-//    QVector<double> keys, values;
-//    QVector<QColor> colors;
-//    currentFrame[channelIndex].dataE.resize(frame.dataE.size());
-//    unsigned int maxEngry = 0;
-//    for (size_t i=0; i<frame.dataE.size(); ++i){
-//        keys << i;
-//        currentFrame[channelIndex].dataE[i] += frame.dataE[i];//将能量叠加
-//        if (isLogarithmic)
-//            values << log(currentFrame[channelIndex].dataE.at(i));
-//        else
-//            values << currentFrame[channelIndex].dataE.at(i);
-//        colors << clrLine[channelIndex];
-
-//        maxEngry = qMax((unsigned int)maxEngry, (unsigned int)currentFrame[channelIndex].dataE.at(i));
-//    }
-
-//    //maxEngry = 10000;
-//    //动态调整轴范围
-//    {
-////        const QCPRange xRange = customPlot->xAxis->range();
-////        if ((xRange.upper - xRange.lower) != frame.data.size())
-////            customPlot->xAxis->setRange(0, frame.data.size());
-
-////        const QCPRange yRange = customPlot->yAxis->range();
-////        maxEngry = (unsigned int)(((double)maxEngry) / 10000) * 10000 + 10000;
-////        if (maxEngry != yRange.upper)
-////            customPlot->yAxis->setRange(0, maxEngry);
-//        //customPlot->yAxis->rescale(false);
-//    }
-//    customPlot->graph(ENGRY_GRAPH)->setData(keys, values, colors);
-//    customPlot->replot();
-//}
-
 void PlotWidget::slotCoincidenceResult(quint32 time, CoincidenceResult result)
 {
+    QMutexLocker locker(&mutexRefreshPlot);
     double key = time;
     double value = result.ConCount_multiple;
     QColor colors = clrLine[0];
@@ -917,6 +878,7 @@ void PlotWidget::slotCoincidenceResult(quint32 time, CoincidenceResult result)
 
 void PlotWidget::slotSingleSpectrum(SingleSpectrum result)
 {
+    QMutexLocker locker(&mutexRefreshPlot);
     long channel = 0;
     if (this->objectName() == "real-Detector-1"){
         channel = 0;
@@ -948,6 +910,7 @@ void PlotWidget::slotSingleSpectrum(SingleSpectrum result)
 
 void PlotWidget::slotCurrentPoint(quint32 time, CurrentPoint result)
 {
+    QMutexLocker locker(&mutexRefreshPlot);
     double key = time;
     double value = result.dataPoint1;
     if (this->objectName() == "real-Detector-2")
@@ -959,22 +922,28 @@ void PlotWidget::slotCurrentPoint(quint32 time, CurrentPoint result)
 
 void PlotWidget::slotCoincidenceResults(vector<CoincidenceResult> r)
 {
+    QMutexLocker locker(&mutexRefreshPlot);
     QVector<double> keys, values;
     QVector<QColor> colors;
-    //qint32 time = customPlot->graph(0)->data()->size();
+    double maxCount = 0;
 
-    for (int i=0; i<r.size(); ++i){
+    for (size_t i=0; i<r.size(); ++i){
         keys << (i+1);
         values << r[i].ConCount_single;
         colors << clrLine[0];
+        maxCount = qMax(maxCount, values[i]);
     }
 
+    if (maxCount > customPlot->yAxis->range().upper * RANGE_SCARRE_UPPER){
+        customPlot->yAxis->setRange(customPlot->yAxis->range().lower, maxCount / RANGE_SCARRE_LOWER);
+    }
     customPlot->graph(0)->setData(keys, values, colors);
     customPlot->replot();
 }
 
 void PlotWidget::slotSingleSpectrums(vector<SingleSpectrum> r)
 {
+    QMutexLocker locker(&mutexRefreshPlot);
     long channel = 0;
     if (this->objectName() == "real-Detector-1"){
         channel = 0;
@@ -982,32 +951,39 @@ void PlotWidget::slotSingleSpectrums(vector<SingleSpectrum> r)
         channel = 1;
     }
 
+    double maxEnergy = 0;
     QVector<double> keys, values;
     QVector<QColor> colors;
 
     QCPGraph *graph = customPlot->graph(0);
-    for (int j=0; j<r.size(); ++j){
+    for (size_t j=0; j<r.size(); ++j){
         if (graph->data()->size() > 0){
             for (int i=0; i<MULTI_CHANNEL; ++i){
                 keys << i+1;
                 values << (graph->data()->at(i)->value + r[j].spectrum[channel][i]);
                 colors << clrLine[channel];
+                maxEnergy = qMax(maxEnergy, values[i]);
             }
         } else{
             for (int i=0; i<MULTI_CHANNEL; ++i){
                 keys << i+1;
                 values << r[j].spectrum[channel][i];
                 colors << clrLine[0];
+                maxEnergy = qMax(maxEnergy, values[i]);
             }
         }
     }
 
+    if (maxEnergy > customPlot->yAxis->range().upper * RANGE_SCARRE_UPPER){
+        customPlot->yAxis->setRange(customPlot->yAxis->range().lower, maxEnergy / RANGE_SCARRE_LOWER);
+    }
     customPlot->graph(0)->setData(keys, values, colors);
     customPlot->replot();
 }
 
 void PlotWidget::slotCurrentPoints(vector<CurrentPoint> r)
 {
+    QMutexLocker locker(&mutexRefreshPlot);
     long channel = 0;
     if (this->objectName() == "real-Detector-1"){
         channel = 0;
@@ -1015,24 +991,32 @@ void PlotWidget::slotCurrentPoints(vector<CurrentPoint> r)
         channel = 1;
     }
 
+    double maxPoint = 0;
     QVector<double> keys, values;
     QVector<QColor> colors;
-    for (int i=0; i<r.size(); ++i){
+    for (size_t i=0; i<r.size(); ++i){
         keys << i+1;
         if (channel == 0x00)
             values << r[i].dataPoint1;
         else
             values << r[i].dataPoint2;
+
+        maxPoint = qMax(maxPoint, values[i]);
         colors << clrLine[0];
     }
 
+    if (maxPoint > customPlot->yAxis->range().upper * RANGE_SCARRE_UPPER){
+        customPlot->yAxis->setRange(customPlot->xAxis->range().lower, maxPoint / RANGE_SCARRE_LOWER);
+    }
     customPlot->graph(1)->setData(keys, values, colors);
     customPlot->replot();
 }
 
 void PlotWidget::slotSingleSpectrumsAndCurrentPoints(quint8 channel, vector<SingleSpectrum> r1, vector<CurrentPoint> r2)
 {
+    QMutexLocker locker(&mutexRefreshPlot);
     {
+        double maxEnergy = 0;
         QVector<double> keys, values;
         QVector<QColor> colors;
         values.resize(MULTI_CHANNEL);
@@ -1043,29 +1027,44 @@ void PlotWidget::slotSingleSpectrumsAndCurrentPoints(quint8 channel, vector<Sing
                 values[i] = customPlot->graph(0)->data()->at(i)->value;
              else
                 values[i] = 0;
+            maxEnergy = qMax(maxEnergy, values[i]);
         }
 
-        for (int j=0; j<r1.size(); ++j){
+        for (size_t j=0; j<r1.size(); ++j){
             for (int i=0; i<MULTI_CHANNEL; ++i){
                 values[i] += r1[j].spectrum[channel][i];
+                maxEnergy = qMax(maxEnergy, values[i]);
             }
         }
+
         customPlot->graph(0)->setData(keys, values, colors);
+        if (customPlot->graph(0)->visible()){
+            if (maxEnergy > customPlot->yAxis->range().upper * RANGE_SCARRE_UPPER){
+                customPlot->yAxis->setRange(customPlot->yAxis->range().lower, maxEnergy / RANGE_SCARRE_LOWER);
+            }
+        }
     }
 
     {
+        double maxPoint = 0;
         QVector<double> keys, values;
         QVector<QColor> colors;
-        for (int i=0; i<r2.size(); ++i){
+        for (size_t i=0; i<r2.size(); ++i){
             keys << i+1;
             if (channel == 0x00)
                 values << r2[i].dataPoint1;
             else
                 values << r2[i].dataPoint2;
             colors << clrLine[0];
+            maxPoint = qMax(maxPoint, values[i]);
         }
 
-        customPlot->graph(1)->setData(keys, values, colors);
+        if (customPlot->graph(1)->visible()){
+            customPlot->graph(1)->setData(keys, values, colors);
+            if (maxPoint > customPlot->yAxis->range().upper * RANGE_SCARRE_UPPER){
+                customPlot->yAxis->setRange(customPlot->yAxis->range().lower, maxPoint / RANGE_SCARRE_LOWER);
+            }
+        }
     }
 
     customPlot->replot();
@@ -1073,9 +1072,8 @@ void PlotWidget::slotSingleSpectrumsAndCurrentPoints(quint8 channel, vector<Sing
 
 void PlotWidget::slotResetPlot()
 {
+    QMutexLocker locker(&mutexRefreshPlot);
     for (int i=0; i<GRAPH_COUNT; ++i){
-        //currentFrame[i].dataE.clear();
-
         customPlot->graph(i)->data()->clear();// ->data()->data().clear();// setData(QVector<double>(), QVector<double>());
     }
 
@@ -1084,6 +1082,7 @@ void PlotWidget::slotResetPlot()
 
 void PlotWidget::switchShowModel(bool refModel)
 {
+    QMutexLocker locker(&mutexRefreshPlot);
     customPlot->graph(ENGRY_GRAPH)->setVisible(!refModel);
     customPlot->graph(GAUSS_GRAPH)->setVisible(!refModel);
     customPlot->graph(REF_GRAPH)->setVisible(refModel);
@@ -1110,6 +1109,7 @@ void PlotWidget::switchShowModel(bool refModel)
 
 void PlotWidget::switchDataModel(bool log)
 {
+    QMutexLocker locker(&mutexRefreshPlot);
     /*
         对于参数formatCode可以参考QT的Qstring::number
         f 普通数字格式，范围过大时出现刻度重叠问题。默认保留小数点后六位，使用void QCPAxis::setNumberPrecision ( int precision)来控制保留多少位的小数点
@@ -1120,13 +1120,33 @@ void PlotWidget::switchDataModel(bool log)
     isLogarithmic = log;
     if (isLogarithmic){
         customPlot->yAxis->setScaleType(QCPAxis::ScaleType::stLogarithmic);
-        customPlot->yAxis->setRange(0.1, 100); // 设置y轴的显示范围
         customPlot->yAxis->setNumberFormat("eb");//使用科学计数法表示刻度
         customPlot->yAxis->setNumberPrecision(0);//小数点后面小数位数
 
+        QSharedPointer<QCPAxisTickerLog> logTicker(new QCPAxisTickerLog);
+        customPlot->yAxis->setTicker(logTicker);
         customPlot->xAxis->setRange(0, 180);
         customPlot->yAxis->setRange(0, 1e5);
+
+        connect(customPlot->xAxis, QOverload<const QCPRange &>::of(&QCPAxis::rangeChanged), this, [=](const QCPRange &range){
+            qint64 maxRange = range.upper - range.lower;
+            if (range.lower<=0){
+               customPlot->xAxis->setRange(0, maxRange);
+            }
+        });
+        connect(customPlot->yAxis, QOverload<const QCPRange &>::of(&QCPAxis::rangeChanged), this, [=](const QCPRange &range){
+            qint64 maxRange = range.upper - range.lower;
+            if (maxRange<=1e3){
+               customPlot->yAxis->setRange(1e-2, range.lower + 1e3);//0.01~1000
+            }
+        });
+
+        //connect(customPlot->yAxis, SIGNAL(rangeChanged(QCPRange)), customPlot->yAxis2, SLOT(setRange(QCPRange)));
+        //connect(customPlot->xAxis, SIGNAL(rangeChanged(QCPRange)), customPlot->xAxis2, SLOT(setRange(QCPRange)));
     } else {
+        QSharedPointer<QCPAxisTicker> ticker(new QCPAxisTicker);
+        customPlot->yAxis->setTicker(ticker);
+
         customPlot->yAxis->setScaleType(QCPAxis::ScaleType::stLinear);
         customPlot->yAxis->setRange(-100, 10000);
         customPlot->yAxis->setNumberFormat("f");
@@ -1141,6 +1161,7 @@ void PlotWidget::switchDataModel(bool log)
 
 void PlotWidget::slotGauss(int leftE, int rightE)
 {
+    QMutexLocker locker(&mutexRefreshPlot);
     double key_from = dragRectItem->topLeft->key();
     double key_to = dragRectItem->bottomRight->key();
     double key_temp = key_from;

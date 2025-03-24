@@ -691,49 +691,6 @@ void CommandHelper::slotStart(qint8 mode)
     socketDetector->write(command);
 }
 
-#include <vector>
-#include <cstdint>
-
-// 生成部分匹配表（最长前缀后缀数组）
-std::vector<int> compute_lps(const std::vector<uint8_t>& pattern) {
-    int m = pattern.size();
-    std::vector<int> lps(m, 0);
-    int len = 0;
-    for (int i = 1; i < m; ) {
-        if (pattern[i] == pattern[len]) {
-            lps[i++] = ++len;
-        } else {
-            if (len != 0) len = lps[len - 1];
-            else lps[i++] = 0;
-        }
-    }
-
-    return lps;
-}
-
-// KMP匹配统计出现次数
-int kmp_count(const int8_t* text, size_t size, const std::vector<uint8_t>& pattern) {
-    if (pattern.empty()) return 0;
-    int count = 0;
-    size_t j = 0; // 模式串索引
-    const auto& lps = compute_lps(pattern);
-
-    for (size_t i = 0; i < size;) {
-        if (text[i] == pattern[j]) {
-            ++i; ++j;
-            if (j == pattern.size()) {
-                ++count;
-                j = lps[j - 1]; // 利用LPS表跳过已匹配部分
-            }
-        } else {
-            if (j != 0) j = lps[j - 1];
-            else ++i;
-        }
-    }
-
-    return count;
-}
-
 //开始手工测量
 #include <QThread>
 void CommandHelper::slotStartManualMeasure(DetectorParameter p)
@@ -844,21 +801,8 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
         if (workStatus == Measuring) {
             if (nullptr != pfSave && binaryData.size() > 0){
                 pfSave->write(binaryData);
-                pfSave->flush();
-//                if (0x03 == detectorParameter.transferModel){
-//                    // 波形个数
-//                    //包头0x0000AAB1 + 通道号（16bit） + 波形数据（4096*16bit） + 包尾0x0000CCD1
-//                    // 使用示例
-//                    //std::vector<uint8_t> data = {0x01, 0x02, 0x03, 0x01, 0x02, 0x03};
-//                    std::vector<uint8_t> target = {0x00, 0x00, 0xaa, 0x0b1};
-//                    int occurrences = kmp_count((const int8_t*)binaryData.data(), binaryData.size(), target); // 返回2
-//                    emit sigRecvPkgCount(occurrences);
-//                } else if (0x00 == detectorParameter.transferModel){
-//                    // 能谱个数
-//                    //包头0x0000AAB2 + 能谱序号（32bit） + 测量时间（32bit） + 通道号（32bit）+ 能谱数据8187*32bit + 包尾0x0000CCD2
-//                }
-
-//                emit sigRecvDataSize(binaryData.size());
+                pfSave->flush();               
+                emit sigRecvDataSize(binaryData.size());
             }
 
             // 只有符合模式才需要做进一步数据处理
@@ -958,7 +902,7 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
             if (detectorParameter.transferModel == 0x00 || detectorParameter.transferModel == 0x05){
                 if (binaryData.compare(command) == 0){
                     prepareStep++;
-                } else if (prepareStep == 5){
+                } else if (prepareStep == 6){
                     //清空
                     command.clear();
 
@@ -1010,7 +954,10 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
                 case 5: // 开始测量/停止测量
                     slotStart(0x02);
                     break;
-                case 6: // 开始测量/停止测量
+                case 6: // 开始测量/停止测量                    
+                    binaryData.remove(0, command.size());                    
+                    break;
+                case 7:
                     workStatus = Measuring;
                     emit sigMeasureStart(detectorParameter.measureModel);
                     binaryData.remove(0, command.size());
@@ -1070,10 +1017,10 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
             }
 
             // 只有符合模式才需要做进一步数据处理
-//            if (detectorParameter.transferModel == 0x05){
-//                QMutexLocker locker(&mutexCache);
-//                cachePool.push_back(binaryData);
-//            }
+            if (detectorParameter.transferModel == 0x05){
+                QMutexLocker locker(&mutexCache);
+                cachePool.push_back(binaryData);
+            }
         }
     });
 
@@ -1259,6 +1206,7 @@ void CommandHelper::slotAnalyzeNetFrame()
                     //12 34 00 0F FF 10 00 11 00 00 AB CD
                     //通过指令来判断测量是否停止
                     if ((quint8)handlerPool.at(0) == 0x12 && (quint8)handlerPool.at(1) == 0x34
+                            && (quint8)handlerPool.at(2) == 0x00 && (quint8)handlerPool.at(3) == 0x0f
                             && (quint8)handlerPool.at(10) == 0xab && (quint8)handlerPool.at(11) == 0xcd){
                         handlerPool.remove(0, 12);
 
@@ -1327,7 +1275,8 @@ void CommandHelper::slotAnalyzeNetFrame()
                     QMutexLocker locker(&mutexPlot);
                     DetTimeEnergy detTimeEnergy;
                     detTimeEnergy.channel = channel;
-                    detTimeEnergy.timeEnergy.swap(temp);
+                    detTimeEnergy.timeEnergy.swap(temp);                    
+                    currentSpectrumFrames.push_back(detTimeEnergy);
                 }
             }
         } else if (detectorParameter.transferModel == 0x03){
@@ -1336,11 +1285,72 @@ void CommandHelper::slotAnalyzeNetFrame()
             // 使用示例
             //std::vector<uint8_t> data = {0x01, 0x02, 0x03, 0x01, 0x02, 0x03};
             //std::vector<uint8_t> target = {0x00, 0x00, 0xaa, 0x0b1};
-            //int occurrences = kmp_count((const int8_t*)handlerPool.data(), handlerPool.size(), target); // 返回2
-            //emit sigRecvPkgCount(occurrences);
-            emit sigRecvDataSize(handlerPool.size());
+            if (0x03 == detectorParameter.transferModel){
+                // 波形个数
+                //包头0x0000AAB1 + 通道号（16bit） + 波形数据（4096*16bit） + 包尾0x0000CCD1
+                // 使用示例
+                //std::vector<uint8_t> data = {0x01, 0x02, 0x03, 0x01, 0x02, 0x03};
+                qint32 count = 0;
+                std::vector<uint8_t> target = {0x00, 0x00, 0xaa, 0x0b1};
+                while (true){
+                    quint32 size = handlerPool.size();
+                    quint32 minPkgSize = (4096+5) * 2;
+                    if (size >= minPkgSize){
+                        // 寻找包头
+                        if ((quint8)handlerPool.at(0) == 0x00 && (quint8)handlerPool.at(1) == 0x00 && (quint8)handlerPool.at(2) == 0xaa && (quint8)handlerPool.at(3) == 0xb1){
+                            // 寻找包尾(正常情况包尾正确)
+                            if ((quint8)handlerPool.at(minPkgSize-4) == 0x00 && (quint8)handlerPool.at(minPkgSize-3) == 0x00 && (quint8)handlerPool.at(minPkgSize-2) == 0xcc && (quint8)handlerPool.at(minPkgSize-1) == 0xd1){
+                                handlerPool.remove(0, minPkgSize);
+                                count++;
+                                continue;
+                            } else {
+                                handlerPool.remove(0, 1);
+                            }
+                        } else if ((quint8)handlerPool.at(0) == 0x12 && (quint8)handlerPool.at(1) == 0x34
+                                   && (quint8)handlerPool.at(10) == 0xab && (quint8)handlerPool.at(11) == 0xcd){
+                           handlerPool.remove(0, 12);
 
-            handlerPool.clear();
+                           if (nullptr != pfSave){
+                               pfSave->close();
+                               delete pfSave;
+                               pfSave = nullptr;
+                           }
+
+                           //测量停止是否需要清空所有数据
+                           handlerPool.clear();
+                           emit sigMeasureStop();
+                           break;
+                        } else {
+                            handlerPool.remove(0, 1);
+                        }
+                    } else if (handlerPool.size() == 12){
+                        //12 34 00 0F FF 10 00 11 00 00 AB CD
+                        //通过指令来判断测量是否停止
+                        if ((quint8)handlerPool.at(0) == 0x12 && (quint8)handlerPool.at(1) == 0x34
+                                && (quint8)handlerPool.at(10) == 0xab && (quint8)handlerPool.at(11) == 0xcd){
+                            handlerPool.remove(0, 12);
+
+                            if (nullptr != pfSave){
+                                pfSave->close();
+                                delete pfSave;
+                                pfSave = nullptr;
+                            }
+
+                            //测量停止是否需要清空所有数据
+                            //currentSpectrumFrames.clear();
+                            emit sigMeasureStop();
+                            break;
+                        } else {
+                            handlerPool.remove(0, 1);
+                        }
+                    } else {
+                        break;
+                    }
+                }
+
+                if (0 != count)
+                    emit sigRecvPkgCount(count);
+            }
         } else {
             handlerPool.clear();
         }
@@ -1587,4 +1597,10 @@ void CommandHelper::saveFileName(QString dstPath)
 void CommandHelper::setDefaultCacheDir(QString dir)
 {
     this->defaultCacheDir = dir;
+}
+
+bool CommandHelper::isConnected()
+{
+    //探测器是否连接
+    return socketDetector->isOpen();
 }

@@ -743,21 +743,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     handlerPool.clear();
 
     QMutexLocker locker2(&mutexReset);
-    currentClockStepNs[0] = 1;//fpga时钟步长（数据包的时长）
-    currentClockStepNs[1] = 1;
-
-    currentRefreshStepNs[0] = 1;//ui时钟步长（界面刷新时长）
-    currentRefreshStepNs[1] = 1;
-
-//    currentStepSpectrumFrame[0].dataT.clear(); // 保存当前时长内的时间、能谱信息，一旦达到1s时长，将交给接口处理
-//    currentStepSpectrumFrame[0].dataE.clear();
-//    currentStepSpectrumFrame[1].dataT.clear();
-//    currentStepSpectrumFrame[1].dataE.clear();
-
     currentSpectrumFrames.clear();
-    currentStepCountFrames.clear();
-//    totalStepCountFrames.clear();
-    totalSpectrumFrames.clear();
 
     //连接探测器
     prepareStep = 0;
@@ -1205,7 +1191,6 @@ void CommandHelper::slotAnalyzeNetFrame()
                     DetTimeEnergy detTimeEnergy;
                     detTimeEnergy.channel = channel;
                     detTimeEnergy.timeEnergy.swap(temp);
-                    currentSpectrumFrames.push_back(detTimeEnergy);
                 }
             }
         } else if (detectorParameter.transferModel == 0x03){
@@ -1221,202 +1206,10 @@ void CommandHelper::slotAnalyzeNetFrame()
 void CommandHelper::slotPlotUpdateFrame()
 {
     QDateTime tmStart = QDateTime::currentDateTime().addDays(-1);
-    const quint64 currentStepBaseNs[2] = {(quint64)1e8, (quint64)1e8};
-    currentClockStepNs[0] = 1;
-    currentClockStepNs[1] = 1;
-    currentRefreshStepNs[0] = 1;
-    currentRefreshStepNs[1] = 1;
-
     vector<TimeEnergy> data1_2, data2_2;
     while (!taskFinished)
     {
-        // 时间步长到了，该刷新界面了
-        if (0/*this->refModel*/){
-            // 对输入的粒子[时间、能量]数据进行统计,给出计数率随时间变化的曲线，注意这里dataT与dataE一定是相同的长度
-            // dataT粒子的时间, 单位ns
-            // dataE粒子的能量
-            // stepT统计的时间步长, 单位s
-            // leftE：左区间
-            // rightE：右区间
-            // return：vector<TimeCountRate> 计数率数组
-            QDateTime tmNow = QDateTime::currentDateTime();
-            if (tmStart.msecsTo(tmNow) >= 10){
-                tmStart = tmNow;
-
-                //1、把分拣之后的数据全部交换出来，让网络继续接收处理
-                std::vector<DetTimeEnergy> swapFrames;
-                {
-                    QMutexLocker locker(&mutexPlot);
-                    totalSpectrumFrames.insert(totalSpectrumFrames.end(), currentSpectrumFrames.begin(), currentSpectrumFrames.end());
-                    swapFrames.swap(currentSpectrumFrames);
-                }                
-
-                QMutexLocker locker(&mutexReset);
-                //2、处理缓存区数据
-                if (swapFrames.size() > 0){
-                    while (!swapFrames.empty()){
-                        DetTimeEnergy detTimeEnergy = swapFrames.front();
-                        swapFrames.erase(swapFrames.begin());
-                        quint8 channel = detTimeEnergy.channel;
-
-                        // 根据步长，将数据添加到当前处理缓存
-                        while (!detTimeEnergy.timeEnergy.empty()){
-                            TimeEnergy timeEnergy = detTimeEnergy.timeEnergy.front();
-                            detTimeEnergy.timeEnergy.erase(detTimeEnergy.timeEnergy.begin());
-
-                            if (timeEnergy.time > currentStepBaseNs[channel] * currentClockStepNs[channel]){
-                                //满足1s时间步长
-                                //判断中间是否丢包
-                                quint32 clockStepNs = timeEnergy.time / currentStepBaseNs[detTimeEnergy.channel];
-                                qDebug() << currentClockStepNs[channel] << "" << clockStepNs;
-                                if (clockStepNs > currentClockStepNs[channel]){
-                                    //丢包了，补齐丢掉的包
-                                    for (quint32 i=currentClockStepNs[channel]; i<clockStepNs; ++i){
-                                        long long t = currentStepBaseNs[channel] * i;
-                                        unsigned short e = 0;
-
-                                        //空包填充
-                                        preStepSpectrumFrame[channel].energy.push_back(e);
-
-//                                        //计数
-//                                        DetStepTimeEnergy cacheCountFrame;
-//                                        cacheCountFrame.channel = channel;
-//                                        cacheCountFrame = i;//currentClockStepNs[frame.channel];
-//                                        cacheCountFrame.dataT = i;//currentClockStepNs[frame.channel];
-//                                        cacheCountFrame.dataE = 0; //单位cps
-//                                        totalStepCountFrames.push_back(cacheCountFrame);
-
-//                                        //能谱
-//                                        PariticalSpectrumFrame cacheSpectrumFrame;
-//                                        cacheSpectrumFrame.channel = channel;
-//                                        cacheSpectrumFrame.stepT = i;//currentClockStepNs[frame.channel];
-//                                        //cacheSpectrumFrame.dataT.push_back(currentClockStepNs[frame.channel]);
-//                                        //cacheSpectrumFrame.dataE = GetSpectrum(preStepSpectrumFrame[frame.channel].dataE, maxEnergy, maxCh);
-//                                        cacheSpectrumFrame.dataT.insert(cacheSpectrumFrame.dataT.begin(), preStepSpectrumFrame[channel].dataT.begin(), preStepSpectrumFrame[channel].dataT.end());
-//                                        cacheSpectrumFrame.dataE.insert(cacheSpectrumFrame.dataE.begin(), preStepSpectrumFrame[channel].dataE.begin(), preStepSpectrumFrame[channel].dataE.end());
-//                                        totalStepSpectrumFrames.push_back(cacheSpectrumFrame);
-
-                                        //符合
-
-                                        currentClockStepNs[channel]++;
-                                    }
-                                } else {
-
-                                }
-                                /////////////////////////////////////////////////////////////////////////////////////////
-
-                                //计数
-                                vector<unsigned short> dataE;
-                                for (quint32 i = 0; i<preStepSpectrumFrame[channel].energy.size(); ++i){
-                                    dataE.push_back(preStepSpectrumFrame[channel].energy.at(i));
-                                }
-                                {
-                                    StepTimeCount stepTimeCount;
-                                    stepTimeCount.time = clockStepNs;
-                                    stepTimeCount.count = GetCount(dataE, this->leftE[channel], this->rightE[channel]); //单位cps
-
-                                    //等到处理完成了再扔进总堆栈里面去
-                                    //totalStepCountFrames[channel].push_back(stepTimeCount);
-
-                                    currentStepCountFrames.push_back(stepTimeCount);
-                                }
-                                /////////////////////////////////////////////////////////////////////////////////////////
-
-                                //能谱
-                                {
-                                    StepTimeEnergy stepTimeEnergy;
-                                    stepTimeEnergy.time = clockStepNs;
-                                    stepTimeEnergy.energy = GetSpectrum(dataE, maxEnergy, maxCh);
-
-                                    //等到处理完成了再扔进总堆栈里面去
-                                    //totalStepSpectrumFrames[channel].push_back(stepTimeEnergy);
-
-                                    currentStepSpectrumFrames.push_back(stepTimeEnergy);
-                                }
-                                /////////////////////////////////////////////////////////////////////////////////////////
-
-                                //符合结果
-                                //注意：这里需要注意，第2个探测器必须等到第1个探测器的的数据到了，才能一起进行计算
-//                                vector<TimeEnergy> data1_2, data2_2;
-//                                for (int i=0; i<cacheSpectrumFrame.dataT.size(); ++i){
-
-//                                }
-//                                data1_2.push_back({900LL,500});
-//                                CoinResult result = coincidenceAnalyzer->Coincidence(data1_2, data2_2, leftE[0], rightE[0], timeWidth);
-//                                //删除容器中已经处理的数据点
-//                                if (result.dataPoint1 <= (int)data1_2.size()) {
-//                                    data1_2.erase(data1_2.begin(), data1_2.begin() + result.dataPoint1);
-//                                } else {
-//                                    data1_2.clear(); // 如果N大于容器的大小，清空容器
-//                                }
-//                                if (result.dataPoint2 <= (int)data2_2.size()) {
-//                                    data2_2.erase(data2_2.begin(), data2_2.begin() + result.dataPoint2);
-//                                } else {
-//                                    data2_2.clear(); // 如果N大于容器的大小，清空容器
-//                                }
-
-                                // 准备计算
-//                                int nanoseconds = 1000000000LL; //1s = 1E9ns
-//                                int time1_elapseFPGA;//计算FPGA当前最大时间与上一时刻的时间差,单位：秒
-//                                int time2_elapseFPGA;//计算FPGA当前最大时间与上一时刻的时间差,单位：秒
-//                                time1_elapseFPGA = data1_2.back().time/nanoseconds - coincidenceAnalyzer->GetcountCoin();//计算FPGA当前最大时间与上一时刻的时间差
-//                                time2_elapseFPGA = data2_2.back().time/nanoseconds - coincidenceAnalyzer->GetcountCoin();//计算FPGA当前最大时间与上一时刻的时间差
-//                                long long lastTime1 = data1_2.back().time;
-//                                long long lastTime2 = data2_2.back().time;
-//                                time1_elapseFPGA = lastTime1/nanoseconds - coincidenceAnalyzer->GetcountCoin();//计算FPGA当前最大时间与上一时刻的时间差
-//                                time2_elapseFPGA = lastTime2/nanoseconds - coincidenceAnalyzer->GetcountCoin();//计算FPGA当前最大时间与上一时刻的时间差
-                                /////////////////////////////////////////////////////////////////////////////////////////
-
-                                preStepSpectrumFrame[channel].energy.clear();
-
-
-                                /////////////////////////////////////////////////////////////////////////////////////////
-
-                                if (timeEnergy.time > currentStepBaseNs[channel] * currentRefreshStepNs[channel] * this->stepT){
-                                    //满足ui设定刷新时间步长
-                                    //计数
-                                    if (this->refModel){
-                                        StepTimeCount sFrame;
-                                        sFrame.time = currentRefreshStepNs[channel] * this->stepT;
-                                        sFrame.count = 0;
-                                        for (auto stepTimeCount : currentStepCountFrames){
-                                            sFrame.count += stepTimeCount.count; // 求和
-                                        }
-
-                                        //求均值
-                                        sFrame.count = sFrame.count / this->stepT;
-
-                                        currentStepCountFrames.clear();
-                                        emit sigRefreshCountData(channel, sFrame);
-                                    } else {
-                                        //能谱
-                                        StepTimeEnergy sFrame;
-                                        sFrame.time = currentRefreshStepNs[channel] * this->stepT;
-                                        sFrame.energy.resize(currentStepSpectrumFrames.at(0).energy.size());
-                                        for (auto stepTimeCount : currentStepSpectrumFrames){
-                                            for (quint32 i=0; i<sFrame.energy.size(); ++i){
-                                                sFrame.energy[i] += stepTimeCount.energy[i]; // 求和
-                                            }
-                                        }
-                                        currentStepSpectrumFrames.clear();
-                                        emit sigRefreshSpectrum(channel, sFrame);
-                                    }
-
-                                    currentRefreshStepNs[channel]++;
-                                }
-
-                                //处理剩余数据
-                                currentClockStepNs[channel]++;
-                                preStepSpectrumFrame[channel].energy.push_back(timeEnergy.energy);
-                            } else {
-                                preStepSpectrumFrame[channel].time = currentClockStepNs[channel];
-                                preStepSpectrumFrame[channel].energy.push_back(timeEnergy.energy);
-                            }
-                        }
-                    }
-                }
-            }
-        } else {
+        {
             QDateTime tmNow = QDateTime::currentDateTime();
             if (tmStart.msecsTo(tmNow) >= 500){
                 tmStart = tmNow;
@@ -1478,21 +1271,12 @@ void CommandHelper::updateParamter(int _stepT, int _leftE[2], int _rightE[2], in
     this->rightE[1] = _rightE[1];
     this->timeWidth = _timewidth;
 
-    currentRefreshStepNs[0] = 1;//ui时钟步长（界面刷新时长）
-    currentRefreshStepNs[1] = 1;
+    currentSpectrumFrames.clear();
 
-//    currentStepSpectrumFrame[0].dataT.clear(); // 保存当前时长内的时间、能谱信息，一旦达到1s时长，将交给接口处理
-//    currentStepSpectrumFrame[0].dataE.clear();
-//    currentStepSpectrumFrame[1].dataT.clear();
-//    currentStepSpectrumFrame[1].dataE.clear();
+    if (reset){
+        //根据_stepT重新计算
 
-//    currentStepCountFrames.clear();
-//    currentStepSpectrumFrames.clear();
-
-//    if (reset){
-//        totalStepCountFrames.clear();
-//    }
-
+    }
 //    //计数模式需要重新刷新图像
 //    if (this->refModel){
 //        for (auto frame : totalStepCountFrames){

@@ -844,7 +844,7 @@ void MainWindow::on_pushButton_measure_clicked()
         int leftE[2] = {ui->spinBox_1_leftE->value(), ui->spinBox_2_leftE->value()};
         int rightE[2] = {ui->spinBox_1_rightE->value(), ui->spinBox_2_rightE->value()};
         int timewidth = ui->spinBox_resolving_time->value();
-        commandhelper->updateParamter(stepT, leftE, rightE, timewidth, true);
+        commandhelper->updateParamter(stepT, leftE, rightE, timewidth, false);
         commandhelper->slotStartManualMeasure(detectorParameter);
 
         QTimer::singleShot(3000, this, [=](){
@@ -915,7 +915,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         int leftE[2] = {ui->spinBox_1_leftE->value(), ui->spinBox_2_leftE_2->value()};
         int rightE[2] = {ui->spinBox_1_rightE_2->value(), ui->spinBox_2_rightE_2->value()};
         int timewidth = ui->spinBox_resolving_time->value();
-        commandhelper->updateParamter(stepT, leftE, rightE, timewidth, true);
+        commandhelper->updateParamter(stepT, leftE, rightE, timewidth, false);
         commandhelper->slotStartAutoMeasure(detectorParameter);
 
         QTimer::singleShot(60000, this, [=](){
@@ -995,7 +995,7 @@ void MainWindow::on_pushButton_refresh_clicked()
     }
 
     int timewidth = ui->spinBox_resolving_time->value();
-    commandhelper->updateParamter(stepT, leftE, rightE, timewidth);
+    commandhelper->updateParamter(stepT, leftE, rightE, timewidth, true);
 }
 
 void MainWindow::on_action_close_triggered()

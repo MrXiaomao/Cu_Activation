@@ -6132,6 +6132,26 @@ QCPAxisTicker::~QCPAxisTicker()
   
 }
 
+void QCPAxisTicker::setTickStep(double step)
+{
+  if (step > 0)
+    mTickStep = step;
+  else
+    qDebug() << Q_FUNC_INFO << "tick step must be greater than zero:" << step;
+}
+
+/*!
+  Sets whether the specified tick step (\ref setTickStep) is absolutely fixed or whether
+  modifications may be applied to it before calculating the finally used tick step, such as
+  permitting multiples or powers. See \ref ScaleStrategy for details.
+
+  The default strategy is \ref ssNone, which means the tick step is absolutely fixed.
+*/
+void QCPAxisTicker::setScaleStrategy(QCPAxisTicker::ScaleStrategy strategy)
+{
+  mScaleStrategy = strategy;
+}
+
 /*!
   Sets which strategy the axis ticker follows when choosing the size of the tick step. For the
   available strategies, see \ref TickStepStrategy.
@@ -6218,10 +6238,38 @@ void QCPAxisTicker::generate(const QCPRange &range, const QLocale &locale, QChar
   implementation, it should reimplement this method. See \ref cleanMantissa for a possible helper
   function.
 */
+//double QCPAxisTicker::getTickStep(const QCPRange &range)
+//{
+//  double exactStep = range.size()/double(mTickCount+1e-10); // mTickCount ticks on average, the small addition is to prevent jitter on exact integers
+//  return cleanMantissa(exactStep);
+//}
+
 double QCPAxisTicker::getTickStep(const QCPRange &range)
 {
-  double exactStep = range.size()/double(mTickCount+1e-10); // mTickCount ticks on average, the small addition is to prevent jitter on exact integers
-  return cleanMantissa(exactStep);
+  switch (mScaleStrategy)
+  {
+    case ssNone:
+    {
+      return mTickStep;
+    }
+    case ssMultiples:
+    {
+      double exactStep = range.size()/double(mTickCount+1e-10); // mTickCount ticks on average, the small addition is to prevent jitter on exact integers
+      return cleanMantissa(exactStep);
+
+//      double exactStep = range.size()/double(mTickCount+1e-10); // mTickCount ticks on average, the small addition is to prevent jitter on exact integers
+//      if (exactStep < mTickStep)
+//        return mTickStep;
+//      else
+//        return qint64(cleanMantissa(exactStep/mTickStep)+0.5)*mTickStep;
+    }
+    case ssPowers:
+    {
+      double exactStep = range.size()/double(mTickCount+1e-10); // mTickCount ticks on average, the small addition is to prevent jitter on exact integers
+      return qPow(mTickStep, int(qLn(exactStep)/qLn(mTickStep)+0.5));
+    }
+  }
+  return mTickStep;
 }
 
 /*! \internal

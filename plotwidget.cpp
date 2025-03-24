@@ -283,17 +283,20 @@ void PlotWidget::initMultiCustomPlot()
     //customPlot->graph(0)->rescaleValueAxis(true);
     customPlot->xAxis->rescale(false);
     customPlot->yAxis->rescale(false);
-    // 设置刻度范围
-    QSharedPointer<QCPAxisTickerFixed> axisTickerFixed(new QCPAxisTickerFixed);
-    axisTickerFixed->setTickStep(256);//每间隔256单位一个标签
-    axisTickerFixed->setScaleStrategy(QCPAxisTickerFixed::ssMultiples);
-    //axisTickerFixed->setTickStepStrategy(QCPAxisTicker::TickStepStrategy::tssMeetTickCount);
-    customPlot->xAxis->setTicker(axisTickerFixed);
+    // 设置刻度范围    
+//    QSharedPointer<QCPAxisTickerFixed> axisTickerFixed(new QCPAxisTickerFixed);
+//    axisTickerFixed->setTickStep(256);//每间隔256单位一个标签
+//    axisTickerFixed->setScaleStrategy(QCPAxisTickerFixed::ssPowers);
+//    axisTickerFixed->setTickStepStrategy(QCPAxisTicker::TickStepStrategy::tssReadability);
+//    customPlot->xAxis->setTicker(axisTickerFixed);
+    customPlot->xAxis->ticker()->setTickStep(256);//每间隔256单位一个标签
+    customPlot->xAxis->ticker()->setScaleStrategy(QCPAxisTicker::ssNone);
+    customPlot->yAxis->ticker()->setScaleStrategy(QCPAxisTicker::ssMultiples);
     customPlot->xAxis->setRange(0, 4096);
     customPlot->yAxis->setRange(-50, 10000);
-    customPlot->yAxis->ticker()->setTickCount(5);
-    customPlot->xAxis->ticker()->setTickCount(16);
-    //customPlot->xAxis->ticker()->setTickStepStrategy(QCPAxisTicker::TickStepStrategy::tssMeetTickCount);
+    //customPlot->yAxis->ticker()->setTickCount(5);
+    //customPlot->xAxis->ticker()->setTickCount(16);
+    //customPlot->xAxis->ticker()->setTickStepStrategy(QCPAxisTicker::TickStepStrategy::tssReadability);
     //customPlot->yAxis2->setPadding(10);//距离右边的距离
 
 //    QSharedPointer<QCPAxisTickerText> xAxisTickerText(new QCPAxisTickerText);

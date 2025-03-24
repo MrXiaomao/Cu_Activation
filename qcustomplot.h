@@ -1743,11 +1743,26 @@ public:
     tssReadability    ///< A nicely readable tick step is prioritized over matching the requested number of ticks (see \ref setTickCount)
     ,tssMeetTickCount ///< Less readable tick steps are allowed which in turn facilitates getting closer to the requested tick count
   };
+
   Q_ENUMS(TickStepStrategy)
   
   QCPAxisTicker();
   virtual ~QCPAxisTicker();
   
+  enum ScaleStrategy { ssNone      ///< Modifications are not allowed, the specified tick step is absolutely fixed. This might cause a high tick density and overlapping labels if the axis range is zoomed out.
+                       ,ssMultiples ///< An integer multiple of the specified tick step is allowed. The used factor follows the base class properties of \ref setTickStepStrategy and \ref setTickCount.
+                       ,ssPowers    ///< An integer power of the specified tick step is allowed.
+                     };
+  Q_ENUMS(ScaleStrategy)
+
+  // getters:
+  double tickStep() const { return mTickStep; }
+  ScaleStrategy scaleStrategy() const { return mScaleStrategy; }
+
+  // setters:
+  void setTickStep(double step);
+  void setScaleStrategy(ScaleStrategy strategy);
+
   // getters:
   TickStepStrategy tickStepStrategy() const { return mTickStepStrategy; }
   int tickCount() const { return mTickCount; }
@@ -1761,6 +1776,11 @@ public:
   // introduced virtual methods:
   virtual void generate(const QCPRange &range, const QLocale &locale, QChar formatChar, int precision, QVector<double> &ticks, QVector<double> *subTicks, QVector<QString> *tickLabels);
   
+protected:
+  // property members:
+  double mTickStep;
+  ScaleStrategy mScaleStrategy;
+
 protected:
   // property members:
   TickStepStrategy mTickStepStrategy;

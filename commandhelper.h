@@ -211,19 +211,7 @@ private:
     unsigned int maxEnergy = 8192;
     int maxCh = 4096;
 
-    quint32 currentClockStepNs[2];//fpga时钟步长（数据包的时长）
-    quint32 currentRefreshStepNs[2];//ui时钟步长（界面刷新时长）
-
-    std::vector<DetTimeEnergy> totalSpectrumFrames;//开始测量以来所有能谱数据
     std::vector<DetTimeEnergy> currentSpectrumFrames;//网络新接收的能谱数据（一般指未处理，未分步长的数据）
-
-    StepTimeEnergy preStepSpectrumFrame[2]; // 预处理能谱信息，一旦达到1s时长，将交给接口处理
-
-    std::vector<StepTimeCount> totalStepCountFrames[2]; // 保存自测试开始以来所有的计数信息(按步长统计)
-    std::vector<StepTimeEnergy> totalStepSpectrumFrames[2]; // 保存自测试开始以来所有的能谱信息
-
-    std::vector<StepTimeCount> currentStepCountFrames;//当前步长内的计数
-    std::vector<StepTimeEnergy> currentStepSpectrumFrames;//当前步长内的能谱信息
 };
 
 #include <QThread>

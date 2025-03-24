@@ -54,6 +54,82 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
         sigPlot(r1, r2, r3);
     });
 
+    connect(this, &CommandHelper::sigMeasureStop, this, [=](){
+        //测量停止保存符合运算结果
+        QString coincidenceResultFile = currentFilename + ".coincidence.csv";
+        {
+            QFile file(coincidenceResultFile);
+            if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+                QTextStream out(&file);
+                out << "CountRate1;CountRate2;ConCount_single;ConCount_multiple";
+
+                vector<CoincidenceResult> coincidenceResult = coincidenceAnalyzer->GetCoinResult();
+                for (size_t i=0; i<coincidenceResult.size(); ++i){
+                    out << coincidenceResult[i].CountRate1 << ";" << coincidenceResult[i].CountRate2 << ";" << coincidenceResult[i].ConCount_single << ";" << coincidenceResult[i].ConCount_multiple;
+                }
+
+                file.flush();
+                file.close();
+            }
+        }
+
+        QString singleSpectrumResultFile = currentFilename + ".singleSpectrum.csv";
+        {
+            QFile file(singleSpectrumResultFile);
+            if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+                QTextStream out(&file);
+                out << "time;Det1-Energy;Det2-Energy";
+
+                vector<SingleSpectrum> singleSpectrum = coincidenceAnalyzer->GetSpectrum();
+                for (size_t i=0; i<singleSpectrum.size(); ++i){
+                    for (size_t j=0; j<MULTI_CHANNEL; ++j){
+                        out << singleSpectrum[i].time << singleSpectrum[i].spectrum[0][j] << singleSpectrum[i].spectrum[1][j];//Qt::endl
+                    }
+                }
+
+                file.flush();
+                file.close();
+            }
+        }
+
+        QString configResultFile = currentFilename + ".config.csv";
+        {
+            QFile file(singleSpectrumResultFile);
+            if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+                QTextStream out(&file);
+
+                if (detectorParameter.transferModel == 0x05){
+                    // 保存粒子测量参数
+                    out << "阈值1;" << detectorParameter.triggerThold1;
+                    out << "阈值2;" << detectorParameter.triggerThold2;
+                    out << "波形极性;" << ((detectorParameter.waveformPolarity==0x00) ? tr("正极性") : tr("负极性"));
+                    out << "死时间;" << detectorParameter.dieTimeLength;
+                    out << "波形触发模式;" << ((detectorParameter.triggerModel==0x00) ? tr("normal") : tr("auto"));
+                    if (detectorParameter.gain==0x00)
+                        out << "探测器增益;" << "0.08";
+                    else if (detectorParameter.gain==0x01)
+                        out << "探测器增益;" << "0.16";
+                    else if (detectorParameter.gain==0x02)
+                        out << "探测器增益;" << "0.32";
+                    else if (detectorParameter.gain==0x03)
+                        out << "探测器增益;" << "0.63";
+                    else if (detectorParameter.gain==0x04)
+                        out << "探测器增益;" << "1.26";
+                    else if (detectorParameter.gain==0x05)
+                        out << "探测器增益;" << "2.52";
+                    else if (detectorParameter.gain==0x06)
+                        out << "探测器增益;" << "5.01";
+                    else if (detectorParameter.gain==0x00)
+                        out << "探测器增益;" << "10";
+                }
+
+                file.flush();
+                file.close();
+            }
+        }
+    });
+
+
     initSocket(&socketDetector);
     socketDetector->setSocketOption(QAbstractSocket::LowDelayOption, 1);//优化Socket以实现低延迟
 }
@@ -615,6 +691,49 @@ void CommandHelper::slotStart(qint8 mode)
     socketDetector->write(command);
 }
 
+#include <vector>
+#include <cstdint>
+
+// 生成部分匹配表（最长前缀后缀数组）
+std::vector<int> compute_lps(const std::vector<uint8_t>& pattern) {
+    int m = pattern.size();
+    std::vector<int> lps(m, 0);
+    int len = 0;
+    for (int i = 1; i < m; ) {
+        if (pattern[i] == pattern[len]) {
+            lps[i++] = ++len;
+        } else {
+            if (len != 0) len = lps[len - 1];
+            else lps[i++] = 0;
+        }
+    }
+
+    return lps;
+}
+
+// KMP匹配统计出现次数
+int kmp_count(const int8_t* text, size_t size, const std::vector<uint8_t>& pattern) {
+    if (pattern.empty()) return 0;
+    int count = 0;
+    size_t j = 0; // 模式串索引
+    const auto& lps = compute_lps(pattern);
+
+    for (size_t i = 0; i < size;) {
+        if (text[i] == pattern[j]) {
+            ++i; ++j;
+            if (j == pattern.size()) {
+                ++count;
+                j = lps[j - 1]; // 利用LPS表跳过已匹配部分
+            }
+        } else {
+            if (j != 0) j = lps[j - 1];
+            else ++i;
+        }
+    }
+
+    return count;
+}
+
 //开始手工测量
 #include <QThread>
 void CommandHelper::slotStartManualMeasure(DetectorParameter p)
@@ -726,11 +845,24 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
             if (nullptr != pfSave && binaryData.size() > 0){
                 pfSave->write(binaryData);
                 pfSave->flush();
-                emit sigRecvData(binaryData.size());
+//                if (0x03 == detectorParameter.transferModel){
+//                    // 波形个数
+//                    //包头0x0000AAB1 + 通道号（16bit） + 波形数据（4096*16bit） + 包尾0x0000CCD1
+//                    // 使用示例
+//                    //std::vector<uint8_t> data = {0x01, 0x02, 0x03, 0x01, 0x02, 0x03};
+//                    std::vector<uint8_t> target = {0x00, 0x00, 0xaa, 0x0b1};
+//                    int occurrences = kmp_count((const int8_t*)binaryData.data(), binaryData.size(), target); // 返回2
+//                    emit sigRecvPkgCount(occurrences);
+//                } else if (0x00 == detectorParameter.transferModel){
+//                    // 能谱个数
+//                    //包头0x0000AAB2 + 能谱序号（32bit） + 测量时间（32bit） + 通道号（32bit）+ 能谱数据8187*32bit + 包尾0x0000CCD2
+//                }
+
+//                emit sigRecvDataSize(binaryData.size());
             }
 
             // 只有符合模式才需要做进一步数据处理
-            if (detectorParameter.transferModel == 0x05){
+            if (detectorParameter.transferModel == 0x05 || detectorParameter.transferModel == 0x03){
                 QMutexLocker locker(&mutexCache);
                 cachePool.push_back(binaryData);
             }
@@ -1052,6 +1184,9 @@ void CommandHelper::slotAnalyzeNetFrame()
 
         //00:能谱 03:波形 05:粒子
         if (detectorParameter.transferModel == 0x00){
+            // 能谱个数
+            //包头0x0000AAB2 + 能谱序号（32bit） + 测量时间（32bit） + 通道号（32bit）+ 能谱数据8187*32bit + 包尾0x0000CCD2
+
             if (1){
                 // 直接写文件                
             } else {
@@ -1133,6 +1268,8 @@ void CommandHelper::slotAnalyzeNetFrame()
                             pfSave = nullptr;
                         }
 
+                        //测量停止是否需要清空所有数据
+                        //currentSpectrumFrames.clear();
                         emit sigMeasureStop();
                         break;
                     } else {
@@ -1194,7 +1331,16 @@ void CommandHelper::slotAnalyzeNetFrame()
                 }
             }
         } else if (detectorParameter.transferModel == 0x03){
+            // 波形个数
+            //包头0x0000AAB1 + 通道号（16bit） + 波形数据（4096*16bit） + 包尾0x0000CCD1
+            // 使用示例
+            //std::vector<uint8_t> data = {0x01, 0x02, 0x03, 0x01, 0x02, 0x03};
+            //std::vector<uint8_t> target = {0x00, 0x00, 0xaa, 0x0b1};
+            //int occurrences = kmp_count((const int8_t*)handlerPool.data(), handlerPool.size(), target); // 返回2
+            //emit sigRecvPkgCount(occurrences);
+            emit sigRecvDataSize(handlerPool.size());
 
+            handlerPool.clear();
         } else {
             handlerPool.clear();
         }

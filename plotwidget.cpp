@@ -289,13 +289,15 @@ void PlotWidget::initMultiCustomPlot()
 //    axisTickerFixed->setScaleStrategy(QCPAxisTickerFixed::ssPowers);
 //    axisTickerFixed->setTickStepStrategy(QCPAxisTicker::TickStepStrategy::tssReadability);
 //    customPlot->xAxis->setTicker(axisTickerFixed);
-    customPlot->xAxis->ticker()->setTickStep(256);//每间隔256单位一个标签
-    customPlot->xAxis->ticker()->setScaleStrategy(QCPAxisTicker::ssNone);
-    customPlot->yAxis->ticker()->setScaleStrategy(QCPAxisTicker::ssMultiples);
-    customPlot->xAxis->setRange(0, 4096);
+    QSharedPointer<QCPAxisTickerLog> axisTickerFixed(new QCPAxisTickerLog);
+    //axisTickerFixed->setLogBase(10);
+    //axisTickerFixed->setSubTickCount(5);
+    customPlot->yAxis->setTicker(axisTickerFixed);
     customPlot->yAxis->setRange(-50, 10000);
     //customPlot->yAxis->ticker()->setTickCount(5);
-    //customPlot->xAxis->ticker()->setTickCount(16);
+
+    customPlot->xAxis->setRange(0, 4096);
+    customPlot->xAxis->ticker()->setTickCount(16);
     //customPlot->xAxis->ticker()->setTickStepStrategy(QCPAxisTicker::TickStepStrategy::tssReadability);
     //customPlot->yAxis2->setPadding(10);//距离右边的距离
 
@@ -1121,11 +1123,17 @@ void PlotWidget::switchDataModel(bool log)
         customPlot->yAxis->setRange(0.1, 100); // 设置y轴的显示范围
         customPlot->yAxis->setNumberFormat("eb");//使用科学计数法表示刻度
         customPlot->yAxis->setNumberPrecision(0);//小数点后面小数位数
+
+        customPlot->xAxis->setRange(0, 180);
+        customPlot->yAxis->setRange(0, 1e5);
     } else {
         customPlot->yAxis->setScaleType(QCPAxis::ScaleType::stLinear);
         customPlot->yAxis->setRange(-100, 10000);
         customPlot->yAxis->setNumberFormat("f");
         customPlot->yAxis->setNumberPrecision(0);
+
+        customPlot->xAxis->setRange(0, 4096);
+        customPlot->yAxis->setRange(0, 1e5);
     }
 
     customPlot->replot();

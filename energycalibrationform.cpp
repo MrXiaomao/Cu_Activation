@@ -10,6 +10,8 @@ EnergyCalibrationForm::EnergyCalibrationForm(QWidget *parent) :
     ui->setupUi(this);
 
     initCustomPlot();
+
+    ui->radioButton_2->setVisible(false);
     ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 }
 
@@ -288,7 +290,10 @@ void EnergyCalibrationForm::calculate(int no)
         }
     }
 
-    //绘制点
+    double xRangLower = 0, xRangUpper = 0;
+    double yRangLower = 0, yRangUpper = 0;
+
+        //绘制点
     {
         QVector<double> keys, values;
         for (int i = 0; i < points.size(); i++)
@@ -296,8 +301,10 @@ void EnergyCalibrationForm::calculate(int no)
             qreal x = points[i].x(), y = points[i].y();
             keys << x;
             values << y;
+            yRangUpper = qMax(yRangUpper, y);
         }
 
+        xRangUpper = points.size() + 0.5;
         customPlot->graph(0)->setData(keys, values);
     }
 
@@ -338,8 +345,10 @@ void EnergyCalibrationForm::calculate(int no)
         customPlot->graph(1)->setData(keys, values);
     }
 
-    customPlot->xAxis->rescale(true);
-    customPlot->yAxis->rescale(true);
+    customPlot->xAxis->setRange(xRangLower, xRangUpper);
+    customPlot->yAxis->setRange(yRangLower, yRangUpper);
+//    customPlot->xAxis->rescale(true);
+//    customPlot->yAxis->rescale(true);
     customPlot->replot();
 }
 

@@ -141,12 +141,19 @@ MainWindow::MainWindow(QWidget *parent)
         QString msg = tr("测量正式开始");
         ui->statusbar->showMessage(msg);
 
+        //开启测量时钟
+        QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
+        measureTimer->start(ui->spinBox_timelength->value());
+
         emit sigAppengMsg(msg, QtInfoMsg);
         emit sigRefreshUi();
     });
 
     // 测量停止
     connect(commandhelper, &CommandHelper::sigMeasureStop, this, [=](){
+        QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
+        measureTimer->stop();
+
         this->setProperty("measuring", false);
         QString msg = tr("测量已停止");
         ui->statusbar->showMessage(msg);
@@ -161,6 +168,9 @@ MainWindow::MainWindow(QWidget *parent)
         this->setProperty("detector_on", false);
         this->setProperty("measuring", false);
 
+        QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
+        measureTimer->stop();
+
         QString msg = QString(tr("网络故障，探测器连接失败！"));
         ui->statusbar->showMessage(msg);
         emit sigAppengMsg(msg, QtCriticalMsg);
@@ -170,8 +180,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(commandhelper, &CommandHelper::sigDetectorStatus, this, [=](bool on){
         this->setProperty("detector_fault", false);
         this->setProperty("detector_on", on);
-        if (!on)
+        if (!on){
             this->setProperty("measuring", false);
+            QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
+            measureTimer->stop();
+        }
 
         QString msg = QString(tr("探测器状态：%1")).arg(on ? tr("开") : tr("关"));
         ui->statusbar->showMessage(msg);
@@ -454,6 +467,21 @@ void MainWindow::InitMainWindowUi()
         qDebug() << "main timer: " << QThread::currentThreadId();
     });
     timer->start(500);
+
+    QTimer* measureTimer = new QTimer(this);
+    measureTimer->setObjectName("measureTimer");
+    connect(measureTimer, &QTimer::timeout, this, [=](){
+        emit sigAppengMsg(tr("定时测量倒计时结束，自动停止测量！"), QtInfoMsg);
+
+        //自动测量时间到，停止测量
+        measureTimer->stop();
+        if (this->property("measure-model").toUInt() == 0x00)
+            commandhelper->slotStopManualMeasure();
+        else
+            commandhelper->slotStopAutoMeasure();
+
+        QMessageBox::information(this, tr("提醒"), tr("定时测量倒计时结束，自动停止测量！"));
+    });
 
     QTimer* timerException = new QTimer(this);
     timerException->setObjectName("exceptionCheckClock");
@@ -1092,8 +1120,7 @@ std::function<bool(const QString &,const QString &)> CopyDirectoryFiles = [](con
 
 void MainWindow::on_action_restore_triggered()
 {
-    if (QMessageBox::warning(this, tr("提示"), tr("是否恢复出厂设置？"), QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) != QMessageBox::Yes)
-        return ;
+    if (QMessageBox::warning(this, tr("提示"), tr("是否恢复出厂设置？\n恢复出厂设置只影响软件界面的默认参数，不影响硬件的相关参数。"), QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) != QMessageBox::Yes)
 
     qInfo() << tr("恢复出厂设置");
     if (CopyDirectoryFiles("./config/default", "./config/"))
@@ -1186,11 +1213,18 @@ void MainWindow::slotRefreshUi()
         ui->action_config->setEnabled(false);
     } else {
         if (!this->property("detector_on").toBool()){
+            ui->action_partical->setEnabled(false);
+            ui->action_SpectrumModel->setEnabled(false);
+            ui->action_WaveformModel->setEnabled(false);
             ui->action_config->setEnabled(false);
             ui->action_detector_connect->setIcon(QIcon(":/resource/conect.png"));
             ui->action_detector_connect->setText(tr("打开探测器"));
             ui->action_detector_connect->setIconText(tr("打开探测器"));
         } else {
+            ui->action_partical->setEnabled(true);
+            ui->action_SpectrumModel->setEnabled(true);
+            ui->action_WaveformModel->setEnabled(true);
+
             ui->action_config->setEnabled(true);
             ui->action_detector_connect->setIcon(QIcon(":/resource/conect-on.png"));
             ui->action_detector_connect->setText(tr("关闭探测器"));

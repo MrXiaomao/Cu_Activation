@@ -40,7 +40,7 @@ WaveformModel::WaveformModel(QWidget *parent)
         ui->label_13->setText(time.toString("HH:mm:ss"));
     });
 
-    connect(commandhelper, &CommandHelper::sigRecvData, this, [=](qint32 size){
+    connect(commandhelper, &CommandHelper::sigRecvDataSize, this, [=](qint32 size){
         auto cal = [=](qint64 sz){
             double num = (double)sz;
             QStringList list;
@@ -60,6 +60,10 @@ WaveformModel::WaveformModel(QWidget *parent)
 
         total_filesize += size;
         ui->label_size->setText(cal(total_filesize));
+    });
+
+    connect(commandhelper, &CommandHelper::sigRecvPkgCount, this, [=](qint32 count){
+        ui->label_size->setText(QString::number(count));
     });
 
     this->load();

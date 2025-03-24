@@ -114,7 +114,8 @@ signals:
     void sigMeasureStop();
 
     //网络包数大小
-    void sigRecvData(qint32);
+    void sigRecvDataSize(qint32);
+    void sigRecvPkgCount(qint32);
 
 private:
     QByteArray frame;

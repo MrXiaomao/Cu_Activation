@@ -143,6 +143,7 @@ void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> data1, vector<
             spec_temp.spectrum[1][i] = spectrum2[i];
         }
     }
+
     if(AllSpectrum.size() >= MAX_REMAIN_SPECTRUM) AllSpectrum.erase(AllSpectrum.begin()); //当超过最大能谱数目时，则先进先出
     AllSpectrum.push_back(spec_temp);
 }

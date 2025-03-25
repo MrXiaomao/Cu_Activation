@@ -251,14 +251,11 @@ MainWindow::MainWindow(QWidget *parent)
         lastRecvDataTime = QDateTime::currentDateTime();
         bool pause_plot = this->property("pause_plot").toBool();
         if (!pause_plot){
-            PlotWidget* plotWidget1 = this->findChild<PlotWidget*>("real-Detector-1");
-            PlotWidget* plotWidget2 = this->findChild<PlotWidget*>("real-Detector-2");
-            PlotWidget* plotWidget3 = this->findChild<PlotWidget*>("real-Result");
-
-            qDebug() << "main sigPlot: " << QThread::currentThreadId();
-            plotWidget1->slotSingleSpectrumsAndCurrentPoints(0, r1, r2);
-            plotWidget2->slotSingleSpectrumsAndCurrentPoints(1, r1, r2);
-            plotWidget3->slotCoincidenceResults(r3);
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-plotWidget");
+            //plotWidget->slotSingleSpectrumsAndCurrentPoints(0, r1, r2);
+            //plotWidget->slotSingleSpectrumsAndCurrentPoints(1, r1, r2);
+            //plotWidget->slotCoincidenceResults(r3);
+            plotWidget->slotUpdatePlotDatas(r1, r2, r3);
 
             ui->lcdNumber_CountRate1->display(r3.back().CountRate1);
             ui->lcdNumber_CountRate2->display(r3.back().CountRate2);
@@ -423,7 +420,7 @@ void MainWindow::InitMainWindowUi()
             ui->widget_result->hide();
         }
     });
-    emit grp->buttonClicked(1);//默认能谱模式
+    //emit grp->buttonClicked(1);//默认能谱模式
 
     // 任务栏信息
     QLabel *label_Idle = new QLabel(ui->statusbar);
@@ -525,6 +522,12 @@ void MainWindow::InitMainWindowUi()
 void MainWindow::initCustomPlot()
 {
     //this->setDockNestingEnabled(true);
+    {
+        PlotWidget *customPlotWidget = new PlotWidget(this);
+        customPlotWidget->initCustomPlot();
+        ui->widget_plot->layout()->addWidget(customPlotWidget);
+        return;
+    }
 
     QSplitter *spMainWindow = new QSplitter(Qt::Vertical, nullptr);
 

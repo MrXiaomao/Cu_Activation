@@ -14,11 +14,16 @@ class QCPGraph;
 class QCPAbstractPlottable;
 class QCPItemStraightLine;
 class QCPItemCurve;
-class PlotWidget : public QDockWidget
+class PlotWidget : public QWidget
 {
     Q_OBJECT
 public:
     explicit PlotWidget(QWidget *parent = nullptr);
+
+    void init();
+    QCustomPlot *allocCustomPlot(QString objName, QWidget *parent = nullptr);
+    QCPItemStraightLine *allocStraightLineItem(QCustomPlot *customPlot);
+    void dispatchAdditionalFunction(QCustomPlot *customPlot);
 
     void initCustomPlot();
     void initMultiCustomPlot();
@@ -72,15 +77,13 @@ private:
         GAUSS_GRAPH = 2,
         GRAPH_COUNT = 3
     };
-    QCustomPlot *customPlot;
-    QCPGraph *selectGraph = nullptr;
-    QCPItemText *titleTextTtem;// 显示图例名称
-    QCPItemText *coordsTextItem; // 显示拟合信息
-    QCPItemText *textTipItem;// 用于鼠标点击显示轴坐标值信息
-    QCPItemLine *lineFlagItem;// 标记选择点
-    QCPItemRect *dragRectItem;//框选
-    QCPItemStraightLine *lineLeft = nullptr;
-    QCPItemStraightLine *lineRight = nullptr;
+
+    //QCustomPlot *customPlot;
+    //QCPItemText *coordsTextItem; // 显示拟合信息
+    //QCPItemText *textTipItem;// 用于鼠标点击显示轴坐标值信息
+    //QCPItemLine *lineFlagItem;// 选择点标记竖线
+    //QCPItemStraightLine *lineLeft = nullptr;
+    //QCPItemStraightLine *lineRight = nullptr;
 
     bool showAxis = false;//是否显示轴线
     bool isDragging = false;

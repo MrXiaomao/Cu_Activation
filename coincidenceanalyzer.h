@@ -53,6 +53,9 @@ public:
         swap(AllSpectrum, emptySpec);
 
         vector<CurrentPoint>().swap(AllPoint);
+
+        vector<TimeEnergy>().swap(unusedData1);
+        vector<TimeEnergy>().swap(unusedData2);
     }
 
     //已经处理的计数率点数，也就是FPGA数据，已经处理了的时间长度，单位:秒

@@ -41,7 +41,7 @@ MainWindow::MainWindow(QWidget *parent)
     this->setProperty("detector_fault", false);
     this->setProperty("detector_on", false);
     //测量
-    this->setProperty("measuring", false);
+    this->setProperty("measure-status", msNone);
     //测量模式
     this->setProperty("measure-model", 0x00);
     //暂停刷新
@@ -124,7 +124,7 @@ MainWindow::MainWindow(QWidget *parent)
 
         if (!on){
             //电源关闭，设备断电，测量强制停止
-            this->setProperty("measuring", false);
+            this->setProperty("measure-status", msEnd);
         }
         QString msg = QString(tr("电源状态：%1")).arg(on ? tr("开") : tr("关"));
         ui->statusbar->showMessage(msg);
@@ -141,10 +141,10 @@ MainWindow::MainWindow(QWidget *parent)
         QTimer* exceptionCheckTimer = this->findChild<QTimer*>("exceptionCheckTimer");
         exceptionCheckTimer->start(5000);
 
-        this->setProperty("measuring", true);
+        this->setProperty("measure-status", msStart);
         this->setProperty("measure-model", mode);
         if (mode == 0x01)
-            ui->start_time_text->setDateTime(QDateTime::currentDateTime());
+            ui->start_time_text->setText(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
         QString msg = tr("测量正式开始");
         ui->statusbar->showMessage(msg);
 
@@ -164,6 +164,10 @@ MainWindow::MainWindow(QWidget *parent)
         emit sigRefreshUi();
     });
 
+    connect(commandhelper, &CommandHelper::sigMeasureWait, this, [=](){
+        this->setProperty("measure-status", msWaiting);
+    });
+
     // 测量停止
     connect(commandhelper, &CommandHelper::sigMeasureStop, this, [=](){
         QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
@@ -172,7 +176,7 @@ MainWindow::MainWindow(QWidget *parent)
         QTimer* measureRefTimer = this->findChild<QTimer*>("measureRefTimer");
         measureRefTimer->stop();
 
-        this->setProperty("measuring", false);
+        this->setProperty("measure-status", msEnd);
         QString msg = tr("测量已停止");
         ui->statusbar->showMessage(msg);
         emit sigAppengMsg(msg, QtInfoMsg);
@@ -184,7 +188,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(commandhelper, &CommandHelper::sigDetectorFault, this, [=](){
         this->setProperty("detector_fault", true);
         this->setProperty("detector_on", false);
-        this->setProperty("measuring", false);
+        this->setProperty("measure-status", msEnd);
 
         QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
         measureTimer->stop();
@@ -199,7 +203,7 @@ MainWindow::MainWindow(QWidget *parent)
         this->setProperty("detector_fault", false);
         this->setProperty("detector_on", on);
         if (!on){
-            this->setProperty("measuring", false);
+            this->setProperty("measure-status", msEnd);
             QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
             measureTimer->stop();
         }
@@ -318,7 +322,7 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 void MainWindow::InitMainWindowUi()
 {
     // 获取当前时间
-    ui->start_time_text->setDateTime(QDateTime::currentDateTime());
+    //ui->start_time_text->setDateTime(QDateTime::currentDateTime());
     ui->textEdit_log->clear();
 
     QString path = QApplication::applicationDirPath() + "/config";
@@ -499,11 +503,11 @@ void MainWindow::InitMainWindowUi()
     connect(exceptionCheckTimer, &QTimer::timeout, this, [=](){
         // 获取当前时间
         QDateTime currentDateTime = QDateTime::currentDateTime();
-        if (this->property("measuring").toBool()){
+        if (this->property("measure-status").toUInt() == msPrepare){
             if (lastRecvDataTime.secsTo(currentDateTime) > 3){
                 exceptionCheckTimer->stop();
-                emit sigAppengMsg(tr("探测器故障"), QtCriticalMsg);
-                QMessageBox::critical(this, tr("错误"), tr("探测器故障，请检查！"));
+                emit sigAppengMsg(tr("探测器数据异常"), QtCriticalMsg);
+                //QMessageBox::critical(this, tr("错误"), tr("探测器故障，请检查！"));
             }
         }
     });
@@ -780,8 +784,10 @@ void MainWindow::on_action_power_triggered()
         commandhelper->openRelay(ip, port);
     } else {
         //如果正在测量，停止测量
-        if (!this->property("measuring").toBool()){
-            if (this->property("measure-model").toUInt() == 0x00)
+        if (this->property("measure-status").toUInt() == msPrepare
+                || this->property("measure-status").toUInt() == msWaiting
+                || this->property("measure-status").toUInt() == msStart){
+            if (this->property("measure-model").toUInt() == mmManual)
                 commandhelper->slotStopManualMeasure();
             else
                 commandhelper->slotStopAutoMeasure();
@@ -837,8 +843,11 @@ void MainWindow::on_action_energycalibration_triggered()
 
 void MainWindow::on_pushButton_measure_clicked()
 {
-    if (!this->property("measuring").toBool()){
+    if (this->property("measure-status").toUInt() == msNone
+            || this->property("measure-status").toUInt() == msEnd){
         this->save();
+
+        this->setProperty("measure-status", msPrepare);
 
         //手动测量
         DetectorParameter detectorParameter;
@@ -890,17 +899,18 @@ void MainWindow::on_pushButton_measure_clicked()
 
         QTimer::singleShot(3000, this, [=](){
             //指定时间未收到开始测量指令，则按钮恢复初始状态
-            if (!this->property("measuring").toBool()){
+            if (this->property("measure-status").toUInt() == msPrepare){
+                commandhelper->slotStopManualMeasure();
                 ui->pushButton_measure->setEnabled(true);
             }
         });
     } else {
         ui->pushButton_measure->setEnabled(false);
-        commandhelper->slotStopAutoMeasure();
+        commandhelper->slotStopManualMeasure();
 
-        QTimer::singleShot(5000, this, [=](){
+        QTimer::singleShot(3000, this, [=](){
             //指定时间未收到停止测量指令，则按钮恢复初始状态
-            if (this->property("measuring").toBool()){
+            if (this->property("measure-status").toUInt() != msEnd){
                 ui->pushButton_measure->setEnabled(true);
             }
         });
@@ -910,8 +920,11 @@ void MainWindow::on_pushButton_measure_clicked()
 void MainWindow::on_pushButton_measure_2_clicked()
 {
     //自动测量
-    if (!this->property("measuring").toBool()){
+    if (this->property("measure-status").toUInt() == msNone
+            || this->property("measure-status").toUInt() == msEnd){
         this->save();
+
+        this->setProperty("measure-status", msPrepare);
 
         //手动测量
         DetectorParameter detectorParameter;
@@ -945,9 +958,8 @@ void MainWindow::on_pushButton_measure_2_clicked()
         ui->pushButton_gauss->setEnabled(true);
         ui->action_refresh->setEnabled(true);
         ui->pushButton_measure->setEnabled(false);
-        ui->pushButton_measure_2->setText(tr("等待触发"));
-        ui->pushButton_measure_2->setEnabled(false);
-        ui->start_time_text->setDateTime(QDateTime(QDate(0,0,0), QTime(0, 0, 0)));
+        ui->pushButton_measure_2->setText(tr("停止测量"));
+        ui->start_time_text->setText("0000-00-00 00:00:00");
         for (int i=0; i<2; ++i){
             PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(i+1));
             plotWidget->slotResetPlot();
@@ -963,9 +975,11 @@ void MainWindow::on_pushButton_measure_2_clicked()
         commandhelper->updateParamter(stepT, leftE, rightE, timewidth, false);
         commandhelper->slotStartAutoMeasure(detectorParameter);
 
-        QTimer::singleShot(60000, this, [=](){
+        ui->pushButton_measure_2_tip->setText(tr("等待触发..."));
+        QTimer::singleShot(3000, this, [=](){
             //指定时间未收到开始测量指令，则按钮恢复初始状态
-            if (!this->property("measuring").toBool()){
+            if (this->property("measure-status").toUInt() == msPrepare){
+                commandhelper->slotStopAutoMeasure();
                 ui->pushButton_measure_2->setEnabled(true);
             }
         });
@@ -973,9 +987,9 @@ void MainWindow::on_pushButton_measure_2_clicked()
         ui->pushButton_measure_2->setEnabled(false);
         commandhelper->slotStopAutoMeasure();
 
-        QTimer::singleShot(5000, this, [=](){
-            //指定时间未收到开始测量指令，则按钮恢复初始状态
-            if (this->property("measuring").toBool()){
+        QTimer::singleShot(3000, this, [=](){
+            //指定时间未收到停止测量指令，则按钮恢复初始状态
+            if (this->property("measure-status").toUInt() != msEnd){
                 ui->pushButton_measure_2->setEnabled(true);
             }
         });
@@ -1146,7 +1160,7 @@ void MainWindow::on_action_restore_triggered()
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    if (this->property("measuring").toBool()){
+    if (this->property("measure-status").toUInt() != msEnd){
         QMessageBox::warning(this, tr("提示"), tr("测量过程中，禁止退出程序！"), QMessageBox::Ok, QMessageBox::Ok);
         event->ignore();
         return ;
@@ -1250,8 +1264,9 @@ void MainWindow::slotRefreshUi()
     }
 
     //测量
-    if (this->property("measuring").toBool()){
+    if (this->property("measure-status").toUInt() == msStart){
         ui->action_refresh->setEnabled(true);
+        ui->pushButton_measure_2_tip->setText("");
 
         //测量过程中不允许修改能床幅值
         ui->spinBox_1_leftE->setEnabled(false);

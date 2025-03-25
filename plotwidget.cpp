@@ -6,6 +6,8 @@
 
 #define RANGE_SCARRE_UPPER 0.8
 #define RANGE_SCARRE_LOWER 0.4
+#define X_AXIS_LOWER    0
+#define Y_AXIS_LOWER    -100
 
 PlotWidget::PlotWidget(QWidget *parent) : QDockWidget(parent)
     , titleTextTtem(nullptr)
@@ -68,7 +70,7 @@ void PlotWidget::initCustomPlot()
     //axisTickerFixed->setTickStepStrategy(QCPAxisTicker::TickStepStrategy::tssMeetTickCount);
     //customPlot->xAxis->setTicker(axisTickerFixed);
     customPlot->xAxis->setRange(0, 180);
-    customPlot->yAxis->setRange(-50, 10000);
+    customPlot->yAxis->setRange(Y_AXIS_LOWER, 10000);
     customPlot->yAxis->ticker()->setTickCount(5);
     customPlot->xAxis->ticker()->setTickCount(16);
     //customPlot->xAxis->ticker()->setTickStepStrategy(QCPAxisTicker::TickStepStrategy::tssMeetTickCount);
@@ -222,6 +224,31 @@ void PlotWidget::initCustomPlot()
     connect(customPlot, SIGNAL(beforeReplot()), this, SLOT(slotBeforeReplot()));
     connect(customPlot, SIGNAL(afterLayout()), this, SLOT(slotBeforeReplot()));
 
+    connect(customPlot->xAxis, QOverload<const QCPRange &>::of(&QCPAxis::rangeChanged), this, [=](const QCPRange &range){
+        qint64 maxRange = range.upper - range.lower;
+        if (range.lower < 0){
+           customPlot->xAxis->setRange(0, maxRange);
+        } else if (maxRange < 1e2){
+            customPlot->xAxis->setRange(range.lower, range.lower + 1e2);//0.01~1000
+         }
+    });
+    connect(customPlot->yAxis, QOverload<const QCPRange &>::of(&QCPAxis::rangeChanged), this, [=](const QCPRange &range){
+        qint64 maxRange = range.upper - range.lower;
+        if (isLogarithmic){
+            if (maxRange < 1e2){
+               customPlot->yAxis->setRange(1e-2, range.lower + 1e2);//0.01~1000
+            }
+        } else if (maxRange < 1e2){
+            customPlot->yAxis->setRange(range.lower, range.lower + 1e2);//0.01~1000
+        } else if (range.lower < Y_AXIS_LOWER){
+            customPlot->yAxis->setRange(Y_AXIS_LOWER, maxRange + 1e2);//0.01~1000
+        }
+    });
+
+    //connect(customPlot->yAxis, SIGNAL(rangeChanged(QCPRange)), customPlot->yAxis2, SLOT(setRange(QCPRange)));
+    //connect(customPlot->xAxis, SIGNAL(rangeChanged(QCPRange)), customPlot->xAxis2, SLOT(setRange(QCPRange)));
+
+
 //    QTimer::singleShot(50, this, [=](){
 //        //随机数据
 //        for (int index = 0; index < customPlot->graphCount(); ++index) {
@@ -296,7 +323,7 @@ void PlotWidget::initMultiCustomPlot()
     //axisTickerFixed->setLogBase(10);
     //axisTickerFixed->setSubTickCount(5);
     customPlot->yAxis->setTicker(axisTickerFixed);
-    customPlot->yAxis->setRange(-50, 10000);
+    customPlot->yAxis->setRange(Y_AXIS_LOWER, 10000);
     //customPlot->yAxis->ticker()->setTickCount(5);
 
     customPlot->xAxis->setRange(0, 4096);
@@ -445,12 +472,26 @@ void PlotWidget::initMultiCustomPlot()
     connect(customPlot, SIGNAL(beforeReplot()), this, SLOT(slotBeforeReplot()));
     connect(customPlot, SIGNAL(afterLayout()), this, SLOT(slotBeforeReplot()));
 
-    //connect(customPlot, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(mousePress()));
-    connect(customPlot, &QCustomPlot::mouseWheel, this, [=](QWheelEvent*){
-        customPlot->yAxis->setRangeLower(-200);
-        customPlot->xAxis->setRangeLower(0);
+    connect(customPlot->xAxis, QOverload<const QCPRange &>::of(&QCPAxis::rangeChanged), this, [=](const QCPRange &range){
+        qint64 maxRange = range.upper - range.lower;
+        if (range.lower < 0){
+           customPlot->xAxis->setRange(0, maxRange);
+        } else if (maxRange < 1e2){
+            customPlot->xAxis->setRange(range.lower, range.lower + 1e2);//0.01~1000
+         }
     });
-
+    connect(customPlot->yAxis, QOverload<const QCPRange &>::of(&QCPAxis::rangeChanged), this, [=](const QCPRange &range){
+        qint64 maxRange = range.upper - range.lower;
+        if (isLogarithmic){
+            if (maxRange < 1e2){
+               customPlot->yAxis->setRange(1e-2, range.lower + 1e2);//0.01~1000
+            }
+        } else if (maxRange < 1e2){
+            customPlot->yAxis->setRange(range.lower, range.lower + 1e2);//0.01~1000
+        } else if (range.lower < Y_AXIS_LOWER){
+            customPlot->yAxis->setRange(Y_AXIS_LOWER, maxRange + 1e2);//0.01~1000
+        }
+    });
 
     switchShowModel(false);
     switchDataModel(false);
@@ -1125,35 +1166,19 @@ void PlotWidget::switchDataModel(bool log)
 
         QSharedPointer<QCPAxisTickerLog> logTicker(new QCPAxisTickerLog);
         customPlot->yAxis->setTicker(logTicker);
-        customPlot->xAxis->setRange(0, 180);
-        customPlot->yAxis->setRange(0, 1e5);
-
-        connect(customPlot->xAxis, QOverload<const QCPRange &>::of(&QCPAxis::rangeChanged), this, [=](const QCPRange &range){
-            qint64 maxRange = range.upper - range.lower;
-            if (range.lower<=0){
-               customPlot->xAxis->setRange(0, maxRange);
-            }
-        });
-        connect(customPlot->yAxis, QOverload<const QCPRange &>::of(&QCPAxis::rangeChanged), this, [=](const QCPRange &range){
-            qint64 maxRange = range.upper - range.lower;
-            if (maxRange<=1e3){
-               customPlot->yAxis->setRange(1e-2, range.lower + 1e3);//0.01~1000
-            }
-        });
-
-        //connect(customPlot->yAxis, SIGNAL(rangeChanged(QCPRange)), customPlot->yAxis2, SLOT(setRange(QCPRange)));
-        //connect(customPlot->xAxis, SIGNAL(rangeChanged(QCPRange)), customPlot->xAxis2, SLOT(setRange(QCPRange)));
+        //customPlot->xAxis->setRange(0, 180);
+        customPlot->yAxis->setRange(1e-2, 1e5);
     } else {
         QSharedPointer<QCPAxisTicker> ticker(new QCPAxisTicker);
         customPlot->yAxis->setTicker(ticker);
 
         customPlot->yAxis->setScaleType(QCPAxis::ScaleType::stLinear);
-        customPlot->yAxis->setRange(-100, 10000);
+        customPlot->yAxis->setRange(0, 10000);
         customPlot->yAxis->setNumberFormat("f");
         customPlot->yAxis->setNumberPrecision(0);
 
         customPlot->xAxis->setRange(0, 4096);
-        customPlot->yAxis->setRange(0, 1e5);
+        customPlot->yAxis->setRange(Y_AXIS_LOWER, 1e4);
     }
 
     customPlot->replot();

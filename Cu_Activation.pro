@@ -47,6 +47,7 @@ HEADERS += \
     dataanalysiswidget.h \
     energycalibrationform.h \
     equipmentmanagementform.h \
+    pch.h \
     plotwidget.h \
     polynomialfit.h \
     qcustomplot.h \

@@ -75,7 +75,8 @@ public:
         NoWork = 0,     // 未开始
         Preparing = 1,  // 准备过程中...
         Measuring = 2,  // 测量中...
-        WorkEnd = 3    // 测量结束
+        Waiting = 3,  // 测量中...
+        WorkEnd = 4    // 测量结束
     };
 
     enum MeasureModelFlag {
@@ -110,8 +111,9 @@ signals:
     void sigDoTasks();
     void sigAnalyzeFrame();
 
-    //自动测量正式开始
+    //测量正式开始/等待/停止
     void sigMeasureStart(qint8 mode);
+    void sigMeasureWait();
     void sigMeasureStop();
 
     //网络包数大小

@@ -21,7 +21,6 @@ protected:
     virtual bool eventFilter(QObject *watched, QEvent *event) override;
 
 public slots:
-    void slotPlowWidgetDoubleClickEvent();
 
 private:    
     Ui::DataAnalysisWidget *ui;

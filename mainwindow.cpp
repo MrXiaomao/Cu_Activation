@@ -43,7 +43,7 @@ MainWindow::MainWindow(QWidget *parent)
     //测量
     this->setProperty("measure-status", msNone);
     //测量模式
-    this->setProperty("measure-model", 0x00);
+    this->setProperty("measure-model", mmNone);
     //暂停刷新
     this->setProperty("pause_plot", false);
     //线性模型
@@ -143,13 +143,13 @@ MainWindow::MainWindow(QWidget *parent)
 
         this->setProperty("measure-status", msStart);
         this->setProperty("measure-model", mode);
-        if (mode == 0x01)
+        if (mode == mmAuto)
             ui->start_time_text->setText(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
         QString msg = tr("测量正式开始");
         ui->statusbar->showMessage(msg);
 
         //开启测量时钟
-        if (mode == 0x01 || mode == 0x02){//手动/自动测量
+        if (mode == mmManual || mode == mmAuto){//手动/自动测量
             //测量倒计时时钟
             QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
             measureTimer->start();
@@ -214,36 +214,6 @@ MainWindow::MainWindow(QWidget *parent)
         emit sigRefreshUi();
     });
 
-    qRegisterMetaType<SingleSpectrum>("SingleSpectrum");
-    connect(commandhelper, &CommandHelper::sigSingleSpectrum, this, [=](SingleSpectrum result){
-        bool pause_plot = this->property("pause_plot").toBool();
-        if (!pause_plot){
-            for (int channel=0; channel<2; ++channel){
-                PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(channel+1));
-                plotWidget->slotSingleSpectrum(result);
-            }
-        }
-    });
-    qRegisterMetaType<CurrentPoint>("CurrentPoint");
-    connect(commandhelper, &CommandHelper::sigCurrentPoint, this, [=](quint32 time, CurrentPoint result){
-        bool pause_plot = this->property("pause_plot").toBool();
-        if (!pause_plot){
-            for (int channel=0; channel<2; ++channel){
-                PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(channel+1));
-                plotWidget->slotCurrentPoint(time, result);
-            }
-        }
-    });
-    qRegisterMetaType<CoincidenceResult>("CoincidenceResult");
-    connect(commandhelper, &CommandHelper::sigCoincidenceResult, this, [=](quint32 time, CoincidenceResult result){
-        bool pause_plot = this->property("pause_plot").toBool();
-        if (!pause_plot){
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-Result");
-            plotWidget->slotCoincidenceResult(time, result);
-        }
-    });
-
-    qDebug() << "main Thread: " << QThread::currentThreadId();
     qRegisterMetaType<vector<SingleSpectrum>>("vector<SingleSpectrum>");
     qRegisterMetaType<vector<CurrentPoint>>("vector<CurrentPoint>");
     qRegisterMetaType<vector<CoincidenceResult>>("vector<CoincidenceResult>");
@@ -251,17 +221,14 @@ MainWindow::MainWindow(QWidget *parent)
         lastRecvDataTime = QDateTime::currentDateTime();
         bool pause_plot = this->property("pause_plot").toBool();
         if (!pause_plot){
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-plotWidget");
-            //plotWidget->slotSingleSpectrumsAndCurrentPoints(0, r1, r2);
-            //plotWidget->slotSingleSpectrumsAndCurrentPoints(1, r1, r2);
-            //plotWidget->slotCoincidenceResults(r3);
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
             plotWidget->slotUpdatePlotDatas(r1, r2, r3);
 
             ui->lcdNumber_CountRate1->display(r3.back().CountRate1);
             ui->lcdNumber_CountRate2->display(r3.back().CountRate2);
             ui->lcdNumber_ConCount_single->display(r3.back().ConCount_single);
         }
-    }, Qt::DirectConnection/*防止堵塞*/);
+    }, Qt::QueuedConnection/*防止堵塞*/);
 
     emit sigRefreshUi();
 
@@ -402,25 +369,17 @@ void MainWindow::InitMainWindowUi()
     grp->addButton(ui->radioButton_spectrum, 1);
     connect(grp, QOverload<int>::of(&QButtonGroup::buttonClicked), this, [=](int index){        
         commandhelper->switchShowModel(index == 0);
-        for (int i=0; i<2; ++i){            
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(i+1));
-            plotWidget->slotResetPlot();
-            plotWidget->switchShowModel(index == 0);
-        }
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+        plotWidget->slotResetPlot();
+        plotWidget->switchShowModel(index == 0);
 
         if (0 == index){
             ui->widget_gauss->hide();
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>(tr("real-Result"));
-            plotWidget->show();
-            ui->widget_result->show();
         } else {
             ui->widget_gauss->show();
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>(tr("real-Result"));
-            plotWidget->hide();
-            ui->widget_result->hide();
         }
     });
-    //emit grp->buttonClicked(1);//默认能谱模式
+    emit grp->buttonClicked(1);//默认能谱模式
 
     // 任务栏信息
     QLabel *label_Idle = new QLabel(ui->statusbar);
@@ -463,10 +422,9 @@ void MainWindow::InitMainWindowUi()
 
         // 根据数字获取中文名称
         QString dayOfWeekString = dayNames.at(dayOfWeekNumber);
-
         this->findChild<QLabel*>("label_systemtime")->setText(QString(QObject::tr("系统时间：")) + currentDateTime.toString("yyyy/MM/dd hh:mm:ss ") + dayOfWeekString);
     });
-    systemClockTimer->start(500);
+    systemClockTimer->start(900);
 
     QTimer* measureTimer = new QTimer(this);
     measureTimer->setObjectName("measureTimer");
@@ -475,7 +433,7 @@ void MainWindow::InitMainWindowUi()
 
         //自动测量时间到，停止测量
         measureTimer->stop();
-        if (this->property("measure-model").toUInt() == 0x00)
+        if (this->property("measure-model").toUInt() == mmManual)
             commandhelper->slotStopManualMeasure();
         else
             commandhelper->slotStopAutoMeasure();
@@ -489,9 +447,9 @@ void MainWindow::InitMainWindowUi()
         QDateTime currentDateTime = QDateTime::currentDateTime();
         qint64 days = currentDateTime.daysTo(measureStartTime);
         if (days >= 1){
-            ui->lcdNumber->display(QString::number(days) + tr("天 ") + QTime(0,0,0).addSecs(currentDateTime.secsTo(measureStartTime) - days * 24 * 60 * 60).toString("hh:mm:ss"));
+            ui->lcdNumber->display(QString::number(days) + tr("天 ") + QTime(0,0,0).addSecs(measureStartTime.secsTo(currentDateTime) - days * 24 * 60 * 60).toString("hh:mm:ss"));
         } else{
-            ui->lcdNumber->display(QTime(0,0,0).addSecs(currentDateTime.secsTo(measureStartTime)).toString("hh:mm:ss"));
+            ui->lcdNumber->display(QTime(0,0,0).addSecs(measureStartTime.secsTo(currentDateTime)).toString("hh:mm:ss"));
         }
     });
 
@@ -524,29 +482,10 @@ void MainWindow::initCustomPlot()
     //this->setDockNestingEnabled(true);
     {
         PlotWidget *customPlotWidget = new PlotWidget(this);
+        customPlotWidget->setObjectName("real-PlotWidget");
         customPlotWidget->initCustomPlot();
-        ui->widget_plot->layout()->addWidget(customPlotWidget);
-        return;
-    }
-
-    QSplitter *spMainWindow = new QSplitter(Qt::Vertical, nullptr);
-
-    // Det-1
-    {
-        //能谱
-        //计数
-        //拟合曲线
-        PlotWidget *customPlotWidget = new PlotWidget(spMainWindow);
-        customPlotWidget->setObjectName(tr("real-Detector-1"));
-        customPlotWidget->installEventFilter(this);
-        customPlotWidget->setWindowTitle(tr("Det 1"));
-        customPlotWidget->initMultiCustomPlot();
-        //customPlotWidget->initDetailWidget();
-        customPlotWidget->show();
-
-        connect(customPlotWidget, &PlotWidget::sigUpdateMeanValues, this, [=](unsigned int minMean, unsigned int maxMean){
-            PlotWidget *customPlotWidget = qobject_cast<PlotWidget*>(sender());
-            if (customPlotWidget->objectName() == "real-Detector-1")
+        connect(customPlotWidget, &PlotWidget::sigUpdateMeanValues, this, [=](QString name, unsigned int minMean, unsigned int maxMean){
+            if (name == "Det1")
                 currentDetectorIndex = 0;
             else
                 currentDetectorIndex = 1;
@@ -559,88 +498,8 @@ void MainWindow::initCustomPlot()
            ui->spinBox_leftE->setValue(minMean);
            ui->spinBox_rightE->setValue(maxMean);
         });
-        spMainWindow->addWidget(customPlotWidget);
-        //connect(customPlotWidget, SIGNAL(sigMouseDoubleClickEvent()), this, SLOT(slotPlowWidgetDoubleClickEvent()));
+        ui->widget_plot->layout()->addWidget(customPlotWidget);
     }
-
-    // Det
-    {
-        //能谱
-        //计数
-        //拟合曲线
-        PlotWidget *customPlotWidget = new PlotWidget(spMainWindow);
-        customPlotWidget->setObjectName(tr("real-Detector-2"));
-        customPlotWidget->installEventFilter(this);
-        customPlotWidget->setWindowTitle(tr("Det 2"));
-        customPlotWidget->initMultiCustomPlot();
-        //customPlotWidget->initDetailWidget();
-        customPlotWidget->show();
-
-        connect(customPlotWidget, &PlotWidget::sigUpdateMeanValues, this, [=](unsigned int minMean, unsigned int maxMean){
-            PlotWidget *customPlotWidget = qobject_cast<PlotWidget*>(sender());
-            if (customPlotWidget->objectName() == "real-Detector-1")
-                currentDetectorIndex = 0;
-            else
-                currentDetectorIndex = 1;
-
-            if (currentDetectorIndex == 1){
-                ui->spinBox_2_leftE->setValue(minMean);
-                ui->spinBox_2_rightE->setValue(maxMean);
-            }
-
-            ui->spinBox_leftE->setValue(minMean);
-            ui->spinBox_rightE->setValue(maxMean);
-        });
-        spMainWindow->addWidget(customPlotWidget);
-        //connect(customPlotWidget, SIGNAL(sigMouseDoubleClickEvent()), this, SLOT(slotPlowWidgetDoubleClickEvent()));
-    }
-
-    // result
-    {
-        PlotWidget *customPlotWidget_result = new PlotWidget(spMainWindow);
-        customPlotWidget_result->setObjectName(tr("real-Result"));
-        customPlotWidget_result->installEventFilter(this);
-        customPlotWidget_result->setWindowTitle(tr("符合结果"));
-        customPlotWidget_result->initCustomPlot();
-        customPlotWidget_result->show();
-        //ui->widget_plot->layout()->addWidget(customPlotWidget_result);
-        spMainWindow->addWidget(customPlotWidget_result);
-        //connect(customPlotWidget_result, SIGNAL(sigMouseDoubleClickEvent()), this, SLOT(slotPlowWidgetDoubleClickEvent()));
-    }
-
-    spMainWindow->setStretchFactor(0, 3);
-    spMainWindow->setStretchFactor(1, 3);
-    spMainWindow->setStretchFactor(2, 2);
-    ui->widget_plot->layout()->addWidget(spMainWindow);
-}
-
-void MainWindow::slotPlowWidgetDoubleClickEvent()
-{
-    PlotWidget* plotwidget = qobject_cast<PlotWidget*>(sender());
-    bool isFullRect = false;
-    if (plotwidget->property("isFullRect").isValid())
-        isFullRect = plotwidget->property("isFullRect").toBool();
-
-    isFullRect = !isFullRect;
-    plotwidget->setProperty("isFullRect", isFullRect);
-    QList<PlotWidget*> plotWidgets = this->findChildren<PlotWidget*>();
-    for (auto a : plotWidgets){
-        bool _isFullRect = false;
-        if (a->property("isFullRect").isValid()){
-            _isFullRect = a->property("isFullRect").toBool();
-        }
-
-        if (isFullRect){
-            if (a != plotwidget)
-                a->hide();
-            else
-                a->show();
-        } else {
-            a->show();
-        }
-    };
-
-    plotwidget->show();
 }
 
 void MainWindow::on_action_devices_triggered()
@@ -860,7 +719,7 @@ void MainWindow::on_pushButton_measure_clicked()
         detectorParameter.dieTimeLength = 0x05;
         detectorParameter.gain = 0x00;
         detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
-        detectorParameter.measureModel = 0x00;
+        detectorParameter.measureModel = mmManual;
         this->setProperty("measur-model", detectorParameter.measureModel);
 
         // 打开 JSON 文件
@@ -885,10 +744,8 @@ void MainWindow::on_pushButton_measure_clicked()
         ui->action_refresh->setEnabled(true);
         ui->pushButton_measure->setEnabled(false);
 
-        for (int i=0; i<2; ++i){
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(i+1));
-            plotWidget->slotResetPlot();
-        }
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+        plotWidget->slotResetPlot();
 
         ui->pushButton_measure_2->setEnabled(false);
         int stepT = ui->spinBox_step->value();
@@ -937,7 +794,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         detectorParameter.dieTimeLength = 0x05;
         detectorParameter.gain = 0x00;
         detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
-        detectorParameter.measureModel = 0x01;
+        detectorParameter.measureModel = mmAuto;
         this->setProperty("measur-model", detectorParameter.measureModel);
 
         // 打开 JSON 文件
@@ -963,10 +820,9 @@ void MainWindow::on_pushButton_measure_2_clicked()
         ui->pushButton_measure->setEnabled(false);
         ui->pushButton_measure_2->setText(tr("停止测量"));
         ui->start_time_text->setText("0000-00-00 00:00:00");
-        for (int i=0; i<2; ++i){
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(i+1));
-            plotWidget->slotResetPlot();
-        }
+
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+        plotWidget->slotResetPlot();
 
         int stepT = ui->spinBox_step_2->value();
         int leftE[2] = {ui->spinBox_1_leftE->value(), ui->spinBox_2_leftE_2->value()};
@@ -1050,10 +906,8 @@ void MainWindow::on_pushButton_refresh_clicked()
     int rightE[2] = {ui->spinBox_1_rightE->value(), ui->spinBox_2_rightE->value()};
 
     if (ui->radioButton_ref->isChecked()){
-        for (int i=0; i<2; ++i){
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(i+1));
-            plotWidget->slotResetPlot();
-        }
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+        plotWidget->slotResetPlot();
     }
 
     int timewidth = ui->spinBox_resolving_time->value();
@@ -1084,7 +938,7 @@ void MainWindow::on_pushButton_gauss_clicked()
 {
     this->save();
 
-    PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(currentDetectorIndex+1));
+    PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
     plotWidget->slotGauss(ui->spinBox_leftE->value(), ui->spinBox_rightE->value());
 }
 
@@ -1277,7 +1131,7 @@ void MainWindow::slotRefreshUi()
         ui->spinBox_2_leftE->setEnabled(false);
         ui->spinBox_2_rightE->setEnabled(false);
 
-        if (this->property("measur-model").toInt() == 0x00){//手动测量
+        if (this->property("measur-model").toInt() == mmManual){//手动测量
             ui->pushButton_measure->setText(tr("停止测量"));
             ui->pushButton_measure->setEnabled(true);
             ui->pushButton_refresh->setEnabled(true);
@@ -1293,7 +1147,7 @@ void MainWindow::slotRefreshUi()
             //标定测量
             ui->pushButton_measure_3->setEnabled(false);
             ui->pushButton_refresh_3->setEnabled(false);
-        } else if (this->property("measur-model").toInt() == 0x01){//自动测量
+        } else if (this->property("measur-model").toInt() == mmAuto){//自动测量
             ui->pushButton_measure_2->setText(tr("停止测量"));
             ui->pushButton_measure_2->setEnabled(true);
 
@@ -1307,7 +1161,7 @@ void MainWindow::slotRefreshUi()
 
             //标定测量
             ui->pushButton_measure_3->setEnabled(false);
-        }  else if (this->property("measur-model").toInt() == 0x02){//标定测量
+        }  else if (this->property("measur-model").toInt() == mmDefine){//标定测量
             ui->pushButton_measure_3->setText(tr("停止测量"));
             ui->pushButton_measure_3->setEnabled(true);
 
@@ -1559,21 +1413,17 @@ void MainWindow::on_action_line_log_triggered()
 {
     if (this->property("ScaleLogarithmicType").toBool()){
         this->setProperty("ScaleLogarithmicType", false);
-        for (int i=0; i<2; ++i){
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(i+1));
-            plotWidget->slotResetPlot();
-            plotWidget->switchDataModel(false);
-        }
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+        plotWidget->slotResetPlot();
+        plotWidget->switchDataModel(false);
 
         ui->action_line_log->setText(tr("对数"));
         ui->action_line_log->setIconText(tr("对数"));
         ui->action_line_log->setIcon(QIcon(":/resource/mathlog.png"));
     } else {
         this->setProperty("ScaleLogarithmicType", true);
-        for (int i=0; i<2; ++i){
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>(QString("real-Detector-%1").arg(i+1));
-            plotWidget->switchDataModel(true);
-        }
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+        plotWidget->switchDataModel(true);
 
         ui->action_line_log->setText(tr("线性"));
         ui->action_line_log->setIconText(tr("线性"));

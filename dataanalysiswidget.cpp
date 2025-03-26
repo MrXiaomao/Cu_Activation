@@ -68,56 +68,7 @@ bool DataAnalysisWidget::eventFilter(QObject *watched, QEvent *event)
 void DataAnalysisWidget::initCustomPlot()
 {
     //this->setDockNestingEnabled(true);
-
-    // Det
-    PlotWidget *customPlotWidget_Det1_2 = new PlotWidget(ui->widget_plot);
-    customPlotWidget_Det1_2->setObjectName(tr("history-Detector"));
-    customPlotWidget_Det1_2->installEventFilter(this);
-    customPlotWidget_Det1_2->setWindowTitle(tr("Detector"));
-    customPlotWidget_Det1_2->initMultiCustomPlot();
-    customPlotWidget_Det1_2->initDetailWidget();
-    customPlotWidget_Det1_2->show();
-
-    // result
-    PlotWidget *customPlotWidget_result = new PlotWidget(ui->widget_plot);
-    customPlotWidget_result->setObjectName(tr("history-Result"));
-    customPlotWidget_result->installEventFilter(this);
-    customPlotWidget_result->setWindowTitle(tr("符合结果"));
-    customPlotWidget_result->initCustomPlot();
-    customPlotWidget_result->show();
-
-    ui->widget_plot->layout()->addWidget(customPlotWidget_Det1_2);
-    ui->widget_plot->layout()->addWidget(customPlotWidget_result);
-
-    connect(customPlotWidget_Det1_2, SIGNAL(sigMouseDoubleClickEvent()), this, SLOT(slotPlowWidgetDoubleClickEvent()));
-    connect(customPlotWidget_result, SIGNAL(sigMouseDoubleClickEvent()), this, SLOT(slotPlowWidgetDoubleClickEvent()));
-}
-
-void DataAnalysisWidget::slotPlowWidgetDoubleClickEvent()
-{
-    PlotWidget* plotwidget = qobject_cast<PlotWidget*>(sender());
-    bool isFullRect = false;
-    if (plotwidget->property("isFullRect").isValid())
-        isFullRect = plotwidget->property("isFullRect").toBool();
-
-    isFullRect = !isFullRect;
-    plotwidget->setProperty("isFullRect", isFullRect);
-    QList<PlotWidget*> plotWidgets = this->findChildren<PlotWidget*>();
-    for (auto a : plotWidgets){
-        bool _isFullRect = false;
-        if (a->property("isFullRect").isValid()){
-            _isFullRect = a->property("isFullRect").toBool();
-        }
-
-        if (isFullRect){
-            if (a != plotwidget)
-                a->hide();
-            else
-                a->show();
-        } else {
-            a->show();
-        }
-    };
-
-    plotwidget->show();
+    PlotWidget *customPlotWidget = new PlotWidget(this);
+    customPlotWidget->initCustomPlot();
+    ui->widget_plot->layout()->addWidget(customPlotWidget);
 }

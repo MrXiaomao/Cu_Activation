@@ -37,6 +37,7 @@ public:
         mmNone = 0x00,
         mmManual= 0x01, // 手动
         mmAuto = 0x02, // 自动
+        mmDefine = 0x03, // 标定
     };
 
 protected:
@@ -53,8 +54,6 @@ signals:
     void sigAppengMsg(const QString &msg, QtMsgType msgType);
 
 private slots:
-    void slotPlowWidgetDoubleClickEvent();
-
     void on_action_power_triggered();
 
     void on_action_devices_triggered();

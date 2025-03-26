@@ -1447,7 +1447,7 @@ p, li { white-space: pre-wrap; }
                         <string notr="true">color: rgb(0, 0, 255);</string>
                        </property>
                        <property name="text">
-                        <string>等待触发...</string>
+                        <string/>
                        </property>
                       </widget>
                      </item>

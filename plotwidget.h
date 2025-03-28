@@ -20,7 +20,8 @@ public:
     explicit PlotWidget(QWidget *parent = nullptr);
 
     QCustomPlot *allocCustomPlot(QString objName, QWidget *parent = nullptr);
-    void dispatchAdditionalFunction(QCustomPlot *customPlot);
+    void dispatchAdditionalTipFunction(QCustomPlot *customPlot);
+    void dispatchAdditionalDragFunction(QCustomPlot *customPlot);
 
     void initCustomPlot();
     void initMultiCustomPlot();

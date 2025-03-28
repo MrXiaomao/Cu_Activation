@@ -30,7 +30,7 @@ PlotWidget::PlotWidget(QWidget *parent) : QWidget(parent)
     SPECTRUM_Y_AXIS_LOWER = 0;
     SPECTRUM_Y_AXIS_UPPER = 1e4;
 
-    this->setProperty("isMergeMode", true);
+    this->setProperty("isMergeMode", false);
     this->setProperty("SelectDetIndex", 0);
 }
 
@@ -187,7 +187,8 @@ void PlotWidget::initCustomPlot(){
         spPlotWindow->addWidget(containWidget);
         customPlot->installEventFilter(this);
 
-        dispatchAdditionalFunction(customPlot);
+        dispatchAdditionalTipFunction(customPlot);
+        dispatchAdditionalDragFunction(customPlot);
     } else {
         {
             QWidget *containWidget = new QWidget(this);
@@ -205,7 +206,8 @@ void PlotWidget::initCustomPlot(){
             spPlotWindow->addWidget(containWidget);
             customPlot->installEventFilter(this);
 
-            dispatchAdditionalFunction(customPlot);
+            dispatchAdditionalTipFunction(customPlot);
+            dispatchAdditionalDragFunction(customPlot);
         }
 
         {
@@ -224,7 +226,8 @@ void PlotWidget::initCustomPlot(){
             spPlotWindow->addWidget(containWidget);
             customPlot->installEventFilter(this);
 
-            dispatchAdditionalFunction(customPlot);
+            dispatchAdditionalTipFunction(customPlot);
+            dispatchAdditionalDragFunction(customPlot);
         }
     }
 
@@ -245,7 +248,7 @@ void PlotWidget::initCustomPlot(){
         spPlotWindow->addWidget(containWidget);
         customPlot->installEventFilter(this);
 
-        dispatchAdditionalFunction(customPlot);
+        dispatchAdditionalTipFunction(customPlot);
     }
 
     spPlotWindow->setStretchFactor(0, 1);
@@ -260,23 +263,9 @@ void PlotWidget::initCustomPlot(){
     switchDataModel(false);
 }
 
-void PlotWidget::dispatchAdditionalFunction(QCustomPlot *customPlot)
+void PlotWidget::dispatchAdditionalTipFunction(QCustomPlot *customPlot)
 {
     // 文本元素随坐标变动而变动
-    QCPItemText* gaussResultItemText = new QCPItemText(customPlot);
-    gaussResultItemText->setObjectName("gaussResultItemText");
-    gaussResultItemText->setColor(QColor(0,128,128,255));// 字体色
-    gaussResultItemText->setPen(QColor(130,130,130,255));// 边框
-    gaussResultItemText->setBrush(QBrush(QColor(255,255,225,255)));// 背景色
-    gaussResultItemText->setPositionAlignment(Qt::AlignBottom | Qt::AlignLeft);
-    gaussResultItemText->position->setType(QCPItemPosition::ptPlotCoords);
-    gaussResultItemText->setTextAlignment(Qt::AlignLeft);
-    gaussResultItemText->setFont(QFont(font().family(), 12));
-    gaussResultItemText->setPadding(QMargins(5, 5, 5, 5));
-    gaussResultItemText->position->setCoords(250.0, 1000.0);//X、Y轴坐标值
-    gaussResultItemText->setText("");
-    gaussResultItemText->setVisible(false);
-
     QCPItemText *coordsTipItemText = new QCPItemText(customPlot);
     coordsTipItemText->setObjectName("coordsTipItemText");
     coordsTipItemText->setPositionAlignment(Qt::AlignBottom|Qt::AlignLeft);
@@ -304,15 +293,43 @@ void PlotWidget::dispatchAdditionalFunction(QCustomPlot *customPlot)
     dragRectItem->setBrush(Qt::NoBrush);// 背景色
     dragRectItem->setSelectedPen(QPen(clrSelect, 1, Qt::DotLine));
     dragRectItem->setVisible(false);
+}
+
+void PlotWidget::dispatchAdditionalDragFunction(QCustomPlot *customPlot)
+{
+    // 文本元素随坐标变动而变动
+    QCPItemText* gaussResultItemText = new QCPItemText(customPlot);
+    gaussResultItemText->setObjectName("gaussResultItemText");
+    gaussResultItemText->setColor(QColor(0,128,128,255));// 字体色
+    gaussResultItemText->setPen(QColor(130,130,130,255));// 边框
+    gaussResultItemText->setBrush(QBrush(QColor(255,255,225,255)));// 背景色
+    gaussResultItemText->setPositionAlignment(Qt::AlignBottom | Qt::AlignLeft);
+    gaussResultItemText->position->setType(QCPItemPosition::ptPlotCoords);
+    gaussResultItemText->setTextAlignment(Qt::AlignLeft);
+    gaussResultItemText->setFont(QFont(font().family(), 12));
+    gaussResultItemText->setPadding(QMargins(5, 5, 5, 5));
+    gaussResultItemText->position->setCoords(250.0, 1000.0);//X、Y轴坐标值
+    gaussResultItemText->setText("");
+    gaussResultItemText->setVisible(false);
+
+    QCPItemRect *dragRectItem = new QCPItemRect(customPlot);
+    dragRectItem->setObjectName("dragRectItem");
+    dragRectItem->setAntialiased(false);
+    dragRectItem->topLeft->setType(QCPItemPosition::ptPlotCoords);//QCPItemPosition::ptAbsolute);
+    dragRectItem->bottomRight->setType(QCPItemPosition::ptPlotCoords);//QCPItemPosition::ptAbsolute);
+    dragRectItem->setPen(QPen(clrSelect, 1, Qt::DotLine));// 边框
+    dragRectItem->setBrush(Qt::NoBrush);// 背景色
+    dragRectItem->setSelectedPen(QPen(clrSelect, 1, Qt::DotLine));
+    dragRectItem->setVisible(false);
 
     auto createStraightLineItem = [=](QCPItemStraightLine** _line){
         QCPItemStraightLine *line = new QCPItemStraightLine(customPlot);
         line->setLayer("overlay");
-        line->setPen(QPen(Qt::gray, 1, Qt::DashLine));
+        line->setPen(QPen(Qt::gray, 1, Qt::DotLine));
         line->setClipToAxisRect(true);
         line->point1->setCoords(0, 0);
         line->point2->setCoords(0, 0);
-        line->setVisible(false);
+        line->setVisible(true);
         *_line = line;
     };
     QCPItemStraightLine *itemStraightLineLeft, *itemStraightLineRight;
@@ -321,6 +338,7 @@ void PlotWidget::dispatchAdditionalFunction(QCustomPlot *customPlot)
     createStraightLineItem(&itemStraightLineRight);
     itemStraightLineRight->setObjectName("itemStraightLineRight");
 }
+
 
 QCustomPlot *PlotWidget::allocCustomPlot(QString objName, QWidget *parent)
 {
@@ -422,15 +440,16 @@ QCustomPlot *PlotWidget::allocCustomPlot(QString objName, QWidget *parent)
     int count = 1;
     if (this->property("isMergeMode").toBool()){
         count = 2;
-        for (int i=0; i<count; ++i){
-            QCPGraph * mainGraph = customPlot->addGraph(customPlot->xAxis, customPlot->yAxis);
-            mainGraph->setName("mainGraph");
-            mainGraph->setAntialiased(false);
-            mainGraph->setPen(QPen(QColor(i == 0x00 ? clrLine : clrLine2)));
-            mainGraph->selectionDecorator()->setPen(QPen(i == 0x00 ? clrLine : clrLine2));
-            mainGraph->setLineStyle(QCPGraph::lsNone);// 隐藏线性图
-            mainGraph->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssCircle, 8));//显示散点图
-        }
+    }
+
+    for (int i=0; i<count; ++i){
+        QCPGraph * mainGraph = customPlot->addGraph(customPlot->xAxis, customPlot->yAxis);
+        mainGraph->setName("mainGraph");
+        mainGraph->setAntialiased(false);
+        mainGraph->setPen(QPen(QColor(i == 0x00 ? clrLine : clrLine2)));
+        mainGraph->selectionDecorator()->setPen(QPen(i == 0x00 ? clrLine : clrLine2));
+        mainGraph->setLineStyle(QCPGraph::lsNone);// 隐藏线性图
+        mainGraph->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssCircle, 5));//显示散点图
     }
 
     if (objName != "CoincidenceResult"){
@@ -964,7 +983,7 @@ void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPo
                 for (size_t i=0; i<r2.size(); ++i){
                     keys << i+1;
                     values << r2[i].dataPoint2;
-                    colors << clrLine;
+                    colors << clrLine2;
                     maxPoint = qMax(maxPoint, values[i]);
                 }
 

@@ -16,6 +16,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    movingcontrol.cpp \
     cachedirconfigwidget.cpp \
     coincidenceanalyzer.cpp \
     controlwidget.cpp \
@@ -38,6 +39,7 @@ SOURCES += \
     FPGASetting.cpp
 
 HEADERS += \
+    movingcontrol.h \
     cachedirconfigwidget.h \
     coincidenceanalyzer.h \
     controlwidget.h \

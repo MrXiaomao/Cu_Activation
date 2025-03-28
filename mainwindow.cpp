@@ -308,31 +308,6 @@ void MainWindow::InitMainWindowUi()
         commandhelper->setDefaultCacheDir("./");
     }
 
-    // 手动测量-标定文件
-    {
-        QAction *action = ui->lineEdit_file->addAction(QIcon(":/resource/open.png"), QLineEdit::TrailingPosition);
-        QToolButton* button = qobject_cast<QToolButton*>(action->associatedWidgets().last());
-        button->setCursor(QCursor(Qt::PointingHandCursor));
-        connect(button, &QToolButton::pressed, this, [=](){
-            QString lastDir = QApplication::applicationFilePath();
-            QString fileName = QFileDialog::getOpenFileName(this, tr("打开文件"), lastDir, tr("所有文件（*.*）"));
-            if (!fileName.isEmpty()){
-                lastDir = fileName;
-                ui->lineEdit_file->setText(fileName);
-            }
-        });
-    }
-    // 自动测量-标定文件
-    {
-        QAction *action = ui->lineEdit_file_2->addAction(QIcon(":/resource/open.png"), QLineEdit::TrailingPosition);
-        QToolButton* button = qobject_cast<QToolButton*>(action->associatedWidgets().last());
-        button->setCursor(QCursor(Qt::PointingHandCursor));
-        connect(button, &QToolButton::pressed, this, [=](){
-            QString dir = QFileDialog::getOpenFileName(this);
-            ui->lineEdit_file_2->setText(dir);
-        });
-    }
-
     // 测量结果-存储路径
     {
         QAction *action = ui->lineEdit_path->addAction(QIcon(":/resource/open.png"), QLineEdit::TrailingPosition);
@@ -351,6 +326,14 @@ void MainWindow::InitMainWindowUi()
     ui->tabWidget_client->tabBar()->setTabButton(0, QTabBar::RightSide, nullptr);//第一个tab取消关闭按钮
     connect(ui->tabWidget_client, &QTabWidget::tabCloseRequested, this, [=](int index){
         ui->tabWidget_client->removeTab(index);
+    });
+
+    connect(ui->comboBox_range, QOverload<int>::of(&QComboBox::currentIndexChanged), ui->comboBox_range_2, &QComboBox::setCurrentIndex);
+    connect(ui->comboBox_range, QOverload<int>::of(&QComboBox::currentIndexChanged), ui->comboBox_range_3, &QComboBox::setCurrentIndex);
+    connect(ui->comboBox_range_2, QOverload<int>::of(&QComboBox::currentIndexChanged), ui->comboBox_range, &QComboBox::setCurrentIndex);
+    connect(ui->comboBox_range_3, QOverload<int>::of(&QComboBox::currentIndexChanged), ui->comboBox_range, &QComboBox::setCurrentIndex);
+    connect(ui->comboBox_range, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [=](int){
+        qDebug() << "";
     });
 
     // 显示计数/能谱
@@ -1132,12 +1115,6 @@ void MainWindow::slotRefreshUi()
         ui->action_refresh->setEnabled(true);
         ui->pushButton_measure_2_tip->setText("");
 
-        //测量过程中不允许修改能床幅值
-        ui->spinBox_1_leftE->setEnabled(false);
-        ui->spinBox_1_rightE->setEnabled(false);
-        ui->spinBox_2_leftE->setEnabled(false);
-        ui->spinBox_2_rightE->setEnabled(false);
-
         if (this->property("measur-model").toInt() == mmManual){//手动测量
             ui->pushButton_measure->setText(tr("停止测量"));
             ui->pushButton_measure->setEnabled(true);
@@ -1145,6 +1122,15 @@ void MainWindow::slotRefreshUi()
 
             ui->action_power->setEnabled(false);
             ui->action_detector_connect->setEnabled(false);
+
+            //测量过程中不允许修改能窗幅值
+            ui->spinBox_1_leftE->setEnabled(false);
+            ui->spinBox_1_rightE->setEnabled(false);
+            ui->spinBox_2_leftE->setEnabled(false);
+            ui->spinBox_2_rightE->setEnabled(false);
+
+            // 测量中禁用符合分辨时间
+            ui->spinBox_timeWidth->setEnabled(false);
 
             //公共
             ui->pushButton_save->setEnabled(false);
@@ -1193,21 +1179,32 @@ void MainWindow::slotRefreshUi()
 
         ui->action_power->setEnabled(true);
         ui->action_detector_connect->setEnabled(true);
-
         ui->action_refresh->setEnabled(false);
+
+        // 手动测量
         ui->spinBox_1_leftE->setEnabled(true);
         ui->spinBox_1_rightE->setEnabled(true);
         ui->spinBox_2_leftE->setEnabled(true);
-        ui->spinBox_2_rightE->setEnabled(true);
+        ui->spinBox_2_rightE->setEnabled(true);        
+        ui->spinBox_timeWidth->setEnabled(true);
+
+        // 自动测量
+        ui->spinBox_1_leftE_2->setEnabled(true);
+        ui->spinBox_1_rightE_2->setEnabled(true);
+        ui->spinBox_2_leftE_2->setEnabled(true);
+        ui->spinBox_2_rightE_2->setEnabled(true);
+        ui->spinBox_timeWidth_2->setEnabled(true);
+
+        // 标定测量
+        ui->spinBox_1_leftE_3->setEnabled(true);
+        ui->spinBox_1_rightE_3->setEnabled(true);
+        ui->spinBox_2_leftE_3->setEnabled(true);
+        ui->spinBox_2_rightE_3->setEnabled(true);
+        ui->spinBox_timeWidth_3->setEnabled(true);
 
         if (this->property("detector_on").toBool()){
             //公共
             ui->pushButton_save->setEnabled(true);
-            ui->pushButton_gauss->setEnabled(false);
-
-            ui->pushButton_refresh->setEnabled(false);
-            ui->pushButton_refresh_2->setEnabled(false);
-            ui->pushButton_refresh_3->setEnabled(false);
 
             ui->pushButton_measure->setEnabled(true);
             ui->pushButton_measure_2->setEnabled(true);
@@ -1215,16 +1212,15 @@ void MainWindow::slotRefreshUi()
         } else {
             //公共
             ui->pushButton_save->setEnabled(false);
-            ui->pushButton_gauss->setEnabled(false);
-
-            ui->pushButton_refresh->setEnabled(false);
-            ui->pushButton_refresh_2->setEnabled(false);
-            ui->pushButton_refresh_3->setEnabled(false);
-
             ui->pushButton_measure->setEnabled(false);
             ui->pushButton_measure_2->setEnabled(false);
             ui->pushButton_measure_3->setEnabled(false);
         }
+
+        ui->pushButton_gauss->setEnabled(false);
+        ui->pushButton_refresh->setEnabled(false);
+        ui->pushButton_refresh_2->setEnabled(false);
+        ui->pushButton_refresh_3->setEnabled(false);
     }
 }
 
@@ -1259,8 +1255,6 @@ void MainWindow::load()
             ui->spinBox_step->setValue(jsonObjM1["step"].toInt());
             //符合分辨时间
             ui->spinBox_timeWidth->setValue(jsonObjM1["timewidth"].toInt());
-            //标定文件
-            ui->lineEdit_file->setText(jsonObjM1["file"].toString());
         }
 
         //自动
@@ -1271,8 +1265,6 @@ void MainWindow::load()
             ui->spinBox_timelength_2->setValue(jsonObjM2["timelength"].toInt());
             //量程选取
             ui->comboBox_range_2->setCurrentIndex(jsonObjM2["range"].toInt());
-            //冷却时长
-            ui->spinBox_cool_timelength_2->setValue(jsonObjM2["cool_timelength"].toInt());
             //时间步长
             ui->spinBox_step_2->setValue(jsonObjM2["step"].toInt());
             //符合分辨时间
@@ -1300,8 +1292,8 @@ void MainWindow::load()
         if (jsonObj.contains("Public")){
             jsonObjPub = jsonObj["Public"].toObject();
             //高斯拟合
-            ui->spinBox_leftE->setValue(jsonObjPub["leftE"].toInt());
-            ui->spinBox_rightE->setValue(jsonObjPub["rightE"].toInt());
+            ui->spinBox_leftE->setValue(jsonObjPub["Gauss_leftE"].toInt());
+            ui->spinBox_rightE->setValue(jsonObjPub["Gauss_rightE"].toInt());
             //保存数据
             ui->lineEdit_path->setText(jsonObjPub["path"].toString());
             ui->lineEdit_filename->setText(jsonObjPub["filename"].toString());
@@ -1343,8 +1335,14 @@ void MainWindow::save()
         jsonObjM1["step"] = ui->spinBox_step->value();
         //符合分辨时间
         jsonObjM1["timewidth"] = ui->spinBox_timeWidth->value();
-        //标定文件
-        jsonObjM1["file"] = ui->lineEdit_file->text();
+        //探测器1能窗左侧
+        jsonObjM1["Det1_EnWidth_left"] = ui->spinBox_1_leftE->value();
+        //探测器1能窗右侧
+        jsonObjM1["Det1_EnWidth_right"] = ui->spinBox_1_rightE->value();
+        //探测器2能窗左侧
+        jsonObjM1["Det2_EnWidth_left"] = ui->spinBox_2_leftE->value();
+        //探测器2能窗右侧
+        jsonObjM1["Det2_EnWidth_right"] = ui->spinBox_2_rightE->value();
         if (!jsonObj.contains("M1")){
             jsonObj.insert("M1", jsonObjM1);
         }
@@ -1360,12 +1358,18 @@ void MainWindow::save()
         jsonObjM2["timelength"] = ui->spinBox_timelength_2->value();
         //量程选取
         jsonObjM2["range"] = ui->comboBox_range_2->currentIndex();
-        //冷却时长
-        jsonObjM2["cool_timelength"] = ui->spinBox_cool_timelength_2->value();
         //时间步长
         jsonObjM2["step"] = ui->spinBox_step_2->value();
         //符合分辨时间
         jsonObjM2["timewidth"] = ui->spinBox_timeWidth_2->value();
+        //探测器1能窗左侧
+        jsonObjM2["Det1_EnWidth_left"] = ui->spinBox_1_leftE_2->value();
+        //探测器1能窗右侧
+        jsonObjM2["Det1_EnWidth_right"] = ui->spinBox_1_rightE_2->value();
+        //探测器2能窗左侧
+        jsonObjM2["Det2_EnWidth_left"] = ui->spinBox_2_leftE_2->value();
+        //探测器2能窗右侧
+        jsonObjM2["Det2_EnWidth_right"] = ui->spinBox_2_rightE_2->value();
         if (!jsonObj.contains("M2")){
             jsonObj.insert("M2", jsonObjM2);
         }
@@ -1385,6 +1389,14 @@ void MainWindow::save()
         jsonObjM3["cool_timelength"] = ui->spinBox_cool_timelength_3->value();
         //符合分辨时间
         jsonObjM3["timeWidth"] = ui->spinBox_timeWidth_3->value();
+        //探测器1能窗左侧
+        jsonObjM3["Det1_EnWidth_left"] = ui->spinBox_1_leftE_3->value();
+        //探测器1能窗右侧
+        jsonObjM3["Det1_EnWidth_right"] = ui->spinBox_1_rightE_3->value();
+        //探测器2能窗左侧
+        jsonObjM3["Det2_EnWidth_left"] = ui->spinBox_2_leftE_3->value();
+        //探测器2能窗右侧
+        jsonObjM3["Det2_EnWidth_right"] = ui->spinBox_2_rightE_3->value();
         //中子产额
         jsonObjM3["neutron_yield"] = ui->spinBox_neutron_yield->value();
         if (!jsonObj.contains("M3")){
@@ -1399,8 +1411,8 @@ void MainWindow::save()
             //jsonObj.insert("Public", jsonObjPub);
         }
         //高斯拟合
-        jsonObjPub["leftE"] = ui->spinBox_leftE->value();
-        jsonObjPub["rightE"] = ui->spinBox_rightE->value();
+        jsonObjPub["Gauss_leftE"] = ui->spinBox_leftE->value();
+        jsonObjPub["Gauss_rightE"] = ui->spinBox_rightE->value();
         //保存数据
         jsonObjPub["path"] = ui->lineEdit_path->text();
         jsonObjPub["filename"] = ui->lineEdit_filename->text();

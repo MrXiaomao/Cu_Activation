@@ -1044,10 +1044,51 @@ void CommandHelper::slotStopAutoMeasure()
 }
 
 #include <QThread>
+#include <random>
 void CommandHelper::slotDoTasks()
 {
     while (!taskFinished)
     {
+        // 初始化随机数引擎
+        std::random_device rd;
+        std::mt19937 gen(rd());
+
+        // 定义高斯分布，均值为5000，标准差为200
+        std::normal_distribution<> gaussEn(500.0, 20.0);
+
+        // 定义高斯分布，来抽样产生非等间隔时间序列
+        double deltaT = 2000.; // 单位ns
+        std::normal_distribution<> gaussDeltaT(deltaT, 30.0); //gaussDeltaT(均值，标准差)
+
+        //构造时间、能量序列1
+        int nlength = 10000;
+        vector<TimeEnergy> data1;
+        unsigned long long lastT = 0LL;
+        for(int i=0; i<nlength; i++)
+        {
+            int randT = (int)gaussDeltaT(gen);
+            lastT += randT;
+            unsigned short value = (unsigned short)gaussEn(gen);
+            data1.push_back({lastT,value});
+        }
+
+        //构造时间、能量序列2
+        vector<TimeEnergy> data2;
+        long long lastT2 = 0LL;
+        for(int i=0; i<nlength; i++)
+        {
+            int randT = (int)gaussDeltaT(gen);
+            lastT2 += randT;
+            unsigned short value = (unsigned short)gaussEn(gen);
+            data2.push_back({lastT,value});
+        }
+
+        QMutexLocker locker(&mutexPlot);
+        DetTimeEnergy detTimeEnergy;
+        detTimeEnergy.channel = 0;
+        detTimeEnergy.timeEnergy.swap(data2);
+        currentSpectrumFrames.push_back(detTimeEnergy);
+
         QThread::msleep(30);
     }
 }
@@ -1064,8 +1105,58 @@ void CommandHelper::slotAnalyzeNetFrame()
 //        qFile.close();
 //    }
 
+    unsigned long long lastT = 0LL;
+    long long lastT2 = 0LL;
     while (!taskFinished)
     {
+        {
+            // 初始化随机数引擎
+            std::random_device rd;
+            std::mt19937 gen(rd());
+
+            // 定义高斯分布，均值为5000，标准差为200
+            std::normal_distribution<> gaussEn(5000.0, 1000.0);
+
+            // 定义高斯分布，来抽样产生非等间隔时间序列
+            double deltaT = 2000.; // 单位ns
+            std::normal_distribution<> gaussDeltaT(deltaT, 30.0); //gaussDeltaT(均值，标准差)
+
+            //构造时间、能量序列1
+            int nlength = 1e4;
+            vector<TimeEnergy> data1;
+
+            for(int i=0; i<nlength; i++)
+            {
+                int randT = (int)gaussDeltaT(gen);
+                lastT += randT + 1e5;
+                unsigned short value = (unsigned short)gaussEn(gen);
+                data1.push_back({lastT,value});
+            }
+
+            //构造时间、能量序列2
+            vector<TimeEnergy> data2;
+            for(int i=0; i<nlength; i++)
+            {
+                int randT = (int)gaussDeltaT(gen);
+                lastT2 += randT + 1e5;
+                unsigned short value = (unsigned short)gaussEn(gen);
+                data2.push_back({lastT,value});
+            }
+
+            QMutexLocker locker(&mutexPlot);
+            DetTimeEnergy detTimeEnergy;
+            detTimeEnergy.channel = 0;
+            detTimeEnergy.timeEnergy.swap(data1);
+            currentSpectrumFrames.push_back(detTimeEnergy);
+
+            DetTimeEnergy detTimeEnergy2;
+            detTimeEnergy2.channel = 1;
+            detTimeEnergy2.timeEnergy.swap(data2);
+            currentSpectrumFrames.push_back(detTimeEnergy2);
+
+            QThread::msleep(1000);//cps
+            continue;
+        }
         {
             QMutexLocker locker(&mutexCache);
             if (cachePool.size() <= 0){
@@ -1355,11 +1446,12 @@ void CommandHelper::slotPlotUpdateFrame()
                     }
 
                     if (data1_2.size() > 0 && data2_2.size() > 0 ){
-                        coincidenceAnalyzer->calculate(data1_2, data2_2, leftE[0], rightE[0], leftE[1], rightE[1], timeWidth);
+                        std::cout << "enter coincidenceAnalyzer->calculate " << std::endl;
+                        coincidenceAnalyzer->calculate(data1_2, data2_2, leftE[0], rightE[0], leftE[1], rightE[1], timeWidth, false);
                         data1_2.clear();
                         data2_2.clear();
 
-                        qDebug() << "slotPlotUpdateFrame threadId: " << QThread::currentThreadId();
+                        std::cout << "leave coincidenceAnalyzer->calculate " << std::endl;
                     }
                 }
             }

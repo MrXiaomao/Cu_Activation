@@ -589,6 +589,9 @@ background-color: rgb(96, 96, 96);</string>
         <property name="maximum">
          <double>999999.989999999990687</double>
         </property>
+        <property name="value">
+         <double>50.000000000000000</double>
+        </property>
        </widget>
       </item>
       <item row="1" column="0">
@@ -626,6 +629,9 @@ background-color: rgb(96, 96, 96);</string>
         <property name="maximum">
          <number>1000000</number>
         </property>
+        <property name="value">
+         <number>1000</number>
+        </property>
        </widget>
       </item>
       <item row="0" column="2">
@@ -635,6 +641,9 @@ background-color: rgb(96, 96, 96);</string>
         </property>
         <property name="maximum">
          <double>999999.989999999990687</double>
+        </property>
+        <property name="value">
+         <double>250.000000000000000</double>
         </property>
        </widget>
       </item>

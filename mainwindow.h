@@ -30,7 +30,7 @@ public:
         msEnd = 0x00, // 停止
         msPrepare = 0x01, // 准备
         msWaiting = 0x02, // 等待触发（自动测量有一个等待时间段）
-        msStart = 0x03,// 开始
+        msStart = 0x03,// 开始，测量中
     };
 
     enum Measure_model{

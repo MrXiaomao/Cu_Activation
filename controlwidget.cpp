@@ -214,6 +214,9 @@ void ControlWidget::on_pushButton_connect_clicked()
 {
     //连接
     if (mCurrentHandle != 0){
+        ui->pushButton_start->setText(tr("开启往返运动"));
+        this->setProperty("enableAuto", false);
+        fti_single_stop(mCurrentHandle, currentAxiaName.toStdString().c_str());
         QTimer* timerPosition = this->findChild<QTimer*>("timerPosition");
         timerPosition->stop();
         fti_close(mCurrentHandle);
@@ -470,11 +473,16 @@ void ControlWidget::enableUiStatus()
 
 void ControlWidget::on_pushButton_start_clicked()
 {
+    if (mCurrentHandle == 0)
+        return;
+
     if (this->property("enableAuto").toBool()){
+        fti_single_stop(mCurrentHandle, currentAxiaName.toStdString().c_str());
         ui->pushButton_start->setText(tr("开启往返运动"));
         this->setProperty("enableAuto", false);
     }
     else{
+        fti_single_moveabs(mCurrentHandle, currentAxiaName.toStdString().c_str(), ui->doubleSpinBox_lower->value() * 1000);
         ui->pushButton_start->setText(tr("停止往返运动"));
         this->setProperty("enableAuto", true);
     }

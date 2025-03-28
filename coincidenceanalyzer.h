@@ -56,6 +56,14 @@ public:
 
         vector<TimeEnergy>().swap(unusedData1);
         vector<TimeEnergy>().swap(unusedData2);
+
+        //自动调整能窗相关参数重新初始化
+        autoFirst = true;
+        for(int i=0; i<MULTI_CHANNEL; i++)
+        {
+            GaussFitSpec[0][i] = 0;
+            GaussFitSpec[1][i] = 0;
+        }
     }
 
     //已经处理的计数率点数，也就是FPGA数据，已经处理了的时间长度，单位:秒
@@ -74,16 +82,28 @@ public:
         return AllPoint;
     }
 
+    inline int GetEnWidth_left1(){ return EnWidth_left1;}
+
+    inline int GetEnWidth_right1(){ return EnWidth_right1;}
+
+    inline int GetEnWidth_left2(){ return EnWidth_left2;}
+
+    inline int GetEnWidth_right2(){ return EnWidth_right2;}
+
     void calculate(vector<TimeEnergy> data1, vector<TimeEnergy> data2,
             unsigned short E_left1, unsigned short E_right1,
             unsigned short E_left2, unsigned short E_right2,
-            int windowWidthT);
+            int windowWidthT, bool autoEnWidth = false);
 
+    //这里加入回调函数，后期做成SDK会出现问题，SDK不存在回调，只存在返回值。
     void set_callback(std::function<void(vector<SingleSpectrum>, vector<CurrentPoint>, vector<CoincidenceResult>)> func);
 
 private:
     // 统计给出两个探测器各自当前一秒钟测量数据的能谱，当前一秒钟没有测量信号，则能谱全为零
     void calculateAllSpectrum(vector<TimeEnergy> data1, vector<TimeEnergy> data2);
+    
+    //自动能窗更新，根据初始的能窗，每到能谱数据累积满一定的数据量后， 进行高斯拟合，拟合得到的高斯半高宽作为新的能窗。
+    void AutoEnergyWidth();
 
     //进行符合事件处理
     void Coincidence(vector<TimeEnergy> data1, vector<TimeEnergy> data2,
@@ -118,5 +138,14 @@ private:
     vector<TimeEnergy> unusedData1, unusedData2;//用于存储未处理完的数据信息
     std::function<void(vector<SingleSpectrum>, vector<CurrentPoint>, vector<CoincidenceResult>)> m_pfunc;
     mutex mtx;
+    
+    // 用于高斯拟合，自动更新能窗
+    bool autoFirst; //自动调节符合计算能窗宽度，用于解决峰飘问题，每测量一定数据点之后，自动拟合出高斯曲线，以新的半高宽来作为符合计算能窗。
+    int GaussFitSpec[2][MULTI_CHANNEL]; //用于高斯拟合的能谱，每秒钟汇总一次，并且计算能窗内计数点是否到达指定的点数。满足点数后便进行拟合，更新能谱
+    int GaussCountMin; //高斯拟合的最小数据点数
+    unsigned short EnWidth_left1; 
+    unsigned short EnWidth_right1;
+    unsigned short EnWidth_left2; 
+    unsigned short EnWidth_right2;
 };
 #endif // COINCIDENCEANALYZER_H

@@ -154,7 +154,7 @@ void PlotWidget::initCustomPlot(){
         title->setLayout(new QHBoxLayout());
         title->layout()->setContentsMargins(0, 0, 0, 0);
         title->layout()->setSpacing(6);
-        title->setFixedHeight(3);
+        title->setFixedHeight(13);
         QLabel* label = new QLabel("Det1 / Det2");
         label->setContentsMargins(9, 0, 0, 0);
         label->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
@@ -833,29 +833,29 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                             if (fcount > 0){
                                 //显示拟合曲线
                                 double result[3];
-                                fit_GaussCurve(fcount, sx, sy, result);
+                                if (fit_GaussCurve(fcount, sx, sy, result)){
+                                    if (!std::isnan(result[0]) && !std::isnan(result[1]) && !std::isnan(result[2])){
+                                        //显示拟合数据
+                                        QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
+                                        if (gaussResultItemText){
+                                            QString info = QString("半高宽：%1\n峰: %2 = %3")
+                                                    .arg(QString::number(result[0], 'f', 3))
+                                                    .arg(QString::number(result[1], 'f', 0))
+                                                    .arg(QString::number(result[2], 'f', 3));
 
-                                if (!std::isnan(result[0]) && !std::isnan(result[1]) && !std::isnan(result[2])){
-                                    //显示拟合数据
-                                    QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
-                                    if (gaussResultItemText){
-                                        QString info = QString("半高宽：%1\n峰: %2 = %3")
-                                                .arg(QString::number(result[0], 'f', 3))
-                                                .arg(QString::number(result[1], 'f', 0))
-                                                .arg(QString::number(result[2], 'f', 3));
+                                            gaussResultItemText->setText(info);
+                                            double key, value;
+                                            graph->pixelsToCoords(e->pos().x(), e->pos().y(), key, value);
+                                            gaussResultItemText->position->setCoords(key, value);
+                                            gaussResultItemText->setVisible(true);
+                                        }
 
-                                        gaussResultItemText->setText(info);
-                                        double key, value;
-                                        graph->pixelsToCoords(e->pos().x(), e->pos().y(), key, value);
-                                        gaussResultItemText->position->setCoords(key, value);
-                                        gaussResultItemText->setVisible(true);
+                                        //计算符合能窗
+                                        unsigned int minMean = (result[1] - result[0] / 2);
+                                        unsigned int maxMean = (result[1] + result[0] / 2);
+                                        this->setProperty("ActiveCustomPlotName", customPlot->objectName());
+                                        emit sigUpdateMeanValues(customPlot->objectName(), minMean, maxMean);
                                     }
-
-                                    //计算符合能窗
-                                    unsigned int minMean = (result[1] - result[0] / 2);
-                                    unsigned int maxMean = (result[1] + result[0] / 2);
-                                    this->setProperty("ActiveCustomPlotName", customPlot->objectName());
-                                    emit sigUpdateMeanValues(customPlot->objectName(), minMean, maxMean);
                                 }
                             }
                         }

@@ -83,8 +83,9 @@ double GetCount(const vector<unsigned short> &data, int leftE, int rightE, int s
 // sx 待拟合数据x数组，
 // sy 待拟合数据y数组
 // 返回值result, result[0]为半高宽FWHM,result[1] 为峰位，result[2]为峰值。
+// return, 拟合是否成功
 // 待拟合函数：y(x) = a*exp[-4ln2(x-u)^2/FWHM^2]，a=result[2],u=result[1],FWHM=result[0].
-void fit_GaussCurve(int count, std::vector<double> sx, std::vector<double> sy, double* result);
+bool fit_GaussCurve(int count, std::vector<double> sx, std::vector<double> sy, double* result);
 
 class SysUtils
 {

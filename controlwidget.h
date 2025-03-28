@@ -19,8 +19,11 @@ public:
     void load();
     void save();
 
+    void enableUiStatus();
+
 protected:
     virtual bool eventFilter(QObject *watched, QEvent *event) override;
+    virtual void closeEvent(QCloseEvent *event) override;
 
 private slots:
     void on_pushButton_connect_clicked();
@@ -37,10 +40,19 @@ private slots:
 
     void on_pushButton_setup_clicked();
 
+    void on_pushButton_start_clicked();
+
+    void on_pushButton_clicked();
+
+    void on_pushButton_2_clicked();
+
+    void on_pushButton_backward_clicked();
+
 private:
     Ui::ControlWidget *ui;
-    FT_H mHandle1 = 0;
-    FT_H mHandle2 = 0;
+    FT_H mHandle[2] = { 0, 0 };
+    FT_H mCurrentHandle = 0;
+    QString currentAxiaName;
 };
 
 #endif // CONTROLWIDGET_H

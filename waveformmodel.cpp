@@ -324,7 +324,6 @@ void WaveformModel::on_pushButton_start_clicked()
     }
 }
 
-
 void WaveformModel::on_pushButton_save_clicked()
 {
     //存储路径

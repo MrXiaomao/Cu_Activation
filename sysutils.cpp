@@ -116,7 +116,7 @@ void printHistogram(const vector<int>& binEdges, const vector<int>& histogram) {
 // sy 待拟合数据y数组
 // 返回值result, result[0]为半高宽FWHM,result[1] 为峰位，result[2]为峰值。
 #include "polynomialfit.h"
-void fit_GaussCurve(int count, std::vector<double> sx, std::vector<double> sy, double* result)
+bool fit_GaussCurve(int count, std::vector<double> sx, std::vector<double> sy, double* result)
 {
     int degree = 2;
     double* weight = new double[count];
@@ -160,8 +160,12 @@ void fit_GaussCurve(int count, std::vector<double> sx, std::vector<double> sy, d
         result[0] = FWHM;
         result[1] = mean;
         result[2] = a;
+        delete[] weight;
+        return true;
     }else
+    {
         std::cout << "failed" ;
-
-    delete[] weight;
+        delete[] weight;
+        return false;
+    }
 }

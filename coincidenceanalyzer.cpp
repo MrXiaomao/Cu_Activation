@@ -1,6 +1,6 @@
 #include "coincidenceanalyzer.h"
 #include <queue>
-#include <QDebug>
+#include "sysutils.h"
 
 using namespace std;
 
@@ -20,9 +20,16 @@ struct particle_data
 //priority_queue<particle_data> q;//此时创建的优先队列是按x大小升序排列的
 
 CoincidenceAnalyzer::CoincidenceAnalyzer():
-countCoin(0)
+countCoin(0),autoFirst(true),
+GaussCountMin(2000),
+EnWidth_left1(1),EnWidth_right1(4095),
+EnWidth_left2(1),EnWidth_right2(4095)
 {
-
+    for(int i=0; i<MULTI_CHANNEL; i++)
+    {
+        GaussFitSpec[0][i] = 0;
+        GaussFitSpec[1][i] = 0;
+    }
 }
 
 void CoincidenceAnalyzer::set_callback(std::function<void(vector<SingleSpectrum>, vector<CurrentPoint>, vector<CoincidenceResult>)> func)
@@ -30,12 +37,32 @@ void CoincidenceAnalyzer::set_callback(std::function<void(vector<SingleSpectrum>
     m_pfunc = func;
 }
 
+/**calculate 处理[时间、能量]数据对，给出能谱、探测器计数、符合计数
+* TimeEnergy：结构体，时间(ns)：能量(无单位)
+* E_left1：探测器1左能窗
+* E_right1：探测器1左能窗
+* E_left2：探测器2左能窗
+* E_right2：探测器2左能窗
+* windowWidthT [int]：符合时间窗
+* autoEnWidth [bool]：是否自动修正峰位漂移引起的能窗移动
+*/
 void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy> _data2,
               unsigned short E_left1, unsigned short E_right1,
               unsigned short E_left2, unsigned short E_right2,
-              int windowWidthT)
+              int windowWidthT, bool autoEnWidth)
 {
-    mtx.lock();
+    // 如果是自动调整窗宽，则只在测量开始的首次读取窗宽，后续都自动更新窗宽
+    if(autoEnWidth) {
+        autoFirst = false;
+    }
+    if(autoFirst)  
+    {
+        EnWidth_left1 = E_left1;
+        EnWidth_right1 = E_right1;
+        EnWidth_left2 = E_left2;
+        EnWidth_right2 = E_right2;
+    }
+
     vector<TimeEnergy> data1;
     vector<TimeEnergy> data2;
     if (unusedData1.size() > 0){
@@ -50,7 +77,6 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
     data2.insert(data2.end(), _data2.begin(), _data2.end());
 
     if (data1.size()<=0 || data2.size() <= 0){
-        mtx.unlock();
         return;
     }
 
@@ -64,17 +90,20 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
     //必须存够1秒的数据才进行处理
     while(time1_elapseFPGA >= deltaT && time2_elapseFPGA >= deltaT)
     {
-        qDebug() << "countCoin[" << countCoin << "] " << data1.size() << "...." << data2.size();
-
         //先计算出当前一秒的数据点个数
         GetDataPoint(data1, data2);
-        qDebug() << "AllPoint[" << countCoin << "] " << AllPoint.back().dataPoint1 << "...." << AllPoint.back().dataPoint2;
 
         //对当前一秒数据处理给出能谱
         calculateAllSpectrum(data1,data2);
+        
+        //自动拟合，更新能窗
+        if(autoEnWidth) 
+        {
+            AutoEnergyWidth();
+        }
 
         //对当前一秒数据处理给出各自的计数以及符合计数
-        Coincidence(data1, data2, E_left1, E_right1, E_left2, E_right2, windowWidthT);
+        Coincidence(data1, data2, EnWidth_left1, EnWidth_right1, EnWidth_left2, EnWidth_right2, windowWidthT);
 
         //删除容器中已经处理的数据点
         if (AllPoint.back().dataPoint1 <= (int)data1.size()) {
@@ -101,7 +130,6 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
         unusedData1.insert(unusedData1.end(), data1.begin(), data1.end());
     if (data2.size() > 0)
         unusedData2.insert(unusedData2.end(), data2.begin(), data2.end());
-    mtx.unlock();
 }
 
 /* calculateAllSpectrum:统计给出两个探测器各自当前一秒钟测量数据的能谱，当前一秒钟没有测量信号，则能谱全为零
@@ -275,6 +303,58 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
         }
     }
     coinResult.push_back(tmpCoinResult);
+}
+
+// 自动更新能窗
+void CoincidenceAnalyzer::AutoEnergyWidth()
+{
+    SingleSpectrum tempSpec = AllSpectrum.back();
+
+    //计算能窗内数据点数
+    int sumEnergy1 = 0; 
+    int sumEnergy2 = 0;
+
+    for(int i=0; i<MULTI_CHANNEL; i++)
+    {
+        GaussFitSpec[0][i] += tempSpec.spectrum[0][i];
+        GaussFitSpec[1][i] += tempSpec.spectrum[1][i];
+        if(i >= EnWidth_left1 && i <= EnWidth_right1) sumEnergy1 += GaussFitSpec[0][i];
+        if(i >= EnWidth_left2 && i <= EnWidth_right2) sumEnergy2 += GaussFitSpec[1][i];
+    }
+
+    if(sumEnergy1 > GaussCountMin)  
+    {
+        double result[3];
+        vector<double> sx,sy;
+        for(int i=0; i<MULTI_CHANNEL; i++)
+        {
+            if(i >= EnWidth_left1 && i <= EnWidth_right1) {sx.push_back(i*1.0); sy.push_back(GaussFitSpec[0][i]);}
+        }
+        
+        int fcount = EnWidth_right1 - EnWidth_left1 + 1;
+        if(fit_GaussCurve(fcount, sx, sy, result))
+        {
+            EnWidth_left1 = result[1] - result[0]*0.5; // 峰位-0.5*半高宽FWHM
+            EnWidth_right1 = result[1] + result[0]*0.5; // 峰位+0.5*半高宽FWHM
+        }
+    }
+
+    if(sumEnergy2 > GaussCountMin)  
+    {
+        double result[3];
+        vector<double> sx,sy;
+        for(int i=0; i<MULTI_CHANNEL; i++)
+        {
+            if(i >= EnWidth_left2 && i <= EnWidth_right2) {sx.push_back(i*1.0); sy.push_back(GaussFitSpec[1][i]);}
+        }
+
+        int fcount = EnWidth_right1 - EnWidth_left1 + 1;
+        if(fit_GaussCurve(fcount, sx, sy, result))
+        {
+            EnWidth_left2 = result[1] - result[0]*0.5; // 峰位-0.5*半高宽FWHM
+            EnWidth_right2 = result[1] + result[0]*0.5; // 峰位+0.5*半高宽FWHM
+        }
+    }
 }
 
 //统计给出当前一秒内的两个探测器各自数据点的个数

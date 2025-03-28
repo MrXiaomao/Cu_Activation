@@ -101,7 +101,6 @@ MainWindow::MainWindow(QWidget *parent)
         }
 
         QString msg = QString(tr("外设%1状态：%2")).arg(index + 1).arg(on ? tr("开") : tr("关"));
-        ui->statusbar->showMessage(msg);
         emit sigAppengMsg(msg, QtInfoMsg);
         emit sigRefreshUi();
     });
@@ -113,7 +112,6 @@ MainWindow::MainWindow(QWidget *parent)
         this->setProperty("relay_on", false);
 
         QString msg = QString(tr("网络故障，电源连接失败！"));
-        ui->statusbar->showMessage(msg);
         emit sigAppengMsg(msg, QtCriticalMsg);
         emit sigRefreshUi();
     });
@@ -127,7 +125,6 @@ MainWindow::MainWindow(QWidget *parent)
             this->setProperty("measure-status", msEnd);
         }
         QString msg = QString(tr("电源状态：%1")).arg(on ? tr("开") : tr("关"));
-        ui->statusbar->showMessage(msg);
         emit sigAppengMsg(msg, QtInfoMsg);
         emit sigRefreshUi();
     });
@@ -146,7 +143,7 @@ MainWindow::MainWindow(QWidget *parent)
         if (mode == mmAuto)
             ui->start_time_text->setText(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
         QString msg = tr("测量正式开始");
-        ui->statusbar->showMessage(msg);
+        emit sigAppengMsg(msg, QtCriticalMsg);
 
         //开启测量时钟
         if (mode == mmManual || mode == mmAuto){//手动/自动测量
@@ -178,7 +175,6 @@ MainWindow::MainWindow(QWidget *parent)
 
         this->setProperty("measure-status", msEnd);
         QString msg = tr("测量已停止");
-        ui->statusbar->showMessage(msg);
         emit sigAppengMsg(msg, QtInfoMsg);
         emit sigRefreshUi();
     });
@@ -194,7 +190,6 @@ MainWindow::MainWindow(QWidget *parent)
         measureTimer->stop();
 
         QString msg = QString(tr("网络故障，探测器连接失败！"));
-        ui->statusbar->showMessage(msg);
         emit sigAppengMsg(msg, QtCriticalMsg);
         emit sigRefreshUi();
     });
@@ -209,7 +204,6 @@ MainWindow::MainWindow(QWidget *parent)
         }
 
         QString msg = QString(tr("探测器状态：%1")).arg(on ? tr("开") : tr("关"));
-        ui->statusbar->showMessage(msg);
         emit sigAppengMsg(msg, QtInfoMsg);
         emit sigRefreshUi();
     });
@@ -286,7 +280,6 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 void MainWindow::InitMainWindowUi()
 {
     // 获取当前时间
-    //ui->start_time_text->setDateTime(QDateTime::currentDateTime());
     ui->textEdit_log->clear();
 
     QString path = QApplication::applicationDirPath() + "/config";
@@ -405,6 +398,20 @@ void MainWindow::InitMainWindowUi()
     ui->statusbar->addWidget(new QLabel(ui->statusbar), 1);
     ui->statusbar->addWidget(nullptr, 1);
     ui->statusbar->addPermanentWidget(label_systemtime);    
+
+    //日志窗口重置位置
+    int screenValidHeight = QGuiApplication::primaryScreen()->size().height();
+    if (screenValidHeight <= 768){
+        // 分页
+        int index = ui->tabWidget_client->addTab(ui->widget_log, tr("日志视窗"));
+        ui->tabWidget_client->tabBar()->setTabButton(index, QTabBar::RightSide, nullptr);//tab取消关闭按钮
+    } else if (screenValidHeight <= 1080){
+        // 右侧
+        ui->widget_right->layout()->removeItem(ui->verticalSpacer_3);//移除弹簧
+        ui->widget_right->layout()->addWidget(ui->widget_log);
+    } else {
+
+    }
 
     QTimer* systemClockTimer = new QTimer(this);
     systemClockTimer->setObjectName("systemClockTimer");
@@ -716,7 +723,7 @@ void MainWindow::on_pushButton_measure_clicked()
         detectorParameter.triggerThold1 = 0x81;
         detectorParameter.triggerThold2 = 0x81;
         detectorParameter.waveformPolarity = 0x00;
-        detectorParameter.dieTimeLength = 0x05;
+        detectorParameter.dieTimeLength = 1;
         detectorParameter.gain = 0x00;
         detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
         detectorParameter.measureModel = mmManual;
@@ -735,7 +742,7 @@ void MainWindow::on_pushButton_measure_clicked()
             detectorParameter.triggerThold1 = jsonObj["TriggerThold1"].toInt();
             detectorParameter.triggerThold2 = jsonObj["TriggerThold2"].toInt();
             detectorParameter.waveformPolarity = jsonObj["WaveformPolarity"].toInt();
-            detectorParameter.dieTimeLength = jsonObj["DieTimeLength"].toInt();
+            detectorParameter.dieTimeLength = jsonObj["DieTimeLength"].toInt() / 10;
             detectorParameter.gain = jsonObj["DetectorGain"].toInt();
         }
 
@@ -751,7 +758,7 @@ void MainWindow::on_pushButton_measure_clicked()
         int stepT = ui->spinBox_step->value();
         int leftE[2] = {ui->spinBox_1_leftE->value(), ui->spinBox_2_leftE->value()};
         int rightE[2] = {ui->spinBox_1_rightE->value(), ui->spinBox_2_rightE->value()};
-        int timewidth = ui->spinBox_resolving_time->value();
+        int timewidth = ui->spinBox_timeWidth->value();
         QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
         measureTimer->setInterval(ui->spinBox_timelength_3->value() * 1000);
         commandhelper->updateParamter(stepT, leftE, rightE, timewidth, false);
@@ -827,7 +834,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         int stepT = ui->spinBox_step_2->value();
         int leftE[2] = {ui->spinBox_1_leftE->value(), ui->spinBox_2_leftE_2->value()};
         int rightE[2] = {ui->spinBox_1_rightE_2->value(), ui->spinBox_2_rightE_2->value()};
-        int timewidth = ui->spinBox_resolving_time->value();
+        int timewidth = ui->spinBox_timeWidth->value();
         QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
         measureTimer->setInterval(ui->spinBox_timelength_3->value() * 1000);
 
@@ -910,7 +917,7 @@ void MainWindow::on_pushButton_refresh_clicked()
         plotWidget->slotResetPlot();
     }
 
-    int timewidth = ui->spinBox_resolving_time->value();
+    int timewidth = ui->spinBox_timeWidth->value();
     commandhelper->updateParamter(stepT, leftE, rightE, timewidth, true);
 }
 
@@ -1136,6 +1143,9 @@ void MainWindow::slotRefreshUi()
             ui->pushButton_measure->setEnabled(true);
             ui->pushButton_refresh->setEnabled(true);
 
+            ui->action_power->setEnabled(false);
+            ui->action_detector_connect->setEnabled(false);
+
             //公共
             ui->pushButton_save->setEnabled(false);
             ui->pushButton_gauss->setEnabled(true);
@@ -1180,6 +1190,9 @@ void MainWindow::slotRefreshUi()
         ui->pushButton_measure->setText(tr("开始测量"));
         ui->pushButton_measure_2->setText(tr("开始测量"));
         ui->pushButton_measure_3->setText(tr("开始测量"));
+
+        ui->action_power->setEnabled(true);
+        ui->action_detector_connect->setEnabled(true);
 
         ui->action_refresh->setEnabled(false);
         ui->spinBox_1_leftE->setEnabled(true);
@@ -1245,7 +1258,7 @@ void MainWindow::load()
             //时间步长
             ui->spinBox_step->setValue(jsonObjM1["step"].toInt());
             //符合分辨时间
-            ui->spinBox_resolving_time->setValue(jsonObjM1["resolving_time"].toInt());
+            ui->spinBox_timeWidth->setValue(jsonObjM1["timewidth"].toInt());
             //标定文件
             ui->lineEdit_file->setText(jsonObjM1["file"].toString());
         }
@@ -1263,7 +1276,7 @@ void MainWindow::load()
             //时间步长
             ui->spinBox_step_2->setValue(jsonObjM2["step"].toInt());
             //符合分辨时间
-            ui->spinBox_resolving_time_2->setValue(jsonObjM2["resolving_time"].toInt());
+            ui->spinBox_timeWidth_2->setValue(jsonObjM2["timewidth"].toInt());
         }
 
         //标定
@@ -1277,7 +1290,7 @@ void MainWindow::load()
             //冷却时长
             ui->spinBox_cool_timelength_3->setValue(jsonObjM3["cool_timelength"].toInt());
             //符合分辨时间
-            ui->spinBox_resolving_time_3->setValue(jsonObjM3["resolving_time"].toInt());
+            ui->spinBox_timeWidth_3->setValue(jsonObjM3["timewidth"].toInt());
             //中子产额
             ui->spinBox_neutron_yield->setValue(jsonObjM3["neutron_yield"].toInt());
         }
@@ -1329,7 +1342,7 @@ void MainWindow::save()
         //时间步长
         jsonObjM1["step"] = ui->spinBox_step->value();
         //符合分辨时间
-        jsonObjM1["resolving_time"] = ui->spinBox_resolving_time->value();
+        jsonObjM1["timewidth"] = ui->spinBox_timeWidth->value();
         //标定文件
         jsonObjM1["file"] = ui->lineEdit_file->text();
         if (!jsonObj.contains("M1")){
@@ -1352,7 +1365,7 @@ void MainWindow::save()
         //时间步长
         jsonObjM2["step"] = ui->spinBox_step_2->value();
         //符合分辨时间
-        jsonObjM2["resolving_time"] = ui->spinBox_resolving_time_2->value();
+        jsonObjM2["timewidth"] = ui->spinBox_timeWidth_2->value();
         if (!jsonObj.contains("M2")){
             jsonObj.insert("M2", jsonObjM2);
         }
@@ -1371,7 +1384,7 @@ void MainWindow::save()
         //冷却时长
         jsonObjM3["cool_timelength"] = ui->spinBox_cool_timelength_3->value();
         //符合分辨时间
-        jsonObjM3["resolving_time"] = ui->spinBox_resolving_time_3->value();
+        jsonObjM3["timeWidth"] = ui->spinBox_timeWidth_3->value();
         //中子产额
         jsonObjM3["neutron_yield"] = ui->spinBox_neutron_yield->value();
         if (!jsonObj.contains("M3")){
@@ -1383,7 +1396,7 @@ void MainWindow::save()
         if (jsonObj.contains("Public")){
             jsonObjPub = jsonObj["Public"].toObject();
         } else {
-            jsonObj.insert("Public", jsonObjPub);
+            //jsonObj.insert("Public", jsonObjPub);
         }
         //高斯拟合
         jsonObjPub["leftE"] = ui->spinBox_leftE->value();
@@ -1391,6 +1404,9 @@ void MainWindow::save()
         //保存数据
         jsonObjPub["path"] = ui->lineEdit_path->text();
         jsonObjPub["filename"] = ui->lineEdit_filename->text();
+        if (!jsonObj.contains("Public")){
+            jsonObj.insert("Public", jsonObjPub);
+        }
 
         file.open(QIODevice::WriteOnly | QIODevice::Text);
         QJsonDocument jsonDocNew(jsonObj);
@@ -1429,4 +1445,14 @@ void MainWindow::on_action_line_log_triggered()
         ui->action_line_log->setIconText(tr("线性"));
         ui->action_line_log->setIcon(QIcon(":/resource/line.png"));
     }
+}
+
+#include "controlwidget.h"
+void MainWindow::on_action_Moving_triggered()
+{
+    ControlWidget *w = new ControlWidget(this);
+    w->setAttribute(Qt::WA_DeleteOnClose, true);
+    w->setWindowFlags(Qt::WindowCloseButtonHint|Qt::Dialog);
+    w->setWindowModality(Qt::ApplicationModal);
+    w->showNormal();
 }

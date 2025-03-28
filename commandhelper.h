@@ -21,7 +21,7 @@ typedef struct tagDetectorParameter{
     qint8 waveformPolarity;
 
 
-    // 能谱模式/粒子模式死时间
+    // 能谱模式/粒子模式死时间 单位x10ns
     qint16 dieTimeLength;
     // 能谱刷新时间
     quint32 refreshTimeLength;

@@ -45,16 +45,14 @@ void AppMessageHandler(QtMsgType type, const QMessageLogContext& /*context*/, co
 
     // 加锁
     QMutexLocker locker(&mutexMsg);
+    if (type == QtWarningMsg)
+        return;
 
     // 确保logs目录存在
     QDir dir(QDir::currentPath() + "/logs");
     if (!dir.exists()) {
         dir.mkpath(".");
     }
-
-    //过滤掉警告日志信息
-    if (type == QtWarningMsg)
-        return;
 
     // 获取当前日期，并格式化为YYYY-MM-DD
     QString currentDate = QDateTime::currentDateTime().toString("yyyy-MM-dd");
@@ -72,7 +70,7 @@ void AppMessageHandler(QtMsgType type, const QMessageLogContext& /*context*/, co
         file.flush();
         file.close();
 
-        if (mw)
+        if (mw && type != QtDebugMsg)
             emit mw->sigAppengMsg(msg + "\n", type);
     }
 }
@@ -162,13 +160,21 @@ void cleanOldLogs(int refsToKeep)
     }
 }
 
-
 int main(int argc, char *argv[])
 {
     QApplication::setStyle(QStyleFactory::create("fusion"));//WindowsVista fusion windows
-    QApplication::setAttribute(Qt::AA_DisableHighDpiScaling); // 启用高DPI缩放支持
+    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling, false); // 启用高DPI缩放支持
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps); // 使用高DPI位图
+    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+
     QApplication a(argc, argv);
+//    // 获取屏幕分辨率和缩放因子
+//    QScreen *screen = QGuiApplication::primaryScreen();
+//    qreal dpiScale = screen->logicalDotsPerInch() / 96.0;
+//    // 设置全局字体并应用缩放因子
+//    QFont defaultFont = QApplication::font();
+//    defaultFont.setPointSizeF(defaultFont.pointSizeF() * dpiScale);
+//    QApplication::setFont(defaultFont);
 
     qDebug() << APP_VERSION;
     qDebug() << GIT_BRANCH;

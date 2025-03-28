@@ -144,7 +144,7 @@
    <item row="4" column="0">
     <widget class="QLabel" name="label_6">
      <property name="text">
-      <string>死时间/x10ns：</string>
+      <string>死时间/ns：</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -159,8 +159,11 @@
      <property name="maximum">
       <number>1000</number>
      </property>
+     <property name="singleStep">
+      <number>10</number>
+     </property>
      <property name="value">
-      <number>50</number>
+      <number>10</number>
      </property>
     </widget>
    </item>

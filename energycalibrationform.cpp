@@ -31,8 +31,8 @@ void EnergyCalibrationForm::initCustomPlot()
     // 设置选择容忍度，即鼠标点击点到数据点的距离
     //customPlot->setSelectionTolerance(5);
     // 设置全局抗锯齿
-    //customPlot->setAntialiasedElements(QCP::aeAll);
-    customPlot->setNotAntialiasedElements(QCP::aeAll);
+    customPlot->setAntialiasedElements(QCP::aeAll);
+    //customPlot->setNotAntialiasedElements(QCP::aeAll);
     // 图例名称隐藏
     customPlot->legend->setVisible(false);
     // 图例名称显示位置

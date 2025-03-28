@@ -1147,7 +1147,27 @@ void QCPLayer::draw(QCPPainter *painter)
     if (child->realVisibility())
     {
       painter->save();
-      painter->setClipRect(child->clipRect().translated(0, -1));
+//      if (child->inherits("QCPAxis")){
+//          QCPAxis *cpAxis = reinterpret_cast<QCPAxis*>(child);
+//          if (cpAxis->axisType() == QCPAxis::atBottom){
+//              //if (child->axisType() != QCPAxis::atBottom)mAxisType
+//              QRectF clipRect = child->clipRect();
+//              clipRect.adjust(0, 0, 0, -20);
+//              clipRect = clipRect.translated(0, -1);
+//              painter->setClipRect(clipRect);
+//              //painter->setClipRect(child->clipRect().translated(0, -1));//snowwolf
+//              child->applyDefaultAntialiasingHint(painter);
+//              child->draw(painter);
+//              painter->restore();
+//              return;
+//          }
+//      }
+
+      QRectF clipRect = child->clipRect();
+      clipRect.adjust(0, 0, 0, 5);
+      clipRect = clipRect.translated(0, -1);
+      painter->setClipRect(clipRect);
+      //painter->setClipRect(child->clipRect().translated(0, -1));//snowwolf 使x坐标轴上的图像也可以显示出来，覆盖在坐标轴之上，而不是被坐标轴遮挡
       child->applyDefaultAntialiasingHint(painter);
       child->draw(painter);
       painter->restore();
@@ -5697,7 +5717,7 @@ void QCPLabelPainterPrivate::drawLabelMaybeCached(QCPPainter *painter, const QFo
     }
     // if label would be partly clipped by widget border on sides, don't draw it (only for outside tick labels):
     bool labelClippedByBorder = false;
-    /*
+    /* snowwolf
     if (tickLabelSide == QCPAxis::lsOutside)
     {
       if (QCPAxis::orientation(type) == Qt::Horizontal)
@@ -9967,7 +9987,7 @@ void QCPAxisPainterPrivate::draw(QCPPainter *painter)
     baseLine.setPoints(origin+QPointF(xCor, yCor), origin+QPointF(xCor, -axisRect.height()+yCor));
   if (reversedEndings)
     baseLine = QLineF(baseLine.p2(), baseLine.p1()); // won't make a difference for line itself, but for line endings later
-  painter->drawLine(baseLine);
+  painter->drawLine(baseLine);//snowwolf
   
   // draw ticks:
   if (!tickPositions.isEmpty())
@@ -17396,7 +17416,7 @@ void QCPSelectionDecoratorBracket::setTangentAverage(int pointCount)
     mTangentAverage = 1;
 }
 
-/*!
+/*!s
   Draws the bracket shape with \a painter. The parameter \a direction is either -1 or 1 and
   indicates whether the bracket shall point to the left or the right (i.e. is a closing or opening
   bracket, respectively).

@@ -353,44 +353,6 @@
                    </property>
                   </widget>
                  </item>
-                 <item>
-                  <widget class="QLabel" name="label_22">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="text">
-                    <string>中子产额：</string>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLCDNumber" name="lcdNumber_6">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>0</width>
-                     <height>30</height>
-                    </size>
-                   </property>
-                   <property name="digitCount">
-                    <number>9</number>
-                   </property>
-                   <property name="segmentStyle">
-                    <enum>QLCDNumber::Flat</enum>
-                   </property>
-                  </widget>
-                 </item>
                 </layout>
                </widget>
               </item>
@@ -478,7 +440,7 @@
                  <set>Qt::BottomDockWidgetArea</set>
                 </property>
                 <property name="windowTitle">
-                 <string>日志视图</string>
+                 <string>日志视窗</string>
                 </property>
                 <widget class="QWidget" name="dockWidgetContents_2">
                  <layout class="QGridLayout" name="gridLayout_12">
@@ -554,7 +516,7 @@ p, li { white-space: pre-wrap; }
               </size>
              </property>
              <property name="currentIndex">
-              <number>1</number>
+              <number>2</number>
              </property>
              <widget class="QWidget" name="tab_3">
               <attribute name="title">
@@ -716,12 +678,15 @@ p, li { white-space: pre-wrap; }
                    </widget>
                   </item>
                   <item row="7" column="1">
-                   <widget class="QSpinBox" name="spinBox_resolving_time">
+                   <widget class="QSpinBox" name="spinBox_timeWidth">
                     <property name="minimum">
-                     <number>1</number>
+                     <number>10</number>
                     </property>
                     <property name="maximum">
-                     <number>50000000</number>
+                     <number>10000000</number>
+                    </property>
+                    <property name="singleStep">
+                     <number>10</number>
                     </property>
                     <property name="value">
                      <number>10</number>
@@ -1175,9 +1140,9 @@ p, li { white-space: pre-wrap; }
                    </widget>
                   </item>
                   <item row="5" column="1">
-                   <widget class="QSpinBox" name="spinBox_resolving_time_2">
+                   <widget class="QSpinBox" name="spinBox_timeWidth_2">
                     <property name="minimum">
-                     <number>1</number>
+                     <number>10</number>
                     </property>
                     <property name="maximum">
                      <number>1000</number>
@@ -1347,10 +1312,10 @@ p, li { white-space: pre-wrap; }
                   <item row="2" column="1">
                    <widget class="QSpinBox" name="spinBox_step_2">
                     <property name="minimum">
-                     <number>0</number>
+                     <number>1</number>
                     </property>
                     <property name="maximum">
-                     <number>864000</number>
+                     <number>3600</number>
                     </property>
                    </widget>
                   </item>
@@ -1783,12 +1748,15 @@ p, li { white-space: pre-wrap; }
                    </widget>
                   </item>
                   <item row="2" column="1">
-                   <widget class="QSpinBox" name="spinBox_resolving_time_3">
+                   <widget class="QSpinBox" name="spinBox_timeWidth_3">
                     <property name="minimum">
-                     <number>1</number>
+                     <number>10</number>
                     </property>
                     <property name="maximum">
-                     <number>1000</number>
+                     <number>10000000</number>
+                    </property>
+                    <property name="singleStep">
+                     <number>10</number>
                     </property>
                     <property name="value">
                      <number>10</number>
@@ -2418,6 +2386,7 @@ p, li { white-space: pre-wrap; }
      <string>工具</string>
     </property>
     <addaction name="action_energycalibration"/>
+    <addaction name="action_Moving"/>
     <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menu_5">
@@ -2669,6 +2638,15 @@ p, li { white-space: pre-wrap; }
    </property>
    <property name="text">
     <string>恢复出厂设置</string>
+   </property>
+  </action>
+  <action name="action_Moving">
+   <property name="icon">
+    <iconset resource="resource.qrc">
+     <normaloff>:/resource/zhiling.png</normaloff>:/resource/zhiling.png</iconset>
+   </property>
+   <property name="text">
+    <string>位移平台</string>
    </property>
   </action>
  </widget>

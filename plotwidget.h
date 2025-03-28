@@ -31,6 +31,9 @@ public:
     void resetAxisCoords();
     void rescalAxisCoords(QCustomPlot* customPlot);
 
+    QCPGraph* getGraph(int index); //0-Det1 1-Det2 2=符合曲线 3-高斯曲线
+    void resetPlotDatas(QCustomPlot* customPlot);//右键重设数据初始状态
+
 public slots:
     void slotPlotClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event);
     void slotBeforeReplot();
@@ -42,6 +45,7 @@ public slots:
     void slotResetPlot();
     void slotGauss(int leftE, int rightE);
 
+
 protected:
     virtual bool eventFilter(QObject *watched, QEvent *event) override;
 
@@ -49,7 +53,7 @@ signals:
     void sigMouseDoubleClickEvent();
     void sigUpdateMeanValues(QString name, unsigned int minMean, unsigned int maxMean);
 
-private:
+private:    
     bool showAxis = false;//是否显示轴线
     bool isDragging = false;
     bool enableDrag = false;
@@ -57,7 +61,8 @@ private:
     QPoint dragStart;
 
     QColor clrBackground = QColor(255, 255, 255);
-    QColor clrLine = QColor(0, 255, 0, 200);
+    QColor clrLine = QColor(2, 115, 189, 200);
+    QColor clrLine2 = QColor(189, 115, 2, 200);
     QColor clrRang = QColor(255, 0, 0, 255);
     QColor clrSelect = QColor(0, 0, 255, 200);
     QColor clrGauseCurve = QColor(0, 0, 255, 200);

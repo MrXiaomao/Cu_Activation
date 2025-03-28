@@ -1,4 +1,4 @@
-QT       += core gui widgets network
+QT       += core gui widgets network serialport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -18,6 +18,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
     cachedirconfigwidget.cpp \
     coincidenceanalyzer.cpp \
+    controlwidget.cpp \
     function.cpp \
     aboutwidget.cpp \
     augmentedmatrix.cpp \
@@ -39,6 +40,7 @@ SOURCES += \
 HEADERS += \
     cachedirconfigwidget.h \
     coincidenceanalyzer.h \
+    controlwidget.h \
     function.h \
     aboutwidget.h \
     augmentedmatrix.h \
@@ -61,6 +63,7 @@ FORMS += \
     FPGASetting.ui \
     aboutwidget.ui \
     cachedirconfigwidget.ui \
+    controlwidget.ui \
     coolingtimewidget.ui \
     dataanalysiswidget.ui \
     energycalibrationform.ui \
@@ -200,3 +203,13 @@ DEFINES += APP_VERSION=\"\\\"$$APP_VERSION\\\"\"
 message(GIT_BRANCH":  ""$$GIT_BRANCH")
 message(GIT_TIME":  ""$$GIT_TIME")
 message(APP_VERSION":  ""$$APP_VERSION")
+
+contains(QT_ARCH, x86_64) {
+    win32: LIBS += -L$$PWD/3rdParty/ftcoreimc_win_v1.3.0.9n/lib/x64/ -lftcoreimc
+    DEPENDPATH += $$PWD/3rdParty/ftcoreimc_win_v1.3.0.9n/lib/x64/
+} else {
+    win32: LIBS += -L$$PWD/3rdParty/ftcoreimc_win_v1.3.0.9n/lib/x86/ -lftcoreimc
+    DEPENDPATH += $$PWD/3rdParty/ftcoreimc_win_v1.3.0.9n/lib/x86/
+}
+
+INCLUDEPATH += $$PWD/3rdParty/ftcoreimc_win_v1.3.0.9n/inc

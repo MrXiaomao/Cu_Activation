@@ -102,6 +102,8 @@ private slots:
 
     void on_action_line_log_triggered();
 
+    void on_action_Moving_triggered();
+
 private:
     Ui::MainWindow *ui = nullptr;
     SpectrumModel *spectrummodel = nullptr;//能谱模型

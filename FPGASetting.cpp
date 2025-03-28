@@ -24,6 +24,7 @@ FPGASetting::~FPGASetting()
 void FPGASetting::on_pushButton_save_clicked()
 {
     this->save();
+    this->close();
 }
 
 bool FPGASetting::save()

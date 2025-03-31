@@ -17,6 +17,8 @@ public:
 
     void load();
 
+    void gotoAbs(int index);
+
     /// 获取sdk的版本号，如“1.1.0.0”
     const char* getsdkversion();
 
@@ -133,6 +135,9 @@ public:
                                   uint16_t* value);
 
 signals:
+    // 位移平台状态
+    void sigControlStatus(bool on);
+    void sigControlFault(qint32 index);//故障，一般指网络不通
 
 private:
     FT_H mHandle;

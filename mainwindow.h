@@ -111,8 +111,8 @@ private:
     Ui::MainWindow *ui = nullptr;
     SpectrumModel *spectrummodel = nullptr;//能谱模型
     DataAnalysisWidget *dataAnalysisWidget = nullptr;//数据解析
-    CommandHelper *commandhelper = nullptr;//网络指令
-    ControlHelper *controlhelper = nullptr;//网络指令
+    CommandHelper *commandHelper = nullptr;//网络指令
+    ControlHelper *controlHelper = nullptr;//网络指令
 
     qint32 currentDetectorIndex = 0;
     QDateTime lastRecvDataTime;//探测器上一次接收数据时间

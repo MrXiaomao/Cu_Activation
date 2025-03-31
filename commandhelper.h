@@ -87,10 +87,6 @@ public:
     };
 
 signals:
-    // 位移平台状态
-    void sigDisplacementStatus(bool on, qint32 index);
-    void sigDisplacementFault(qint32 index);//故障，一般指网络不通
-
     // 继电器状态
     void sigRelayStatus(bool on);
     void sigRelayFault();//故障，一般指网络不通
@@ -139,13 +135,10 @@ protected:
     quint8 crc();
 
 public slots:
-    void openRelay(QString ip, qint32 port);
+    void openRelay();
     void closeRelay();
 
-    void openDisplacement(QString ip, qint32 port, qint32 index);
-    void closeDisplacement(qint32 index);
-
-    void openDetector(QString ip, qint32 port);
+    void openDetector();
     void closeDetector();
 
     //触发阈值1
@@ -193,8 +186,6 @@ public slots:
     void slotPlotUpdateFrame();
 
 private:
-    QTcpSocket *socketDisplacement1;//2个位移平台、1个继电器、1个探测器
-    QTcpSocket *socketDisplacement2;
     QTcpSocket *socketRelay;    //继电器
     QTcpSocket *socketDetector;//探测器
 

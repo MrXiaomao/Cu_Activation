@@ -33,10 +33,8 @@ MainWindow::MainWindow(QWidget *parent)
     this->setProperty("relay_on", false);
     this->setProperty("relay_fault", false);
     //外设
-    this->setProperty("displacement_1_on", false);
-    this->setProperty("displacement_2_on", false);
-    this->setProperty("displacement_1_fault", false);
-    this->setProperty("displacement_2_fault", false);
+    this->setProperty("control_on", false);
+    this->setProperty("control_fault", false);
     //探测器
     this->setProperty("detector_fault", false);
     this->setProperty("detector_on", false);
@@ -52,64 +50,34 @@ MainWindow::MainWindow(QWidget *parent)
     connect(this, SIGNAL(sigRefreshUi()), this, SLOT(slotRefreshUi()));
     connect(this, SIGNAL(sigAppengMsg(const QString &, QtMsgType)), this, SLOT(slotAppendMsg(const QString &, QtMsgType)));
 
-    commandhelper = CommandHelper::instance();
-    controlhelper = ControlHelper::instance();
+    commandHelper = CommandHelper::instance();
+    controlHelper = ControlHelper::instance();
 
     //外设状态
-    connect(commandhelper, &CommandHelper::sigDisplacementFault, this, [=](qint32 index){
-        if (index == 0){
-            this->setProperty("displacement_1_fault", true);
-            this->setProperty("displacement_1_on", false);
-        } else {
-            this->setProperty("displacement_2_fault", true);
-            this->setProperty("displacement_1_on", false);
-        }
+    connect(controlHelper, &ControlHelper::sigControlFault, this, [=](){
+        this->setProperty("control_fault", true);
+        this->setProperty("control_on", false);
 
         emit sigRefreshUi();
     });
 
-    connect(commandhelper, &CommandHelper::sigDisplacementStatus, this, [=](bool on, qint32 index){
-        if (index == 0){
-            this->setProperty("displacement_1_fault", false);
-            this->setProperty("displacement_1_on", on);
-        } else {
-            this->setProperty("displacement_2_fault", false);
-            this->setProperty("displacement_2_on", on);
-        }
+    connect(controlHelper, &ControlHelper::sigControlStatus, this, [=](bool on){
+        this->setProperty("control_fault", false);
+        this->setProperty("control_on", on);
 
         //外设连接成功，主动连接电源
-        if (this->property("displacement_1_on").toBool() && this->property("displacement_2_on").toBool()){
-            QFile file(QApplication::applicationDirPath() + "/config/ip.json");
-            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-                // 读取文件内容
-                QByteArray jsonData = file.readAll();
-                file.close(); //释放资源
-
-                // 将 JSON 数据解析为 QJsonDocument
-                QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-                QJsonObject jsonObj = jsonDoc.object();
-
-                QString ip = "192.168.10.253";
-                qint32 port = 1030;
-                QJsonObject jsonDetector;
-                if (jsonObj.contains("Relay")){
-                    jsonDetector = jsonObj["Relay"].toObject();
-                    ip = jsonDetector["ip"].toString();
-                    port = jsonDetector["port"].toInt();
-                }
-
-                commandhelper->openRelay(ip, port);
-            }
+        if (this->property("control_on").toBool()){
+            commandHelper->openRelay();
         }
 
-        QString msg = QString(tr("外设%1状态：%2")).arg(index + 1).arg(on ? tr("开") : tr("关"));
+        QString msg = QString(tr("外设状态：%2")).arg(on ? tr("开") : tr("关"));
         emit sigAppengMsg(msg, QtInfoMsg);
         emit sigRefreshUi();
     });
 
     // 禁用开启电源按钮
     ui->action_power->setEnabled(false);
-    connect(commandhelper, &CommandHelper::sigRelayFault, this, [=](){
+    connect(commandHelper, &CommandHelper::sigRelayFault, this, [=](){
         this->setProperty("relay_fault", true);
         this->setProperty("relay_on", false);
 
@@ -118,7 +86,7 @@ MainWindow::MainWindow(QWidget *parent)
         emit sigRefreshUi();
     });
 
-    connect(commandhelper, &CommandHelper::sigRelayStatus, this, [=](bool on){
+    connect(commandHelper, &CommandHelper::sigRelayStatus, this, [=](bool on){
         this->setProperty("relay_fault", false);
         this->setProperty("relay_on", on);
 
@@ -132,7 +100,7 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     // 自动测量开始
-    connect(commandhelper, &CommandHelper::sigMeasureStart, this, [=](qint8 mode){
+    connect(commandHelper, &CommandHelper::sigMeasureStart, this, [=](qint8 mode){
         if (mode == 0x02 || mode == 0x03)
             return;//波形测量、能谱测量
 
@@ -163,12 +131,12 @@ MainWindow::MainWindow(QWidget *parent)
         emit sigRefreshUi();
     });
 
-    connect(commandhelper, &CommandHelper::sigMeasureWait, this, [=](){
+    connect(commandHelper, &CommandHelper::sigMeasureWait, this, [=](){
         this->setProperty("measure-status", msWaiting);
     });
 
     // 测量停止
-    connect(commandhelper, &CommandHelper::sigMeasureStop, this, [=](){
+    connect(commandHelper, &CommandHelper::sigMeasureStop, this, [=](){
         QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
         measureTimer->stop();
 
@@ -183,7 +151,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     // 禁用连接探测器按钮
     ui->action_detector_connect->setEnabled(false);
-    connect(commandhelper, &CommandHelper::sigDetectorFault, this, [=](){
+    connect(commandHelper, &CommandHelper::sigDetectorFault, this, [=](){
         this->setProperty("detector_fault", true);
         this->setProperty("detector_on", false);
         this->setProperty("measure-status", msEnd);
@@ -196,7 +164,7 @@ MainWindow::MainWindow(QWidget *parent)
         emit sigRefreshUi();
     });
 
-    connect(commandhelper, &CommandHelper::sigDetectorStatus, this, [=](bool on){
+    connect(commandHelper, &CommandHelper::sigDetectorStatus, this, [=](bool on){
         this->setProperty("detector_fault", false);
         this->setProperty("detector_on", on);
         if (!on){
@@ -213,7 +181,7 @@ MainWindow::MainWindow(QWidget *parent)
     qRegisterMetaType<vector<SingleSpectrum>>("vector<SingleSpectrum>");
     qRegisterMetaType<vector<CurrentPoint>>("vector<CurrentPoint>");
     qRegisterMetaType<vector<CoincidenceResult>>("vector<CoincidenceResult>");
-    connect(commandhelper, &CommandHelper::sigPlot, this, [=](vector<SingleSpectrum> r1, vector<CurrentPoint> r2, vector<CoincidenceResult> r3){
+    connect(commandHelper, &CommandHelper::sigPlot, this, [=](vector<SingleSpectrum> r1, vector<CurrentPoint> r2, vector<CoincidenceResult> r3){
         lastRecvDataTime = QDateTime::currentDateTime();
         bool pause_plot = this->property("pause_plot").toBool();
         if (!pause_plot){
@@ -239,7 +207,7 @@ MainWindow::MainWindow(QWidget *parent)
        this->showMaximized();
     });
 
-    commandhelper->startWork();
+    commandHelper->startWork();
 }
 
 MainWindow::~MainWindow()
@@ -303,11 +271,11 @@ void MainWindow::InitMainWindowUi()
         ui->lineEdit_filename->setText(jsonObj["filename"].toString());
 
         QString cacheDir = jsonObj["defaultCache"].toString();
-        commandhelper->setDefaultCacheDir(cacheDir);
+        commandHelper->setDefaultCacheDir(cacheDir);
     } else {
         ui->lineEdit_path->setText("./");
         ui->lineEdit_filename->setText("test.dat");
-        commandhelper->setDefaultCacheDir("./");
+        commandHelper->setDefaultCacheDir("./");
     }
 
     // 测量结果-存储路径
@@ -334,8 +302,8 @@ void MainWindow::InitMainWindowUi()
     connect(ui->comboBox_range, QOverload<int>::of(&QComboBox::currentIndexChanged), ui->comboBox_range_3, &QComboBox::setCurrentIndex);
     connect(ui->comboBox_range_2, QOverload<int>::of(&QComboBox::currentIndexChanged), ui->comboBox_range, &QComboBox::setCurrentIndex);
     connect(ui->comboBox_range_3, QOverload<int>::of(&QComboBox::currentIndexChanged), ui->comboBox_range, &QComboBox::setCurrentIndex);
-    connect(ui->comboBox_range, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [=](int){
-        qDebug() << "";
+    connect(ui->comboBox_range, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [=](int index){
+        controlHelper->gotoAbs(index);
     });
 
     // 显示计数/能谱
@@ -346,7 +314,7 @@ void MainWindow::InitMainWindowUi()
     grp->addButton(ui->radioButton_ref, 0);
     grp->addButton(ui->radioButton_spectrum, 1);
     connect(grp, QOverload<int>::of(&QButtonGroup::buttonClicked), this, [=](int index){        
-        commandhelper->switchShowModel(index == 0);
+        commandHelper->switchShowModel(index == 0);
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
         plotWidget->slotResetPlot();
         plotWidget->switchShowModel(index == 0);
@@ -426,9 +394,9 @@ void MainWindow::InitMainWindowUi()
         //自动测量时间到，停止测量
         measureTimer->stop();
         if (this->property("measure-model").toUInt() == mmManual)
-            commandhelper->slotStopManualMeasure();
+            commandHelper->slotStopManualMeasure();
         else
-            commandhelper->slotStopAutoMeasure();
+            commandHelper->slotStopAutoMeasure();
 
         QMessageBox::information(this, tr("提醒"), tr("定时测量倒计时结束，自动停止测量！"));
     });
@@ -572,39 +540,18 @@ void MainWindow::on_action_displacement_triggered()
         return;
     }
 
-    // 读取文件内容
-    QByteArray jsonData = file.readAll();
-    file.close(); //释放资源
+    //断开连接之前先关闭电源
+    if (this->property("control_on").toBool()){
+        commandHelper->closeDetector();
+        commandHelper->closeRelay();
+    }
 
-    // 将 JSON 数据解析为 QJsonDocument
-    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-    QJsonObject jsonObj = jsonDoc.object();
-
-    QString ip = "192.168.10.253";
-    qint32 port = 1030;
-    bool on = this->property("displacement_1_on").toBool() && this->property("displacement_2_on").toBool();
-    if (jsonObj.contains("Displacement")){
-        QJsonArray jsonDisplacements = jsonObj["Displacement"].toArray();
-        QJsonObject jsonDisplacement;
-
-        //断开连接之前先关闭电源
-        if (on){
-            commandhelper->closeDetector();
-            commandhelper->closeRelay();
-        }
-
-        for (int i=0; i<jsonDisplacements.size(); ++i){
-            jsonDisplacement = jsonDisplacements.at(0).toObject();
-            ip = jsonDisplacement["ip"].toString();
-            port = jsonDisplacement["port"].toInt();
-
-            //位移平台
-            if (!on){
-                commandhelper->openDisplacement(ip, port, i);
-            } else {
-                commandhelper->closeDisplacement(i);
-            }
-        }
+    //位移平台
+    if (!this->property("control_on").toBool()){
+        if (controlHelper->open_tcp())
+            controlHelper->gotoAbs(0);
+    } else {
+        controlHelper->close();
     }
 }
 
@@ -617,38 +564,21 @@ void MainWindow::on_action_power_triggered()
         return;
     }
 
-    // 读取文件内容
-    QByteArray jsonData = file.readAll();
-    file.close(); //释放资源
-
-    // 将 JSON 数据解析为 QJsonDocument
-    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-    QJsonObject jsonObj = jsonDoc.object();
-
-    QString ip = "192.168.10.253";
-    qint32 port = 1030;
-    QJsonObject jsonDetector;
-    if (jsonObj.contains("Relay")){
-        jsonDetector = jsonObj["Relay"].toObject();
-        ip = jsonDetector["ip"].toString();
-        port = jsonDetector["port"].toInt();
-    }
-
     if (!this->property("relay_on").toBool()){
-        commandhelper->openRelay(ip, port);
+        commandHelper->openRelay();
     } else {
         //如果正在测量，停止测量
         if (this->property("measure-status").toUInt() == msPrepare
                 || this->property("measure-status").toUInt() == msWaiting
                 || this->property("measure-status").toUInt() == msStart){
             if (this->property("measure-model").toUInt() == mmManual)
-                commandhelper->slotStopManualMeasure();
+                commandHelper->slotStopManualMeasure();
             else
-                commandhelper->slotStopAutoMeasure();
+                commandHelper->slotStopAutoMeasure();
 
-            commandhelper->closeDetector();
+            commandHelper->closeDetector();
         }
-        commandhelper->closeRelay();
+        commandHelper->closeRelay();
     }
 }
 
@@ -656,33 +586,10 @@ void MainWindow::on_action_power_triggered()
 void MainWindow::on_action_detector_connect_triggered()
 {
     if (!this->property("detector_on").toBool()){
-        QFile file(QApplication::applicationDirPath() + "/config/ip.json");
-        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            QMessageBox::information(this, tr("提示"), tr("请先配置远程设备信息！"));
-            return;
-        }
-
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
-
-        // 将 JSON 数据解析为 QJsonDocument
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-
-        QString ip = "192.168.10.3";
-        qint32 port = 5000;
-        QJsonObject jsonDetector;
-        if (jsonObj.contains("Detector")){
-            jsonDetector = jsonObj["Detector"].toObject();
-            ip = jsonDetector["ip"].toString();
-            port = jsonDetector["port"].toInt();
-        }
-
-        commandhelper->openDetector(ip, port);
+        commandHelper->openDetector();
     } else {
-        commandhelper->slotStopManualMeasure();
-        commandhelper->closeDetector();
+        commandHelper->slotStopManualMeasure();
+        commandHelper->closeDetector();
     }
 }
 
@@ -746,19 +653,19 @@ void MainWindow::on_pushButton_measure_clicked()
         int timewidth = ui->spinBox_timeWidth->value();
         QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
         measureTimer->setInterval(ui->spinBox_timelength_3->value() * 1000);
-        commandhelper->updateParamter(stepT, leftE, rightE, timewidth, false);
-        commandhelper->slotStartManualMeasure(detectorParameter);
+        commandHelper->updateParamter(stepT, leftE, rightE, timewidth, false);
+        commandHelper->slotStartManualMeasure(detectorParameter);
 
         QTimer::singleShot(3000, this, [=](){
             //指定时间未收到开始测量指令，则按钮恢复初始状态
             if (this->property("measure-status").toUInt() == msPrepare){
-                commandhelper->slotStopManualMeasure();
+                commandHelper->slotStopManualMeasure();
                 ui->pushButton_measure->setEnabled(true);
             }
         });
     } else {
         ui->pushButton_measure->setEnabled(false);
-        commandhelper->slotStopManualMeasure();
+        commandHelper->slotStopManualMeasure();
 
         QTimer::singleShot(3000, this, [=](){
             //指定时间未收到停止测量指令，则按钮恢复初始状态
@@ -823,20 +730,20 @@ void MainWindow::on_pushButton_measure_2_clicked()
         QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
         measureTimer->setInterval(ui->spinBox_timelength_3->value() * 1000);
 
-        commandhelper->updateParamter(stepT, leftE, rightE, timewidth, false);
-        commandhelper->slotStartAutoMeasure(detectorParameter);
+        commandHelper->updateParamter(stepT, leftE, rightE, timewidth, false);
+        commandHelper->slotStartAutoMeasure(detectorParameter);
 
         ui->pushButton_measure_2_tip->setText(tr("等待触发..."));
         QTimer::singleShot(3000, this, [=](){
             //指定时间未收到开始测量指令，则按钮恢复初始状态
             if (this->property("measure-status").toUInt() == msPrepare){
-                commandhelper->slotStopAutoMeasure();
+                commandHelper->slotStopAutoMeasure();
                 ui->pushButton_measure_2->setEnabled(true);
             }
         });
     } else {
         ui->pushButton_measure_2->setEnabled(false);
-        commandhelper->slotStopAutoMeasure();
+        commandHelper->slotStopAutoMeasure();
 
         QTimer::singleShot(3000, this, [=](){
             //指定时间未收到停止测量指令，则按钮恢复初始状态
@@ -885,7 +792,7 @@ void MainWindow::on_pushButton_save_clicked()
         file.write(jsonDoc.toJson());
         file.close();
 
-        commandhelper->saveFileName(path + "/" + filename);
+        commandHelper->saveFileName(path + "/" + filename);
     }       
 }
 
@@ -903,7 +810,7 @@ void MainWindow::on_pushButton_refresh_clicked()
     }
 
     int timewidth = ui->spinBox_timeWidth->value();
-    commandhelper->updateParamter(stepT, leftE, rightE, timewidth, true);
+    commandHelper->updateParamter(stepT, leftE, rightE, timewidth, true);
 }
 
 void MainWindow::on_action_close_triggered()
@@ -1016,10 +923,9 @@ void MainWindow::closeEvent(QCloseEvent *event)
     }
 
     qInstallMessageHandler(nullptr);
-    commandhelper->closeDetector();
-    commandhelper->closeRelay();
-    commandhelper->closeDisplacement(0);
-    commandhelper->closeDisplacement(1);
+    commandHelper->closeDetector();
+    commandHelper->closeRelay();
+    controlHelper->close();
 
     event->accept();
 }
@@ -1042,12 +948,12 @@ void MainWindow::on_action_log_triggered()
 void MainWindow::slotRefreshUi()
 {
     //外设
-    if (this->property("displacement_1_fault").toBool() || this->property("displacement_2_fault").toBool()){
+    if (this->property("control_fault").toBool()){
         ui->action_displacement->setIcon(QIcon(":/resource/lianjie-fault.png"));
         ui->action_displacement->setText(tr("打开外设"));
         ui->action_displacement->setIconText(tr("打开外设"));
     } else {
-        if (!this->property("displacement_1_on").toBool() || !this->property("displacement_2_on").toBool()){
+        if (!this->property("control_on").toBool()){
             ui->action_displacement->setIcon(QIcon(":/resource/lianjie.png"));
             ui->action_displacement->setText(tr("打开外设"));
             ui->action_displacement->setIconText(tr("打开外设"));
@@ -1072,7 +978,7 @@ void MainWindow::slotRefreshUi()
             ui->action_power->setIconText(tr("打开电源"));
 
             ui->action_detector_connect->setEnabled(false);
-            if (!this->property("displacement_1_on").toBool() && !this->property("displacement_2_on").toBool()){
+            if (!this->property("control_on").toBool()){
                 ui->action_power->setEnabled(false);
             }
         } else {
@@ -1117,6 +1023,9 @@ void MainWindow::slotRefreshUi()
         ui->action_refresh->setEnabled(true);
         ui->pushButton_measure_2_tip->setText("");
 
+        ui->comboBox_range->setEnabled(false);
+        ui->comboBox_range_2->setEnabled(false);
+        ui->comboBox_range_3->setEnabled(false);
         if (this->property("measur-model").toInt() == mmManual){//手动测量
             ui->pushButton_measure->setText(tr("停止测量"));
             ui->pushButton_measure->setEnabled(true);
@@ -1175,6 +1084,10 @@ void MainWindow::slotRefreshUi()
             ui->pushButton_measure_2->setEnabled(false);
         }
     } else {
+        ui->comboBox_range->setEnabled(true);
+        ui->comboBox_range_2->setEnabled(true);
+        ui->comboBox_range_3->setEnabled(true);
+
         ui->pushButton_measure->setText(tr("开始测量"));
         ui->pushButton_measure_2->setText(tr("开始测量"));
         ui->pushButton_measure_3->setText(tr("开始测量"));

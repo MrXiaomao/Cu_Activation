@@ -3,13 +3,17 @@
 #include <QDataStream>
 #include <QApplication>
 #include <QDateTime>
+#include <QApplication>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <QMessageBox>
+#include <QFile>
+#include <QDir>
 
 CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
   , coincidenceAnalyzer(new CoincidenceAnalyzer)
 {
-    initSocket(&socketDisplacement1);
-    initSocket(&socketDisplacement2);
-
     initSocket(&socketRelay);
     //网络异常
     connect(socketRelay, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error), this, [=](QAbstractSocket::SocketError){
@@ -173,8 +177,6 @@ CommandHelper::~CommandHelper(){
         }
     };
 
-    closeSocket(socketDisplacement1);
-    closeSocket(socketDisplacement2);
     closeSocket(socketRelay);
     closeSocket(socketDetector);
 
@@ -191,59 +193,30 @@ void CommandHelper::initSocket(QTcpSocket** _socket)
     *_socket = socket;
 }
 
-void CommandHelper::openDisplacement(QString ip, qint32 port, qint32 index)
+void CommandHelper::openRelay()
 {
-    sigDisplacementStatus(true, index);
-    return;
-    QTcpSocket *socketDisplacement;
-    if (0 == index)
-        socketDisplacement = socketDisplacement1;
-    else
-        socketDisplacement = socketDisplacement2;
+    QFile file(QApplication::applicationDirPath() + "/config/ip.json");
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QMessageBox::information(nullptr, tr("提示"), tr("请先配置远程设备信息！"));
+        return;
+    }
 
-    //断开网络连接
-    if (socketDisplacement->isOpen())
-        socketDisplacement->disconnectFromHost();
+    QString ip;
+    qint32 port;
+    // 读取文件内容
+    QByteArray jsonData = file.readAll();
+    file.close(); //释放资源
 
-    disconnect(socketDisplacement);// 断开所有槽函数
+    // 将 JSON 数据解析为 QJsonDocument
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+    QJsonObject jsonObj = jsonDoc.object();
+    QJsonObject jsonDetector;
+    if (jsonObj.contains("Relay")){
+        jsonDetector = jsonObj["Relay"].toObject();
+        ip = jsonDetector["ip"].toString();
+        port = jsonDetector["port"].toInt();
+    }
 
-    //网络异常
-    connect(socketDisplacement, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error), this, [=](QAbstractSocket::SocketError){
-        emit sigDisplacementFault(index);
-    });
-
-    //状态改变
-    connect(socketDisplacement, &QAbstractSocket::stateChanged, this, [=](QAbstractSocket::SocketState){
-    });
-
-    //连接成功
-    connect(socketDisplacement, &QTcpSocket::connected, this, [=](){
-        sigDisplacementStatus(true, index);
-        //发送位移指令
-    });
-
-    //接收数据
-    connect(socketDisplacement, &QTcpSocket::readyRead, this, [=](){
-    });
-
-    socketDisplacement->connectToHost(ip, port);
-}
-
-void CommandHelper::closeDisplacement(qint32 index)
-{
-    QTcpSocket *socketDisplacement;
-    if (0 == index)
-        socketDisplacement = socketDisplacement1;
-    else
-        socketDisplacement = socketDisplacement2;
-
-    socketDisplacement->close();
-    sigDisplacementStatus(false, index);
-    sigDisplacementStatus(false, index);
-}
-
-void CommandHelper::openRelay(QString ip, qint32 port)
-{
     //断开网络连接
     if (socketRelay->isOpen())
         socketRelay->disconnectFromHost();
@@ -343,8 +316,31 @@ void CommandHelper::closeRelay()
     socketRelay->write(command);
 }
 
-void CommandHelper::openDetector(QString ip, qint32 port)
+void CommandHelper::openDetector()
 {
+    QFile file(QApplication::applicationDirPath() + "/config/ip.json");
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QMessageBox::information(nullptr, tr("提示"), tr("请先配置远程设备信息！"));
+        return;
+    }
+
+    // 读取文件内容
+    QByteArray jsonData = file.readAll();
+    file.close(); //释放资源
+
+    // 将 JSON 数据解析为 QJsonDocument
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+    QJsonObject jsonObj = jsonDoc.object();
+
+    QString ip = "192.168.10.3";
+    qint32 port = 5000;
+    QJsonObject jsonDetector;
+    if (jsonObj.contains("Detector")){
+        jsonDetector = jsonObj["Detector"].toObject();
+        ip = jsonDetector["ip"].toString();
+        port = jsonDetector["port"].toInt();
+    }
+
     //断开网络连接
     if (socketDetector->isOpen())
         socketDetector->disconnectFromHost();

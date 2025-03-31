@@ -1,4 +1,10 @@
 #include "controlhelper.h"
+#include <QApplication>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <QFile>
+#include <QDir>
 
 ControlHelper::ControlHelper(QObject *parent) : QObject(parent)
 {
@@ -31,14 +37,19 @@ bool ControlHelper::open_com(int axis_no)
 /// 连接网络（Modbus-TCP），初始化，返回句柄。
 bool ControlHelper::open_tcp()
 {
-    int ret = fti_open_tcp(mIp.toStdString().c_str(), mPort, FT_TRUE, &mHandle);
-    return (ret == FT_SUCCESS);
+    int ret = fti_open_tcp(mIp.toStdString().c_str(), mPort, FT_TRUE, &mHandle);    
+    emit sigControlStatus(ret == FT_SUCCESS);
+    return ret == FT_SUCCESS;
 }
 
 /// 关闭连接。
 bool ControlHelper::close()
 {
-    return fti_close(mHandle) == FT_SUCCESS;
+    int ret = fti_close(mHandle) == FT_SUCCESS;
+    if (ret == FT_SUCCESS)
+        emit sigControlStatus(false);
+
+    return ret == FT_SUCCESS;
 }
 
 /// 修改驱动器地址。出厂默认地址为01。
@@ -122,7 +133,7 @@ bool ControlHelper::get_vel(int axis_no, float* value)
 /// 设置软限位的位置下限。
 bool ControlHelper::set_sw_p1(int axis_no, float value)
 {
-    return fti_set_vel(mHandle, mAxiaName[axis_no].toStdString().c_str(), value) == FT_SUCCESS;
+    return fti_set_sw_p1(mHandle, mAxiaName[axis_no].toStdString().c_str(), value) == FT_SUCCESS;
 }
 
 /// 获取软限位的位置下限。
@@ -164,13 +175,13 @@ bool ControlHelper::single_home(int axis_no)
 /// 单轴相对运动。
 bool ControlHelper::single_move(int axis_no, float value)
 {
-    return fti_single_move(mHandle, mAxiaName[axis_no].toStdString().c_str(), value) == FT_SUCCESS;
+    return fti_single_move(mHandle, mAxiaName[axis_no].toStdString().c_str(), value * 1000) == FT_SUCCESS;
 }
 
 /// 单轴绝对运动。
 bool ControlHelper::single_moveabs(int axis_no, float value)
 {
-    return fti_single_moveabs(mHandle, mAxiaName[axis_no].toStdString().c_str(), value) == FT_SUCCESS;
+    return fti_single_moveabs(mHandle, mAxiaName[axis_no].toStdString().c_str(), value * 1000) == FT_SUCCESS;
 }
 
 /// 单轴向左（负向）连续运动。
@@ -239,12 +250,6 @@ bool ControlHelper::get_uint16(int axis_no, const int reg_addr, uint16_t* value)
     return fti_get_uint16(mHandle, mAxiaName[axis_no].toStdString().c_str(), reg_addr, value) == FT_SUCCESS;
 }
 
-#include <QApplication>
-#include <QJsonArray>
-#include <QJsonObject>
-#include <QJsonDocument>
-#include <QFile>
-#include <QDir>
 void ControlHelper::load()
 {
     QString path = QApplication::applicationDirPath() + "/config";
@@ -265,6 +270,59 @@ void ControlHelper::load()
             jsonControl = jsonObj["Control"].toObject();
             mIp = jsonControl["ip"].toString();
             mPort = jsonControl["port"].toInt();
+        }
+    }
+}
+
+void ControlHelper::gotoAbs(int index)
+{
+    QString path = QApplication::applicationDirPath() + "/config";
+    QDir dir(path);
+    if (!dir.exists())
+        dir.mkdir(path);
+    QFile file(QApplication::applicationDirPath() + "/config/ip.json");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // 读取文件内容
+        QByteArray jsonData = file.readAll();
+        file.close(); //释放资源
+
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+        QJsonObject jsonObj = jsonDoc.object();
+
+        if (jsonObj.contains("Control")){
+            QJsonObject jsonControl = jsonObj["Control"].toObject();
+            QJsonArray jsonDistances = jsonControl["Distances"].toArray();
+
+            if (jsonControl.contains("Distances")){
+                QJsonObject jsonDistance1 = jsonControl["Distances"].toObject()["01"].toObject();
+                QJsonObject jsonDistance2 = jsonControl["Distances"].toObject()["02"].toObject();
+                {
+                    //float speed;
+                    //get_vel(0x01, &speed);
+                    //set_vel(0x01, 5.0);
+                    double pos = 0.;
+                    switch (index){
+                        case 0x00: pos = jsonDistance1["0-1E4"].toString().toDouble(); break;
+                        case 0x01: pos = jsonDistance1["1E4-1E7"].toString().toDouble(); break;
+                        case 0x02: pos = jsonDistance1["1E7-1E10"].toString().toDouble(); break;
+                        case 0x03: pos = jsonDistance1["1E10-1E13"].toString().toDouble(); break;
+                    }
+
+                    single_moveabs(0x01, pos);
+                    //set_vel(0x01, speed);
+                }
+                {
+                    double pos = 0.;
+                    switch (index){
+                        case 0x00: pos = jsonDistance2["0-1E4"].toString().toDouble(); break;
+                        case 0x01: pos = jsonDistance2["1E4-1E7"].toString().toDouble(); break;
+                        case 0x02: pos = jsonDistance2["1E7-1E10"].toString().toDouble(); break;
+                        case 0x03: pos = jsonDistance2["1E10-1E13"].toString().toDouble(); break;
+                    }
+
+                    single_moveabs(0x02, pos);
+                }
+            }
         }
     }
 }

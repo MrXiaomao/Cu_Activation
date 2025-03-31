@@ -16,9 +16,9 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    movingcontrol.cpp \
     cachedirconfigwidget.cpp \
     coincidenceanalyzer.cpp \
+    controlhelper.cpp \
     controlwidget.cpp \
     function.cpp \
     aboutwidget.cpp \
@@ -39,9 +39,9 @@ SOURCES += \
     FPGASetting.cpp
 
 HEADERS += \
-    movingcontrol.h \
     cachedirconfigwidget.h \
     coincidenceanalyzer.h \
+    controlhelper.h \
     controlwidget.h \
     function.h \
     aboutwidget.h \
@@ -215,3 +215,7 @@ contains(QT_ARCH, x86_64) {
 }
 
 INCLUDEPATH += $$PWD/3rdParty/ftcoreimc_win_v1.3.0.9n/inc
+
+windows{
+    QMAKE_LFLAGS += -Wl,--kill-at
+}

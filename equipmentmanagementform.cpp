@@ -31,7 +31,7 @@ EquipmentManagementForm::EquipmentManagementForm(QWidget *parent) :
 
         QJsonObject jsonDetector;
         QJsonObject jsonRelay;
-        QJsonObject jsonDisplacement;
+        QJsonObject jsonControl;
         if (jsonObj.contains("Detector")){
             jsonDetector = jsonObj["Detector"].toObject();
             ui->tableWidget->item(0, 0)->setText(jsonDetector["ip"].toString());
@@ -44,15 +44,10 @@ EquipmentManagementForm::EquipmentManagementForm(QWidget *parent) :
             ui->tableWidget->item(1, 1)->setText(QString::number(jsonRelay["port"].toInt()));
         }
 
-        if (jsonObj.contains("Displacement")){
-            QJsonArray jsonDisplacements = jsonObj["Displacement"].toArray();
-            jsonDisplacement = jsonDisplacements.at(0).toObject();
-            ui->tableWidget->item(2, 0)->setText(jsonDisplacement["ip"].toString());
-            ui->tableWidget->item(2, 1)->setText(QString::number(jsonDisplacement["port"].toInt()));
-
-            jsonDisplacement = jsonDisplacements.at(1).toObject();
-            ui->tableWidget->item(3, 0)->setText(jsonDisplacement["ip"].toString());
-            ui->tableWidget->item(3, 1)->setText(QString::number(jsonDisplacement["port"].toInt()));
+        if (jsonObj.contains("Control")){
+            jsonControl = jsonObj["Control"].toObject();
+            ui->tableWidget->item(2, 0)->setText(jsonControl["ip"].toString());
+            ui->tableWidget->item(2, 1)->setText(QString::number(jsonControl["port"].toInt()));
         }
     }
 }
@@ -79,38 +74,27 @@ void EquipmentManagementForm::on_pushButton_ok_clicked()
         QJsonObject jsonObj = jsonDoc.object();
         QJsonObject jsonDetector;
         if (jsonObj.contains("Detector")){
-            jsonDetector = jsonObj["Detector"].toObject();
-            jsonDetector["ip"] = ui->tableWidget->item(0, 0)->text();
-            jsonDetector["port"] = ui->tableWidget->item(0, 1)->text().toInt();
-
-            jsonObj["Detector"] = jsonDetector;
+            jsonDetector = jsonObj["Detector"].toObject();            
         }
+        jsonDetector["ip"] = ui->tableWidget->item(0, 0)->text();
+        jsonDetector["port"] = ui->tableWidget->item(0, 1)->text().toInt();
+        jsonObj["Detector"] = jsonDetector;
 
         QJsonObject jsonRelay;
         if (jsonObj.contains("Relay")){
-            jsonRelay = jsonObj["Relay"].toObject();
-            jsonRelay["ip"] = ui->tableWidget->item(1, 0)->text();
-            jsonRelay["port"] = ui->tableWidget->item(1, 1)->text().toInt();
-
-            jsonObj["Relay"] = jsonRelay;
         }
+        jsonRelay = jsonObj["Relay"].toObject();
+        jsonRelay["ip"] = ui->tableWidget->item(1, 0)->text();
+        jsonRelay["port"] = ui->tableWidget->item(1, 1)->text().toInt();
+        jsonObj["Relay"] = jsonRelay;
 
-        QJsonArray jsonDisplacements;
-        QJsonObject jsonDisplacement1, jsonDisplacement2;
-        if (jsonObj.contains("Displacement")){
-            jsonDisplacements = jsonObj["Displacement"].toArray();
-            jsonDisplacement1 = jsonDisplacements.at(0).toObject();
-            jsonDisplacement1["ip"] = ui->tableWidget->item(2, 0)->text();
-            jsonDisplacement1["port"] = ui->tableWidget->item(2, 1)->text().toInt();
-
-            jsonDisplacement2 = jsonDisplacements.at(1).toObject();
-            jsonDisplacement2["ip"] = ui->tableWidget->item(3, 0)->text();
-            jsonDisplacement2["port"] = ui->tableWidget->item(3, 1)->text().toInt();
-
-            jsonDisplacements.replace(0, jsonDisplacement1);
-            jsonDisplacements.replace(1, jsonDisplacement2);
-            jsonObj["Displacement"] = jsonDisplacements;
+        QJsonObject jsonControl;
+        if (jsonObj.contains("Control")){
+            jsonControl = jsonObj["Control"].toObject();
         }
+        jsonControl["ip"] = ui->tableWidget->item(2, 0)->text();
+        jsonControl["port"] = ui->tableWidget->item(2, 1)->text().toInt();
+        jsonObj["Control"] = jsonControl;
 
         file.open(QIODevice::WriteOnly | QIODevice::Text);
         jsonDoc.setObject(jsonObj);

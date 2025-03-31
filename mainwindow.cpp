@@ -53,6 +53,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(this, SIGNAL(sigAppengMsg(const QString &, QtMsgType)), this, SLOT(slotAppendMsg(const QString &, QtMsgType)));
 
     commandhelper = CommandHelper::instance();
+    controlhelper = ControlHelper::instance();
+
     //外设状态
     connect(commandhelper, &CommandHelper::sigDisplacementFault, this, [=](qint32 index){
         if (index == 0){
@@ -1467,4 +1469,18 @@ void MainWindow::on_action_Moving_triggered()
     w->setWindowFlags(Qt::WindowCloseButtonHint|Qt::Dialog);
     w->setWindowModality(Qt::ApplicationModal);
     w->showNormal();
+}
+
+#include <QRegExp>
+bool isFloat(const QString &str) {
+    QRegExp re("^[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"); // 正则表达式匹配浮点数格式
+    return re.exactMatch(str);
+}
+void MainWindow::on_lineEdit_editingFinished()
+{
+    QString arg1 = ui->lineEdit->text();
+    if (!isFloat(arg1)){
+        ui->lineEdit->clear();
+        ui->lineEdit->setPlaceholderText(tr("输入数字无效"));
+    }
 }

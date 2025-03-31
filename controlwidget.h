@@ -2,7 +2,7 @@
 #define CONTROLWIDGET_H
 
 #include <QWidget>
-#include "ftcoreimc.h"
+#include "controlhelper.h"
 
 namespace Ui {
 class ControlWidget;
@@ -50,8 +50,9 @@ private slots:
 
 private:
     Ui::ControlWidget *ui;
-    FT_H mHandle[2] = { 0, 0 };
-    FT_H mCurrentHandle = 0;
+    ControlHelper *controlhelper = nullptr;
+    FT_H mHandle = 0;
+
     QString currentAxiaName;
 };
 

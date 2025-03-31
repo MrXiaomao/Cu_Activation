@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QDateTime>
 #include "commandhelper.h"
+#include "controlhelper.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -104,11 +105,15 @@ private slots:
 
     void on_action_Moving_triggered();
 
+    void on_lineEdit_editingFinished();
+
 private:
     Ui::MainWindow *ui = nullptr;
     SpectrumModel *spectrummodel = nullptr;//能谱模型
     DataAnalysisWidget *dataAnalysisWidget = nullptr;//数据解析
     CommandHelper *commandhelper = nullptr;//网络指令
+    ControlHelper *controlhelper = nullptr;//网络指令
+
     qint32 currentDetectorIndex = 0;
     QDateTime lastRecvDataTime;//探测器上一次接收数据时间
     QDateTime measureStartTime;//探测器测量开始时间

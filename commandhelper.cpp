@@ -1109,7 +1109,7 @@ void CommandHelper::slotAnalyzeNetFrame()
     long long lastT2 = 0LL;
     while (!taskFinished)
     {
-        {
+        if (0){
             // 初始化随机数引擎
             std::random_device rd;
             std::mt19937 gen(rd());

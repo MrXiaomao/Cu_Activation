@@ -11,7 +11,7 @@
 #include "sysutils.h"
 #include <mutex>
 
-#define MULTI_CHANNEL 4096 //能谱多道的道数
+#define MULTI_CHANNEL 8192/*4096*/ //能谱多道的道数
 #define MAX_ENERGY 8192 //最大能量
 // long long nanoseconds = 1000000000LL; //1s = 1E9ns
 #define NANOSECONDS 1e9

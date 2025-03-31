@@ -845,7 +845,7 @@ void MainWindow::on_action_config_triggered()
 {
     FPGASetting *w = new FPGASetting(this);
     w->setAttribute(Qt::WA_DeleteOnClose, true);
-    w->setWindowFlags(Qt::WindowMinMaxButtonsHint|Qt::WindowCloseButtonHint|Qt::Dialog);
+    w->setWindowFlags(Qt::WindowCloseButtonHint|Qt::Dialog);
     w->setWindowModality(Qt::ApplicationModal);
     w->showNormal();
 }
@@ -1083,7 +1083,7 @@ void MainWindow::slotRefreshUi()
             //自动测量
             ui->pushButton_measure_2->setEnabled(false);
         }
-    } else {
+    } else if (this->property("detector_on").toBool()){
         ui->comboBox_range->setEnabled(true);
         ui->comboBox_range_2->setEnabled(true);
         ui->comboBox_range_3->setEnabled(true);

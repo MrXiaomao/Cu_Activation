@@ -16,6 +16,7 @@ public:
     }
 
     void load();
+    bool connected();
 
     void gotoAbs(int index);
 
@@ -141,6 +142,7 @@ signals:
 
 private:
     FT_H mHandle;
+    bool mConnected = false;
     QString mIp;
     qint32 mPort;
     QString mAxiaName[3] = {"'",  "01", "02" };

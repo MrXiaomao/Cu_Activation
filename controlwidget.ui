@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>366</width>
-    <height>661</height>
+    <height>632</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,62 +20,109 @@
       <string>轴1</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
-      <item row="1" column="0" colspan="3">
-       <layout class="QHBoxLayout" name="horizontalLayout_2">
-        <item>
-         <spacer name="horizontalSpacer_2">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="lineEdit_position">
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-          <property name="readOnly">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_8">
-          <property name="text">
-           <string>mm</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer_3">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-       </layout>
-      </item>
-      <item row="9" column="0">
-       <widget class="QLabel" name="label_15">
+      <item row="4" column="2">
+       <widget class="QPushButton" name="pushButton_absolute_position">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="text">
-         <string>运动速度(mm)：</string>
+         <string>Go-&gt;</string>
         </property>
        </widget>
       </item>
-      <item row="5" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_absolute_position">
+      <item row="1" column="0" colspan="3">
+       <layout class="QGridLayout" name="gridLayout_2">
+        <item row="0" column="3">
+         <widget class="QLabel" name="label_7">
+          <property name="text">
+           <string>运行中</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="3">
+         <widget class="QLabel" name="label_running">
+          <property name="styleSheet">
+           <string notr="true">min-width:16px;
+min-height:16px;
+max-width:16px;
+max-height:16px;
+border-radius: 8px;
+border:1px solid rgb(200, 200, 200);
+background-color: rgb(96, 96, 96);</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLabel" name="label_negative">
+          <property name="styleSheet">
+           <string notr="true">min-width:16px;
+min-height:16px;
+max-width:16px;
+max-height:16px;
+border-radius: 8px;
+border:1px solid rgb(200, 200, 200);
+background-color: rgb(96, 96, 96);</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <widget class="QLabel" name="label_positive">
+          <property name="styleSheet">
+           <string notr="true">min-width:16px;
+min-height:16px;
+max-width:16px;
+max-height:16px;
+border-radius: 8px;
+border:1px solid rgb(200, 200, 200);
+background-color: rgb(96, 96, 96);</string>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="label_5">
+          <property name="text">
+           <string>负限位</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QLabel" name="label_3">
+          <property name="text">
+           <string>正限位</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="6" column="1">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_relative_position">
         <property name="decimals">
          <number>4</number>
         </property>
@@ -86,28 +133,67 @@
          <double>0.010000000000000</double>
         </property>
         <property name="value">
+         <double>0.500000000000000</double>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="1">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_speed">
+        <property name="decimals">
+         <number>4</number>
+        </property>
+        <property name="singleStep">
+         <double>0.010000000000000</double>
+        </property>
+        <property name="value">
          <double>1.000000000000000</double>
         </property>
        </widget>
       </item>
-      <item row="9" column="2">
-       <widget class="QPushButton" name="pushButton_speed">
-        <property name="enabled">
-         <bool>false</bool>
+      <item row="0" column="0" colspan="3">
+       <widget class="QGroupBox" name="groupBox_2">
+        <property name="title">
+         <string>选项</string>
         </property>
-        <property name="text">
-         <string>设置</string>
-        </property>
+        <layout class="QGridLayout" name="gridLayout">
+         <item row="0" column="0">
+          <widget class="QRadioButton" name="radioButton_01">
+           <property name="text">
+            <string>轴1(mm)</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QRadioButton" name="radioButton_02">
+           <property name="text">
+            <string>轴2(mm)</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLineEdit" name="lineEdit_position">
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="lineEdit_position_2">
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
-      <item row="7" column="0">
-       <widget class="QLabel" name="label_14">
-        <property name="text">
-         <string>运动至相对位置(mm)：</string>
-        </property>
-       </widget>
-      </item>
-      <item row="10" column="0" colspan="3">
+      <item row="9" column="0" colspan="3">
        <widget class="QTableWidget" name="tableWidget_position">
         <row>
          <property name="text">
@@ -252,7 +338,17 @@
         </item>
        </widget>
       </item>
-      <item row="3" column="0" colspan="3">
+      <item row="6" column="2">
+       <widget class="QPushButton" name="pushButton_relative_position">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Mv</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0" colspan="3">
        <layout class="QHBoxLayout" name="horizontalLayout">
         <item>
          <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -352,190 +448,25 @@
         </item>
        </layout>
       </item>
-      <item row="5" column="0">
-       <widget class="QLabel" name="label_13">
+      <item row="6" column="0">
+       <widget class="QLabel" name="label_14">
         <property name="text">
-         <string>运动至绝对位置(mm)：</string>
+         <string>运动至相对位置(mm)：</string>
         </property>
        </widget>
       </item>
-      <item row="0" column="0" colspan="3">
-       <widget class="QGroupBox" name="groupBox_2">
-        <property name="title">
-         <string>选项</string>
-        </property>
-        <layout class="QGridLayout" name="gridLayout">
-         <item row="0" column="0">
-          <widget class="QRadioButton" name="radioButton_01">
-           <property name="text">
-            <string>轴1</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="3">
-          <widget class="QLabel" name="label_2">
-           <property name="text">
-            <string>端口：</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1" colspan="2">
-          <widget class="QComboBox" name="comboBox_ip">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="4">
-          <widget class="QPushButton" name="pushButton_connect">
-           <property name="text">
-            <string>连接</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="2">
-          <widget class="QCheckBox" name="checkBox_limit">
-           <property name="text">
-            <string>限位低电平有效</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="4">
-          <widget class="QComboBox" name="comboBox_port">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="0">
-          <widget class="QRadioButton" name="radioButton_02">
-           <property name="text">
-            <string>轴2</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item row="5" column="2">
-       <widget class="QPushButton" name="pushButton_absolute_position">
+      <item row="8" column="2">
+       <widget class="QPushButton" name="pushButton_speed">
         <property name="enabled">
          <bool>false</bool>
         </property>
         <property name="text">
-         <string>Go-&gt;</string>
+         <string>设置</string>
         </property>
        </widget>
       </item>
-      <item row="2" column="0" colspan="3">
-       <layout class="QGridLayout" name="gridLayout_2">
-        <item row="0" column="3">
-         <widget class="QLabel" name="label_7">
-          <property name="text">
-           <string>运行中</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="3">
-         <widget class="QLabel" name="label_running">
-          <property name="styleSheet">
-           <string notr="true">min-width:16px;
-min-height:16px;
-max-width:16px;
-max-height:16px;
-border-radius: 8px;
-border:1px solid rgb(200, 200, 200);
-background-color: rgb(96, 96, 96);</string>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1">
-         <widget class="QLabel" name="label_negative">
-          <property name="styleSheet">
-           <string notr="true">min-width:16px;
-min-height:16px;
-max-width:16px;
-max-height:16px;
-border-radius: 8px;
-border:1px solid rgb(200, 200, 200);
-background-color: rgb(96, 96, 96);</string>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="2">
-         <widget class="QLabel" name="label_positive">
-          <property name="styleSheet">
-           <string notr="true">min-width:16px;
-min-height:16px;
-max-width:16px;
-max-height:16px;
-border-radius: 8px;
-border:1px solid rgb(200, 200, 200);
-background-color: rgb(96, 96, 96);</string>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="QLabel" name="label_5">
-          <property name="text">
-           <string>负限位</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="2">
-         <widget class="QLabel" name="label_3">
-          <property name="text">
-           <string>正限位</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item row="7" column="2">
-       <widget class="QPushButton" name="pushButton_relative_position">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="text">
-         <string>Mv</string>
-        </property>
-       </widget>
-      </item>
-      <item row="7" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_relative_position">
+      <item row="4" column="1">
+       <widget class="QDoubleSpinBox" name="doubleSpinBox_absolute_position">
         <property name="decimals">
          <number>4</number>
         </property>
@@ -546,20 +477,21 @@ background-color: rgb(96, 96, 96);</string>
          <double>0.010000000000000</double>
         </property>
         <property name="value">
-         <double>0.500000000000000</double>
+         <double>1.000000000000000</double>
         </property>
        </widget>
       </item>
-      <item row="9" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_speed">
-        <property name="decimals">
-         <number>4</number>
+      <item row="4" column="0">
+       <widget class="QLabel" name="label_13">
+        <property name="text">
+         <string>运动至绝对位置(mm)：</string>
         </property>
-        <property name="singleStep">
-         <double>0.010000000000000</double>
-        </property>
-        <property name="value">
-         <double>1.000000000000000</double>
+       </widget>
+      </item>
+      <item row="8" column="0">
+       <widget class="QLabel" name="label_15">
+        <property name="text">
+         <string>运动速度(mm)：</string>
         </property>
        </widget>
       </item>

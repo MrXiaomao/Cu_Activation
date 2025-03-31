@@ -5,6 +5,13 @@
 #include <QJsonDocument>
 #include <QFile>
 #include <QDir>
+#include <QTimer>
+
+//#include <QLibrary>
+//extern "C" {
+//    typedef __cdecl  int (*PFfti_open_tcp)(const char* ip, const int port, const byte limit_isnegative, FT_H* handle);
+//    typedef const char* (*PFfti_getsdkversion)();
+//}
 
 ControlHelper::ControlHelper(QObject *parent) : QObject(parent)
 {
@@ -34,11 +41,23 @@ bool ControlHelper::open_com(int axis_no)
     return (ret == FT_SUCCESS);
 }
 
+bool ControlHelper::connected()
+{
+    return mConnected;
+}
+
 /// 连接网络（Modbus-TCP），初始化，返回句柄。
 bool ControlHelper::open_tcp()
 {
-    int ret = fti_open_tcp(mIp.toStdString().c_str(), mPort, FT_TRUE, &mHandle);    
-    emit sigControlStatus(ret == FT_SUCCESS);
+    int ret = fti_open_tcp(mIp.toStdString().c_str(), mPort, FT_TRUE, &mHandle);
+    mConnected = ret == FT_SUCCESS;
+    emit sigControlStatus(mConnected);
+
+//细分 螺距 加速系数 减速系数
+//            fti_get_div(mCurrentHandle, currentAxiaName.toStdString().c_str(), &iValue);
+//            fti_get_pitch(mCurrentHandle, currentAxiaName.toStdString().c_str(), &dValue);
+//            fti_get_accel(mCurrentHandle, currentAxiaName.toStdString().c_str(), &uValue);
+//            fti_get_decel(mCurrentHandle, currentAxiaName.toStdString().c_str(), &uValue);
     return ret == FT_SUCCESS;
 }
 
@@ -157,6 +176,9 @@ bool ControlHelper::get_sw_p2(int axis_no, float* value)
 /// 单轴停止运动。
 bool ControlHelper::single_stop(int axis_no)
 {
+    if (mHandle == 0)
+        return false;
+
     return fti_single_stop(mHandle, mAxiaName[axis_no].toStdString().c_str()) == FT_SUCCESS;
 }
 
@@ -175,13 +197,13 @@ bool ControlHelper::single_home(int axis_no)
 /// 单轴相对运动。
 bool ControlHelper::single_move(int axis_no, float value)
 {
-    return fti_single_move(mHandle, mAxiaName[axis_no].toStdString().c_str(), value * 1000) == FT_SUCCESS;
+    return fti_single_move(mHandle, mAxiaName[axis_no].toStdString().c_str(), value) == FT_SUCCESS;
 }
 
 /// 单轴绝对运动。
 bool ControlHelper::single_moveabs(int axis_no, float value)
 {
-    return fti_single_moveabs(mHandle, mAxiaName[axis_no].toStdString().c_str(), value * 1000) == FT_SUCCESS;
+    return fti_single_moveabs(mHandle, mAxiaName[axis_no].toStdString().c_str(), value) == FT_SUCCESS;
 }
 
 /// 单轴向左（负向）连续运动。
@@ -297,9 +319,9 @@ void ControlHelper::gotoAbs(int index)
                 QJsonObject jsonDistance1 = jsonControl["Distances"].toObject()["01"].toObject();
                 QJsonObject jsonDistance2 = jsonControl["Distances"].toObject()["02"].toObject();
                 {
-                    //float speed;
-                    //get_vel(0x01, &speed);
-                    //set_vel(0x01, 5.0);
+                    float speed;
+                    get_vel(0x01, &speed);
+                    set_vel(0x01, 15.0);
                     double pos = 0.;
                     switch (index){
                         case 0x00: pos = jsonDistance1["0-1E4"].toString().toDouble(); break;
@@ -308,10 +330,15 @@ void ControlHelper::gotoAbs(int index)
                         case 0x03: pos = jsonDistance1["1E10-1E13"].toString().toDouble(); break;
                     }
 
-                    single_moveabs(0x01, pos);
-                    //set_vel(0x01, speed);
+                    single_moveabs(0x01, pos * 1000);
+                    QTimer::singleShot(5000, this, [=](){
+                        set_vel(0x01, speed);
+                    });
                 }
                 {
+                    float speed;
+                    get_vel(0x01, &speed);
+                    set_vel(0x01, 15.0);
                     double pos = 0.;
                     switch (index){
                         case 0x00: pos = jsonDistance2["0-1E4"].toString().toDouble(); break;
@@ -320,7 +347,10 @@ void ControlHelper::gotoAbs(int index)
                         case 0x03: pos = jsonDistance2["1E10-1E13"].toString().toDouble(); break;
                     }
 
-                    single_moveabs(0x02, pos);
+                    single_moveabs(0x02, pos * 1000);
+                    QTimer::singleShot(5000, this, [=](){
+                        set_vel(0x01, speed);
+                    });
                 }
             }
         }

@@ -15,11 +15,10 @@
 
 ControlWidget::ControlWidget(QWidget *parent) :
     QWidget(parent),
-    ui(new Ui::ControlWidget),
-    currentAxiaName("01")
+    ui(new Ui::ControlWidget)
 {
     ui->setupUi(this);
-    controlhelper = ControlHelper::instance();
+    controlHelper = ControlHelper::instance();
 
     QButtonGroup* grp = new QButtonGroup();
     grp->setExclusive(true);
@@ -27,21 +26,17 @@ ControlWidget::ControlWidget(QWidget *parent) :
     grp->addButton(ui->radioButton_02, 1);
     connect(grp, QOverload<int>::of(&QButtonGroup::buttonClicked), this, [=](int index){
         this->save();
+        mAxis_no = index + 1;
         if (0 == index){
             ui->groupBox->setTitle(tr("轴1"));
-            currentAxiaName = "01";
         }
         else{
             ui->groupBox->setTitle(tr("轴2"));
-            currentAxiaName = "02";
         }
 
         this->load();
         enableUiStatus();
-        ui->comboBox_ip->setCurrentIndex(0);
-        ui->comboBox_port->setCurrentIndex(0);
-    });
-    //emit grp->buttonClicked(0);
+    });    
 
     // 打印SDK版本
     ui->tableWidget_position->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
@@ -70,98 +65,6 @@ ControlWidget::ControlWidget(QWidget *parent) :
 //        ui->comboBox_com_2->addItem(port.portName());
 //    }
 
-    QTimer *timer = new QTimer(this);
-    timer->setObjectName("timerPosition");
-    connect(timer, &QTimer::timeout, this, [=](){
-        if (mHandle != 0){
-            {
-                float pos;
-                uint32_t status;
-                byte isrunning;
-                byte limits[2];
-                int ret = fti_single_getpos(mHandle, currentAxiaName.toStdString().c_str(), &pos);
-                if (FT_SUCCESS == ret){
-                    ui->lineEdit_position->setText(QString::number(pos / 1000, 'f', 4));
-                }
-
-                if (this->property("enableAuto").toBool()){
-                    float realPos = pos / 1000;
-                    if (realPos <= ui->doubleSpinBox_lower->value()){
-                        fti_single_stop(mHandle, currentAxiaName.toStdString().c_str());
-                        QTimer::singleShot(ui->spinBox_delay->value(), this, [=](){
-                            fti_single_moveabs(mHandle, currentAxiaName.toStdString().c_str(), ui->doubleSpinBox_upper->value() * 1000);
-                        });
-                    } else if (realPos >= ui->doubleSpinBox_upper->value()){
-                        fti_single_stop(mHandle, currentAxiaName.toStdString().c_str());
-                        QTimer::singleShot(ui->spinBox_delay->value(), this, [=](){
-                            fti_single_moveabs(mHandle, currentAxiaName.toStdString().c_str(), ui->doubleSpinBox_lower->value() * 1000);
-                        });
-                    }
-                }
-                ret = fti_single_getstatus(mHandle, currentAxiaName.toStdString().c_str(), &status);
-                ret = fti_single_isrunning(status, &isrunning);
-                ret = fti_single_getlimits(status, limits);
-                if (isrunning == FT_TRUE){
-                    ui->label_running->setStyleSheet("min-width:16px;"
-                                                     "min-height:16px;"
-                                                     "max-width:16px;"
-                                                     "max-height:16px;"
-                                                     "border-radius: 8px;"
-                                                     "border:1px solid rgb(200, 200, 200);"
-                                                     "background-color: rgb(170, 255, 0);");
-                } else {
-                    ui->label_running->setStyleSheet("min-width:16px;"
-                                                     "min-height:16px;"
-                                                     "max-width:16px;"
-                                                     "max-height:16px;"
-                                                     "border-radius: 8px;"
-                                                     "border:1px solid rgb(200, 200, 200);"
-                                                     "background-color: rgb(96, 96, 96);");
-                }
-
-                if (limits[1] == FT_TRUE){
-                    ui->pushButton_forward->setEnabled(false);
-                    ui->label_positive->setStyleSheet("min-width:16px;"
-                                                      "min-height:16px;"
-                                                      "max-width:16px;"
-                                                      "max-height:16px;"
-                                                      "border-radius: 8px;"
-                                                      "border:1px solid rgb(200, 200, 200);"
-                                                      "background-color: rgb(170, 255, 0);");
-                } else {
-                    ui->pushButton_forward->setEnabled(true);
-                    ui->label_positive->setStyleSheet("min-width:16px;"
-                                                      "min-height:16px;"
-                                                      "max-width:16px;"
-                                                      "max-height:16px;"
-                                                      "border-radius: 8px;"
-                                                      "border:1px solid rgb(200, 200, 200);"
-                                                      "background-color: rgb(96, 96, 96);");
-                }
-
-                if (limits[0] == FT_TRUE){
-                    ui->pushButton_backward->setEnabled(true);
-                    ui->label_negative->setStyleSheet("min-width:16px;"
-                                                      "min-height:16px;"
-                                                      "max-width:16px;"
-                                                      "max-height:16px;"
-                                                      "border-radius: 8px;"
-                                                      "border:1px solid rgb(200, 200, 200);"
-                                                      "background-color: rgb(170, 255, 0);");
-                } else {
-                    ui->pushButton_backward->setEnabled(true);
-                    ui->label_negative->setStyleSheet("min-width:16px;"
-                                                      "min-height:16px;"
-                                                      "max-width:16px;"
-                                                      "max-height:16px;"
-                                                      "border-radius: 8px;"
-                                                      "border:1px solid rgb(200, 200, 200);"
-                                                      "background-color: rgb(96, 96, 96);");
-                }
-            }
-        }        
-    });
-
     //量程
     //负限位
     //正限位
@@ -181,19 +84,19 @@ ControlWidget::ControlWidget(QWidget *parent) :
             w->layout()->addWidget(btn1);
             w->layout()->addWidget(btn2);
             connect(btn1, &QPushButton::clicked, this, [&,tableWidget,i](){
-                tableWidget->item(i, 1)->setText(ui->lineEdit_position->text());
+                if (mAxis_no == 0x01)
+                    tableWidget->item(i, 1)->setText(ui->lineEdit_position->text());
+                else
+                    tableWidget->item(i, 1)->setText(ui->lineEdit_position_2->text());
             });
             connect(btn2, &QPushButton::clicked, this, [&,tableWidget,i](){
                 float v = tableWidget->item(i, 1)->text().toFloat();
-                if (mHandle == 0)
-                    return ;
-
                 if (i<=3) //量程
-                    fti_single_moveabs(mHandle, currentAxiaName.toStdString().c_str(), v * 1000);
+                    controlHelper->single_moveabs(mAxis_no, v * 1000);
                 else if (4==i)//设定负限位
-                    fti_set_sw_p1(mHandle, currentAxiaName.toStdString().c_str(), v * 1000);
+                    controlHelper->set_sw_p1(mAxis_no, v * 1000);
                 else if (5==i)//设定正限位
-                    fti_set_sw_p2(mHandle, currentAxiaName.toStdString().c_str(), v * 1000);
+                    controlHelper->set_sw_p2(mAxis_no, v * 1000);
             });
             btn1->setProperty("row", i);
             btn2->setProperty("row", i);
@@ -203,6 +106,100 @@ ControlWidget::ControlWidget(QWidget *parent) :
     ui->pushButton_forward->installEventFilter(this);
     ui->pushButton_backward->installEventFilter(this);
 
+    QTimer *timerPosition = new QTimer(this);
+    timerPosition->setObjectName("timerPosition");
+    connect(timerPosition, &QTimer::timeout, this, [=](){
+        float pos;
+        uint32_t status;
+        byte isrunning;
+        byte limits[2];
+        bool ret = controlHelper->single_getpos(0x01, &pos);
+        if (ret){
+            ui->lineEdit_position->setText(QString::number(pos / 1000, 'f', 4));
+        }
+
+        ret = controlHelper->single_getpos(0x02, &pos);
+        if (ret){
+            ui->lineEdit_position_2->setText(QString::number(pos / 1000, 'f', 4));
+        }
+
+        if (this->property("enableAuto").toBool()){
+            float realPos = pos / 1000;
+            if (realPos <= ui->doubleSpinBox_lower->value()){
+                controlHelper->single_stop(mAxis_no);
+                QTimer::singleShot(ui->spinBox_delay->value(), this, [=](){
+                    controlHelper->single_moveabs(mAxis_no, ui->doubleSpinBox_upper->value() * 1000);
+                });
+            } else if (realPos >= ui->doubleSpinBox_upper->value()){
+                controlHelper->single_stop(mAxis_no);
+                QTimer::singleShot(ui->spinBox_delay->value(), this, [=](){
+                    controlHelper->single_moveabs(mAxis_no, ui->doubleSpinBox_lower->value() * 1000);
+                });
+            }
+        }
+        ret = controlHelper->single_getstatus(mAxis_no, &status);
+        ret = controlHelper->single_isrunning(status, &isrunning);
+        ret = controlHelper->single_getlimits(status, limits);
+        if (isrunning == FT_TRUE){
+            ui->label_running->setStyleSheet("min-width:16px;"
+                                             "min-height:16px;"
+                                             "max-width:16px;"
+                                             "max-height:16px;"
+                                             "border-radius: 8px;"
+                                             "border:1px solid rgb(200, 200, 200);"
+                                             "background-color: rgb(170, 255, 0);");
+        } else {
+            ui->label_running->setStyleSheet("min-width:16px;"
+                                             "min-height:16px;"
+                                             "max-width:16px;"
+                                             "max-height:16px;"
+                                             "border-radius: 8px;"
+                                             "border:1px solid rgb(200, 200, 200);"
+                                             "background-color: rgb(96, 96, 96);");
+        }
+
+        if (limits[1] == FT_TRUE){
+            ui->pushButton_forward->setEnabled(false);
+            ui->label_positive->setStyleSheet("min-width:16px;"
+                                              "min-height:16px;"
+                                              "max-width:16px;"
+                                              "max-height:16px;"
+                                              "border-radius: 8px;"
+                                              "border:1px solid rgb(200, 200, 200);"
+                                              "background-color: rgb(170, 255, 0);");
+        } else {
+            ui->pushButton_forward->setEnabled(true);
+            ui->label_positive->setStyleSheet("min-width:16px;"
+                                              "min-height:16px;"
+                                              "max-width:16px;"
+                                              "max-height:16px;"
+                                              "border-radius: 8px;"
+                                              "border:1px solid rgb(200, 200, 200);"
+                                              "background-color: rgb(96, 96, 96);");
+        }
+
+        if (limits[0] == FT_TRUE){
+            ui->pushButton_backward->setEnabled(true);
+            ui->label_negative->setStyleSheet("min-width:16px;"
+                                              "min-height:16px;"
+                                              "max-width:16px;"
+                                              "max-height:16px;"
+                                              "border-radius: 8px;"
+                                              "border:1px solid rgb(200, 200, 200);"
+                                              "background-color: rgb(170, 255, 0);");
+        } else {
+            ui->pushButton_backward->setEnabled(true);
+            ui->label_negative->setStyleSheet("min-width:16px;"
+                                              "min-height:16px;"
+                                              "max-width:16px;"
+                                              "max-height:16px;"
+                                              "border-radius: 8px;"
+                                              "border:1px solid rgb(200, 200, 200);"
+                                              "background-color: rgb(96, 96, 96);");
+        }
+    });
+    timerPosition->start(100);
+
     this->load();
 }
 
@@ -211,136 +208,40 @@ ControlWidget::~ControlWidget()
     delete ui;
 }
 
-//#include <QLibrary>
-//extern "C" {
-//    typedef __cdecl  int (*PFfti_open_tcp)(const char* ip, const int port, const byte limit_isnegative, FT_H* handle);
-//    typedef const char* (*PFfti_getsdkversion)();
-//}
-
-void ControlWidget::on_pushButton_connect_clicked()
-{
-//    QLibrary myLib("ftcoreimc.dll"); // 指定要加载的 DLL 文件
-
-//    if (myLib.load())
-//    {
-//        PFfti_getsdkversion fti_getsdkversion = (PFfti_getsdkversion)myLib.resolve("fti_getsdkversion");
-//        if (fti_getsdkversion){
-//            QMessageBox::information(this, "ver", QString::fromLocal8Bit(fti_getsdkversion()));
-//        }
-//        QMessageBox::information(this, "tip", "ftcoreimc.dll loaded successfully");
-//    }
-
-    //连接
-    if (mHandle != 0){
-        ui->pushButton_start->setText(tr("开启往返运动"));
-        this->setProperty("enableAuto", false);
-        fti_single_stop(mHandle, currentAxiaName.toStdString().c_str());
-        QTimer* timerPosition = this->findChild<QTimer*>("timerPosition");
-        timerPosition->stop();
-        fti_close(mHandle);
-        mHandle = 0;
-        enableUiStatus();
-        return;
-    }
-
-    {
-//        QMessageBox::information(this, "tip", "3");
-//        PFfti_open_tcp fti_open_tcp = (PFfti_open_tcp)myLib.resolve("fti_open_tcp");
-//        if (fti_open_tcp)
-//        {
-//            QMessageBox::information(this, "tip", "34");
-//            int ret = fti_open_tcp(ui->comboBox_ip->currentText().toStdString().c_str(), ui->comboBox_port->currentText().toUInt(), FT_TRUE, &mCurrentHandle);
-//            QMessageBox::information(this, "tip", "35");
-//        }
-//        QMessageBox::information(this, "tip", "36");
-        int ret = fti_open_tcp(ui->comboBox_ip->currentText().trimmed().toStdString().c_str(),
-                               ui->comboBox_port->currentText().toUInt(),
-                               ui->checkBox_limit->isChecked() ? FT_TRUE : FT_FALSE, &mHandle);
-        if (FT_SUCCESS == ret){
-            //ret = fti_single_home(mHandle1, currentAxiaName.toStdString().c_str());
-
-            float dValue;
-            int iValue;
-            ushort uValue;
-            //设定负限位
-            fti_get_sw_p1(mHandle, currentAxiaName.toStdString().c_str(), &dValue);
-            ui->tableWidget_position->item(4, 1)->setText(QString::number(dValue / 1000, 'f', 4));
-            //设定正限位
-            fti_get_sw_p2(mHandle, currentAxiaName.toStdString().c_str(), &dValue);
-            ui->tableWidget_position->item(5, 1)->setText(QString::number(dValue / 1000, 'f', 4));
-
-            //运动速度
-            fti_get_vel(mHandle, currentAxiaName.toStdString().c_str(), &dValue);
-            ui->doubleSpinBox_speed->setValue(dValue);
-
-            //细分 螺距 加速系数 减速系数
-//            fti_get_div(mCurrentHandle, currentAxiaName.toStdString().c_str(), &iValue);
-//            fti_get_pitch(mCurrentHandle, currentAxiaName.toStdString().c_str(), &dValue);
-//            fti_get_accel(mCurrentHandle, currentAxiaName.toStdString().c_str(), &uValue);
-//            fti_get_decel(mCurrentHandle, currentAxiaName.toStdString().c_str(), &uValue);
-
-            QTimer* timerPosition = this->findChild<QTimer*>("timerPosition");
-            timerPosition->start(100);
-            enableUiStatus();
-        } else {
-            mHandle = 0;
-            QMessageBox::information(this, tr("提示"), tr("设备连接失败！"));
-        }
-    }
-}
-
 void ControlWidget::on_pushButton_zero_clicked()
 {
     //回零
-    if (mHandle == 0)
-        return ;
-
-    fti_single_home(mHandle, currentAxiaName.toStdString().c_str());
+    controlHelper->single_home(mAxis_no);
 }
 
 void ControlWidget::on_pushButton_stop_clicked()
 {
     //停止
-    if (mHandle == 0)
-        return ;
-
-    fti_single_stop(mHandle, currentAxiaName.toStdString().c_str());
+    controlHelper->single_stop(mAxis_no);
 }
 
 void ControlWidget::on_pushButton_absolute_position_clicked()
 {
     //绝对位置
-    if (mHandle == 0)
-        return ;
-
-    fti_single_moveabs(mHandle, currentAxiaName.toStdString().c_str(), ui->doubleSpinBox_absolute_position->value() * 1000);
+    controlHelper->single_moveabs(mAxis_no, ui->doubleSpinBox_absolute_position->value() * 1000);
 }
 
 void ControlWidget::on_pushButton_relative_position_clicked()
 {
     //相对位置
-    if (mHandle == 0)
-        return ;
-
-    fti_single_move(mHandle, currentAxiaName.toStdString().c_str(), ui->doubleSpinBox_relative_position->value() * 1000);
+    controlHelper->single_move(mAxis_no, ui->doubleSpinBox_relative_position->value() * 1000);
 }
 
 void ControlWidget::on_pushButton_speed_clicked()
 {
     //速度    
-    if (mHandle == 0)
-        return ;
-
-    fti_set_vel(mHandle, currentAxiaName.toStdString().c_str(), ui->doubleSpinBox_speed->value());
+    controlHelper->set_vel(mAxis_no, ui->doubleSpinBox_speed->value());
 }
 
 void ControlWidget::on_pushButton_setup_clicked()
 {
     //参数配置
-    if (mHandle == 0)
-        return ;
-
-    fti_save_params_permanently(mHandle, currentAxiaName.toStdString().c_str());
+    controlHelper->save_params_permanently(mAxis_no);
 }
 
 void ControlWidget::load()
@@ -358,19 +259,14 @@ void ControlWidget::load()
         QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
         QJsonObject jsonObj = jsonDoc.object();
 
-        ui->comboBox_ip->clear();
-        ui->comboBox_port->clear();
-
         if (jsonObj.contains("Control")){
             QJsonObject jsonControl = jsonObj["Control"].toObject();
             QJsonArray jsonDistances = jsonControl["Distances"].toArray();
 
-            ui->comboBox_ip->addItem(jsonControl["ip"].toString());
-            ui->comboBox_port->addItem(QString::number(jsonControl["port"].toInt()));
             if (jsonControl.contains("Distances")){
                 QJsonObject jsonDistance1 = jsonControl["Distances"].toObject()["01"].toObject();
                 QJsonObject jsonDistance2 = jsonControl["Distances"].toObject()["02"].toObject();
-                if (currentAxiaName == "01"){
+                if (mAxis_no == 0x01){
                     ui->tableWidget_position->item(0, 1)->setText(jsonDistance1["0-1E4"].toString());
                     ui->tableWidget_position->item(1, 1)->setText(jsonDistance1["1E4-1E7"].toString());
                     ui->tableWidget_position->item(2, 1)->setText(jsonDistance1["1E7-1E10"].toString());
@@ -384,6 +280,18 @@ void ControlWidget::load()
             }
         }
     }
+
+    float dValue;
+    //设定负限位
+    controlHelper->get_sw_p1(mAxis_no, &dValue);
+    ui->tableWidget_position->item(4, 1)->setText(QString::number(dValue / 1000, 'f', 4));
+    //设定正限位
+    controlHelper->get_sw_p2(mAxis_no, &dValue);
+    ui->tableWidget_position->item(5, 1)->setText(QString::number(dValue / 1000, 'f', 4));
+
+    //运动速度
+    controlHelper->get_vel(mAxis_no, &dValue);
+    ui->doubleSpinBox_speed->setValue(dValue);
 }
 
 bool ControlWidget::eventFilter(QObject *watched, QEvent *event)
@@ -394,26 +302,17 @@ bool ControlWidget::eventFilter(QObject *watched, QEvent *event)
                 QPushButton* btn = qobject_cast<QPushButton*>(watched);
                 if (btn->objectName() == "pushButton_forward" || btn->objectName() == "pushButton_forward_2"){
                     //正向
-                    if (mHandle == 0)
-                        return QWidget::eventFilter(watched, event);
-
-                    fti_single_stop(mHandle, currentAxiaName.toStdString().c_str());
-                    fti_single_jogright(mHandle, currentAxiaName.toStdString().c_str());
+                    controlHelper->single_stop(mAxis_no);
+                    controlHelper->single_jogright(mAxis_no);
                 } else if (btn->objectName() == "pushButton_backward" || btn->objectName() == "pushButton_backward_2"){
                     //负向
-                    if (mHandle == 0)
-                        return QWidget::eventFilter(watched, event);
-
-                    fti_single_stop(mHandle, currentAxiaName.toStdString().c_str());
-                    fti_single_jogleft(mHandle, currentAxiaName.toStdString().c_str());
+                    controlHelper->single_stop(mAxis_no);
+                    controlHelper->single_jogleft(mAxis_no);
                 }
             }
         } else if (event->type() == QEvent::MouseButtonRelease){
             if (watched->inherits("QPushButton")){
-                if (mHandle == 0)
-                    return QWidget::eventFilter(watched, event);
-
-                fti_single_stop(mHandle, currentAxiaName.toStdString().c_str());
+                controlHelper->single_stop(mAxis_no);
             }
         }
     }
@@ -448,7 +347,7 @@ void ControlWidget::save()
             jsonDistance2 = jsonDistances["02"].toObject();
         }
 
-        if (currentAxiaName == "01"){
+        if (mAxis_no == 0x01){
             jsonDistance1["0-1E4"] = ui->tableWidget_position->item(0, 1)->text();
             jsonDistance1["1E4-1E7"] = ui->tableWidget_position->item(1, 1)->text();
             jsonDistance1["1E7-1E10"] = ui->tableWidget_position->item(2, 1)->text();
@@ -474,18 +373,12 @@ void ControlWidget::save()
 
 void ControlWidget::closeEvent(QCloseEvent */*event*/)
 {
-    if (mHandle != 0){
-        fti_close(mHandle);
-        mHandle = 0;
-    }
-
     this->save();
 }
 
 void ControlWidget::enableUiStatus()
 {
-    bool enabled = mHandle!=0;
-    ui->pushButton_connect->setText(enabled ? tr("断开连接") : tr("连接"));
+    bool enabled = controlHelper->connected();
     ui->pushButton_backward->setEnabled(enabled);
     ui->pushButton_zero->setEnabled(enabled);
     ui->pushButton_stop->setEnabled(enabled);
@@ -496,16 +389,16 @@ void ControlWidget::enableUiStatus()
 
 void ControlWidget::on_pushButton_start_clicked()
 {
-    if (mHandle == 0)
+    if (!controlHelper->connected())
         return;
 
     if (this->property("enableAuto").toBool()){
-        fti_single_stop(mHandle, currentAxiaName.toStdString().c_str());
+        controlHelper->single_stop(mAxis_no);
         ui->pushButton_start->setText(tr("开启往返运动"));
         this->setProperty("enableAuto", false);
     }
     else{
-        fti_single_moveabs(mHandle, currentAxiaName.toStdString().c_str(), ui->doubleSpinBox_lower->value() * 1000);
+        controlHelper->single_moveabs(mAxis_no, ui->doubleSpinBox_lower->value() * 1000);
         ui->pushButton_start->setText(tr("停止往返运动"));
         this->setProperty("enableAuto", true);
     }
@@ -513,15 +406,16 @@ void ControlWidget::on_pushButton_start_clicked()
 
 void ControlWidget::on_pushButton_clicked()
 {
-    ui->doubleSpinBox_lower->setValue(ui->lineEdit_position->text().toFloat());
+    if (mAxis_no == 0x01)
+        ui->doubleSpinBox_lower->setValue(ui->lineEdit_position->text().toFloat());
+    else
+        ui->doubleSpinBox_lower->setValue(ui->lineEdit_position_2->text().toFloat());
 }
 
 void ControlWidget::on_pushButton_2_clicked()
 {
-    ui->doubleSpinBox_upper->setValue(ui->lineEdit_position->text().toFloat());
-}
-
-void ControlWidget::on_pushButton_backward_clicked()
-{
-
+    if (mAxis_no == 0x01)
+        ui->doubleSpinBox_upper->setValue(ui->lineEdit_position->text().toFloat());
+    else
+        ui->doubleSpinBox_upper->setValue(ui->lineEdit_position->text().toFloat());
 }

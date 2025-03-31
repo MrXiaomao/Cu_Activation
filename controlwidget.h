@@ -26,8 +26,6 @@ protected:
     virtual void closeEvent(QCloseEvent *event) override;
 
 private slots:
-    void on_pushButton_connect_clicked();
-
     void on_pushButton_zero_clicked();
 
     void on_pushButton_stop_clicked();
@@ -46,14 +44,10 @@ private slots:
 
     void on_pushButton_2_clicked();
 
-    void on_pushButton_backward_clicked();
-
 private:
     Ui::ControlWidget *ui;
-    ControlHelper *controlhelper = nullptr;
-    FT_H mHandle = 0;
-
-    QString currentAxiaName;
+    ControlHelper *controlHelper = nullptr;
+    qint32 mAxis_no = 0x01;
 };
 
 #endif // CONTROLWIDGET_H

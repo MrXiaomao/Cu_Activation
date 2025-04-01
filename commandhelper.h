@@ -49,6 +49,55 @@ typedef struct tagDetectorParameter{
     qint32 cool_timelength;//冷却时长
 } DetectorParameter;
 
+class NetWorker : public QObject
+{
+    Q_OBJECT
+public:
+    void push_back(QByteArray binaryData){
+        QMutexLocker locker(&mutexCache);
+        cachePool.push_back(binaryData);
+    };
+public slots:
+    void doWork();
+
+signals:
+    void resultReady(const QString &result);
+    void sigMeasureStop();
+    //网络包数大小
+    void sigRecvDataSize(qint32);
+    void sigRecvPkgCount(qint32);
+
+    //分拣完毕
+    void sigDispatchEnergyPkg(DetTimeEnergy);
+
+private:
+    QMutex mutexCache;
+    QByteArray cachePool;
+    QByteArray handlerPool;
+    DetectorParameter detectorParameter;
+    QFile *pfSave = nullptr;
+    bool taskFinished = false;
+};
+
+class EnergyWorker : public QObject
+{
+    Q_OBJECT
+public slots:
+    void doWork();
+
+    void handleDispatchEnergyPkg(DetTimeEnergy detTimeEnergy){
+        QMutexLocker locker(&mutexPlot);
+        currentSpectrumFrames.push_back(detTimeEnergy);
+    }
+signals:
+    void resultReady(const QString &result);
+
+private:
+    QMutex mutexPlot;
+    std::vector<DetTimeEnergy> currentSpectrumFrames;//网络新接收的能谱数据（一般指未处理，未分步长的数据;
+};
+
+
 class QUiThread;
 class CommandHelper : public QObject
 {
@@ -131,8 +180,16 @@ private:
     quint32 SequenceNumber;// 帧序列号
     QUiThread* analyzeNetDataThread;
     QUiThread* plotUpdateThread;
+
+    QThread netWorkerThread;
+    QThread energyWorkerThread;
+    NetWorker *netWorker;
+    EnergyWorker *energyWorker;
+
     CoincidenceAnalyzer* coincidenceAnalyzer;
     //void analyzerCalback(deque<SingleSpectrum>, vector<CurrentPoint>, vector<CoincidenceResult>);
+signals:
+    void operate();
 
 protected:
     void makeFrame();

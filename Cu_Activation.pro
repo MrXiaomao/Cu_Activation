@@ -34,7 +34,7 @@ SOURCES += \
     qcustomplot.cpp \
     main.cpp \
     mainwindow.cpp \
-    quithread.cpp \
+    qlitethread.cpp \
     spectrumModel.cpp \
     sysutils.cpp \
     waveformmodel.cpp \
@@ -59,7 +59,7 @@ HEADERS += \
     polynomialfit.h \
     qcustomplot.h \
     mainwindow.h \
-    quithread.h \
+    qlitethread.h \
     spectrumModel.h \
     sysutils.h \
     waveformmodel.h \

@@ -54,6 +54,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
             return;
 
         // 读取数据
+        std::cout << "sub thread id:" << QThread::currentThreadId() << std::endl;
         sigPlot(r1, r2, r3);
     });
 
@@ -64,11 +65,11 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
             QFile file(coincidenceResultFile);
             if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
                 QTextStream out(&file);
-                out << "CountRate1;CountRate2;ConCount_single;ConCount_multiple";
+                out << "CountRate1,CountRate2,ConCount_single,ConCount_multiple";
 
                 vector<CoincidenceResult> coincidenceResult = coincidenceAnalyzer->GetCoinResult();
                 for (size_t i=0; i<coincidenceResult.size(); ++i){
-                    out << coincidenceResult[i].CountRate1 << ";" << coincidenceResult[i].CountRate2 << ";" << coincidenceResult[i].ConCount_single << ";" << coincidenceResult[i].ConCount_multiple;
+                    out << coincidenceResult[i].CountRate1 << "," << coincidenceResult[i].CountRate2 << "," << coincidenceResult[i].ConCount_single << "," << coincidenceResult[i].ConCount_multiple;
                 }
 
                 file.flush();
@@ -81,12 +82,12 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
             QFile file(singleSpectrumResultFile);
             if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
                 QTextStream out(&file);
-                out << "time;Det1-Energy;Det2-Energy";
+                out << "time,Det1-Energy,Det2-Energy";
 
                 vector<SingleSpectrum> singleSpectrum = coincidenceAnalyzer->GetSpectrum();
                 for (size_t i=0; i<singleSpectrum.size(); ++i){
                     for (size_t j=0; j<MULTI_CHANNEL; ++j){
-                        out << singleSpectrum[i].time << singleSpectrum[i].spectrum[0][j] << singleSpectrum[i].spectrum[1][j];//Qt::endl
+                        out << singleSpectrum[i].time << "," << singleSpectrum[i].spectrum[0][j] << "," << singleSpectrum[i].spectrum[1][j];//Qt::endl
                     }
                 }
 
@@ -140,6 +141,23 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
 void CommandHelper::startWork()
 {
     // 创建数据解析线程
+//    netWorker = new NetWorker;
+//    netWorker->moveToThread(&netWorkerThread);
+//    connect(&netWorkerThread, &QThread::finished, netWorker, &QObject::deleteLater);
+//    connect(this, &CommandHelper::operate, netWorker, &NetWorker::doWork);
+//    connect(netWorker, &NetWorker::resultReady, this, &CommandHelper::handleResults);
+//    netWorkerThread.start();
+
+//    energyWorker = new EnergyWorker;
+//    energyWorker->moveToThread(&energyWorkerThread);
+//    connect(&energyWorkerThread, &QThread::finished, energyWorker, &QObject::deleteLater);
+//    connect(this, &CommandHelper::operate, energyWorker, &EnergyWorker::doWork);
+//    connect(energyWorker, &EnergyWorker::resultReady, this, &CommandHelper::handleResults);
+//    energyWorkerThread.start();
+
+//    connect(netWorker, &NetWorker::sigDispatchEnergyPkg, energyWorker, &EnergyWorker::handleDispatchEnergyPkg);
+//    connect(energyWorker, &NetWorker::sigDispatchEnergyPkg, energyWorker, &EnergyWorker::handleDispatchEnergyPkg);
+
     analyzeNetDataThread = new QUiThread(this);
     analyzeNetDataThread->setObjectName("analyzeNetDataThread");
     analyzeNetDataThread->setWorkThreadProc([=](){
@@ -805,6 +823,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
             if (detectorParameter.transferModel == 0x05 || detectorParameter.transferModel == 0x03){
                 QMutexLocker locker(&mutexCache);
                 cachePool.push_back(binaryData);
+                //netWorker->push_back(binaryData);
             }
         }
     });
@@ -1088,11 +1107,207 @@ void CommandHelper::slotDoTasks()
     }
 }
 
-void CommandHelper::slotAnalyzeNetFrame()
+void NetWorker::doWork()
 {
     while (!taskFinished)
-    {        
+    {
         {
+            QMutexLocker locker(&mutexCache);
+            if (cachePool.size() <= 0){
+                if (handlerPool.size() < 12){
+                    // 数据单位最小值为12（一个指令长度）
+                    QThread::msleep(1);
+                }
+            } else {
+                handlerPool.append(cachePool);
+                cachePool.clear();
+            }
+        }
+
+        QByteArray validFrame;
+
+        //00:能谱 03:波形 05:粒子
+        if (detectorParameter.transferModel == 0x00){
+        } else if (detectorParameter.transferModel == 0x05){
+            const quint32 minPkgSize = 1026 * 8;
+            bool isNual = false;
+            while (true){
+                quint32 size = handlerPool.size();
+                if (size >= minPkgSize){
+                    // 寻找包头
+                    if ((quint8)handlerPool.at(0) == 0x00 && (quint8)handlerPool.at(1) == 0x00 && (quint8)handlerPool.at(2) == 0xaa && (quint8)handlerPool.at(3) == 0xb3){
+                        // 寻找包尾(正常情况包尾正确)
+                        if ((quint8)handlerPool.at(minPkgSize-4) == 0x00 && (quint8)handlerPool.at(minPkgSize-3) == 0x00 && (quint8)handlerPool.at(minPkgSize-2) == 0xcc && (quint8)handlerPool.at(minPkgSize-1) == 0xd3){
+                            isNual = true;
+                            break;
+                        } else {
+                            handlerPool.remove(0, 1);
+                        }
+                    } else {
+                        handlerPool.remove(0, 1);
+                    }
+                } else if (handlerPool.size() == 12){
+                    //12 34 00 0F FF 10 00 11 00 00 AB CD
+                    //通过指令来判断测量是否停止
+                    if ((quint8)handlerPool.at(0) == 0x12 && (quint8)handlerPool.at(1) == 0x34
+                            && (quint8)handlerPool.at(2) == 0x00 && (quint8)handlerPool.at(3) == 0x0f
+                            && (quint8)handlerPool.at(10) == 0xab && (quint8)handlerPool.at(11) == 0xcd){
+                        handlerPool.remove(0, 12);
+
+                        if (nullptr != pfSave){
+                            pfSave->close();
+                            delete pfSave;
+                            pfSave = nullptr;
+                        }
+
+                        //测量停止是否需要清空所有数据
+                        //currentSpectrumFrames.clear();
+                        emit sigMeasureStop();
+                        break;
+                    } else {
+                        handlerPool.remove(0, 1);
+                    }
+                } else {
+                    break;
+                }
+            }
+
+            if (isNual){
+                //复制有效数据
+                validFrame.append(handlerPool.data(), minPkgSize);
+                handlerPool.remove(0, minPkgSize);
+
+                //处理数据
+                const unsigned char *ptrOffset = (const unsigned char *)validFrame.constData();
+
+                //通道号(8字节)
+                ptrOffset += 4;
+                quint64 channel = static_cast<quint64>(ptrOffset[0]) << 56 |
+                                 static_cast<quint64>(ptrOffset[1]) << 48 |
+                                 static_cast<quint64>(ptrOffset[2]) << 40 |
+                                 static_cast<quint64>(ptrOffset[3]) << 32 |
+                                 static_cast<quint64>(ptrOffset[4]) << 24 |
+                                 static_cast<quint64>(ptrOffset[5]) << 16 |
+                                 static_cast<quint64>(ptrOffset[6]) << 8 |
+                                 static_cast<quint64>(ptrOffset[7]);
+
+                //通道值转换
+                channel = (channel == 0xFFF1) ? 0 : 1;
+
+                //粒子模式数据1024*8byte,前6字节:时间,后2字节:能量
+                int ref = 1;
+                ptrOffset += 8;
+
+                std::vector<TimeEnergy> temp;
+                while (ref++<=1024){
+                    long long t = static_cast<quint64>(ptrOffset[0]) << 40 |
+                            static_cast<quint64>(ptrOffset[1]) << 32 |
+                            static_cast<quint64>(ptrOffset[2]) << 24 |
+                            static_cast<quint64>(ptrOffset[3]) << 16 |
+                            static_cast<quint64>(ptrOffset[4]) << 8 |
+                            static_cast<quint64>(ptrOffset[5]);
+                    t *= 10;
+                    unsigned int e = static_cast<quint16>(ptrOffset[6]) << 8 | static_cast<quint16>(ptrOffset[7]);
+                    ptrOffset += 8;
+
+                    if (t != 0x00)
+                        temp.push_back(TimeEnergy(t, e));
+                }
+
+                //数据分拣完毕
+                {
+                    DetTimeEnergy detTimeEnergy;
+                    detTimeEnergy.channel = channel;
+                    detTimeEnergy.timeEnergy.swap(temp);
+                    emit sigDispatchEnergyPkg(detTimeEnergy);
+                }
+            }
+        } else if (detectorParameter.transferModel == 0x03){
+            // 波形个数
+            //包头0x0000AAB1 + 通道号（16bit） + 波形数据（4096*16bit） + 包尾0x0000CCD1
+            // 使用示例
+            //std::vector<uint8_t> data = {0x01, 0x02, 0x03, 0x01, 0x02, 0x03};
+            //std::vector<uint8_t> target = {0x00, 0x00, 0xaa, 0x0b1};
+            if (0x03 == detectorParameter.transferModel){
+                // 波形个数
+                //包头0x0000AAB1 + 通道号（16bit） + 波形数据（4096*16bit） + 包尾0x0000CCD1
+                // 使用示例
+                //std::vector<uint8_t> data = {0x01, 0x02, 0x03, 0x01, 0x02, 0x03};
+                qint32 count = 0;
+                std::vector<uint8_t> target = {0x00, 0x00, 0xaa, 0x0b1};
+                while (true){
+                    quint32 size = handlerPool.size();
+                    quint32 minPkgSize = (4096+5) * 2;
+                    if (size >= minPkgSize){
+                        // 寻找包头
+                        if ((quint8)handlerPool.at(0) == 0x00 && (quint8)handlerPool.at(1) == 0x00 && (quint8)handlerPool.at(2) == 0xaa && (quint8)handlerPool.at(3) == 0xb1){
+                            // 寻找包尾(正常情况包尾正确)
+                            if ((quint8)handlerPool.at(minPkgSize-4) == 0x00 && (quint8)handlerPool.at(minPkgSize-3) == 0x00 && (quint8)handlerPool.at(minPkgSize-2) == 0xcc && (quint8)handlerPool.at(minPkgSize-1) == 0xd1){
+                                handlerPool.remove(0, minPkgSize);
+                                count++;
+                                continue;
+                            } else {
+                                handlerPool.remove(0, 1);
+                            }
+                        } else if ((quint8)handlerPool.at(0) == 0x12 && (quint8)handlerPool.at(1) == 0x34
+                                   && (quint8)handlerPool.at(10) == 0xab && (quint8)handlerPool.at(11) == 0xcd){
+                           handlerPool.remove(0, 12);
+
+                           if (nullptr != pfSave){
+                               pfSave->close();
+                               delete pfSave;
+                               pfSave = nullptr;
+                           }
+
+                           //测量停止是否需要清空所有数据
+                           handlerPool.clear();
+                           emit sigMeasureStop();
+                           break;
+                        } else {
+                            handlerPool.remove(0, 1);
+                        }
+                    } else if (handlerPool.size() == 12){
+                        //12 34 00 0F FF 10 00 11 00 00 AB CD
+                        //通过指令来判断测量是否停止
+                        if ((quint8)handlerPool.at(0) == 0x12 && (quint8)handlerPool.at(1) == 0x34
+                                && (quint8)handlerPool.at(10) == 0xab && (quint8)handlerPool.at(11) == 0xcd){
+                            handlerPool.remove(0, 12);
+
+                            if (nullptr != pfSave){
+                                pfSave->close();
+                                delete pfSave;
+                                pfSave = nullptr;
+                            }
+
+                            //测量停止是否需要清空所有数据
+                            //currentSpectrumFrames.clear();
+                            emit sigMeasureStop();
+                            break;
+                        } else {
+                            handlerPool.remove(0, 1);
+                        }
+                    } else {
+                        break;
+                    }
+                }
+
+                if (0 != count)
+                    emit sigRecvPkgCount(count);
+            }
+        } else {
+            handlerPool.clear();
+        }
+
+        QThread::msleep(5);
+    }
+}
+
+void CommandHelper::slotAnalyzeNetFrame()
+{
+    std::cout << "slotAnalyzeNetFrame thread id:" << QThread::currentThreadId() << std::endl;
+    while (!taskFinished)
+    {        
+        {            
             QMutexLocker locker(&mutexCache);
             if (cachePool.size() <= 0){
                 if (handlerPool.size() < 12){
@@ -1337,8 +1552,70 @@ void CommandHelper::slotAnalyzeNetFrame()
     }
 }
 
+void EnergyWorker::doWork()
+{
+    QDateTime tmStart = QDateTime::currentDateTime().addDays(-1);
+    vector<TimeEnergy> data1_2, data2_2;
+//    while (!taskFinished)
+//    {
+//        {
+//            QDateTime tmNow = QDateTime::currentDateTime();
+//            if (tmStart.msecsTo(tmNow) >= 500){
+//                tmStart = tmNow;
+//                std::vector<DetTimeEnergy> swapFrames;
+//                {
+//                    QMutexLocker locker(&mutexPlot);
+
+//                    swapFrames.swap(currentSpectrumFrames);
+//                }
+
+//                QMutexLocker locker(&mutexReset);
+//                //2、处理缓存区数据
+//                if (swapFrames.size() > 0){
+//                    vector<TimeEnergy> data1_2, data2_2;
+//                    while (!swapFrames.empty()){
+//                        DetTimeEnergy detTimeEnergy = swapFrames.front();
+//                        swapFrames.erase(swapFrames.begin());
+
+//                        // 根据步长，将数据添加到当前处理缓存
+//                        quint8 channel = detTimeEnergy.channel;
+//                        if (channel != 0x00 && channel != 0x01){
+//                            qDebug() << "error";
+//                        }
+//                        while (!detTimeEnergy.timeEnergy.empty()){
+//                            TimeEnergy timeEnergy = detTimeEnergy.timeEnergy.front();
+//                            detTimeEnergy.timeEnergy.erase(detTimeEnergy.timeEnergy.begin());
+//                            if (channel == 0x00){
+//                                data1_2.push_back(timeEnergy);
+//                            } else {
+//                                data2_2.push_back(timeEnergy);
+//                            }
+//                        }
+
+//                        //totalSpectrumFrames.emplace_back(detTimeEnergy);
+//                    }
+
+//                    if (data1_2.size() > 0 && data2_2.size() > 0 ){
+//                        QDateTime now = QDateTime::currentDateTime();
+////                        QElapsedTimer timer;
+////                        timer.start();
+//                        //std::cout << "enter[" << QDateTime::currentDateTime().toString("hh:mm:ss.zzz").toStdString() << "] coincidenceAnalyzer->calculate data1.count=" << data1_2.size() << ", data2.count=" << data2_2.size() << std::endl;
+//                        coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, false);
+//                        std::cout << "[" << now.toString("hh:mm:ss.zzz").toStdString() << "] coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime()) << ", data1.count=" << data1_2.size() << ", data2.count=" << data2_2.size() << std::endl;
+//                        data1_2.clear();
+//                        data2_2.clear();
+//                    }
+//                }
+//            }
+//        }
+
+//        QThread::msleep(5);
+//    }
+}
+
 void CommandHelper::slotPlotUpdateFrame()
 {
+    std::cout << "slotPlotUpdateFrame thread id:" << QThread::currentThreadId() << std::endl;
     QDateTime tmStart = QDateTime::currentDateTime().addDays(-1);
     vector<TimeEnergy> data1_2, data2_2;
     while (!taskFinished)

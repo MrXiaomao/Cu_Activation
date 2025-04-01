@@ -205,7 +205,9 @@ MainWindow::MainWindow(QWidget *parent)
             ui->lcdNumber_CountRate2->display(r3.back().CountRate2);
             ui->lcdNumber_ConCount_single->display(r3.back().ConCount_single);
         }
-    }, Qt::QueuedConnection/*防止堵塞*/);
+    }, Qt::DirectConnection/*防止堵塞*/);
+    //DirectConnection replot 子线程操作，不会堵塞，但是会崩溃
+    //QueuedConnection replot 主线程操作，刷新慢，占内存
 
     emit sigRefreshUi();
 

@@ -955,9 +955,9 @@ void PlotWidget::slotBeforeReplot()
 #include <math.h>
 void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPoint> r2, vector<CoincidenceResult> r3)
 {
-    return;
     QMutexLocker locker(&mutexRefreshPlot);
 
+    QCustomPlot::RefreshPriority refreshPriority = QCustomPlot::rpQueuedReplot;
     if (this->property("isMergeMode").toBool()){
         QCustomPlot* customPlotDet12 = this->findChild<QCustomPlot*>("Det12");
         QCustomPlot* customPlotCoincidenceResult = this->findChild<QCustomPlot*>("CoincidenceResult");
@@ -997,7 +997,7 @@ void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPo
                         customPlotDet12->yAxis->setRange(customPlotDet12->yAxis->range().lower, maxPoint / RANGE_SCARRE_LOWER);
                     }
                 }
-                customPlotDet12->replot();
+                customPlotDet12->replot(refreshPriority);
             }
 
             {//符合结果
@@ -1016,7 +1016,7 @@ void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPo
                     customPlotCoincidenceResult->yAxis->setRange(customPlotCoincidenceResult->yAxis->range().lower, maxCount / RANGE_SCARRE_LOWER);
                 }
                 customPlotCoincidenceResult->graph(0)->setData(keys, values, colors);
-                customPlotCoincidenceResult->replot();
+                customPlotCoincidenceResult->replot(refreshPriority);
             }
         } else {//能谱
             {//Det1
@@ -1093,7 +1093,7 @@ void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPo
 
                 //if (this->property("autoRefreshModel").toBool())
                 //    customPlotDet1->xAxis->rescale(true);
-                customPlotDet1->replot();
+                customPlotDet1->replot(refreshPriority);
             }
 
             {//Det2
@@ -1113,7 +1113,7 @@ void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPo
                         customPlotDet2->yAxis->setRange(customPlotDet2->yAxis->range().lower, maxPoint / RANGE_SCARRE_LOWER);
                     }
                 }
-                customPlotDet2->replot();
+                customPlotDet2->replot(refreshPriority);
             }
 
             {//符合结果
@@ -1132,7 +1132,7 @@ void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPo
                     customPlotCoincidenceResult->yAxis->setRange(customPlotCoincidenceResult->yAxis->range().lower, maxCount / RANGE_SCARRE_LOWER);
                 }
                 customPlotCoincidenceResult->graph(0)->setData(keys, values, colors);
-                customPlotCoincidenceResult->replot();
+                customPlotCoincidenceResult->replot(refreshPriority);
             }
         } else {//能谱
             {//Det1
@@ -1158,7 +1158,7 @@ void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPo
                     customPlotDet1->yAxis->setRange(customPlotDet1->yAxis->range().lower, maxEnergy / RANGE_SCARRE_LOWER);
                 }
 
-                customPlotDet1->replot();
+                customPlotDet1->replot(refreshPriority);
             }
 
             {//Det2
@@ -1184,7 +1184,7 @@ void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPo
                     customPlotDet2->yAxis->setRange(customPlotDet2->yAxis->range().lower, maxEnergy / RANGE_SCARRE_LOWER);
                 }
 
-                customPlotDet2->replot();
+                customPlotDet2->replot(refreshPriority);
             }
         }
     }

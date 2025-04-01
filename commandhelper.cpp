@@ -54,7 +54,6 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
             return;
 
         // 读取数据
-        qDebug() << "set_callback: " << QThread::currentThreadId();
         sigPlot(r1, r2, r3);
     });
 
@@ -1091,68 +1090,8 @@ void CommandHelper::slotDoTasks()
 
 void CommandHelper::slotAnalyzeNetFrame()
 {
-//    detectorParameter.transferModel = 0x05;
-//    leftE[0] = 3000; leftE[1] = 3000;
-//    rightE[0] = 4000; rightE[1] = 4000;
-
-//    QFile qFile("C:/Users/Administrator/Desktop/川大项目/缓存目录/2025-03-19 093103.dat");
-//    if (qFile.open(QIODevice::ReadOnly)){
-//        handlerPool = qFile.readAll();
-//        qFile.close();
-//    }
-
-    unsigned long long lastT = 0LL;
-    long long lastT2 = 0LL;
     while (!taskFinished)
-    {
-        if (0){
-            // 初始化随机数引擎
-            std::random_device rd;
-            std::mt19937 gen(rd());
-
-            // 定义高斯分布，均值为5000，标准差为200
-            std::normal_distribution<> gaussEn(5000.0, 1000.0);
-
-            // 定义高斯分布，来抽样产生非等间隔时间序列
-            double deltaT = 2000.; // 单位ns
-            std::normal_distribution<> gaussDeltaT(deltaT, 30.0); //gaussDeltaT(均值，标准差)
-
-            //构造时间、能量序列1
-            int nlength = 1e4;
-            vector<TimeEnergy> data1;
-
-            for(int i=0; i<nlength; i++)
-            {
-                int randT = (int)gaussDeltaT(gen);
-                lastT += randT + 1e5;
-                unsigned short value = (unsigned short)gaussEn(gen);
-                data1.push_back({lastT,value});
-            }
-
-            //构造时间、能量序列2
-            vector<TimeEnergy> data2;
-            for(int i=0; i<nlength; i++)
-            {
-                int randT = (int)gaussDeltaT(gen);
-                lastT2 += randT + 1e5;
-                unsigned short value = (unsigned short)gaussEn(gen);
-                data2.push_back({lastT,value});
-            }
-
-            QMutexLocker locker(&mutexPlot);
-            DetTimeEnergy detTimeEnergy;
-            detTimeEnergy.channel = 0;
-            detTimeEnergy.timeEnergy.swap(data1);
-            currentSpectrumFrames.push_back(detTimeEnergy);
-
-            DetTimeEnergy detTimeEnergy2;
-            detTimeEnergy2.channel = 1;
-            detTimeEnergy2.timeEnergy.swap(data2);
-            currentSpectrumFrames.push_back(detTimeEnergy2);
-
-            QThread::msleep(1000);//cps
-            continue;
-        }
+    {        
         {
             QMutexLocker locker(&mutexCache);
             if (cachePool.size() <= 0){
@@ -1442,12 +1381,14 @@ void CommandHelper::slotPlotUpdateFrame()
                     }
 
                     if (data1_2.size() > 0 && data2_2.size() > 0 ){
-                        std::cout << "enter coincidenceAnalyzer->calculate " << std::endl;
-                        coincidenceAnalyzer->calculate(data1_2, data2_2, leftE[0], rightE[0], leftE[1], rightE[1], timeWidth, false);
+                        QDateTime now = QDateTime::currentDateTime();
+//                        QElapsedTimer timer;
+//                        timer.start();
+                        //std::cout << "enter[" << QDateTime::currentDateTime().toString("hh:mm:ss.zzz").toStdString() << "] coincidenceAnalyzer->calculate data1.count=" << data1_2.size() << ", data2.count=" << data2_2.size() << std::endl;
+                        coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, false);
+                        std::cout << "[" << now.toString("hh:mm:ss.zzz").toStdString() << "] coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime()) << ", data1.count=" << data1_2.size() << ", data2.count=" << data2_2.size() << std::endl;
                         data1_2.clear();
                         data2_2.clear();
-
-                        std::cout << "leave coincidenceAnalyzer->calculate " << std::endl;
                     }
                 }
             }
@@ -1457,14 +1398,14 @@ void CommandHelper::slotPlotUpdateFrame()
     }
 }
 
-void CommandHelper::updateParamter(int _stepT, int _leftE[2], int _rightE[2], int _timewidth/* = 50*/, bool reset/* = false*/)
+void CommandHelper::updateParamter(int _stepT, int _EnWin[4], int _timewidth/* = 50*/, bool reset/* = false*/)
 {
     QMutexLocker locker(&mutexReset);
     this->stepT = _stepT;
-    this->leftE[0] = _leftE[0];
-    this->leftE[1] = _leftE[1];
-    this->rightE[0] = _rightE[0];
-    this->rightE[1] = _rightE[1];
+    this->EnWindow[0] = _EnWin[0];
+    this->EnWindow[1] = _EnWin[1];
+    this->EnWindow[2] = _EnWin[2];
+    this->EnWindow[3] = _EnWin[3];
     this->timeWidth = _timewidth;
 
     currentSpectrumFrames.clear();

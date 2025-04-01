@@ -28,11 +28,13 @@ SOURCES += \
     dataanalysiswidget.cpp \
     energycalibrationform.cpp \
     equipmentmanagementform.cpp \
+    linearfit.cpp \
     plotwidget.cpp \
     polynomialfit.cpp \
     qcustomplot.cpp \
     main.cpp \
     mainwindow.cpp \
+    quithread.cpp \
     spectrumModel.cpp \
     sysutils.cpp \
     waveformmodel.cpp \
@@ -51,11 +53,13 @@ HEADERS += \
     dataanalysiswidget.h \
     energycalibrationform.h \
     equipmentmanagementform.h \
+    linearfit.h \
     pch.h \
     plotwidget.h \
     polynomialfit.h \
     qcustomplot.h \
     mainwindow.h \
+    quithread.h \
     spectrumModel.h \
     sysutils.h \
     waveformmodel.h \
@@ -109,7 +113,7 @@ RC_ICONS = $$PWD/resource/logo.ico
 # 定义输出目录变量
 OUTPUT_DIR_BASE = $$PWD/../../build
 
-message($${TARGET}":" "$$QT_ARCH" "$$QMAKE_CXX")
+#message($${TARGET}":" "$$QT_ARCH" "$$QMAKE_CXX")
 
 # 根据编译器设置输出目录
 win32:msvc {
@@ -157,10 +161,10 @@ win32:CONFIG(release, debug|release): OUTPUT_DIR = $$OUTPUT_DIR/release
 else:win32:CONFIG(debug, debug|release): OUTPUT_DIR = $$OUTPUT_DIR/debug
 
 # 设置输出目录
-message(Qt Version = $$[QT_VERSION])
-QT_VERSION = $$split(QT_VERSION, ".")
-QT_VER_MAJ = $$member(QT_VERSION, 0)
-QT_VER_MIN = $$member(QT_VERSION, 1)
+#message(Qt Version = $$[QT_VERSION])
+#QT_VERSION = $$split(QT_VERSION, ".")
+#QT_VER_MAJ = $$member(QT_VERSION, 0)
+#QT_VER_MIN = $$member(QT_VERSION, 1)
 
 greaterThan(QT_MAJOR_VERSION, 5){
     DESTDIR = $$OUTPUT_DIR/qt6/
@@ -202,9 +206,9 @@ DEFINES += GIT_BRANCH=\"\\\"$$GIT_BRANCH\\\"\"
 DEFINES += GIT_TIME=\"\\\"$$GIT_TIME\\\"\"
 DEFINES += APP_VERSION=\"\\\"$$APP_VERSION\\\"\"
 
-message(GIT_BRANCH":  ""$$GIT_BRANCH")
-message(GIT_TIME":  ""$$GIT_TIME")
-message(APP_VERSION":  ""$$APP_VERSION")
+#message(GIT_BRANCH":  ""$$GIT_BRANCH")
+#message(GIT_TIME":  ""$$GIT_TIME")
+#message(APP_VERSION":  ""$$APP_VERSION")
 
 contains(QT_ARCH, x86_64) {
     win32: LIBS += -L$$PWD/3rdParty/ftcoreimc_win_v1.3.0.9n/lib/x64/ -lftcoreimc
@@ -215,7 +219,3 @@ contains(QT_ARCH, x86_64) {
 }
 
 INCLUDEPATH += $$PWD/3rdParty/ftcoreimc_win_v1.3.0.9n/inc
-
-windows{
-    QMAKE_LFLAGS += -Wl,--kill-at
-}

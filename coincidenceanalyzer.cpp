@@ -1,6 +1,7 @@
 #include "coincidenceanalyzer.h"
 #include <queue>
 #include "sysutils.h"
+#include "linearfit.h"
 
 using namespace std;
 
@@ -21,15 +22,17 @@ struct particle_data
 
 CoincidenceAnalyzer::CoincidenceAnalyzer():
 countCoin(0),autoFirst(true),
-GaussCountMin(2000),
-EnWidth_left1(1),EnWidth_right1(4095),
-EnWidth_left2(1),EnWidth_right2(4095)
+GaussCountMin(2000)
 {
-    for(int i=0; i<MULTI_CHANNEL; i++)
+    for(unsigned short i=0; i<MULTI_CHANNEL; i++)
     {
         GaussFitSpec[0][i] = 0;
         GaussFitSpec[1][i] = 0;
     }
+    EnergyWindow[0] = 1;
+    EnergyWindow[1] = MULTI_CHANNEL - 1;
+    EnergyWindow[2] = 1;
+    EnergyWindow[3] = MULTI_CHANNEL - 1;
 }
 
 void CoincidenceAnalyzer::set_callback(std::function<void(vector<SingleSpectrum>, vector<CurrentPoint>, vector<CoincidenceResult>)> func)
@@ -39,28 +42,34 @@ void CoincidenceAnalyzer::set_callback(std::function<void(vector<SingleSpectrum>
 
 /**calculate 处理[时间、能量]数据对，给出能谱、探测器计数、符合计数
 * TimeEnergy：结构体，时间(ns)：能量(无单位)
-* E_left1：探测器1左能窗
-* E_right1：探测器1左能窗
-* E_left2：探测器2左能窗
-* E_right2：探测器2左能窗
-* windowWidthT [int]：符合时间窗
+* E_win[0]：探测器1左能窗
+* E_win[1]：探测器1右能窗
+* E_win[2]：探测器2左能窗
+* E_win[3]：探测器2右能窗
+* windowWidthT [int]：符合时间窗,单位ns
 * autoEnWidth [bool]：是否自动修正峰位漂移引起的能窗移动
 */
 void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy> _data2,
-              unsigned short E_left1, unsigned short E_right1,
-              unsigned short E_left2, unsigned short E_right2,
+              int E_win[4],
               int windowWidthT, bool autoEnWidth)
 {
     // 如果是自动调整窗宽，则只在测量开始的首次读取窗宽，后续都自动更新窗宽
     if(autoEnWidth) {
         autoFirst = false;
     }
+    else{
+        EnergyWindow[0] = E_win[0];
+        EnergyWindow[1] = E_win[1];
+        EnergyWindow[2] = E_win[2];
+        EnergyWindow[3] = E_win[3];
+    }
+
     if(autoFirst)  
     {
-        EnWidth_left1 = E_left1;
-        EnWidth_right1 = E_right1;
-        EnWidth_left2 = E_left2;
-        EnWidth_right2 = E_right2;
+        EnergyWindow[0] = E_win[0];
+        EnergyWindow[1] = E_win[1];
+        EnergyWindow[2] = E_win[2];
+        EnergyWindow[3] = E_win[3];
     }
 
     vector<TimeEnergy> data1;
@@ -103,7 +112,7 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
         }
 
         //对当前一秒数据处理给出各自的计数以及符合计数
-        Coincidence(data1, data2, EnWidth_left1, EnWidth_right1, EnWidth_left2, EnWidth_right2, windowWidthT);
+        Coincidence(data1, data2, EnergyWindow, windowWidthT);
 
         //删除容器中已经处理的数据点
         if (AllPoint.back().dataPoint1 <= (int)data1.size()) {
@@ -180,7 +189,7 @@ void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> data1, vector<
 // data:能量点数组
 // maxEnergy: 多道中最大道址对应的能量值。
 // ch: 多道道数
-vector<int> CoincidenceAnalyzer::GetSingleSpectrum(const vector<int>& data, int maxEnergy, int ch)
+vector<int> CoincidenceAnalyzer::GetSingleSpectrum(const vector<int>& data, int maxEnergy, unsigned short ch)
 {
     // 自动算出多道计数器的能量bin
     vector<int> binEdges;
@@ -206,8 +215,7 @@ vector<int> CoincidenceAnalyzer::GetSingleSpectrum(const vector<int>& data, int 
  * 多符合事件曲线：
 */
 void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnergy> data2,
-        unsigned short E_left1, unsigned short E_right1,
-        unsigned short E_left2, unsigned short E_right2,
+        unsigned short EnWindowWidth[4],
         int windowWidthT)
 {
     CoincidenceResult tmpCoinResult;
@@ -218,7 +226,7 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
     for (int i=0; i<length1; i++)
     {
 #ifdef QT_NO_DEBUG
-        if(data1.at(i).energy>E_left1 && data1.at(i).energy <=E_right1) count1++;
+        if(data1.at(i).energy>EnWindowWidth[0] && data1.at(i).energy <=EnWindowWidth[1]) count1++;
 #else
         count1++;
 #endif
@@ -230,7 +238,7 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
     for (int i=0; i<length2; i++)
     {
 #ifdef QT_NO_DEBUG
-        if(data2.at(i).energy>E_left2 && data2.at(i).energy <=E_right2) count2++;
+        if(data2.at(i).energy>EnWindowWidth[2] && data2.at(i).energy <=EnWindowWidth[3]) count2++;
 #else
         count2++;
 #endif
@@ -259,14 +267,14 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
     for(auto data:data_temp1)
     {
         //判断粒子能量是否在范围内
-        if(data.energy > E_left1 && data.energy < E_right1){
+        if(data.energy > EnWindowWidth[0] && data.energy < EnWindowWidth[1]){
             q.push(particle_data(data.time, data.energy, 0b01));
         }
     }
     for(auto data:data_temp2)
     {
         //判断粒子能量是否在范围内
-        if(data.energy > E_left2 && data.energy < E_right2){
+        if(data.energy > EnWindowWidth[2] && data.energy < EnWindowWidth[3]){
             q.push(particle_data(data.time, data.energy, 0b10));
         }
     }
@@ -314,28 +322,41 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
     int sumEnergy1 = 0; 
     int sumEnergy2 = 0;
 
-    for(int i=0; i<MULTI_CHANNEL; i++)
+    for(unsigned short i=0; i<MULTI_CHANNEL; i++)
     {
         GaussFitSpec[0][i] += tempSpec.spectrum[0][i];
         GaussFitSpec[1][i] += tempSpec.spectrum[1][i];
-        if(i >= EnWidth_left1 && i <= EnWidth_right1) sumEnergy1 += GaussFitSpec[0][i];
-        if(i >= EnWidth_left2 && i <= EnWidth_right2) sumEnergy2 += GaussFitSpec[1][i];
+        if(i >= EnergyWindow[0] && i <= EnergyWindow[1]) sumEnergy1 += GaussFitSpec[0][i];
+        if(i >= EnergyWindow[2] && i <= EnergyWindow[3]) sumEnergy2 += GaussFitSpec[1][i];
     }
+
+    bool changed = false;
 
     if(sumEnergy1 > GaussCountMin)  
     {
         double result[3];
         vector<double> sx,sy;
-        for(int i=0; i<MULTI_CHANNEL; i++)
+        for(unsigned short i=0; i<MULTI_CHANNEL; i++)
         {
-            if(i >= EnWidth_left1 && i <= EnWidth_right1) {sx.push_back(i*1.0); sy.push_back(GaussFitSpec[0][i]);}
+            if(i >= EnergyWindow[0] && i <= EnergyWindow[1]) {sx.push_back(i*1.0); sy.push_back(GaussFitSpec[0][i]);}
         }
         
-        int fcount = EnWidth_right1 - EnWidth_left1 + 1;
-        if(fit_GaussCurve(fcount, sx, sy, result))
+        int fcount = EnergyWindow[1] - EnergyWindow[2] + 1;
+        Gaussian gau;
+        if(gau.setSample(sx, sy, fcount, result) && gau.process())
         {
-            EnWidth_left1 = result[1] - result[0]*0.5; // 峰位-0.5*半高宽FWHM
-            EnWidth_right1 = result[1] + result[0]*0.5; // 峰位+0.5*半高宽FWHM
+            result[0] = gau.getResult(0);
+            result[1] = gau.getResult(1);
+            result[2] = gau.getResult(2);
+
+            changed = true;
+            double Left = result[1] - result[0]*0.5; // 峰位-0.5*半高宽FWHM
+            double Right = (result[1] + result[0]*0.5); // 峰位+0.5*半高宽FWHM
+            if(Left >= 1) EnergyWindow[0] = (unsigned short) Left;
+            else EnergyWindow[0] = 1u;
+
+            if(Right < MULTI_CHANNEL - 1u) EnergyWindow[1] = (unsigned short)Right;
+            else EnergyWindow[1] = MULTI_CHANNEL-1u;
         }
     }
 
@@ -343,18 +364,30 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
     {
         double result[3];
         vector<double> sx,sy;
-        for(int i=0; i<MULTI_CHANNEL; i++)
+        for(unsigned short i=0; i<MULTI_CHANNEL; i++)
         {
-            if(i >= EnWidth_left2 && i <= EnWidth_right2) {sx.push_back(i*1.0); sy.push_back(GaussFitSpec[1][i]);}
+            if(i >= EnergyWindow[2] && i <= EnergyWindow[3]) {sx.push_back(i*1.0); sy.push_back(GaussFitSpec[1][i]);}
         }
 
-        int fcount = EnWidth_right1 - EnWidth_left1 + 1;
-        if(fit_GaussCurve(fcount, sx, sy, result))
+        int fcount = EnergyWindow[3] - EnergyWindow[2] + 1;
+        Gaussian gau;
+        if(gau.setSample(sx, sy, fcount, result) && gau.process())
         {
-            EnWidth_left2 = result[1] - result[0]*0.5; // 峰位-0.5*半高宽FWHM
-            EnWidth_right2 = result[1] + result[0]*0.5; // 峰位+0.5*半高宽FWHM
+            result[0] = gau.getResult(0);
+            result[1] = gau.getResult(1);
+            result[2] = gau.getResult(2);
+
+            changed = true;
+            double Left = result[1] - result[0]*0.5;
+            double Right = (result[1] + result[0]*0.5);
+            if(Left >= 1) EnergyWindow[2] = (unsigned short) Left;
+            else EnergyWindow[2] = 1u;
+
+            if(Right < MULTI_CHANNEL - 1u) EnergyWindow[3] = (unsigned short)Right;
+            else EnergyWindow[3] = MULTI_CHANNEL - 1u;
         }
     }
+    if(changed) GaussFitLog.push_back({countCoin, EnergyWindow[0], EnergyWindow[1], EnergyWindow[2], EnergyWindow[3]});
 }
 
 //统计给出当前一秒内的两个探测器各自数据点的个数

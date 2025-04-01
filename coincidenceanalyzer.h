@@ -11,7 +11,8 @@
 #include "sysutils.h"
 #include <mutex>
 
-#define MULTI_CHANNEL 8192/*4096*/ //能谱多道的道数
+// #define MULTI_CHANNEL 8192 //能谱多道的道数
+constexpr unsigned short MULTI_CHANNEL = 8192;
 #define MAX_ENERGY 8192 //最大能量
 // long long nanoseconds = 1000000000LL; //1s = 1E9ns
 #define NANOSECONDS 1e9
@@ -35,7 +36,14 @@ struct CurrentPoint{
 struct SingleSpectrum{ //存放每秒钟的能谱数据。1s产生一个能谱
     int time; //时刻(单位s)，以FPGA时钟进行计时，给出当前的能谱对应的时刻，第1个谱对应time=1。
     int spectrum[2][MULTI_CHANNEL] = {0, 0}; //探测器1能谱
-    //int spectrum2[MULTI_CHANNEL] = {0}; //探测器2能谱
+};
+
+struct AutoGaussFit{
+    int time; //修改时间，单位s
+    unsigned short EnLeft1;  // 探测器1符合能窗左边界
+    unsigned short EnRight1; // 探测器1符合能窗右边界
+    unsigned short EnLeft2;  // 探测器2符合能窗左边界
+    unsigned short EnRight2; // 探测器2符合能窗右边界
 };
 
 class CoincidenceAnalyzer
@@ -82,18 +90,20 @@ public:
         return AllPoint;
     }
 
-    inline int GetEnWidth_left1(){ return EnWidth_left1;}
+    inline vector<AutoGaussFit> GetGaussFitLog(){
+        return GaussFitLog;
+    }
 
-    inline int GetEnWidth_right1(){ return EnWidth_right1;}
-
-    inline int GetEnWidth_left2(){ return EnWidth_left2;}
-
-    inline int GetEnWidth_right2(){ return EnWidth_right2;}
+    inline void GetEnWidth(unsigned short EnWindow[]){ 
+        EnWindow[0] = EnergyWindow[0];
+        EnWindow[1] = EnergyWindow[1];
+        EnWindow[2] = EnergyWindow[2];
+        EnWindow[3] = EnergyWindow[3];
+    }
 
     void calculate(vector<TimeEnergy> data1, vector<TimeEnergy> data2,
-            unsigned short E_left1, unsigned short E_right1,
-            unsigned short E_left2, unsigned short E_right2,
-            int windowWidthT, bool autoEnWidth = false);
+            int E_win[4], int windowWidthT, 
+            bool autoEnWidth = false);
 
     //这里加入回调函数，后期做成SDK会出现问题，SDK不存在回调，只存在返回值。
     void set_callback(std::function<void(vector<SingleSpectrum>, vector<CurrentPoint>, vector<CoincidenceResult>)> func);
@@ -107,15 +117,14 @@ private:
 
     //进行符合事件处理
     void Coincidence(vector<TimeEnergy> data1, vector<TimeEnergy> data2,
-          unsigned short E_left1, unsigned short E_right1,
-          unsigned short E_left2, unsigned short E_right2,
+          unsigned short EnWindowWidth[4],
           int windowWidthT);
 
     // 根据输入能量数据，绘制出能谱，
     // data:能量点数组
     // maxEnergy: 多道中最大道址对应的能量值。
     // ch: 多道道数
-    vector<int> GetSingleSpectrum(const vector<int>& data, int maxEnergy, int ch);
+    vector<int> GetSingleSpectrum(const vector<int>& data, int maxEnergy, unsigned short ch);
 
     //统计给出当前一秒内的两个探测器各自数据点的个数
     void GetDataPoint(vector<TimeEnergy> data1, vector<TimeEnergy> data2);
@@ -143,9 +152,7 @@ private:
     bool autoFirst; //自动调节符合计算能窗宽度，用于解决峰飘问题，每测量一定数据点之后，自动拟合出高斯曲线，以新的半高宽来作为符合计算能窗。
     int GaussFitSpec[2][MULTI_CHANNEL]; //用于高斯拟合的能谱，每秒钟汇总一次，并且计算能窗内计数点是否到达指定的点数。满足点数后便进行拟合，更新能谱
     int GaussCountMin; //高斯拟合的最小数据点数
-    unsigned short EnWidth_left1; 
-    unsigned short EnWidth_right1;
-    unsigned short EnWidth_left2; 
-    unsigned short EnWidth_right2;
+    unsigned short EnergyWindow[4];//能窗边界，依次存放探测器1左边界、右边界，探测器2左边界、右边界。
+    vector<AutoGaussFit> GaussFitLog; //记录修改能窗区间的左右宽度,
 };
 #endif // COINCIDENCEANALYZER_H

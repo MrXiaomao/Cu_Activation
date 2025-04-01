@@ -3,11 +3,12 @@
 #include <QGridLayout>
 #include <QtMath>
 #include <cmath>
+#include "linearfit.h"
 
 #define RANGE_SCARRE_UPPER 0.8
 #define RANGE_SCARRE_LOWER 0.4
 #define X_AXIS_LOWER    0
-#define Y_AXIS_LOWER    -1
+#define Y_AXIS_LOWER    0
 
 PlotWidget::PlotWidget(QWidget *parent) : QWidget(parent)
 {
@@ -435,7 +436,6 @@ QCustomPlot *PlotWidget::allocCustomPlot(QString objName, QWidget *parent)
     customPlot->yAxis->rescale(true);
 
 
-
     // 添加散点图
     int count = 1;
     if (this->property("isMergeMode").toBool()){
@@ -481,7 +481,7 @@ QCustomPlot *PlotWidget::allocCustomPlot(QString objName, QWidget *parent)
         qint64 maxRange = range.upper - range.lower;
         if (this->property("isLogarithmic").toBool()){
             if (maxRange < 1e2){
-               customPlot->yAxis->setRange(1e-2, range.lower + 1e2);//0.01~1000
+               customPlot->yAxis->setRange(Y_AXIS_LOWER, range.lower + 1e2);//0.01~1000
             }
         } else if (maxRange < 1e2){
             customPlot->yAxis->setRange(range.lower, range.lower + 1e2);//0.01~1000
@@ -503,6 +503,7 @@ QCustomPlot *PlotWidget::allocCustomPlot(QString objName, QWidget *parent)
         }
     });
 
+    // 是否允许X轴自适应缩放
     connect(customPlot, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(slotRestorePlot()));
     connect(customPlot, SIGNAL(mouseMove(QMouseEvent*)), this, SLOT(slotRestorePlot()));
     connect(customPlot, SIGNAL(mouseWheel(QMouseEvent*)), this, SLOT(slotRestorePlot()));
@@ -534,22 +535,22 @@ QCustomPlot *PlotWidget::allocCustomPlot(QString objName, QWidget *parent)
 
 void PlotWidget::slotRestorePlot()
 {
-    QCustomPlot* customPlot = qobject_cast<QCustomPlot*>(sender());
-    if (this->property("autoRefreshModel").toBool())
-        customPlot->xAxis->rescale(false);
+//    QCustomPlot* customPlot = qobject_cast<QCustomPlot*>(sender());
+//    if (this->property("autoRefreshModel").toBool())
+//        customPlot->xAxis->rescale(false);
 
-    QTimer* timerAutoRestore = this->findChild<QTimer*>("timerAutoRestore");
-    if (nullptr == timerAutoRestore){
-        timerAutoRestore = new QTimer(this);
-        connect(timerAutoRestore, &QTimer::timeout, this, [=](){
-            //拖拽开始
-            timerAutoRestore->stop();
-            this->setProperty("autoRefreshModel", true);
-            customPlot->xAxis->rescale(true);
-        });
-    }
+//    QTimer* timerAutoRestore = this->findChild<QTimer*>("timerAutoRestore");
+//    if (nullptr == timerAutoRestore){
+//        timerAutoRestore = new QTimer(this);
+//        connect(timerAutoRestore, &QTimer::timeout, this, [=](){
+//            //拖拽开始
+//            timerAutoRestore->stop();
+//            this->setProperty("autoRefreshModel", true);
+//            customPlot->xAxis->rescale(true);
+//        });
+//    }
 
-    timerAutoRestore->start(30000);
+//    timerAutoRestore->start(30000);
 }
 
 void PlotWidget::resetPlotDatas(QCustomPlot* customPlot)
@@ -852,7 +853,9 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                             if (fcount > 0){
                                 //显示拟合曲线
                                 double result[3];
-                                if (fit_GaussCurve(fcount, sx, sy, result)){
+                                Gaussian gau;
+                                if(gau.setSample(sx, sy, fcount, result) && gau.process())
+                                {
                                     if (!std::isnan(result[0]) && !std::isnan(result[1]) && !std::isnan(result[2])){
                                         //显示拟合数据
                                         QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
@@ -952,6 +955,7 @@ void PlotWidget::slotBeforeReplot()
 #include <math.h>
 void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPoint> r2, vector<CoincidenceResult> r3)
 {
+    return;
     QMutexLocker locker(&mutexRefreshPlot);
 
     if (this->property("isMergeMode").toBool()){
@@ -965,7 +969,7 @@ void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPo
                 QVector<QColor> colors;
                 for (size_t i=0; i<r2.size(); ++i){
                     keys << i+1;
-                    values << r2[i].dataPoint1;
+                    values << r3[i].CountRate1;
                     colors << clrLine;
                     maxPoint = qMax(maxPoint, values[i]);
                 }
@@ -982,7 +986,7 @@ void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPo
                 QVector<QColor> colors;
                 for (size_t i=0; i<r2.size(); ++i){
                     keys << i+1;
-                    values << r2[i].dataPoint2;
+                    values << r3[i].CountRate2;
                     colors << clrLine2;
                     maxPoint = qMax(maxPoint, values[i]);
                 }
@@ -1230,6 +1234,9 @@ void PlotWidget::switchShowModel(bool refModel)
         QCustomPlot* customPlotCoincidenceResult = this->findChild<QCustomPlot*>("CoincidenceResult");
 
         if (this->property("isRefModel").toBool()){
+            getGraph(0)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssCircle, 5));
+            getGraph(1)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssCircle, 5));
+
             customPlotDet12->xAxis->setLabel(tr("时间/s"));
             customPlotDet12->yAxis->setLabel(tr("计数率/cps"));
 
@@ -1242,6 +1249,9 @@ void PlotWidget::switchShowModel(bool refModel)
             //符合结果隐藏
             containWidgetCoincidenceResult->setVisible(true);
         } else {
+            getGraph(0)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssPlus, 3));
+            getGraph(1)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssPlus, 3));
+
             customPlotDet12->xAxis->setLabel(tr("道址"));
             customPlotDet12->yAxis->setLabel(tr("计数"));
 
@@ -1262,6 +1272,9 @@ void PlotWidget::switchShowModel(bool refModel)
         QCustomPlot* customPlotCoincidenceResult = this->findChild<QCustomPlot*>("CoincidenceResult");
 
         if (this->property("isRefModel").toBool()){
+            getGraph(0)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssCircle, 5));
+            getGraph(1)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssCircle, 5));
+
             customPlotDet1->xAxis->setLabel(tr("时间/s"));
             customPlotDet1->yAxis->setLabel(tr("计数率/cps"));
             customPlotDet2->xAxis->setLabel(tr("时间/s"));
@@ -1275,6 +1288,9 @@ void PlotWidget::switchShowModel(bool refModel)
 
             containWidgetCoincidenceResult->setVisible(true);
         } else {
+            getGraph(0)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssPlus, 3));
+            getGraph(1)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssPlus, 3));
+
             customPlotDet1->xAxis->setLabel(tr("道址"));
             customPlotDet1->yAxis->setLabel(tr("计数"));
             customPlotDet2->xAxis->setLabel(tr("道址"));
@@ -1429,26 +1445,28 @@ void PlotWidget::slotGauss(int leftE, int rightE)
         // 高斯拟合
         {
             double result[3];
-            fit_GaussCurve(fcount, sx, sy, result);
+            Gaussian gau;
+            if(gau.setSample(sx, sy, fcount, result) && gau.process())
+            {
+                //绘制拟合曲线
+                QCPGraph *curveGraph = customPlot->graph(1);
+                QVector<double> curveValues;
+                double a = result[2];
+                double u = result[1];
+                double FWHM = result[0];
+                double ln2 = log(2);
+                for (int i=0; i<curveKeys.size(); ++i){
+                    //a*exp[-4ln2(x-u)^2/FWHM^2]，a=result[2],u=result[1],FWHM=result[0].
+                    double x = curveKeys[i];
+                    double v = a*exp(-4*ln2*pow(x-u,2)/pow(FWHM, 2));
 
-            //绘制拟合曲线
-            QCPGraph *curveGraph = customPlot->graph(1);
-            QVector<double> curveValues;
-            double a = result[2];
-            double u = result[1];
-            double FWHM = result[0];
-            double ln2 = log(2);
-            for (int i=0; i<curveKeys.size(); ++i){
-                //a*exp[-4ln2(x-u)^2/FWHM^2]，a=result[2],u=result[1],FWHM=result[0].
-                double x = curveKeys[i];
-                double v = a*exp(-4*ln2*pow(x-u,2)/pow(FWHM, 2));
+                    curveValues.push_back(v);
+                }
 
-                curveValues.push_back(v);
+                curveGraph->setData(curveKeys, curveValues);
+                curveGraph->setVisible(true);
+                customPlot->replot();
             }
-
-            curveGraph->setData(curveKeys, curveValues);
-            curveGraph->setVisible(true);
-            customPlot->replot();
         }
     }
 }

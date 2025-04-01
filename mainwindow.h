@@ -107,6 +107,8 @@ private slots:
 
     void on_lineEdit_editingFinished();
 
+    void on_action_start_measure_triggered();
+
 private:
     Ui::MainWindow *ui = nullptr;
     SpectrumModel *spectrummodel = nullptr;//能谱模型

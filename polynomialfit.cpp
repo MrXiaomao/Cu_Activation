@@ -58,8 +58,8 @@ void PolynomialFit::init()
  * @param w 样本的权重
  * @return 样本是否可以拟合
  */
-bool PolynomialFit::setSample(std::vector<double> x,
-                              std::vector<double> y,
+bool PolynomialFit::setSample(double* x,
+                              double* y,
                               int count ,
                               bool enableWeight ,
                               double *w )

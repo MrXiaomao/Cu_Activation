@@ -49,5 +49,7 @@
         <file>resource/work-on.png</file>
         <file>resource/restore.png</file>
         <file>resource/mathlog.png</file>
+        <file>resource/circle-green.png</file>
+        <file>resource/circle-red.png</file>
     </qresource>
 </RCC>

@@ -69,7 +69,7 @@ struct DetStepTimeEnergy{
 // data:能量点数组
 // maxEnergy: 多道中最大道址对应的能量值。
 // ch: 多道道数
-vector<unsigned short> GetSpectrum(const vector<unsigned short>& data, unsigned int maxEnergy=8192, int ch=4096);
+// vector<unsigned short> GetSpectrum(const vector<unsigned short>& data, unsigned int maxEnergy=8192, int ch=4096);
 
 // 计算data中数据在指定能量区间的数据个数
 // data：输入的能量数据点
@@ -85,7 +85,7 @@ double GetCount(const vector<unsigned short> &data, int leftE, int rightE, int s
 // 返回值result, result[0]为半高宽FWHM,result[1] 为峰位，result[2]为峰值。
 // return, 拟合是否成功
 // 待拟合函数：y(x) = a*exp[-4ln2(x-u)^2/FWHM^2]，a=result[2],u=result[1],FWHM=result[0].
-bool fit_GaussCurve(int count, std::vector<double> sx, std::vector<double> sy, double* result);
+// bool fit_GaussCurve(int count, std::vector<double> sx, std::vector<double> sy, double* result);
 
 class SysUtils
 {

@@ -24,8 +24,8 @@ public:
                       double intercede = 0.0 );
 
     //设置曲线的样本，权重等
-    virtual bool setSample(std::vector<double> x ,
-                           std::vector<double> y ,
+    virtual bool setSample(double* x ,
+                           double* y ,
                            int count ,
                            bool enableWeight  ,
                            double *w );

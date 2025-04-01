@@ -516,7 +516,7 @@ p, li { white-space: pre-wrap; }
               </size>
              </property>
              <property name="currentIndex">
-              <number>0</number>
+              <number>2</number>
              </property>
              <widget class="QWidget" name="tab_3">
               <attribute name="title">
@@ -587,6 +587,9 @@ p, li { white-space: pre-wrap; }
                      </item>
                      <item>
                       <widget class="QPushButton" name="pushButton_refresh">
+                       <property name="enabled">
+                        <bool>false</bool>
+                       </property>
                        <property name="minimumSize">
                         <size>
                          <width>105</width>
@@ -910,6 +913,9 @@ p, li { white-space: pre-wrap; }
                      </item>
                      <item>
                       <widget class="QPushButton" name="pushButton_measure">
+                       <property name="enabled">
+                        <bool>false</bool>
+                       </property>
                        <property name="sizePolicy">
                         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                          <horstretch>0</horstretch>
@@ -1235,6 +1241,9 @@ p, li { white-space: pre-wrap; }
                      </item>
                      <item>
                       <widget class="QPushButton" name="pushButton_refresh_2">
+                       <property name="enabled">
+                        <bool>false</bool>
+                       </property>
                        <property name="minimumSize">
                         <size>
                          <width>105</width>
@@ -1365,6 +1374,9 @@ p, li { white-space: pre-wrap; }
                      </item>
                      <item>
                       <widget class="QPushButton" name="pushButton_measure_2">
+                       <property name="enabled">
+                        <bool>false</bool>
+                       </property>
                        <property name="minimumSize">
                         <size>
                          <width>105</width>
@@ -1937,6 +1949,9 @@ p, li { white-space: pre-wrap; }
                      </item>
                      <item>
                       <widget class="QPushButton" name="pushButton_measure_3">
+                       <property name="enabled">
+                        <bool>false</bool>
+                       </property>
                        <property name="minimumSize">
                         <size>
                          <width>105</width>
@@ -2092,6 +2107,9 @@ p, li { white-space: pre-wrap; }
                     </item>
                     <item>
                      <widget class="QPushButton" name="pushButton_gauss">
+                      <property name="enabled">
+                       <bool>false</bool>
+                      </property>
                       <property name="text">
                        <string>高斯拟合</string>
                       </property>
@@ -2227,6 +2245,9 @@ p, li { white-space: pre-wrap; }
              <layout class="QGridLayout" name="gridLayout_7">
               <item row="5" column="2">
                <widget class="QPushButton" name="pushButton_save">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="text">
                  <string>保存数据</string>
                 </property>
@@ -2379,6 +2400,7 @@ p, li { white-space: pre-wrap; }
    <addaction name="separator"/>
    <addaction name="action_restore"/>
    <addaction name="separator"/>
+   <addaction name="action_start_measure"/>
    <addaction name="action_close"/>
   </widget>
   <action name="action_devices">
@@ -2556,8 +2578,12 @@ p, li { white-space: pre-wrap; }
    </property>
   </action>
   <action name="action_start_measure">
+   <property name="icon">
+    <iconset resource="resource.qrc">
+     <normaloff>:/resource/circle-red.png</normaloff>:/resource/circle-red.png</iconset>
+   </property>
    <property name="text">
-    <string>开始测量</string>
+    <string>开启离线测试模式</string>
    </property>
   </action>
   <action name="action_config">

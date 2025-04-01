@@ -71,8 +71,19 @@ MainWindow::MainWindow(QWidget *parent)
         }
 
         QString msg = QString(tr("外设状态：%2")).arg(on ? tr("开") : tr("关"));
+        QLabel* label_Connected = this->findChild<QLabel*>("label_Connected");
+        label_Connected->setText(msg);
+
         emit sigAppengMsg(msg, QtInfoMsg);
         emit sigRefreshUi();
+    });
+
+    connect(controlHelper, &ControlHelper::sigReportAbs, this, [=](float f1, float f2){
+        QLabel* label_axis01 = this->findChild<QLabel*>("label_axis01");
+        label_axis01->setText(tr("轴1：") + QString::number(f1 / 1000, 'f', 4) + " mm");
+
+        QLabel* label_axis02 = this->findChild<QLabel*>("label_axis02");
+        label_axis02->setText(tr("轴2：") + QString::number(f2 / 1000, 'f', 4) + " mm");
     });
 
     // 禁用开启电源按钮
@@ -181,6 +192,7 @@ MainWindow::MainWindow(QWidget *parent)
     qRegisterMetaType<vector<SingleSpectrum>>("vector<SingleSpectrum>");
     qRegisterMetaType<vector<CurrentPoint>>("vector<CurrentPoint>");
     qRegisterMetaType<vector<CoincidenceResult>>("vector<CoincidenceResult>");
+    std::cout << "main thread id:" << QThread::currentThreadId() << std::endl;
     connect(commandHelper, &CommandHelper::sigPlot, this, [=](vector<SingleSpectrum> r1, vector<CurrentPoint> r2, vector<CoincidenceResult> r3){
         lastRecvDataTime = QDateTime::currentDateTime();
         bool pause_plot = this->property("pause_plot").toBool();
@@ -188,6 +200,7 @@ MainWindow::MainWindow(QWidget *parent)
             PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
             plotWidget->slotUpdatePlotDatas(r1, r2, r3);
 
+            std::cout << "sub thread id:" << QThread::currentThreadId() << std::endl;
             ui->lcdNumber_CountRate1->display(r3.back().CountRate1);
             ui->lcdNumber_CountRate2->display(r3.back().CountRate2);
             ui->lcdNumber_ConCount_single->display(r3.back().ConCount_single);
@@ -338,7 +351,19 @@ void MainWindow::InitMainWindowUi()
     label_Connected->setObjectName("label_Connected");
     label_Connected->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     label_Connected->setFixedWidth(300);
-    label_Connected->setText(tr("状态：未连接"));
+    label_Connected->setText(tr("外设状态：未连接"));
+
+    QLabel *label_axis01 = new QLabel(ui->statusbar);
+    label_axis01->setObjectName("label_axis01");
+    label_axis01->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    label_axis01->setFixedWidth(300);
+    label_axis01->setText(tr("轴1：未就绪"));
+
+    QLabel *label_axis02 = new QLabel(ui->statusbar);
+    label_axis02->setObjectName("label_axis02");
+    label_axis02->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    label_axis02->setFixedWidth(300);
+    label_axis02->setText(tr("轴2：未就绪"));
 
     /*设置任务栏信息*/
     QLabel *label_systemtime = new QLabel(ui->statusbar);
@@ -348,6 +373,8 @@ void MainWindow::InitMainWindowUi()
     ui->statusbar->setContentsMargins(5, 0, 5, 0);
     ui->statusbar->addWidget(label_Idle);
     ui->statusbar->addWidget(label_Connected);
+    ui->statusbar->addWidget(label_axis01);
+    ui->statusbar->addWidget(label_axis02);
     ui->statusbar->addWidget(new QLabel(ui->statusbar), 1);
     ui->statusbar->addWidget(nullptr, 1);
     ui->statusbar->addPermanentWidget(label_systemtime);    
@@ -466,7 +493,7 @@ void MainWindow::on_action_devices_triggered()
 {
     EquipmentManagementForm *w = new EquipmentManagementForm(this);
     w->setAttribute(Qt::WA_DeleteOnClose, true);
-    w->setWindowFlags(w->windowFlags() |Qt::Dialog);
+    w->setWindowFlags(w->windowFlags() | Qt::Dialog);
     w->setWindowModality(Qt::ApplicationModal);
     w->showNormal();
 }
@@ -534,6 +561,16 @@ void MainWindow::on_action_WaveformModel_triggered()
 // 连接外设
 void MainWindow::on_action_displacement_triggered()
 {
+    if (this->property("test").isValid() && this->property("test").toBool()){
+        this->setProperty("control_fault", false);
+        if (this->property("control_on").toBool())
+            this->setProperty("control_on", false);
+        else
+            this->setProperty("control_on", true);
+        slotRefreshUi();
+        return;
+    }
+
     QFile file(QApplication::applicationDirPath() + "/config/ip.json");
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QMessageBox::information(this, tr("提示"), tr("请先配置远程设备信息！"));
@@ -558,6 +595,16 @@ void MainWindow::on_action_displacement_triggered()
 // 打开电源
 void MainWindow::on_action_power_triggered()
 {
+    if (this->property("test").isValid() && this->property("test").toBool()){
+        this->setProperty("relay_fault", false);
+        if (this->property("relay_on").toBool())
+            this->setProperty("relay_on", false);
+        else
+            this->setProperty("relay_on", true);
+        slotRefreshUi();
+        return;
+    }
+
     QFile file(QApplication::applicationDirPath() + "/config/ip.json");
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QMessageBox::information(this, tr("提示"), tr("请先配置远程设备信息！"));
@@ -602,67 +649,80 @@ void MainWindow::on_action_energycalibration_triggered()
     w->showNormal();
 }
 
+#include "coolingtimewidget.h"
 void MainWindow::on_pushButton_measure_clicked()
 {
     if (this->property("measure-status").toUInt() == msNone
             || this->property("measure-status").toUInt() == msEnd){
         this->save();
 
-        this->setProperty("measure-status", msPrepare);
+        CoolingTimeWidget *w = new CoolingTimeWidget(this);
+        w->setAttribute(Qt::WA_DeleteOnClose, true);
+        w->setWindowFlags(Qt::WindowCloseButtonHint|Qt::Dialog);
+        w->setWindowModality(Qt::ApplicationModal);
+        w->showNormal();
+        emit w->sigUpdateTimeLength(ui->spinBox_cool_timelength->value());
+        connect(w, &CoolingTimeWidget::sigAskTimeLength, this, [=](int new_timelength){
+            ui->spinBox_cool_timelength->setValue(new_timelength);
 
-        //手动测量
-        DetectorParameter detectorParameter;
-        detectorParameter.triggerThold1 = 0x81;
-        detectorParameter.triggerThold2 = 0x81;
-        detectorParameter.waveformPolarity = 0x00;
-        detectorParameter.dieTimeLength = 1;
-        detectorParameter.gain = 0x00;
-        detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
-        detectorParameter.measureModel = mmManual;
-        this->setProperty("measur-model", detectorParameter.measureModel);
+            this->setProperty("measure-status", msPrepare);
 
-        // 打开 JSON 文件
-        QFile file(QApplication::applicationDirPath() + "/config/fpga.json");
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            // 读取文件内容
-            QByteArray jsonData = file.readAll();
-            file.close(); //释放资源
+            //手动测量
+            DetectorParameter detectorParameter;
+            detectorParameter.triggerThold1 = 0x81;
+            detectorParameter.triggerThold2 = 0x81;
+            detectorParameter.waveformPolarity = 0x00;
+            detectorParameter.dieTimeLength = 1;
+            detectorParameter.gain = 0x00;
+            detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
+            detectorParameter.measureModel = mmManual;
+            detectorParameter.cool_timelength = ui->spinBox_cool_timelength->value();
+            this->setProperty("measur-model", detectorParameter.measureModel);
 
-            // 将 JSON 数据解析为 QJsonDocument
-            QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-            QJsonObject jsonObj = jsonDoc.object();
-            detectorParameter.triggerThold1 = jsonObj["TriggerThold1"].toInt();
-            detectorParameter.triggerThold2 = jsonObj["TriggerThold2"].toInt();
-            detectorParameter.waveformPolarity = jsonObj["WaveformPolarity"].toInt();
-            detectorParameter.dieTimeLength = jsonObj["DieTimeLength"].toInt() / 10;
-            detectorParameter.gain = jsonObj["DetectorGain"].toInt();
-        }
+            // 打开 JSON 文件
+            QFile file(QApplication::applicationDirPath() + "/config/fpga.json");
+            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                // 读取文件内容
+                QByteArray jsonData = file.readAll();
+                file.close(); //释放资源
 
-        ui->pushButton_save->setEnabled(false);
-        ui->pushButton_gauss->setEnabled(true);
-        ui->action_refresh->setEnabled(true);
-        ui->pushButton_measure->setEnabled(false);
-
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
-        plotWidget->slotResetPlot();
-
-        ui->pushButton_measure_2->setEnabled(false);
-        int stepT = ui->spinBox_step->value();
-        int leftE[2] = {ui->spinBox_1_leftE->value(), ui->spinBox_2_leftE->value()};
-        int rightE[2] = {ui->spinBox_1_rightE->value(), ui->spinBox_2_rightE->value()};
-        int timewidth = ui->spinBox_timeWidth->value();
-        QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
-        measureTimer->setInterval(ui->spinBox_timelength_3->value() * 1000);
-        commandHelper->updateParamter(stepT, leftE, rightE, timewidth, false);
-        commandHelper->slotStartManualMeasure(detectorParameter);
-
-        QTimer::singleShot(3000, this, [=](){
-            //指定时间未收到开始测量指令，则按钮恢复初始状态
-            if (this->property("measure-status").toUInt() == msPrepare){
-                commandHelper->slotStopManualMeasure();
-                ui->pushButton_measure->setEnabled(true);
+                // 将 JSON 数据解析为 QJsonDocument
+                QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+                QJsonObject jsonObj = jsonDoc.object();
+                detectorParameter.triggerThold1 = jsonObj["TriggerThold1"].toInt();
+                detectorParameter.triggerThold2 = jsonObj["TriggerThold2"].toInt();
+                detectorParameter.waveformPolarity = jsonObj["WaveformPolarity"].toInt();
+                detectorParameter.dieTimeLength = jsonObj["DieTimeLength"].toInt() / 10;
+                detectorParameter.gain = jsonObj["DetectorGain"].toInt();
             }
+
+            ui->pushButton_save->setEnabled(false);
+            ui->pushButton_gauss->setEnabled(true);
+            ui->action_refresh->setEnabled(true);
+            ui->pushButton_measure->setEnabled(false);
+
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+            plotWidget->slotResetPlot();
+
+            ui->pushButton_measure_2->setEnabled(false);
+            int stepT = ui->spinBox_step->value();
+            int EnWin[4] = {ui->spinBox_1_leftE->value(), ui->spinBox_1_rightE->value(),
+                                    ui->spinBox_2_leftE->value(), ui->spinBox_2_rightE->value()};
+            int timewidth = ui->spinBox_timeWidth->value();
+            QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
+            measureTimer->setInterval(ui->spinBox_timelength_3->value() * 1000);
+            commandHelper->updateParamter(stepT, EnWin, timewidth, false);
+            commandHelper->slotStartManualMeasure(detectorParameter);
+
+            QTimer::singleShot(3000, this, [=](){
+                //指定时间未收到开始测量指令，则按钮恢复初始状态
+                if (this->property("measure-status").toUInt() == msPrepare){
+                    commandHelper->slotStopManualMeasure();
+                    ui->pushButton_measure->setEnabled(true);
+                }
+            });
         });
+
     } else {
         ui->pushButton_measure->setEnabled(false);
         commandHelper->slotStopManualMeasure();
@@ -724,13 +784,13 @@ void MainWindow::on_pushButton_measure_2_clicked()
         plotWidget->slotResetPlot();
 
         int stepT = ui->spinBox_step_2->value();
-        int leftE[2] = {ui->spinBox_1_leftE->value(), ui->spinBox_2_leftE_2->value()};
-        int rightE[2] = {ui->spinBox_1_rightE_2->value(), ui->spinBox_2_rightE_2->value()};
+        int EnWin[4] = {ui->spinBox_1_leftE->value(), ui->spinBox_1_rightE->value(),
+            ui->spinBox_2_leftE->value(), ui->spinBox_2_rightE->value()};
         int timewidth = ui->spinBox_timeWidth->value();
         QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
         measureTimer->setInterval(ui->spinBox_timelength_3->value() * 1000);
 
-        commandHelper->updateParamter(stepT, leftE, rightE, timewidth, false);
+        commandHelper->updateParamter(stepT, EnWin, timewidth, false);
         commandHelper->slotStartAutoMeasure(detectorParameter);
 
         ui->pushButton_measure_2_tip->setText(tr("等待触发..."));
@@ -801,8 +861,8 @@ void MainWindow::on_pushButton_refresh_clicked()
     this->save();
 
     int stepT = ui->spinBox_step->value();
-    int leftE[2] = {ui->spinBox_1_leftE->value(), ui->spinBox_2_leftE->value()};
-    int rightE[2] = {ui->spinBox_1_rightE->value(), ui->spinBox_2_rightE->value()};
+    int EnWin[4] = {ui->spinBox_1_leftE->value(), ui->spinBox_1_rightE->value(),
+        ui->spinBox_2_leftE->value(), ui->spinBox_2_rightE->value()};
 
     if (ui->radioButton_ref->isChecked()){
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
@@ -810,7 +870,7 @@ void MainWindow::on_pushButton_refresh_clicked()
     }
 
     int timewidth = ui->spinBox_timeWidth->value();
-    commandHelper->updateParamter(stepT, leftE, rightE, timewidth, true);
+    commandHelper->updateParamter(stepT, EnWin, timewidth, true);
 }
 
 void MainWindow::on_action_close_triggered()
@@ -998,7 +1058,7 @@ void MainWindow::slotRefreshUi()
 
         //ui->action_config->setEnabled(false);
     } else {
-        if (!this->property("detector_on").toBool()){
+        if (this->property("relay_on").toBool() && !this->property("detector_on").toBool()){
             //ui->action_partical->setEnabled(false);
             //ui->action_SpectrumModel->setEnabled(false);
             //ui->action_WaveformModel->setEnabled(false);
@@ -1083,7 +1143,7 @@ void MainWindow::slotRefreshUi()
             //自动测量
             ui->pushButton_measure_2->setEnabled(false);
         }
-    } else if (this->property("detector_on").toBool()){
+    } else {
         ui->comboBox_range->setEnabled(true);
         ui->comboBox_range_2->setEnabled(true);
         ui->comboBox_range_3->setEnabled(true);
@@ -1091,10 +1151,6 @@ void MainWindow::slotRefreshUi()
         ui->pushButton_measure->setText(tr("开始测量"));
         ui->pushButton_measure_2->setText(tr("开始测量"));
         ui->pushButton_measure_3->setText(tr("开始测量"));
-
-        ui->action_power->setEnabled(true);
-        ui->action_detector_connect->setEnabled(true);
-        ui->action_refresh->setEnabled(false);
 
         // 手动测量
         ui->spinBox_1_leftE->setEnabled(true);
@@ -1118,6 +1174,10 @@ void MainWindow::slotRefreshUi()
         ui->spinBox_timeWidth_3->setEnabled(true);
 
         if (this->property("detector_on").toBool()){
+//            ui->action_power->setEnabled(true);
+//            ui->action_detector_connect->setEnabled(true);
+//            ui->action_refresh->setEnabled(false);
+
             //公共
             ui->pushButton_save->setEnabled(true);
 
@@ -1125,6 +1185,10 @@ void MainWindow::slotRefreshUi()
             ui->pushButton_measure_2->setEnabled(true);
             ui->pushButton_measure_3->setEnabled(true);
         } else {
+//            ui->action_power->setEnabled(true);
+//            ui->action_detector_connect->setEnabled(true);
+//            ui->action_refresh->setEnabled(false);
+
             //公共
             ui->pushButton_save->setEnabled(false);
             ui->pushButton_measure->setEnabled(false);
@@ -1395,5 +1459,25 @@ void MainWindow::on_lineEdit_editingFinished()
     if (!isFloat(arg1)){
         ui->lineEdit->clear();
         ui->lineEdit->setPlaceholderText(tr("输入数字无效"));
+    }
+}
+
+void MainWindow::on_action_start_measure_triggered()
+{
+    if (!this->property("test").isValid()){
+        this->setProperty("test", false);
+    }
+
+    if (this->property("test").toBool()){
+        ui->action_start_measure->setIcon(QIcon(":/resource/circle-red.png"));
+        ui->action_start_measure->setText(tr("开启离线测试模式"));
+        ui->action_start_measure->setIconText(tr("开启离线测试模式"));
+        this->setProperty("test", false);
+    }
+    else {
+        ui->action_start_measure->setIcon(QIcon(":/resource/circle-green.png"));
+        ui->action_start_measure->setText(tr("退出离线测试模式"));
+        ui->action_start_measure->setIconText(tr("退出离线测试模式"));
+        this->setProperty("test", true);
     }
 }

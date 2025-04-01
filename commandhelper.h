@@ -5,7 +5,9 @@
 #include <QTcpSocket>
 #include <QMutex>
 #include <QFile>
+#include <QElapsedTimer>
 
+#include "quithread.h"
 #include "sysutils.h"
 #include "coincidenceanalyzer.h"
 typedef struct tagDetectorParameter{
@@ -43,6 +45,8 @@ typedef struct tagDetectorParameter{
 
     // 测量模式
     qint8 measureModel;//00-手动测量 01-自动测量 02-标定测量 03-波形测量 04-能谱测量
+
+    qint32 cool_timelength;//冷却时长
 } DetectorParameter;
 
 class QUiThread;
@@ -60,7 +64,7 @@ public:
 
     void startWork();
     void switchShowModel(bool refModel);
-    void updateParamter(int stepT, int leftE[2], int rightE[2], int timewidth = 50, bool reset = false);
+    void updateParamter(int stepT, int EnWin[4], int timewidth = 50, bool reset = false);
     void saveFileName(QString);
     void setDefaultCacheDir(QString dir);
     bool isConnected();//探测器是否连接
@@ -199,94 +203,16 @@ private:
 private:
     QString defaultCacheDir;
     QString currentFilename;
-    int stepT = 1, leftE[2], rightE[2];
+    int stepT = 1;
+    int EnWindow[4]; // 探测器1左能窗、右能窗；探测器2左能窗、右能窗
+    // int leftE[2], rightE[2];
     int timeWidth = 50;//时间窗宽度，单位ns(符合分辨时间)
     qint64 lastClockT = 0;
     bool refModel = false;
     unsigned int maxEnergy = 8192;
-    int maxCh = 4096;
 
     std::vector<DetTimeEnergy> currentSpectrumFrames;//网络新接收的能谱数据（一般指未处理，未分步长的数据）
 };
 
-#include <QThread>
-typedef std::function<void()> LPThreadRunProc;
-class QGuiThread :public QThread {
-    Q_OBJECT
-private:
-    LPThreadRunProc m_func = 0;//记录线程执行的函数
-
-public:
-    //构造函数，func参数为线程执行的函数
-    explicit QGuiThread(LPThreadRunProc func = NULL, QObject* parent = Q_NULLPTR) :QThread(parent),
-        m_func(func)
-    {
-        connect(this, &QGuiThread::invokeSignal, this, &QGuiThread::invokeSlot);
-    }
-
-    ~QGuiThread()
-    {
-        disconnect(this, &QGuiThread::invokeSignal, this, &QGuiThread::invokeSlot);
-    }
-
-    void setThreadWorkProc(LPThreadRunProc func) {
-        this->m_func = func;
-    }
-
-    void invoke(LPThreadRunProc func) {
-        emit invokeSignal(func);
-    }
-
-protected:
-    void run() override {
-        m_func();
-    }
-
-signals:
-    void invokeSignal(LPThreadRunProc fun);
-
-public slots:
-    void invokeSlot(LPThreadRunProc fun) {
-        fun();
-    }
-};
-
-typedef std::function<void()> LPThreadWorkProc;
-class QUiThread :public QThread {
-    Q_OBJECT
-
-private:
-    LPThreadWorkProc m_pfThreadWorkProc = 0;
-
-public:
-    explicit QUiThread(QObject* parent = Q_NULLPTR, LPThreadWorkProc pfThreadWorkProc = Q_NULLPTR)
-        : QThread(parent)
-        , m_pfThreadWorkProc(pfThreadWorkProc)
-    {
-        connect(this, &QThread::finished, this, &QThread::deleteLater);
-    }
-
-    //析构函数
-    ~QUiThread()
-    {        
-    }
-
-    void setWorkThreadProc(LPThreadRunProc pfThreadRun) {
-        this->m_pfThreadWorkProc = pfThreadRun;
-    }
-
-protected:
-    void run() override {
-        m_pfThreadWorkProc();
-    }
-
-signals:
-    //这里信号函数的参数个数可以根据自己需要随意增加
-    void invokeSignal();
-    void invokeSignal(QVariant);
-
-public slots:
-
-};
 
 #endif // COMMANDHELPER_H

@@ -2,13 +2,16 @@
 #define CONTROLHELPER_H
 
 #include <QObject>
+#include <QMutex>
 #include "ftcoreimc.h"
+#include "quithread.h"
 
 class ControlHelper : public QObject
 {
     Q_OBJECT
 public:
     explicit ControlHelper(QObject *parent = nullptr);
+    ~ControlHelper();
 
     static ControlHelper *instance() {
         static ControlHelper controlHelper;
@@ -18,7 +21,7 @@ public:
     void load();
     bool connected();
 
-    void gotoAbs(int index);
+    void gotoAbs(int index, float max_speed = 5.);
 
     /// 获取sdk的版本号，如“1.1.0.0”
     const char* getsdkversion();
@@ -139,13 +142,19 @@ signals:
     // 位移平台状态
     void sigControlStatus(bool on);
     void sigControlFault(qint32 index);//故障，一般指网络不通
+    void sigReportAbs(float f1, float f2);
+    void sigReportStatus(int i, bool l, bool r, bool s);
+    void sigError(QString);
 
 private:
-    FT_H mHandle;
+    QMutex mutex;
+    FT_H mHandle;    
     bool mConnected = false;
     QString mIp;
     qint32 mPort;
     QString mAxiaName[3] = {"'",  "01", "02" };
+    QUiThread* mpWorkThread;
+    bool taskFinished = false;
 };
 
 #endif // CONTROLHELPER_H

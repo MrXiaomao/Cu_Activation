@@ -29,7 +29,7 @@ vector<unsigned short> computeHistogram(const vector<unsigned short>& data, cons
 // data:能量点数组
 // maxEnergy: 多道中最大道址对应的能量值。
 // ch: 多道道数
-vector<unsigned short> GetSpectrum(const vector<unsigned short>& data, unsigned int maxEnergy, int ch)
+/*vector<unsigned short> GetSpectrum(const vector<unsigned short>& data, unsigned int maxEnergy, int ch)
 {
     // 自动算出多道计数器的能量bin。
     vector<int> binEdges;
@@ -40,7 +40,7 @@ vector<unsigned short> GetSpectrum(const vector<unsigned short>& data, unsigned 
     // 计算能谱
     vector<unsigned short> spectrum = computeHistogram(data, binEdges);
     return spectrum;
-}
+}*/
 
 // 计算data中数据在指定能量区间的数据个数
 // data：输入的能量数据点
@@ -115,7 +115,7 @@ void printHistogram(const vector<int>& binEdges, const vector<int>& histogram) {
 // sx 待拟合数据x数组，
 // sy 待拟合数据y数组
 // 返回值result, result[0]为半高宽FWHM,result[1] 为峰位，result[2]为峰值。
-#include "polynomialfit.h"
+/*#include "polynomialfit.h"
 bool fit_GaussCurve(int count, std::vector<double> sx, std::vector<double> sy, double* result)
 {
     int degree = 2;
@@ -125,7 +125,7 @@ bool fit_GaussCurve(int count, std::vector<double> sx, std::vector<double> sy, d
     result[1] = 0.;
     result[2] = 0.;
     // 参考[1]陈伟,方方,莫磊,等.一种单能高斯峰解析方法[J].太赫兹科学与电子信息学报,2020,18(03):527-530.
-    // 核能谱单能峰扣除背景后，其净计数近似服从高斯分布：y(x) = a*exp[-4ln2(x-u)^2/FWHM^2]
+    // 核能谱单能峰扣除背景后，其净计数近似服从高斯分布：y(x) = a*exp[-4*ln2*(x-u)^2/FWHM^2]
     // a为峰值，u为峰位道址，FWHM 为半高宽。
     // 将高斯函数变化为多项式，取对数,整理为二次多项式形式，b=c1x^2+c2x+c3;
     // b = lny, c1=-4ln2/(FWHM^2);c2=8ln2*u/FWHM^2; c2=-4ln2*u^2/FWHM^2+lna
@@ -168,4 +168,4 @@ bool fit_GaussCurve(int count, std::vector<double> sx, std::vector<double> sy, d
         delete[] weight;
         return false;
     }
-}
+}*/

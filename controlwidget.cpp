@@ -34,9 +34,9 @@ ControlWidget::ControlWidget(QWidget *parent) :
             ui->groupBox->setTitle(tr("轴2"));
         }
 
-        this->load();
-        enableUiStatus();
+        this->load();        
     });    
+    enableUiStatus();
 
     // 打印SDK版本
     ui->tableWidget_position->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
@@ -71,6 +71,7 @@ ControlWidget::ControlWidget(QWidget *parent) :
     for (int i=0; i<=5; ++i){
         QTableWidget* tableWidgets[] = {ui->tableWidget_position};
         for (auto tableWidget : tableWidgets){
+            tableWidget->item(i, 0)->setFlags(tableWidget->item(i, 0)->flags() & ~Qt::ItemFlag::ItemIsEditable);
             tableWidget->setItem(i, 1, new QTableWidgetItem());
             tableWidget->item(i, 1)->setTextAlignment(Qt::AlignCenter);
             //tableWidget->item(row, 0)->setFlags(ui->tableWidget->item(row, 0)->flags() & (~Qt::ItemIsEditable));
@@ -106,40 +107,41 @@ ControlWidget::ControlWidget(QWidget *parent) :
     ui->pushButton_forward->installEventFilter(this);
     ui->pushButton_backward->installEventFilter(this);
 
-    QTimer *timerPosition = new QTimer(this);
-    timerPosition->setObjectName("timerPosition");
-    connect(timerPosition, &QTimer::timeout, this, [=](){
-        float pos;
-        uint32_t status;
-        byte isrunning;
-        byte limits[2];
-        bool ret = controlHelper->single_getpos(0x01, &pos);
-        if (ret){
-            ui->lineEdit_position->setText(QString::number(pos / 1000, 'f', 4));
-        }
-
-        ret = controlHelper->single_getpos(0x02, &pos);
-        if (ret){
-            ui->lineEdit_position_2->setText(QString::number(pos / 1000, 'f', 4));
-        }
+    connect(controlHelper, &ControlHelper::sigReportAbs, this, [=](float f1, float f2){
+        ui->lineEdit_position->setText(QString::number(f1 / 1000, 'f', 4));
+        ui->lineEdit_position_2->setText(QString::number(f2 / 1000, 'f', 4));
 
         if (this->property("enableAuto").toBool()){
-            float realPos = pos / 1000;
-            if (realPos <= ui->doubleSpinBox_lower->value()){
-                controlHelper->single_stop(mAxis_no);
+            float realPos1 = f1 / 1000;
+            float realPos2 = f2 / 1000;
+
+            // 0.003误差3mm
+            if (0.003 > qAbs(realPos1 - ui->doubleSpinBox_lower->value())){
+                controlHelper->single_stop(0x01);
                 QTimer::singleShot(ui->spinBox_delay->value(), this, [=](){
-                    controlHelper->single_moveabs(mAxis_no, ui->doubleSpinBox_upper->value() * 1000);
+                    controlHelper->single_moveabs(0x01, ui->doubleSpinBox_upper->value() * 1000);
                 });
-            } else if (realPos >= ui->doubleSpinBox_upper->value()){
-                controlHelper->single_stop(mAxis_no);
+            } else if (0.003 > qAbs(realPos1 - ui->doubleSpinBox_upper->value())){
+                controlHelper->single_stop(0x01);
                 QTimer::singleShot(ui->spinBox_delay->value(), this, [=](){
-                    controlHelper->single_moveabs(mAxis_no, ui->doubleSpinBox_lower->value() * 1000);
+                    controlHelper->single_moveabs(0x01, ui->doubleSpinBox_lower->value() * 1000);
+                });
+            }
+
+            if (0.003 > qAbs(realPos2 - ui->doubleSpinBox_lower->value())){
+                controlHelper->single_stop(0x02);
+                QTimer::singleShot(ui->spinBox_delay->value(), this, [=](){
+                    controlHelper->single_moveabs(0x02, ui->doubleSpinBox_upper->value() * 1000);
+                });
+            } else if (0.003 > qAbs(realPos2 - ui->doubleSpinBox_upper->value())){
+                controlHelper->single_stop(0x02);
+                QTimer::singleShot(ui->spinBox_delay->value(), this, [=](){
+                    controlHelper->single_moveabs(0x02, ui->doubleSpinBox_lower->value() * 1000);
                 });
             }
         }
-        ret = controlHelper->single_getstatus(mAxis_no, &status);
-        ret = controlHelper->single_isrunning(status, &isrunning);
-        ret = controlHelper->single_getlimits(status, limits);
+    });
+    connect(controlHelper, &ControlHelper::sigReportStatus, this, [=](int /*axis_no*/, bool limit_left, bool limit_right, bool isrunning){
         if (isrunning == FT_TRUE){
             ui->label_running->setStyleSheet("min-width:16px;"
                                              "min-height:16px;"
@@ -158,7 +160,7 @@ ControlWidget::ControlWidget(QWidget *parent) :
                                              "background-color: rgb(96, 96, 96);");
         }
 
-        if (limits[1] == FT_TRUE){
+        if (limit_right == FT_TRUE){
             ui->pushButton_forward->setEnabled(false);
             ui->label_positive->setStyleSheet("min-width:16px;"
                                               "min-height:16px;"
@@ -178,7 +180,7 @@ ControlWidget::ControlWidget(QWidget *parent) :
                                               "background-color: rgb(96, 96, 96);");
         }
 
-        if (limits[0] == FT_TRUE){
+        if (limit_left == FT_TRUE){
             ui->pushButton_backward->setEnabled(true);
             ui->label_negative->setStyleSheet("min-width:16px;"
                                               "min-height:16px;"
@@ -198,13 +200,14 @@ ControlWidget::ControlWidget(QWidget *parent) :
                                               "background-color: rgb(96, 96, 96);");
         }
     });
-    timerPosition->start(100);
 
     this->load();
 }
 
 ControlWidget::~ControlWidget()
 {
+    disconnect(controlHelper, nullptr);
+
     delete ui;
 }
 
@@ -259,9 +262,14 @@ void ControlWidget::load()
         QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
         QJsonObject jsonObj = jsonDoc.object();
 
-        if (jsonObj.contains("Control")){
+        if (jsonObj.contains("Control")){            
             QJsonObject jsonControl = jsonObj["Control"].toObject();
             QJsonArray jsonDistances = jsonControl["Distances"].toArray();
+
+            if (jsonControl.contains("max_speed")){
+                float max_speed = jsonControl["max_speed"].toDouble();
+                ui->doubleSpinBox_speed->setMaximum(max_speed);
+            }
 
             if (jsonControl.contains("Distances")){
                 QJsonObject jsonDistance1 = jsonControl["Distances"].toObject()["01"].toObject();

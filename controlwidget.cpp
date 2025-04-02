@@ -116,88 +116,95 @@ ControlWidget::ControlWidget(QWidget *parent) :
             float realPos2 = f2 / 1000;
 
             // 0.003误差3mm
-            if (0.003 > qAbs(realPos1 - ui->doubleSpinBox_lower->value())){
+            if (MAX_MISTAKE_VALUE > qAbs(realPos1 - ui->doubleSpinBox_lower->value()) || realPos1 <= ui->doubleSpinBox_lower->value()){
                 controlHelper->single_stop(0x01);
                 QTimer::singleShot(ui->spinBox_delay->value(), this, [=](){
-                    controlHelper->single_moveabs(0x01, ui->doubleSpinBox_upper->value() * 1000);
+                    //controlHelper->single_moveabs(0x01, ui->doubleSpinBox_upper->value() * 1000);
+                    controlHelper->single_jogright(0x01);
+
                 });
-            } else if (0.003 > qAbs(realPos1 - ui->doubleSpinBox_upper->value())){
+            } else if (MAX_MISTAKE_VALUE > qAbs(realPos1 - ui->doubleSpinBox_upper->value()) || realPos1 >= ui->doubleSpinBox_upper->value()){
                 controlHelper->single_stop(0x01);
                 QTimer::singleShot(ui->spinBox_delay->value(), this, [=](){
-                    controlHelper->single_moveabs(0x01, ui->doubleSpinBox_lower->value() * 1000);
+                    //controlHelper->single_moveabs(0x01, ui->doubleSpinBox_lower->value() * 1000);
+                    controlHelper->single_jogleft(0x01);
                 });
             }
 
-            if (0.003 > qAbs(realPos2 - ui->doubleSpinBox_lower->value())){
+            if (MAX_MISTAKE_VALUE > qAbs(realPos2 - ui->doubleSpinBox_lower->value()) || realPos2 <= ui->doubleSpinBox_lower->value()){
                 controlHelper->single_stop(0x02);
                 QTimer::singleShot(ui->spinBox_delay->value(), this, [=](){
-                    controlHelper->single_moveabs(0x02, ui->doubleSpinBox_upper->value() * 1000);
+                    //controlHelper->single_moveabs(0x02, ui->doubleSpinBox_upper->value() * 1000);
+                    controlHelper->single_jogright(0x02);
                 });
-            } else if (0.003 > qAbs(realPos2 - ui->doubleSpinBox_upper->value())){
+            } else if (MAX_MISTAKE_VALUE > qAbs(realPos2 - ui->doubleSpinBox_upper->value()) || realPos2 >= ui->doubleSpinBox_upper->value()){
                 controlHelper->single_stop(0x02);
                 QTimer::singleShot(ui->spinBox_delay->value(), this, [=](){
-                    controlHelper->single_moveabs(0x02, ui->doubleSpinBox_lower->value() * 1000);
+                    //controlHelper->single_moveabs(0x02, ui->doubleSpinBox_lower->value() * 1000);
+                    controlHelper->single_jogleft(0x02);
                 });
             }
         }
     });
-    connect(controlHelper, &ControlHelper::sigReportStatus, this, [=](int /*axis_no*/, bool limit_left, bool limit_right, bool isrunning){
-        if (isrunning == FT_TRUE){
-            ui->label_running->setStyleSheet("min-width:16px;"
-                                             "min-height:16px;"
-                                             "max-width:16px;"
-                                             "max-height:16px;"
-                                             "border-radius: 8px;"
-                                             "border:1px solid rgb(200, 200, 200);"
-                                             "background-color: rgb(170, 255, 0);");
-        } else {
-            ui->label_running->setStyleSheet("min-width:16px;"
-                                             "min-height:16px;"
-                                             "max-width:16px;"
-                                             "max-height:16px;"
-                                             "border-radius: 8px;"
-                                             "border:1px solid rgb(200, 200, 200);"
-                                             "background-color: rgb(96, 96, 96);");
-        }
+    connect(controlHelper, &ControlHelper::sigReportStatus, this, [=](int axis_no, bool limit_left, bool limit_right, bool isrunning){
+        if (mAxis_no == axis_no){
+            if (isrunning == FT_TRUE){
+                ui->label_running->setStyleSheet("min-width:16px;"
+                                                 "min-height:16px;"
+                                                 "max-width:16px;"
+                                                 "max-height:16px;"
+                                                 "border-radius: 8px;"
+                                                 "border:1px solid rgb(200, 200, 200);"
+                                                 "background-color: rgb(170, 255, 0);");
+            } else {
+                ui->label_running->setStyleSheet("min-width:16px;"
+                                                 "min-height:16px;"
+                                                 "max-width:16px;"
+                                                 "max-height:16px;"
+                                                 "border-radius: 8px;"
+                                                 "border:1px solid rgb(200, 200, 200);"
+                                                 "background-color: rgb(96, 96, 96);");
+            }
 
-        if (limit_right == FT_TRUE){
-            ui->pushButton_forward->setEnabled(false);
-            ui->label_positive->setStyleSheet("min-width:16px;"
-                                              "min-height:16px;"
-                                              "max-width:16px;"
-                                              "max-height:16px;"
-                                              "border-radius: 8px;"
-                                              "border:1px solid rgb(200, 200, 200);"
-                                              "background-color: rgb(170, 255, 0);");
-        } else {
-            ui->pushButton_forward->setEnabled(true);
-            ui->label_positive->setStyleSheet("min-width:16px;"
-                                              "min-height:16px;"
-                                              "max-width:16px;"
-                                              "max-height:16px;"
-                                              "border-radius: 8px;"
-                                              "border:1px solid rgb(200, 200, 200);"
-                                              "background-color: rgb(96, 96, 96);");
-        }
+            if (limit_right == FT_TRUE){
+                ui->pushButton_forward->setEnabled(false);
+                ui->label_positive->setStyleSheet("min-width:16px;"
+                                                  "min-height:16px;"
+                                                  "max-width:16px;"
+                                                  "max-height:16px;"
+                                                  "border-radius: 8px;"
+                                                  "border:1px solid rgb(200, 200, 200);"
+                                                  "background-color: rgb(170, 255, 0);");
+            } else {
+                ui->pushButton_forward->setEnabled(true);
+                ui->label_positive->setStyleSheet("min-width:16px;"
+                                                  "min-height:16px;"
+                                                  "max-width:16px;"
+                                                  "max-height:16px;"
+                                                  "border-radius: 8px;"
+                                                  "border:1px solid rgb(200, 200, 200);"
+                                                  "background-color: rgb(96, 96, 96);");
+            }
 
-        if (limit_left == FT_TRUE){
-            ui->pushButton_backward->setEnabled(true);
-            ui->label_negative->setStyleSheet("min-width:16px;"
-                                              "min-height:16px;"
-                                              "max-width:16px;"
-                                              "max-height:16px;"
-                                              "border-radius: 8px;"
-                                              "border:1px solid rgb(200, 200, 200);"
-                                              "background-color: rgb(170, 255, 0);");
-        } else {
-            ui->pushButton_backward->setEnabled(true);
-            ui->label_negative->setStyleSheet("min-width:16px;"
-                                              "min-height:16px;"
-                                              "max-width:16px;"
-                                              "max-height:16px;"
-                                              "border-radius: 8px;"
-                                              "border:1px solid rgb(200, 200, 200);"
-                                              "background-color: rgb(96, 96, 96);");
+            if (limit_left == FT_TRUE){
+                ui->pushButton_backward->setEnabled(true);
+                ui->label_negative->setStyleSheet("min-width:16px;"
+                                                  "min-height:16px;"
+                                                  "max-width:16px;"
+                                                  "max-height:16px;"
+                                                  "border-radius: 8px;"
+                                                  "border:1px solid rgb(200, 200, 200);"
+                                                  "background-color: rgb(170, 255, 0);");
+            } else {
+                ui->pushButton_backward->setEnabled(true);
+                ui->label_negative->setStyleSheet("min-width:16px;"
+                                                  "min-height:16px;"
+                                                  "max-width:16px;"
+                                                  "max-height:16px;"
+                                                  "border-radius: 8px;"
+                                                  "border:1px solid rgb(200, 200, 200);"
+                                                  "background-color: rgb(96, 96, 96);");
+            }
         }
     });
 
@@ -401,14 +408,20 @@ void ControlWidget::on_pushButton_start_clicked()
         return;
 
     if (this->property("enableAuto").toBool()){
-        controlHelper->single_stop(mAxis_no);
-        ui->pushButton_start->setText(tr("开启往返运动"));
         this->setProperty("enableAuto", false);
+        ui->pushButton_start->setText(tr("开启往返运动"));
+
+        controlHelper->single_stop(0x01);
+        controlHelper->single_stop(0x02);
     }
     else{
-        controlHelper->single_moveabs(mAxis_no, ui->doubleSpinBox_lower->value() * 1000);
-        ui->pushButton_start->setText(tr("停止往返运动"));
+//        controlHelper->single_moveabs(0x01, ui->doubleSpinBox_lower->value() * 1000);
+//        controlHelper->single_moveabs(0x02, ui->doubleSpinBox_lower->value() * 1000);
         this->setProperty("enableAuto", true);
+        ui->pushButton_start->setText(tr("停止往返运动"));
+
+        controlHelper->single_jogleft(0x01);
+        controlHelper->single_jogleft(0x02);
     }
 }
 

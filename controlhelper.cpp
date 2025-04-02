@@ -6,6 +6,7 @@
 #include <QFile>
 #include <QDir>
 #include <QTimer>
+#include <QDebug>
 
 //#include <QLibrary>
 //extern "C" {
@@ -17,7 +18,7 @@ ControlHelper::ControlHelper(QObject *parent) : QObject(parent)
 {
     this->load();
 
-    mpWorkThread = new QUiThread(this);
+    mpWorkThread = new QLiteThread(this);
     mpWorkThread->setObjectName("mpWorkThread");
     mpWorkThread->setWorkThreadProc([=](){
         while (!taskFinished) {
@@ -36,14 +37,21 @@ ControlHelper::ControlHelper(QObject *parent) : QObject(parent)
                 ret = single_getstatus(0x01, &status);
                 if (ret){
                     single_isrunning(status, &isrunning);
-                    single_getlimits(status, limits);
+//                    if (!isrunning && this->property("single-home").isValid()){
+//                        this->setProperty("axis01-single-home", false);//搜零完毕
+//                    }
 
+                    single_getlimits(status, limits);
                     sigReportStatus(0x01, limits[0] == FT_TRUE, limits[1] == FT_TRUE, isrunning == FT_TRUE);
                 }
 
                 ret = single_getstatus(0x02, &status);
                 if (ret){
                     single_isrunning(status, &isrunning);
+//                    if (!isrunning && this->property("single-home").isValid()){
+//                        this->setProperty("axis01-single-home", false);//搜零完毕
+//                    }
+
                     single_getlimits(status, limits);
 
                     sigReportStatus(0x02, limits[0] == FT_TRUE, limits[1] == FT_TRUE, isrunning == FT_TRUE);
@@ -54,7 +62,7 @@ ControlHelper::ControlHelper(QObject *parent) : QObject(parent)
         }
     });
     mpWorkThread->start();
-    connect(this, &QUiThread::destroyed, [=]() {
+    connect(this, &QLiteThread::destroyed, [=]() {
         mpWorkThread->exit(0);
         mpWorkThread->wait(500);
     });
@@ -105,6 +113,17 @@ bool ControlHelper::open_tcp()
 //            fti_get_pitch(mCurrentHandle, currentAxiaName.toStdString().c_str(), &dValue);
 //            fti_get_accel(mCurrentHandle, currentAxiaName.toStdString().c_str(), &uValue);
 //            fti_get_decel(mCurrentHandle, currentAxiaName.toStdString().c_str(), &uValue);
+
+    if (mConnected){
+        //single_home(0x01);
+
+        //single_home(0x02);
+
+//        QPair<float, float> pair = gotoAbs(0);
+//        this->setProperty("axis01-target-position", pair.first);
+//        this->setProperty("axis02-target-position", pair.second);
+    }
+
     return ret == FT_SUCCESS;
 }
 
@@ -122,6 +141,8 @@ bool ControlHelper::close()
             ret = fti_close(mHandle);
             if (ret != FT_SUCCESS)
                 ++errRef;
+            else
+                break;
         }
         emit sigError(tr("位移平台断开连接失败，计数：%2").arg(errRef));
     }
@@ -301,6 +322,8 @@ bool ControlHelper::single_stop(int axis_no)
             ret = fti_single_stop(mHandle, mAxiaName[axis_no].toStdString().c_str());
             if (ret != FT_SUCCESS)
                 ++errRef;
+            else
+                break;
         }
         emit sigError(tr("轴[%1]停止运行失败，计数：%2").arg(axis_no).arg(errRef));
     }
@@ -323,7 +346,12 @@ bool ControlHelper::single_home(int axis_no)
     if (mHandle == 0)
         return false;
 
-    return fti_single_home(mHandle, mAxiaName[axis_no].toStdString().c_str()) == FT_SUCCESS;
+    int ret = fti_single_home(mHandle, mAxiaName[axis_no].toStdString().c_str());
+    if (ret == FT_SUCCESS){
+        this->setProperty("single-home", true);//正在搜零，搜零完成才能继续其他操作
+    }
+
+    return ret == FT_SUCCESS;
 }
 
 /// 单轴相对运动。
@@ -341,6 +369,7 @@ bool ControlHelper::single_moveabs(int axis_no, float value)
     if (mHandle == 0)
         return false;
 
+    qDebug() << tr("轴") << axis_no << tr("移动位置") << value;
     int ret = fti_single_moveabs(mHandle, mAxiaName[axis_no].toStdString().c_str(), value);
     if (ret != FT_SUCCESS){
         int errRef = 1;
@@ -348,6 +377,8 @@ bool ControlHelper::single_moveabs(int axis_no, float value)
             ret = fti_single_moveabs(mHandle, mAxiaName[axis_no].toStdString().c_str(), value);
             if (ret != FT_SUCCESS)
                 ++errRef;
+            else
+                break;
         }
         emit sigError(tr("轴[%1]移动到位置[%2]失败，计数：%2").arg(axis_no).arg(errRef));
     }
@@ -478,8 +509,9 @@ void ControlHelper::load()
     }
 }
 
-void ControlHelper::gotoAbs(int index, float max_speed)
+QPair<float, float> ControlHelper::gotoAbs(int index, float max_speed)
 {
+    float pos1 = 0.0, pos2 = 0.0;
     QString path = QApplication::applicationDirPath() + "/config";
     QDir dir(path);
     if (!dir.exists())
@@ -501,40 +533,29 @@ void ControlHelper::gotoAbs(int index, float max_speed)
                 QJsonObject jsonDistance1 = jsonControl["Distances"].toObject()["01"].toObject();
                 QJsonObject jsonDistance2 = jsonControl["Distances"].toObject()["02"].toObject();
                 {
-//                    float speed;
-//                    get_vel(0x01, &speed);
-//                    set_vel(0x01, max_speed);
-                    double pos = 0.;
                     switch (index){
-                        case 0x00: pos = jsonDistance1["0-1E4"].toString().toDouble(); break;
-                        case 0x01: pos = jsonDistance1["1E4-1E7"].toString().toDouble(); break;
-                        case 0x02: pos = jsonDistance1["1E7-1E10"].toString().toDouble(); break;
-                        case 0x03: pos = jsonDistance1["1E10-1E13"].toString().toDouble(); break;
+                        case 0x00: pos1 = jsonDistance1["0-1E4"].toString().toDouble(); break;
+                        case 0x01: pos1 = jsonDistance1["1E4-1E7"].toString().toDouble(); break;
+                        case 0x02: pos1 = jsonDistance1["1E7-1E10"].toString().toDouble(); break;
+                        case 0x03: pos1 = jsonDistance1["1E10-1E13"].toString().toDouble(); break;
                     }
 
-                    single_moveabs(0x01, pos * 1000);
-//                    QTimer::singleShot(5000, this, [=](){
-//                        set_vel(0x01, speed);
-//                    });
+                    single_moveabs(0x01, pos1 * 1000);
                 }
+
                 {
-//                    float speed;
-//                    get_vel(0x01, &speed);
-//                    set_vel(0x01, max_speed);
-                    double pos = 0.;
                     switch (index){
-                        case 0x00: pos = jsonDistance2["0-1E4"].toString().toDouble(); break;
-                        case 0x01: pos = jsonDistance2["1E4-1E7"].toString().toDouble(); break;
-                        case 0x02: pos = jsonDistance2["1E7-1E10"].toString().toDouble(); break;
-                        case 0x03: pos = jsonDistance2["1E10-1E13"].toString().toDouble(); break;
+                        case 0x00: pos2 = jsonDistance2["0-1E4"].toString().toDouble(); break;
+                        case 0x01: pos2 = jsonDistance2["1E4-1E7"].toString().toDouble(); break;
+                        case 0x02: pos2 = jsonDistance2["1E7-1E10"].toString().toDouble(); break;
+                        case 0x03: pos2 = jsonDistance2["1E10-1E13"].toString().toDouble(); break;
                     }
 
-                    single_moveabs(0x02, pos * 1000);
-//                    QTimer::singleShot(5000, this, [=](){
-//                        set_vel(0x01, speed);
-//                    });
+                    single_moveabs(0x02, pos2 * 1000);
                 }
             }
         }
     }
+
+    return QPair<float, float>(pos1, pos2);
 }

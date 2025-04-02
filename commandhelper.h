@@ -7,7 +7,7 @@
 #include <QFile>
 #include <QElapsedTimer>
 
-#include "quithread.h"
+#include "qlitethread.h"
 #include "sysutils.h"
 #include "coincidenceanalyzer.h"
 typedef struct tagDetectorParameter{
@@ -98,7 +98,7 @@ private:
 };
 
 
-class QUiThread;
+class QLiteThread;
 class CommandHelper : public QObject
 {
     Q_OBJECT
@@ -178,8 +178,8 @@ private:
     QMutex mutexPlot;//缓冲池交换帧数据所用 spectrumFrameCachePool
     QMutex mutexReset;//更新数据所用，一般用于开始测量，需要重置数据项
     quint32 SequenceNumber;// 帧序列号
-    QUiThread* analyzeNetDataThread;
-    QUiThread* plotUpdateThread;
+    QLiteThread* analyzeNetDataThread;
+    QLiteThread* plotUpdateThread;
 
     QThread netWorkerThread;
     QThread energyWorkerThread;
@@ -262,7 +262,6 @@ private:
     QString currentFilename;
     int stepT = 1;
     int EnWindow[4]; // 探测器1左能窗、右能窗；探测器2左能窗、右能窗
-    // int leftE[2], rightE[2];
     int timeWidth = 50;//时间窗宽度，单位ns(符合分辨时间)
     qint64 lastClockT = 0;
     bool refModel = false;

@@ -1,16 +1,16 @@
-#ifndef QGUITHREAD_H
-#define QGUITHREAD_H
+#ifndef LITETHREAD_H
+#define LITETHREAD_H
 
 #include <QThread>
 typedef std::function<void()> LPThreadWorkProc;
-class QUiThread :public QThread {
+class QLiteThread :public QThread {
     Q_OBJECT
 
 private:
     LPThreadWorkProc m_pfThreadWorkProc = 0;
 
 public:
-    explicit QUiThread(QObject* parent = Q_NULLPTR, LPThreadWorkProc pfThreadWorkProc = Q_NULLPTR)
+    explicit QLiteThread(QObject* parent = Q_NULLPTR, LPThreadWorkProc pfThreadWorkProc = Q_NULLPTR)
         : QThread(parent)
         , m_pfThreadWorkProc(pfThreadWorkProc)
     {
@@ -19,7 +19,7 @@ public:
     }
 
     //析构函数
-    ~QUiThread()
+    ~QLiteThread()
     {
     }
 
@@ -41,4 +41,4 @@ public slots:
 
 };
 
-#endif // QGUITHREAD_H
+#endif // LITETHREAD_H

@@ -146,6 +146,15 @@ void PlotWidget::initCustomPlot(){
     QSplitter *spPlotWindow = new QSplitter(Qt::Vertical, this);
     spPlotWindow->setObjectName("spPlotWindow");
 
+    QString styleSheet = "QLabel{"
+            "background-color:qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #cbdcf1, stop: 0.5 #cddff4, stop: 1.0 #cddff4);"
+            "border-top:2px solid;"
+            "border-top-clor:#8da5c4;"
+            "border-bottom:2px solid;"
+            "border-bottom-color:#ccdbec;"
+            "}";
+
+    styleSheet = "";
     if (this->property("isMergeMode").toBool()){
         QWidget *containWidget = new QWidget(this);
         containWidget->setObjectName("containWidgetDet12");
@@ -156,7 +165,8 @@ void PlotWidget::initCustomPlot(){
         title->layout()->setContentsMargins(0, 0, 0, 0);
         title->layout()->setSpacing(6);
         title->setFixedHeight(13);
-        QLabel* label = new QLabel("Det1 / Det2");
+        QLabel* label = new QLabel("Det1 / Det2");        
+        label->setStyleSheet(styleSheet);
         label->setContentsMargins(9, 0, 0, 0);
         label->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
         title->layout()->addWidget(label);
@@ -197,6 +207,7 @@ void PlotWidget::initCustomPlot(){
             containWidget->setLayout(new QVBoxLayout());
             containWidget->layout()->setContentsMargins(0, 0, 0, 0);
             QLabel* label = new QLabel("Det1");
+            label->setStyleSheet(styleSheet);
             label->setContentsMargins(9, 0, 0, 0);
             label->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
             //label->setFixedHeight(titleHeight);
@@ -217,6 +228,7 @@ void PlotWidget::initCustomPlot(){
             containWidget->setLayout(new QVBoxLayout());
             containWidget->layout()->setContentsMargins(0, 0, 0, 0);
             QLabel* label = new QLabel("Det2");
+            label->setStyleSheet(styleSheet);
             label->setContentsMargins(9, 0, 0, 0);
             label->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
             //label->setFixedHeight(titleHeight);
@@ -238,6 +250,7 @@ void PlotWidget::initCustomPlot(){
         containWidget->setLayout(new QVBoxLayout());
         containWidget->layout()->setContentsMargins(0, 0, 0, 0);
         QLabel* label = new QLabel(tr("符合结果"));
+        label->setStyleSheet(styleSheet);
         label->setObjectName("labelCoincidenceResult");
         label->setContentsMargins(9, 0, 0, 0);
         label->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
@@ -323,10 +336,11 @@ void PlotWidget::dispatchAdditionalDragFunction(QCustomPlot *customPlot)
     dragRectItem->setSelectedPen(QPen(clrSelect, 1, Qt::DotLine));
     dragRectItem->setVisible(false);
 
+    //创建符合能窗边界线
     auto createStraightLineItem = [=](QCPItemStraightLine** _line){
         QCPItemStraightLine *line = new QCPItemStraightLine(customPlot);
         line->setLayer("overlay");
-        line->setPen(QPen(Qt::gray, 1, Qt::DotLine));
+        line->setPen(QPen(Qt::blue, 1, Qt::DotLine));
         line->setClipToAxisRect(true);
         line->point1->setCoords(0, 0);
         line->point2->setCoords(0, 0);
@@ -338,6 +352,11 @@ void PlotWidget::dispatchAdditionalDragFunction(QCustomPlot *customPlot)
     itemStraightLineLeft->setObjectName("itemStraightLineLeft");
     createStraightLineItem(&itemStraightLineRight);
     itemStraightLineRight->setObjectName("itemStraightLineRight");
+
+    itemStraightLineLeft->point1->setCoords(3000, 0);
+    itemStraightLineLeft->point2->setCoords(3000, 100);
+    itemStraightLineRight->point1->setCoords(4000, 0);
+    itemStraightLineRight->point2->setCoords(4000, 100);
 }
 
 

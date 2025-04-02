@@ -36,6 +36,7 @@ SOURCES += \
     mainwindow.cpp \
     qlitethread.cpp \
     spectrumModel.cpp \
+    splashwidget.cpp \
     sysutils.cpp \
     waveformmodel.cpp \
     FPGASetting.cpp
@@ -61,6 +62,7 @@ HEADERS += \
     mainwindow.h \
     qlitethread.h \
     spectrumModel.h \
+    splashwidget.h \
     sysutils.h \
     waveformmodel.h \
     FPGASetting.h
@@ -74,6 +76,7 @@ FORMS += \
     dataanalysiswidget.ui \
     energycalibrationform.ui \
     spectrumModel.ui \
+    splashwidget.ui \
     waveformmodel.ui \
     equipmentmanagementform.ui \
     mainwindow.ui
@@ -219,3 +222,11 @@ contains(QT_ARCH, x86_64) {
 }
 
 INCLUDEPATH += $$PWD/3rdParty/ftcoreimc_win_v1.3.0.9n/inc
+
+#win32: LIBS += -L$$PWD/dwarfstack-2.2/lib/ -ldwarfstack
+
+#INCLUDEPATH += $$PWD/dwarfstack-2.2/include
+#DEPENDPATH += $$PWD/dwarfstack-2.2/include
+
+#win32:!win32-g++: PRE_TARGETDEPS += $$PWD/dwarfstack-2.2/lib/dwarfstack.lib
+#else:win32-g++: PRE_TARGETDEPS += $$PWD/dwarfstack-2.2/lib/libdwarfstack.a

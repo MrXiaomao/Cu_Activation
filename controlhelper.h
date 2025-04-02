@@ -4,8 +4,8 @@
 #include <QObject>
 #include <QMutex>
 #include "ftcoreimc.h"
-#include "quithread.h"
-
+#include "qlitethread.h"
+#define MAX_MISTAKE_VALUE   1e-2
 class ControlHelper : public QObject
 {
     Q_OBJECT
@@ -21,7 +21,7 @@ public:
     void load();
     bool connected();
 
-    void gotoAbs(int index, float max_speed = 5.);
+    QPair<float, float> gotoAbs(int index, float max_speed = 5.);
 
     /// 获取sdk的版本号，如“1.1.0.0”
     const char* getsdkversion();
@@ -153,7 +153,7 @@ private:
     QString mIp;
     qint32 mPort;
     QString mAxiaName[3] = {"'",  "01", "02" };
-    QUiThread* mpWorkThread;
+    QLiteThread* mpWorkThread;
     bool taskFinished = false;
 };
 

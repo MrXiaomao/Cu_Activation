@@ -53,9 +53,84 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
         if (count <= 0)
             return;
 
-        // 读取数据
-        std::cout << "sub thread id:" << QThread::currentThreadId() << std::endl;
-        sigPlot(r1, r2, r3);
+        // 处理冷却时长（冷却时长内的能量数据都做0处理）
+        if (detectorParameter.measureModel==0x00){
+            for (size_t i=0; i<r1.size(); ++i){
+                if (r1[i].time < detectorParameter.cool_timelength){
+                    memset(&r1[i].spectrum, 0, sizeof(r1[i].spectrum));
+                } else{
+                    break;
+                }
+            }
+        }
+
+        //时间步长
+        if (this->stepT > 1){
+            if (r1.size() % this->stepT == 0){
+                vector<SingleSpectrum> rr1;
+                {
+                    size_t i=0;
+                    while (i <= r1.size()){
+                        SingleSpectrum v;
+                        if (i % this->stepT == 1){
+                            v.time = r1[i].time + this->stepT - 1;
+                            memset(&v.spectrum, 0, sizeof(v.spectrum));
+                            for (int j=0; j<this->stepT; ++j){
+                                for (int k=0; k<MULTI_CHANNEL; ++k){
+                                    v.spectrum[0][k] += r1[i+j].spectrum[0][k];
+                                    v.spectrum[1][k] += r1[i+j].spectrum[1][k];
+                                }
+                            }
+
+                            i += this->stepT;
+                            rr1.push_back(v);
+                        }
+                    }
+                }
+
+                vector<CurrentPoint> rr2;
+                {
+                    size_t i=0;
+                    while (i <= r2.size()){
+                        CurrentPoint v;
+                        if (i % this->stepT == 1){
+                            memset(&v, 0, sizeof(v));
+                            for (int j=0; j<this->stepT; ++j){
+                                v.dataPoint1 += r2[i+j].dataPoint1;
+                                v.dataPoint2 += r2[i+j].dataPoint2;
+                            }
+
+                            i += this->stepT;
+                            rr2.push_back(v);
+                        }
+                    }
+                }
+
+                vector<CoincidenceResult> rr3;
+                {
+                    size_t i=0;
+                    while (i <= r3.size()){
+                        CoincidenceResult v;
+                        if (i % this->stepT == 1){
+                            memset(&v, 0, sizeof(v));
+                            for (int j=0; j<this->stepT; ++j){
+                                v.CountRate1 += r3[i+j].CountRate1;
+                                v.CountRate2 += r3[i+j].CountRate2;
+                                v.ConCount_single += r3[i+j].ConCount_single;
+                                v.ConCount_multiple += r3[i+j].ConCount_multiple;
+                            }
+
+                            i += this->stepT;
+                            rr3.push_back(v);
+                        }
+                    }
+                }
+
+                sigPlot(rr1, rr2, rr3);
+            }
+        } else{
+            sigPlot(r1, r2, r3);
+        }
     });
 
     connect(this, &CommandHelper::sigMeasureStop, this, [=](){
@@ -158,7 +233,7 @@ void CommandHelper::startWork()
 //    connect(netWorker, &NetWorker::sigDispatchEnergyPkg, energyWorker, &EnergyWorker::handleDispatchEnergyPkg);
 //    connect(energyWorker, &NetWorker::sigDispatchEnergyPkg, energyWorker, &EnergyWorker::handleDispatchEnergyPkg);
 
-    analyzeNetDataThread = new QUiThread(this);
+    analyzeNetDataThread = new QLiteThread(this);
     analyzeNetDataThread->setObjectName("analyzeNetDataThread");
     analyzeNetDataThread->setWorkThreadProc([=](){
         slotAnalyzeNetFrame();
@@ -170,7 +245,7 @@ void CommandHelper::startWork()
     });
 
     // 图形数据刷新
-    plotUpdateThread = new QUiThread(this);
+    plotUpdateThread = new QLiteThread(this);
     plotUpdateThread->setObjectName("plotUpdateThread");
     plotUpdateThread->setWorkThreadProc([=](){
         slotPlotUpdateFrame();

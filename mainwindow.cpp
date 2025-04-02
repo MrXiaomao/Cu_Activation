@@ -7,6 +7,8 @@
 #include "plotwidget.h"
 #include "FPGASetting.h"
 #include "qcustomplot.h"
+#include "splashwidget.h"
+
 #include <QFileDialog>
 #include <QToolButton>
 #include <QTimer>
@@ -53,6 +55,10 @@ MainWindow::MainWindow(QWidget *parent)
     commandHelper = CommandHelper::instance();
     controlHelper = ControlHelper::instance();
 
+    connect(controlHelper, &ControlHelper::sigError, this, [=](QString msg){
+        emit sigAppengMsg(msg, QtMsgType::QtWarningMsg);
+    });
+
     //外设状态
     connect(controlHelper, &ControlHelper::sigControlFault, this, [=](){
         this->setProperty("control_fault", true);
@@ -78,12 +84,28 @@ MainWindow::MainWindow(QWidget *parent)
         emit sigRefreshUi();
     });
 
+    this->setProperty("axis-prepared", false);
     connect(controlHelper, &ControlHelper::sigReportAbs, this, [=](float f1, float f2){
         QLabel* label_axis01 = this->findChild<QLabel*>("label_axis01");
         label_axis01->setText(tr("轴1：") + QString::number(f1 / 1000, 'f', 4) + " mm");
 
         QLabel* label_axis02 = this->findChild<QLabel*>("label_axis02");
         label_axis02->setText(tr("轴2：") + QString::number(f2 / 1000, 'f', 4) + " mm");
+
+        float axis01_target_position = this->property("axis01-target-position").toFloat();
+        float axis02_target_position = this->property("axis02-target-position").toFloat();
+
+        // 0.003误差3mm
+        if (qAbs(f1-axis01_target_position)<=MAX_MISTAKE_VALUE && qAbs(f2-axis02_target_position)<=MAX_MISTAKE_VALUE){
+            //if (!this->property("axis-prepared").toBool()){
+            //    this->setProperty("axis-prepared", true);
+
+                SplashWidget::instance()->hide();
+                emit sigAppengMsg(tr("位移平台已到位"), QtInfoMsg);
+            //}
+        } else{
+            this->setProperty("axis-prepared", false);
+        }
     });
 
     // 禁用开启电源按钮
@@ -122,9 +144,7 @@ MainWindow::MainWindow(QWidget *parent)
         this->setProperty("measure-status", msStart);
         this->setProperty("measure-model", mode);
         if (mode == mmAuto)
-            ui->start_time_text->setText(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
-        QString msg = tr("测量正式开始");
-        emit sigAppengMsg(msg, QtCriticalMsg);
+            ui->start_time_text->setText(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));        
 
         //开启测量时钟
         if (mode == mmManual || mode == mmAuto){//手动/自动测量
@@ -138,6 +158,7 @@ MainWindow::MainWindow(QWidget *parent)
             measureRefTimer->start(500);
         }
 
+        QString msg = tr("测量正式开始");
         emit sigAppengMsg(msg, QtInfoMsg);
         emit sigRefreshUi();
     });
@@ -200,14 +221,13 @@ MainWindow::MainWindow(QWidget *parent)
             PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
             plotWidget->slotUpdatePlotDatas(r1, r2, r3);
 
-            std::cout << "sub thread id:" << QThread::currentThreadId() << std::endl;
             ui->lcdNumber_CountRate1->display(r3.back().CountRate1);
             ui->lcdNumber_CountRate2->display(r3.back().CountRate2);
             ui->lcdNumber_ConCount_single->display(r3.back().ConCount_single);
         }
     }, Qt::DirectConnection/*防止堵塞*/);
     //DirectConnection replot 子线程操作，不会堵塞，但是会崩溃
-    //QueuedConnection replot 主线程操作，刷新慢，占内存
+    //QueuedConnection replot 主线程操作，刷新慢
 
     emit sigRefreshUi();
 
@@ -282,15 +302,17 @@ void MainWindow::InitMainWindowUi()
         QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
         QJsonObject jsonObj = jsonDoc.object();
 
+        QString cacheDir = jsonObj["defaultCache"].toString();
+        commandHelper->setDefaultCacheDir(cacheDir);
+
         ui->lineEdit_path->setText(jsonObj["path"].toString());
         ui->lineEdit_filename->setText(jsonObj["filename"].toString());
 
-        QString cacheDir = jsonObj["defaultCache"].toString();
-        commandHelper->setDefaultCacheDir(cacheDir);
+
     } else {
         ui->lineEdit_path->setText("./");
         ui->lineEdit_filename->setText("test.dat");
-        commandHelper->setDefaultCacheDir("./");
+        commandHelper->setDefaultCacheDir("./cache");
     }
 
     // 测量结果-存储路径
@@ -318,7 +340,12 @@ void MainWindow::InitMainWindowUi()
     connect(ui->comboBox_range_2, QOverload<int>::of(&QComboBox::currentIndexChanged), ui->comboBox_range, &QComboBox::setCurrentIndex);
     connect(ui->comboBox_range_3, QOverload<int>::of(&QComboBox::currentIndexChanged), ui->comboBox_range, &QComboBox::setCurrentIndex);
     connect(ui->comboBox_range, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [=](int index){
-        controlHelper->gotoAbs(index);
+        QPair<float, float> pair = controlHelper->gotoAbs(index);
+        this->setProperty("axis01-target-position", pair.first);
+        this->setProperty("axis02-target-position", pair.second);
+
+        SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待..."));
+        SplashWidget::instance()->exec();
     });
 
     // 显示计数/能谱
@@ -587,8 +614,14 @@ void MainWindow::on_action_displacement_triggered()
 
     //位移平台
     if (!this->property("control_on").toBool()){
-        if (controlHelper->open_tcp())
-            controlHelper->gotoAbs(0);
+        if (controlHelper->open_tcp()){
+            //controlHelper->single_home(0x01);
+            //controlHelper->single_home(0x02);
+
+            QPair<float, float> pair = controlHelper->gotoAbs(0);
+            this->setProperty("axis01-target-position", pair.first);
+            this->setProperty("axis02-target-position", pair.second);
+        }
     } else {
         controlHelper->close();
     }
@@ -712,7 +745,7 @@ void MainWindow::on_pushButton_measure_clicked()
                                     ui->spinBox_2_leftE->value(), ui->spinBox_2_rightE->value()};
             int timewidth = ui->spinBox_timeWidth->value();
             QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
-            measureTimer->setInterval(ui->spinBox_timelength_3->value() * 1000);
+            measureTimer->setInterval(ui->spinBox_timelength->value() * 1000);
             commandHelper->updateParamter(stepT, EnWin, timewidth, false);
             commandHelper->slotStartManualMeasure(detectorParameter);
 
@@ -790,7 +823,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
             ui->spinBox_2_leftE->value(), ui->spinBox_2_rightE->value()};
         int timewidth = ui->spinBox_timeWidth->value();
         QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
-        measureTimer->setInterval(ui->spinBox_timelength_3->value() * 1000);
+        measureTimer->setInterval(ui->spinBox_timelength_2->value() * 1000);
 
         commandHelper->updateParamter(stepT, EnWin, timewidth, false);
         commandHelper->slotStartAutoMeasure(detectorParameter);

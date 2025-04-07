@@ -68,7 +68,7 @@ WaveformModel::WaveformModel(QWidget *parent)
         ui->label_ref->setText(QString::number(total_ref));
     });
 
-    connect(commandhelper, &CommandHelper::sigMeasureStart, this, [=](qint8 mode){
+    connect(commandhelper, &CommandHelper::sigMeasureStart, this, [=](qint8 mmode, qint8 tmode){
         measuring = true;
         ui->pushButton_start->setText(tr("停止测量"));
 

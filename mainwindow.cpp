@@ -133,8 +133,8 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     // 自动测量开始
-    connect(commandHelper, &CommandHelper::sigMeasureStart, this, [=](qint8 mode){
-        if (mode == 0x02 || mode == 0x03)
+    connect(commandHelper, &CommandHelper::sigMeasureStart, this, [=](qint8 mmode, qint8 tmode){
+        if (tmode == 0x02 || tmode == 0x03)
             return;//波形测量、能谱测量
 
         lastRecvDataTime = QDateTime::currentDateTime();
@@ -142,12 +142,12 @@ MainWindow::MainWindow(QWidget *parent)
         exceptionCheckTimer->start(5000);
 
         this->setProperty("measure-status", msStart);
-        this->setProperty("measure-model", mode);
-        if (mode == mmAuto)
+        this->setProperty("measure-model", mmode);
+        if (mmode == mmAuto)
             ui->start_time_text->setText(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));        
 
         //开启测量时钟
-        if (mode == mmManual || mode == mmAuto){//手动/自动测量
+        if (mmode == mmManual || mmode == mmAuto){//手动/自动测量
             //测量倒计时时钟
             QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
             measureTimer->start();
@@ -829,7 +829,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         commandHelper->slotStartAutoMeasure(detectorParameter);
 
         ui->pushButton_measure_2_tip->setText(tr("等待触发..."));
-        QTimer::singleShot(3000, this, [=](){
+        QTimer::singleShot(300000, this, [=](){
             //指定时间未收到开始测量指令，则按钮恢复初始状态
             if (this->property("measure-status").toUInt() == msPrepare){
                 commandHelper->slotStopAutoMeasure();

@@ -14,6 +14,15 @@
 CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
   , coincidenceAnalyzer(new CoincidenceAnalyzer)
 {
+    gainValue[0x00] = 0.08;
+    gainValue[0x01] = 0.16;
+    gainValue[0x02] = 0.32;
+    gainValue[0x03] = 0.63;
+    gainValue[0x04] = 1.26;
+    gainValue[0x05] = 2.52;
+    gainValue[0x06] = 5.01;
+    gainValue[0x07] = 10.0;
+
     initSocket(&socketRelay);
     //网络异常
     connect(socketRelay, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error), this, [=](QAbstractSocket::SocketError){
@@ -184,22 +193,8 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                     out << "波形极性;" << ((detectorParameter.waveformPolarity==0x00) ? tr("正极性") : tr("负极性"));
                     out << "死时间;" << detectorParameter.dieTimeLength;
                     out << "波形触发模式;" << ((detectorParameter.triggerModel==0x00) ? tr("normal") : tr("auto"));
-                    if (detectorParameter.gain==0x00)
-                        out << "探测器增益;" << "0.08";
-                    else if (detectorParameter.gain==0x01)
-                        out << "探测器增益;" << "0.16";
-                    else if (detectorParameter.gain==0x02)
-                        out << "探测器增益;" << "0.32";
-                    else if (detectorParameter.gain==0x03)
-                        out << "探测器增益;" << "0.63";
-                    else if (detectorParameter.gain==0x04)
-                        out << "探测器增益;" << "1.26";
-                    else if (detectorParameter.gain==0x05)
-                        out << "探测器增益;" << "2.52";
-                    else if (detectorParameter.gain==0x06)
-                        out << "探测器增益;" << "5.01";
-                    else if (detectorParameter.gain==0x00)
-                        out << "探测器增益;" << "10";
+                    if (gainValue.contains(detectorParameter.gain))
+                        out << "探测器增益;" << gainValue[detectorParameter.gain];
                 }
 
                 file.flush();
@@ -638,6 +633,7 @@ void CommandHelper::slotWaveformLength(quint8 v)
 //能谱模式/粒子模式死时间
 void CommandHelper::slotDieTimeLength(quint16 dieTimelength)
 {
+    dieTimelength = dieTimelength/10;//转化为单位10ns
     //清空
     command.clear();
 
@@ -760,8 +756,8 @@ void CommandHelper::slotStart(qint8 mode)
 
     quint8 ch1 = 0x01;
     quint8 ch2 = 0x01;
-    quint8 ch3 = 0x01;
-    quint8 ch4 = 0x01;
+    quint8 ch3 = 0x00;
+    quint8 ch4 = 0x00;
 
     //是否开启相应通道,0关闭，1开启    CH4在高位，    CH3在低位
     dataStream << (quint8)((ch4 << 4) | (ch3 & 0x01));
@@ -779,7 +775,7 @@ void CommandHelper::slotStart(qint8 mode)
     socketDetector->write(command);
 }
 
-//开始手工测量
+//开始手动测量
 #include <QThread>
 void CommandHelper::slotStartManualMeasure(DetectorParameter p)
 {
@@ -817,12 +813,12 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
                         qInfo() << QString("设置能谱刷新时间，值=%1").arg(detectorParameter.refreshTimeLength);
                         slotSpectnumRefreshTimeLength(detectorParameter.refreshTimeLength);
                     } else if (detectorParameter.transferModel == 0x03 || detectorParameter.transferModel == 0x05){
-                        qInfo() << QString("设置能谱模式/粒子模式死时间，值=%1").arg(detectorParameter.dieTimeLength);
+                        qInfo() << QString("设置死时间，值=%1").arg(detectorParameter.dieTimeLength);
                         slotDieTimeLength(detectorParameter.dieTimeLength);
                     }
                     break;
                 case 3: // 探测器增益
-                    qInfo() << QString("设置增益，值=%1").arg(detectorParameter.dieTimeLength);
+                    qInfo() << QString("设置增益，值=%1").arg(gainValue[detectorParameter.gain]);
                     slotDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00);
                     break;
                 case 4: // 传输模式
@@ -833,7 +829,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
                     slotStart(0x01);
                     break;
                 case 6: // 开始测量/停止测量
-                    sigMeasureStart(detectorParameter.measureModel);
+                    sigMeasureStart(detectorParameter.measureModel, detectorParameter.transferModel);
                     workStatus = Measuring;
                     binaryData.remove(0, command.size());
                     break;
@@ -856,11 +852,11 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
                     slotWaveformPolarity(detectorParameter.waveformPolarity);
                     break;
                 case 2: // 能谱模式/粒子模式死时间
-                    qInfo() << QString("设置能谱模式/粒子模式死时间，值=%1").arg(detectorParameter.dieTimeLength);
+                    qInfo() << QString("设置死时间，值=%1").arg(detectorParameter.dieTimeLength);
                     slotDieTimeLength(detectorParameter.dieTimeLength);
                     break;
                 case 3: // 探测器增益
-                    qInfo() << QString("设置增益，值=%1").arg(detectorParameter.dieTimeLength);
+                    qInfo() << QString("设置增益，值=%1").arg(gainValue[detectorParameter.gain]);
                     slotDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00);
                     break;
                 case 4: // 波形长度
@@ -879,7 +875,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
                     slotStart(0x01);
                     break;
                 case 8: // 手动波形测量正式开始
-                    emit sigMeasureStart(detectorParameter.measureModel);
+                    emit sigMeasureStart(detectorParameter.measureModel, detectorParameter.transferModel);
                     workStatus = Measuring;
                     binaryData.remove(0, command.size());
                     break;
@@ -895,7 +891,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
             }
 
             // 只有符合模式才需要做进一步数据处理
-            if (detectorParameter.transferModel == 0x05 || detectorParameter.transferModel == 0x03){
+            if (detectorParameter.transferModel == 0x05){
                 QMutexLocker locker(&mutexCache);
                 cachePool.push_back(binaryData);
                 //netWorker->push_back(binaryData);
@@ -950,15 +946,15 @@ void CommandHelper::slotStopManualMeasure()
     dataStream << (quint8)0xff;
     dataStream << (quint8)0x10;
 
-    quint8 ch1 = 0x00;
-    quint8 ch2 = 0x00;
+    quint8 ch1 = 0x01;
+    quint8 ch2 = 0x01;
     quint8 ch3 = 0x00;
     quint8 ch4 = 0x00;
 
     //是否开启相应通道,0关闭，1开启    CH4在高位，    CH3在低位
-    dataStream << (quint8)((ch4 & 0x10) | (ch3 & 0x01));
+    dataStream << (quint8)((ch4 << 4) | (ch3 & 0x01));
     //是否开启相应通道,0关闭，1开启    CH2在高位，    CH1在低位
-    dataStream << (quint8)((ch2 & 0x10) | (ch1 & 0x01));
+    dataStream << (quint8)((ch2 << 4) | (ch1 & 0x01));
     dataStream << (quint8)0x00;
 
     //00:停止 01:软件触发 02:硬件触发
@@ -973,7 +969,7 @@ void CommandHelper::slotStopManualMeasure()
     }
 }
 
-//开始能谱测量
+//开始自动测量
 void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
 {
     coincidenceAnalyzer->initialize();
@@ -992,6 +988,7 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
             if (binaryData.compare(command) == 0){
                 prepareStep++;
             } else if (prepareStep == 6){
+                // 处理硬件反馈指令
                 //清空
                 command.clear();
 
@@ -1028,7 +1025,7 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
                 slotDieTimeLength(detectorParameter.dieTimeLength);
                 break;
             case 3: // 探测器增益
-                qDebug() << QString("设置增益，值=%1").arg(detectorParameter.dieTimeLength);
+                qDebug() << QString("设置增益，值=%1").arg(gainValue[detectorParameter.gain]);
                 slotDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00);
                 break;
             case 4: // 传输模式
@@ -1046,7 +1043,7 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
             case 7:
                 // 自动测量正式开始
                 workStatus = Measuring;
-                emit sigMeasureStart(detectorParameter.measureModel);
+                emit sigMeasureStart(detectorParameter.measureModel, detectorParameter.transferModel);
                 binaryData.remove(0, command.size());
                 break;
             }
@@ -1109,15 +1106,15 @@ void CommandHelper::slotStopAutoMeasure()
     dataStream << (quint8)0xff;
     dataStream << (quint8)0x10;
 
-    quint8 ch1 = 0x00;
-    quint8 ch2 = 0x00;
+    quint8 ch1 = 0x01;
+    quint8 ch2 = 0x01;
     quint8 ch3 = 0x00;
     quint8 ch4 = 0x00;
 
     //是否开启相应通道,0关闭，1开启    CH4在高位，    CH3在低位
-    dataStream << (quint8)((ch4 & 0x10) | (ch3 & 0x01));
+    dataStream << (quint8)((ch4 << 4) | (ch3 & 0x01));
     //是否开启相应通道,0关闭，1开启    CH2在高位，    CH1在低位
-    dataStream << (quint8)((ch2 & 0x10) | (ch1 & 0x01));
+    dataStream << (quint8)((ch2 << 4) | (ch1 & 0x01));
     dataStream << (quint8)0x00;
 
     //00:停止 01:软件触发 02:硬件触发

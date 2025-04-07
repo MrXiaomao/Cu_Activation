@@ -44,7 +44,7 @@ typedef struct tagDetectorParameter{
     qint8 transferModel;
 
     // 测量模式
-    qint8 measureModel;//00-手动测量 01-自动测量 02-标定测量 03-波形测量 04-能谱测量
+    qint8 measureModel;//00-手动测量 01-自动测量 02-标定测量
 
     qint32 cool_timelength;//冷却时长
 } DetectorParameter;
@@ -139,6 +139,8 @@ public:
         WaverformModel = 3    // 波形
     };
 
+    QMap<qint8, double> gainValue;
+
 signals:
     // 继电器状态
     void sigRelayStatus(bool on);
@@ -161,7 +163,7 @@ signals:
     void sigAnalyzeFrame();
 
     //测量正式开始/等待/停止
-    void sigMeasureStart(qint8 mode);
+    void sigMeasureStart(qint8 mmode, qint8 tmode); //测量模式（手动、自动、标定），传输模式（能谱、波形、符合测量）
     void sigMeasureWait();
     void sigMeasureStop();
 

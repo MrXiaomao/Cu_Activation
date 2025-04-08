@@ -86,6 +86,12 @@ public:
         return AllSpectrum;
     }
 
+    //获取累计能谱
+    inline SingleSpectrum GetAccumulateSpectrum()
+    {
+        return AccumulateSpectrum;
+    }
+
     inline vector<CurrentPoint> GetPointPerSeconds(){
         return AllPoint;
     }
@@ -106,7 +112,7 @@ public:
             bool autoEnWidth = false);
 
     //这里加入回调函数，后期做成SDK会出现问题，SDK不存在回调，只存在返回值。
-    void set_callback(std::function<void(vector<SingleSpectrum>, vector<CurrentPoint>, vector<CoincidenceResult>)> func);
+    void set_callback(std::function<void(SingleSpectrum, vector<CoincidenceResult>)> func);
 
 private:
     // 统计给出两个探测器各自当前一秒钟测量数据的能谱，当前一秒钟没有测量信号，则能谱全为零
@@ -125,7 +131,7 @@ private:
     // maxEnergy: 多道中最大道址对应的能量值。
     // ch: 多道道数
     vector<int> GetSingleSpectrum(const vector<int>& data, int maxEnergy, unsigned short ch);
-
+    
     //统计给出当前一秒内的两个探测器各自数据点的个数
     void GetDataPoint(vector<TimeEnergy> data1, vector<TimeEnergy> data2);
 
@@ -143,9 +149,10 @@ private:
     vector<CoincidenceResult> coinResult; //将所有处理的数据都存放在这个容器中，FPGA时钟每一秒钟产生一个点
     // vector<SingleSpectrum> AllSpectrum;
     vector<SingleSpectrum> AllSpectrum;  //将处理的能谱数据都存放在这个容器中，FPGA时钟每一秒钟产生一个能谱，只存放最近一个小时的能谱。单端队列
+    SingleSpectrum AccumulateSpectrum; //累积能谱,将每秒的能谱进行累积后的能谱。
     vector<CurrentPoint> AllPoint; //每一秒内的各探测器的数据点个数
     vector<TimeEnergy> unusedData1, unusedData2;//用于存储未处理完的数据信息
-    std::function<void(vector<SingleSpectrum>, vector<CurrentPoint>, vector<CoincidenceResult>)> m_pfunc;
+    std::function<void(SingleSpectrum, vector<CoincidenceResult>)> m_pfunc;
     mutex mtx;
     
     // 用于高斯拟合，自动更新能窗

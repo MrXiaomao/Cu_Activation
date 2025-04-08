@@ -23,8 +23,8 @@ typedef struct tagDetectorParameter{
     qint8 waveformPolarity;
 
 
-    // 能谱模式/粒子模式死时间 单位x10ns
-    qint16 dieTimeLength;
+    // 能谱模式/粒子模式死时间 单位ns
+    qint16 deadTime;
     // 能谱刷新时间
     quint32 refreshTimeLength;
     //波形长度
@@ -157,7 +157,7 @@ signals:
     void sigCoincidenceResult(quint32, CoincidenceResult);
     void sigSingleSpectrum(SingleSpectrum);
     void sigCurrentPoint(quint32, CurrentPoint);
-    void sigPlot(vector<SingleSpectrum>, vector<CurrentPoint>, vector<CoincidenceResult>);
+    void sigPlot(SingleSpectrum, vector<CoincidenceResult>, int refreshT);
 
     void sigDoTasks();
     void sigAnalyzeFrame();
@@ -220,7 +220,7 @@ public slots:
     void slotWaveformLength(quint8 v = 0x04);
 
     //能谱模式/粒子模式死时间
-    void slotDieTimeLength(quint16 dieTimelength);
+    void slotDeadTime(quint16 deadTime);
 
     //能谱刷新时间
     void slotSpectnumRefreshTimeLength(quint32 refreshTimelength);
@@ -262,7 +262,7 @@ private:
 private:
     QString defaultCacheDir;
     QString currentFilename;
-    int stepT = 1;
+    int stepT = 1; //界面图像刷新时间
     int EnWindow[4]; // 探测器1左能窗、右能窗；探测器2左能窗、右能窗
     int timeWidth = 50;//时间窗宽度，单位ns(符合分辨时间)
     qint64 lastClockT = 0;

@@ -972,7 +972,7 @@ void PlotWidget::slotBeforeReplot()
 
 #include <QtMath>
 #include <math.h>
-void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPoint> r2, vector<CoincidenceResult> r3)
+void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult> r3, int refreshTime)
 {
     QMutexLocker locker(&mutexRefreshPlot);
 
@@ -986,8 +986,8 @@ void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPo
                 double maxPoint = 0.;
                 QVector<double> keys, values;
                 QVector<QColor> colors;
-                for (size_t i=0; i<r2.size(); ++i){
-                    keys << i+1;
+                for (size_t i=0; i<r3.size(); ++i){
+                    keys << (i+1)*refreshTime;
                     values << r3[i].CountRate1;
                     colors << clrLine;
                     maxPoint = qMax(maxPoint, values[i]);
@@ -1003,8 +1003,8 @@ void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPo
                 double maxPoint = 0.;
                 QVector<double> keys, values;
                 QVector<QColor> colors;
-                for (size_t i=0; i<r2.size(); ++i){
-                    keys << i+1;
+                for (size_t i=0; i<r3.size(); ++i){
+                    keys << (i+1)*refreshTime;
                     values << r3[i].CountRate2;
                     colors << clrLine2;
                     maxPoint = qMax(maxPoint, values[i]);
@@ -1025,7 +1025,7 @@ void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPo
                 double maxCount = 0;
 
                 for (size_t i=0; i<r3.size(); ++i){
-                    keys << (i+1);
+                    keys << (i+1)*refreshTime;
                     values << r3[i].ConCount_single;
                     colors << clrLine;
                     maxCount = qMax(maxCount, values[i]);
@@ -1043,16 +1043,11 @@ void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPo
                 QVector<double> keys, values;
                 QVector<QColor> colors;
 
-                for (size_t j=0; j<r1.size(); ++j){
-                    for (int i=0; i<MULTI_CHANNEL; ++i){
-                        energyValues[0][i] += r1[j].spectrum[0][i];
-                    }
-                }
-
                 for (int i=0; i<MULTI_CHANNEL; ++i){
                     keys << i+1;
                     colors << clrLine;
-                    values << energyValues[0][i];
+                    values << r1.spectrum[0][i];
+                    energyValues[0][i] = r1.spectrum[0][i];
                     maxEnergy = qMax(maxEnergy, values[i]);
                 }
 
@@ -1067,16 +1062,11 @@ void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPo
                 QVector<double> keys, values;
                 QVector<QColor> colors;
 
-                for (size_t j=0; j<r1.size(); ++j){
-                    for (int i=0; i<MULTI_CHANNEL; ++i){
-                        energyValues[1][i] += r1[j].spectrum[1][i];
-                    }
-                }
-
                 for (int i=0; i<MULTI_CHANNEL; ++i){
                     keys << i+1;
                     colors << clrLine;
-                    values << energyValues[1][i];
+                    values << r1.spectrum[1][i];
+                    energyValues[1][i] = r1.spectrum[1][i];
                     maxEnergy = qMax(maxEnergy, values[i]);
                 }
 
@@ -1098,9 +1088,9 @@ void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPo
                 double maxPoint = 0.;
                 QVector<double> keys, values;
                 QVector<QColor> colors;
-                for (size_t i=0; i<r2.size(); ++i){
-                    keys << i+1;
-                    values << r2[i].dataPoint1;
+                for (size_t i=0; i<r3.size(); ++i){
+                    keys << (i+1)*refreshTime;
+                    values << r3[i].CountRate1;
                     colors << clrLine;
                     maxPoint = qMax(maxPoint, values[i]);
                 }
@@ -1119,9 +1109,9 @@ void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPo
                 double maxPoint = 0.;
                 QVector<double> keys, values;
                 QVector<QColor> colors;
-                for (size_t i=0; i<r2.size(); ++i){
-                    keys << i+1;
-                    values << r2[i].dataPoint2;
+                for (size_t i=0; i<r3.size(); ++i){
+                    keys << (i+1)*refreshTime;
+                    values << r3[i].CountRate2;
                     colors << clrLine;
                     maxPoint = qMax(maxPoint, values[i]);
                 }
@@ -1141,7 +1131,7 @@ void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPo
                 double maxCount = 0;
 
                 for (size_t i=0; i<r3.size(); ++i){
-                    keys << (i+1);
+                    keys << (i+1)*refreshTime;
                     values << r3[i].ConCount_single;
                     colors << clrLine;
                     maxCount = qMax(maxCount, values[i]);
@@ -1159,16 +1149,11 @@ void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPo
                 QVector<double> keys, values;
                 QVector<QColor> colors;
 
-                for (size_t j=0; j<r1.size(); ++j){
-                    for (int i=0; i<MULTI_CHANNEL; ++i){
-                        energyValues[0][i] += r1[j].spectrum[0][i];
-                    }
-                }
-
                 for (int i=0; i<MULTI_CHANNEL; ++i){
                     keys << i+1;
                     colors << clrLine;
-                    values << energyValues[0][i];
+                    values << r1.spectrum[0][i];
+                    energyValues[0][i] = r1.spectrum[0][i];
                     maxEnergy = qMax(maxEnergy, values[i]);
                 }
 
@@ -1185,16 +1170,11 @@ void PlotWidget::slotUpdatePlotDatas(vector<SingleSpectrum> r1, vector<CurrentPo
                 QVector<double> keys, values;
                 QVector<QColor> colors;
 
-                for (size_t j=0; j<r1.size(); ++j){
-                    for (int i=0; i<MULTI_CHANNEL; ++i){
-                        energyValues[1][i] += r1[j].spectrum[1][i];
-                    }
-                }
-
                 for (int i=0; i<MULTI_CHANNEL; ++i){
                     keys << i+1;
                     colors << clrLine;
-                    values << energyValues[1][i];
+                    values << r1.spectrum[1][i];
+                    energyValues[1][i] = r1.spectrum[1][i];
                     maxEnergy = qMax(maxEnergy, values[i]);
                 }
 

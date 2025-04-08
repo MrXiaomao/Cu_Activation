@@ -14,6 +14,17 @@ FPGASetting::FPGASetting(QWidget *parent)
     ui->setupUi(this);
 
     this->load();
+
+    // 步长+自动修正
+    ui->spinBox_3->setToolTip("请输入10的倍数（如10, 20, 30）");
+    ui->spinBox_3->setSingleStep(10);
+    connect(ui->spinBox_3, QOverload<int>::of(&QSpinBox::valueChanged), [=](int value) {
+        if (value % 10 != 0) {
+            ui->spinBox_3->blockSignals(true);
+            ui->spinBox_3->setValue((value / 10) * 10);
+            ui->spinBox_3->blockSignals(false);
+        }
+    });
 }
 
 FPGASetting::~FPGASetting()
@@ -90,8 +101,8 @@ bool FPGASetting::save()
 
     //死时间
     {
-        quint16 dieTimelength = ui->spinBox_3->value();
-        jsonObj["DieTimeLength"] = dieTimelength;
+        quint16 deadTime = ui->spinBox_3->value();
+        jsonObj["DeadTime"] = deadTime;
     }
 
     QString path = QApplication::applicationDirPath() + "/config";
@@ -128,7 +139,7 @@ void FPGASetting::load()
         ui->spinBox->setValue(jsonObj["TriggerThold1"].toInt());
         ui->spinBox_2->setValue(jsonObj["TriggerThold2"].toInt());
 
-        ui->spinBox_3->setValue(jsonObj["DieTimeLength"].toInt());
+        ui->spinBox_3->setValue(jsonObj["DeadTime"].toInt());
     } else {
 
     }

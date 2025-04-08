@@ -25,9 +25,15 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
 
     initSocket(&socketRelay);
     //网络异常
+#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
     connect(socketRelay, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error), this, [=](QAbstractSocket::SocketError){
         emit sigRelayFault();
     });
+#else
+    // Qt 5.15 及之后版本
+    connect(socketRelay, &QAbstractSocket::errorOccurred,
+            this, [=] { emit sigRelayFault(); });
+#endif
 
     //状态改变
     connect(socketRelay, &QAbstractSocket::stateChanged, this, [=](QAbstractSocket::SocketState){
@@ -57,88 +63,39 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
     });
 
     //coincidenceAnalyzer->set_callback(std::bind(&CommandHelper::analyzerCalback, this, placeholders::_1, placeholders::_2, placeholders::_3));
-    coincidenceAnalyzer->set_callback([=](vector<SingleSpectrum> r1, vector<CurrentPoint> r2, vector<CoincidenceResult> r3) {
-        long count = r1.size();
+    coincidenceAnalyzer->set_callback([=](SingleSpectrum r1, vector<CoincidenceResult> r3) {
+        long count = r3.size();
+        int _stepT = this->stepT;
         if (count <= 0)
             return;
 
-        // 处理冷却时长（冷却时长内的能量数据都做0处理）
-        if (detectorParameter.measureModel==0x00){
-            for (size_t i=0; i<r1.size(); ++i){
-                if (r1[i].time < detectorParameter.cool_timelength){
-                    memset(&r1[i].spectrum, 0, sizeof(r1[i].spectrum));
-                } else{
-                    break;
-                }
-            }
-        }
-
-        //时间步长
-        if (this->stepT > 1){
-            if (r1.size() % this->stepT == 0){
-                vector<SingleSpectrum> rr1;
-                {
-                    size_t i=0;
-                    while (i <= r1.size()){
-                        SingleSpectrum v;
-                        if (i % this->stepT == 1){
-                            v.time = r1[i].time + this->stepT - 1;
-                            memset(&v.spectrum, 0, sizeof(v.spectrum));
-                            for (int j=0; j<this->stepT; ++j){
-                                for (int k=0; k<MULTI_CHANNEL; ++k){
-                                    v.spectrum[0][k] += r1[i+j].spectrum[0][k];
-                                    v.spectrum[1][k] += r1[i+j].spectrum[1][k];
-                                }
-                            }
-
-                            i += this->stepT;
-                            rr1.push_back(v);
-                        }
-                    }
-                }
-
-                vector<CurrentPoint> rr2;
-                {
-                    size_t i=0;
-                    while (i <= r2.size()){
-                        CurrentPoint v;
-                        if (i % this->stepT == 1){
-                            memset(&v, 0, sizeof(v));
-                            for (int j=0; j<this->stepT; ++j){
-                                v.dataPoint1 += r2[i+j].dataPoint1;
-                                v.dataPoint2 += r2[i+j].dataPoint2;
-                            }
-
-                            i += this->stepT;
-                            rr2.push_back(v);
-                        }
-                    }
-                }
-
+        //时间步长，求均值
+        if (_stepT > 1){
+            if (count>1 && (count % _stepT == 0)){
                 vector<CoincidenceResult> rr3;
-                {
-                    size_t i=0;
-                    while (i <= r3.size()){
-                        CoincidenceResult v;
-                        if (i % this->stepT == 1){
-                            memset(&v, 0, sizeof(v));
-                            for (int j=0; j<this->stepT; ++j){
-                                v.CountRate1 += r3[i+j].CountRate1;
-                                v.CountRate2 += r3[i+j].CountRate2;
-                                v.ConCount_single += r3[i+j].ConCount_single;
-                                v.ConCount_multiple += r3[i+j].ConCount_multiple;
-                            }
 
-                            i += this->stepT;
-                            rr3.push_back(v);
-                        }
+                for (size_t i=0; i < count/_stepT; i++){
+                    CoincidenceResult v;
+                    for (int j=0; j<_stepT; ++j){
+                        size_t posI = i*_stepT + j;
+                        v.CountRate1 += r3[posI].CountRate1;
+                        v.CountRate2 += r3[posI].CountRate2;
+                        v.ConCount_single += r3[posI].ConCount_single;
+                        v.ConCount_multiple += r3[posI].ConCount_multiple;
                     }
+
+                    //给出平均计数率cps,注意，这里是整除，当计数率小于1cps时会变成零。
+                    v.CountRate1 /= _stepT;
+                    v.CountRate2 /= _stepT;
+                    v.ConCount_single /= _stepT;
+                    v.ConCount_multiple /= _stepT;
+                    rr3.push_back(v);
                 }
 
-                sigPlot(rr1, rr2, rr3);
+                sigPlot(r1, rr3, _stepT);
             }
         } else{
-            sigPlot(r1, r2, r3);
+            sigPlot(r1, r3, _stepT);
         }
     });
 
@@ -191,7 +148,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                     out << "阈值1;" << detectorParameter.triggerThold1;
                     out << "阈值2;" << detectorParameter.triggerThold2;
                     out << "波形极性;" << ((detectorParameter.waveformPolarity==0x00) ? tr("正极性") : tr("负极性"));
-                    out << "死时间;" << detectorParameter.dieTimeLength;
+                    out << "死时间;" << detectorParameter.deadTime;
                     out << "波形触发模式;" << ((detectorParameter.triggerModel==0x00) ? tr("normal") : tr("auto"));
                     if (gainValue.contains(detectorParameter.gain))
                         out << "探测器增益;" << gainValue[detectorParameter.gain];
@@ -435,9 +392,15 @@ void CommandHelper::openDetector()
     disconnect(socketDetector, &QTcpSocket::readyRead, this, nullptr);
 
     //网络异常
+#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
+    // Qt 5.15 之前版本
     connect(socketDetector, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error), this, [=](QAbstractSocket::SocketError){
-        emit sigDetectorFault();
-    });
+        emit sigDetectorFault();});
+#else
+    // Qt 5.15 及之后版本
+    connect(socketRelay, &QAbstractSocket::errorOccurred, this, [=] {
+        emit sigRelayFault(); });
+#endif
 
     //状态改变
     connect(socketDetector, &QAbstractSocket::stateChanged, this, [=](QAbstractSocket::SocketState){
@@ -631,9 +594,9 @@ void CommandHelper::slotWaveformLength(quint8 v)
 }
 
 //能谱模式/粒子模式死时间
-void CommandHelper::slotDieTimeLength(quint16 dieTimelength)
+void CommandHelper::slotDeadTime(quint16 deadTime)
 {
-    dieTimelength = dieTimelength/10;//转化为单位10ns
+    deadTime = deadTime/10;//转化为单位10ns
     //清空
     command.clear();
 
@@ -647,7 +610,7 @@ void CommandHelper::slotDieTimeLength(quint16 dieTimelength)
 
     dataStream << (quint8)0x00;
     dataStream << (quint8)0x00;
-    dataStream << (quint16)dieTimelength;
+    dataStream << (quint16)deadTime;
 
     dataStream << (quint8)0xab;
     dataStream << (quint8)0xcd;
@@ -795,7 +758,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
             if (detectorParameter.transferModel == 0x00 || detectorParameter.transferModel == 0x05){
                 if (binaryData.compare(command) == 0){
                     prepareStep++;
-                } else if (prepareStep == 5){
+                } else if (prepareStep == 6){
                     QByteArray firstPart = binaryData.left(command.size());
                     if (firstPart == command){
                         // 比较成功
@@ -803,32 +766,35 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
                     }
                 }
 
+                QString tempStr;
                 switch (prepareStep) {
                 case 1: // 波形极性
-                    qInfo() << QString("设置波形极性, 值=%1").arg(detectorParameter.waveformPolarity);
+                    tempStr = (detectorParameter.waveformPolarity == 0x00) ? "正极性" : "负极性";
+                    qInfo() << "设置波形极性:"+tempStr;
                     slotWaveformPolarity(detectorParameter.waveformPolarity);
                     break;
                 case 2: // 能谱模式/粒子模式死时间
-                    if (detectorParameter.transferModel == 0x00){
-                        qInfo() << QString("设置能谱刷新时间，值=%1").arg(detectorParameter.refreshTimeLength);
-                        slotSpectnumRefreshTimeLength(detectorParameter.refreshTimeLength);
-                    } else if (detectorParameter.transferModel == 0x03 || detectorParameter.transferModel == 0x05){
-                        qInfo() << QString("设置死时间，值=%1").arg(detectorParameter.dieTimeLength);
-                        slotDieTimeLength(detectorParameter.dieTimeLength);
-                    }
+                    qInfo() << QString("设置死时间:%1ns").arg(detectorParameter.deadTime);
+                    slotDeadTime(detectorParameter.deadTime);
+                    if (detectorParameter.transferModel == 0x05) prepareStep++; // 粒子模式不需要发送能谱刷新时间
                     break;
-                case 3: // 探测器增益
-                    qInfo() << QString("设置增益，值=%1").arg(gainValue[detectorParameter.gain]);
+                case 3: // 能谱刷新时间
+                    qInfo() << QString("设置能谱刷新时间:%1ms").arg(detectorParameter.refreshTimeLength);
+                    slotSpectnumRefreshTimeLength(detectorParameter.refreshTimeLength);
+                    break;
+                case 4: // 探测器增益
+                    qInfo() << QString("设置增益:%1").arg(gainValue[detectorParameter.gain]);
                     slotDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00);
                     break;
-                case 4: // 传输模式
-                    qInfo() << QString("设置传输模式，值=%1").arg(detectorParameter.transferModel);
+                case 5: // 传输模式
+                    tempStr = detectorParameter.transferModel == 0x00?"能谱模式":"符合模式";
+                    qInfo() << "设置传输模式:"+tempStr;
                     slotTransferModel(detectorParameter.transferModel);
                     break;
-                case 5: // 开始测量/停止测量
+                case 6: // 开始测量/停止测量
                     slotStart(0x01);
                     break;
-                case 6: // 开始测量/停止测量
+                case 7: // 开始测量/停止测量
                     sigMeasureStart(detectorParameter.measureModel, detectorParameter.transferModel);
                     workStatus = Measuring;
                     binaryData.remove(0, command.size());
@@ -838,7 +804,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
                 //波形测量
                 if (binaryData.compare(command) == 0){
                     prepareStep++;
-                } else if (prepareStep == 7){
+                } else if (prepareStep == 6){
                     QByteArray firstPart = binaryData.left(command.size());
                     if (firstPart == command){
                         // 比较成功
@@ -846,35 +812,34 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
                     }
                 }
 
+                QString tempStr;
                 switch (prepareStep) {
                 case 1: // 波形极性
-                    qInfo() << QString("设置波形极性, 值=%1").arg(detectorParameter.waveformPolarity);
+                    tempStr = (detectorParameter.waveformPolarity == 0x00) ? "正极性" : "负极性";
+                    qInfo() << "设置波形极性:"+tempStr;
                     slotWaveformPolarity(detectorParameter.waveformPolarity);
                     break;
-                case 2: // 能谱模式/粒子模式死时间
-                    qInfo() << QString("设置死时间，值=%1").arg(detectorParameter.dieTimeLength);
-                    slotDieTimeLength(detectorParameter.dieTimeLength);
-                    break;
-                case 3: // 探测器增益
-                    qInfo() << QString("设置增益，值=%1").arg(gainValue[detectorParameter.gain]);
+                case 2: // 探测器增益
+                    qInfo() << QString("设置增益:%1").arg(gainValue[detectorParameter.gain]);
                     slotDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00);
                     break;
-                case 4: // 波形长度
-                    qInfo() << QString("设置波形长度，值=%1").arg(detectorParameter.waveLength);
+                case 3: // 波形长度
+                    qInfo() << QString("设置波形长度:%1").arg(detectorParameter.waveLength);
                     slotWaveformLength(detectorParameter.waveLength);
                     break;
-                case 5: // 波形触发模式
-                    qInfo() << QString("设置波形触发模式，值=%1").arg(detectorParameter.waveLength);
+                case 4: // 波形触发模式
+                    tempStr = detectorParameter.triggerModel==0x00?"normal":"auto";
+                    qInfo() << "设置波形触发模式:" + tempStr;
                     slotWaveformTriggerModel(detectorParameter.triggerModel);
                     break;
-                case 6: // 传输模式
-                    qInfo() << QString("设置传输模式，值=%1").arg(detectorParameter.transferModel);
+                case 5: // 传输模式
+                    qInfo() << "设置传输模式:波形模式";
                     slotTransferModel(detectorParameter.transferModel);
                     break;
-                case 7: // 开始测量/停止测量
+                case 6: // 开始测量/停止测量
                     slotStart(0x01);
                     break;
-                case 8: // 手动波形测量正式开始
+                case 7: // 手动波形测量正式开始
                     emit sigMeasureStart(detectorParameter.measureModel, detectorParameter.transferModel);
                     workStatus = Measuring;
                     binaryData.remove(0, command.size());
@@ -925,7 +890,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
         }
 
         // 触发阈值
-        qDebug() << QString("设置触发阈值, 值1=%1 值2=%2").arg(detectorParameter.triggerThold1).arg(detectorParameter.triggerThold2);
+        qInfo() << QString("设置触发阈值, 值1=%1 值2=%2").arg(detectorParameter.triggerThold1).arg(detectorParameter.triggerThold2);
         slotTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2);
     }
 }
@@ -1020,9 +985,9 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
                 qDebug() << QString("设置波形极性, 值=%1").arg(detectorParameter.waveformPolarity);
                 slotWaveformPolarity(detectorParameter.waveformPolarity);
                 break;
-            case 2: // 能谱模式/粒子模式死时间
-                qDebug() << QString("设置能谱模式/粒子模式死时间，值=%1").arg(detectorParameter.dieTimeLength);
-                slotDieTimeLength(detectorParameter.dieTimeLength);
+            case 2: // 死时间
+                qDebug() << QString("设置死时间，值=%1").arg(detectorParameter.deadTime);
+                slotDeadTime(detectorParameter.deadTime);
                 break;
             case 3: // 探测器增益
                 qDebug() << QString("设置增益，值=%1").arg(gainValue[detectorParameter.gain]);
@@ -1160,13 +1125,13 @@ void CommandHelper::slotDoTasks()
 
         //构造时间、能量序列2
         vector<TimeEnergy> data2;
-        long long lastT2 = 0LL;
+        unsigned long long lastT2 = 0LL;
         for(int i=0; i<nlength; i++)
         {
             int randT = (int)gaussDeltaT(gen);
             lastT2 += randT;
             unsigned short value = (unsigned short)gaussEn(gen);
-            data2.push_back({lastT,value});
+            data2.push_back({lastT2,value});
         }
 
         QMutexLocker locker(&mutexPlot);
@@ -1731,11 +1696,15 @@ void CommandHelper::slotPlotUpdateFrame()
 
                     if (data1_2.size() > 0 && data2_2.size() > 0 ){
                         QDateTime now = QDateTime::currentDateTime();
-//                        QElapsedTimer timer;
-//                        timer.start();
-                        //std::cout << "enter[" << QDateTime::currentDateTime().toString("hh:mm:ss.zzz").toStdString() << "] coincidenceAnalyzer->calculate data1.count=" << data1_2.size() << ", data2.count=" << data2_2.size() << std::endl;
                         coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, false);
-                        std::cout << "[" << now.toString("hh:mm:ss.zzz").toStdString() << "] coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime()) << ", data1.count=" << data1_2.size() << ", data2.count=" << data2_2.size() << std::endl;
+#ifdef QT_NO_DEBUG
+
+#else
+    std::cout << "[" << now.toString("hh:mm:ss.zzz").toStdString() \
+        << "] coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime()) \
+        << ", data1.count=" << data1_2.size() \
+        << ", data2.count=" << data2_2.size() << std::endl;
+#endif
                         data1_2.clear();
                         data2_2.clear();
                     }

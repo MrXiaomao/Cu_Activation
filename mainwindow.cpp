@@ -210,16 +210,16 @@ MainWindow::MainWindow(QWidget *parent)
         emit sigRefreshUi();
     });
 
-    qRegisterMetaType<vector<SingleSpectrum>>("vector<SingleSpectrum>");
-    qRegisterMetaType<vector<CurrentPoint>>("vector<CurrentPoint>");
+    qRegisterMetaType<SingleSpectrum>("SingleSpectrum");
+    // qRegisterMetaType<vector<CurrentPoint>>("vector<CurrentPoint>");
     qRegisterMetaType<vector<CoincidenceResult>>("vector<CoincidenceResult>");
     std::cout << "main thread id:" << QThread::currentThreadId() << std::endl;
-    connect(commandHelper, &CommandHelper::sigPlot, this, [=](vector<SingleSpectrum> r1, vector<CurrentPoint> r2, vector<CoincidenceResult> r3){
+    connect(commandHelper, &CommandHelper::sigPlot, this, [=](SingleSpectrum r1, vector<CoincidenceResult> r3, int refreshUI_time){
         lastRecvDataTime = QDateTime::currentDateTime();
         bool pause_plot = this->property("pause_plot").toBool();
         if (!pause_plot){
             PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
-            plotWidget->slotUpdatePlotDatas(r1, r2, r3);
+            plotWidget->slotUpdatePlotDatas(r1, r3, refreshUI_time);
 
             ui->lcdNumber_CountRate1->display(r3.back().CountRate1);
             ui->lcdNumber_CountRate2->display(r3.back().CountRate2);
@@ -355,7 +355,7 @@ void MainWindow::InitMainWindowUi()
     QButtonGroup *grp = new QButtonGroup(this);
     grp->addButton(ui->radioButton_ref, 0);
     grp->addButton(ui->radioButton_spectrum, 1);
-    connect(grp, QOverload<int>::of(&QButtonGroup::buttonClicked), this, [=](int index){        
+    connect(grp, QOverload<int>::of(&QButtonGroup::idClicked), this, [=](int index){
         commandHelper->switchShowModel(index == 0);
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
         plotWidget->slotResetPlot();
@@ -367,7 +367,7 @@ void MainWindow::InitMainWindowUi()
             ui->widget_gauss->show();
         }
     });
-    emit grp->buttonClicked(1);//默认能谱模式
+    emit grp->idClicked(1);//默认能谱模式
 
     // 任务栏信息
     QLabel *label_Idle = new QLabel(ui->statusbar);
@@ -707,7 +707,7 @@ void MainWindow::on_pushButton_measure_clicked()
             detectorParameter.triggerThold1 = 0x81;
             detectorParameter.triggerThold2 = 0x81;
             detectorParameter.waveformPolarity = 0x00;
-            detectorParameter.dieTimeLength = 1;
+            detectorParameter.deadTime = 0x0A;
             detectorParameter.gain = 0x00;
             detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
             detectorParameter.measureModel = mmManual;
@@ -727,7 +727,7 @@ void MainWindow::on_pushButton_measure_clicked()
                 detectorParameter.triggerThold1 = jsonObj["TriggerThold1"].toInt();
                 detectorParameter.triggerThold2 = jsonObj["TriggerThold2"].toInt();
                 detectorParameter.waveformPolarity = jsonObj["WaveformPolarity"].toInt();
-                detectorParameter.dieTimeLength = jsonObj["DieTimeLength"].toInt() / 10;
+                detectorParameter.deadTime = jsonObj["DeadTime"].toInt();
                 detectorParameter.gain = jsonObj["DetectorGain"].toInt();
             }
 
@@ -785,7 +785,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         detectorParameter.triggerThold1 = 0x81;
         detectorParameter.triggerThold2 = 0x81;
         detectorParameter.waveformPolarity = 0x00;
-        detectorParameter.dieTimeLength = 0x05;
+        detectorParameter.deadTime = 0x05*10;
         detectorParameter.gain = 0x00;
         detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
         detectorParameter.measureModel = mmAuto;
@@ -804,7 +804,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
             detectorParameter.triggerThold1 = jsonObj["TriggerThold1"].toInt();
             detectorParameter.triggerThold2 = jsonObj["TriggerThold2"].toInt();
             detectorParameter.waveformPolarity = jsonObj["WaveformPolarity"].toInt();
-            detectorParameter.dieTimeLength = jsonObj["DieTimeLength"].toInt();
+            detectorParameter.deadTime = jsonObj["DeadTime"].toInt();
             detectorParameter.gain = jsonObj["DetectorGain"].toInt();
         }
 
@@ -829,7 +829,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         commandHelper->slotStartAutoMeasure(detectorParameter);
 
         ui->pushButton_measure_2_tip->setText(tr("等待触发..."));
-        QTimer::singleShot(300000, this, [=](){
+        QTimer::singleShot(3000, this, [=](){
             //指定时间未收到开始测量指令，则按钮恢复初始状态
             if (this->property("measure-status").toUInt() == msPrepare){
                 commandHelper->slotStopAutoMeasure();
@@ -1126,6 +1126,9 @@ void MainWindow::slotRefreshUi()
             ui->pushButton_measure->setEnabled(true);
             ui->pushButton_refresh->setEnabled(true);
 
+            ui->spinBox_timelength->setEnabled(false);
+            ui->spinBox_cool_timelength->setEnabled(false);
+
             ui->action_power->setEnabled(false);
             ui->action_detector_connect->setEnabled(false);
 
@@ -1152,7 +1155,8 @@ void MainWindow::slotRefreshUi()
         } else if (this->property("measur-model").toInt() == mmAuto){//自动测量
             ui->pushButton_measure_2->setText(tr("停止测量"));
             ui->pushButton_measure_2->setEnabled(true);
-
+            
+            ui->spinBox_timelength_2->setEnabled(false);
             //公共
             ui->pushButton_save->setEnabled(false);
             ui->pushButton_gauss->setEnabled(true);
@@ -1179,15 +1183,14 @@ void MainWindow::slotRefreshUi()
             ui->pushButton_measure_2->setEnabled(false);
         }
     } else {
-        ui->comboBox_range->setEnabled(true);
-        ui->comboBox_range_2->setEnabled(true);
-        ui->comboBox_range_3->setEnabled(true);
-
         ui->pushButton_measure->setText(tr("开始测量"));
         ui->pushButton_measure_2->setText(tr("开始测量"));
         ui->pushButton_measure_3->setText(tr("开始测量"));
 
         // 手动测量
+        ui->spinBox_timelength->setEnabled(true);
+        ui->comboBox_range->setEnabled(true);
+        ui->spinBox_cool_timelength->setEnabled(true);
         ui->spinBox_1_leftE->setEnabled(true);
         ui->spinBox_1_rightE->setEnabled(true);
         ui->spinBox_2_leftE->setEnabled(true);
@@ -1195,6 +1198,8 @@ void MainWindow::slotRefreshUi()
         ui->spinBox_timeWidth->setEnabled(true);
 
         // 自动测量
+        ui->spinBox_timelength_2->setEnabled(false);
+        ui->comboBox_range_2->setEnabled(true);
         ui->spinBox_1_leftE_2->setEnabled(true);
         ui->spinBox_1_rightE_2->setEnabled(true);
         ui->spinBox_2_leftE_2->setEnabled(true);
@@ -1202,6 +1207,7 @@ void MainWindow::slotRefreshUi()
         ui->spinBox_timeWidth_2->setEnabled(true);
 
         // 标定测量
+        ui->comboBox_range_3->setEnabled(true);
         ui->spinBox_1_leftE_3->setEnabled(true);
         ui->spinBox_1_rightE_3->setEnabled(true);
         ui->spinBox_2_leftE_3->setEnabled(true);

@@ -41,7 +41,7 @@ public slots:
     void slotRestorePlot();
 
     //批量刷新
-    void slotUpdatePlotDatas(vector<SingleSpectrum>, vector<CurrentPoint>, vector<CoincidenceResult>);
+    void slotUpdatePlotDatas(SingleSpectrum, vector<CoincidenceResult>, int refreshTime);
 
     void slotResetPlot();
     void slotGauss(int leftE, int rightE);

@@ -35,7 +35,7 @@ GaussCountMin(2000)
     EnergyWindow[3] = MULTI_CHANNEL - 1;
 }
 
-void CoincidenceAnalyzer::set_callback(std::function<void(vector<SingleSpectrum>, vector<CurrentPoint>, vector<CoincidenceResult>)> func)
+void CoincidenceAnalyzer::set_callback(std::function<void(SingleSpectrum, vector<CoincidenceResult>)> func)
 {
     m_pfunc = func;
 }
@@ -131,7 +131,7 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
         time1_elapseFPGA = lastTime1/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
         time2_elapseFPGA = lastTime2/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
 
-        m_pfunc(AllSpectrum, AllPoint, coinResult);
+        m_pfunc(AccumulateSpectrum, coinResult);
     }
 
     //将容器中未经处理的数据点添加到缓存保存起来，下次优先处理
@@ -164,6 +164,7 @@ void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> data1, vector<
         for(int i = 0; i<MULTI_CHANNEL; i++)
         {
             spec_temp.spectrum[0][i] = spectrum1[i];
+            AccumulateSpectrum.spectrum[0][i] += spectrum1[i];
         }
     }
     if(length2>0)
@@ -178,6 +179,7 @@ void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> data1, vector<
         for(int i = 0; i<MULTI_CHANNEL; i++)
         {
             spec_temp.spectrum[1][i] = spectrum2[i];
+            AccumulateSpectrum.spectrum[1][i] += spectrum2[i];
         }
     }
 

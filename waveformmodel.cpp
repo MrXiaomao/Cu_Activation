@@ -124,8 +124,6 @@ void WaveformModel::load()
         ui->spinBox->setValue(jsonObj["TriggerThold1"].toInt());
         ui->spinBox_2->setValue(jsonObj["TriggerThold2"].toInt());
 
-        ui->spinBox_3->setValue(jsonObj["DieTimeLength"].toInt());
-
         ui->lineEdit_path->setText(jsonObj["Path"].toString());
         ui->lineEdit_filename->setText(jsonObj["FileName"].toString());
 
@@ -194,18 +192,6 @@ bool WaveformModel::save()
         jsonObj["TriggerThold4"] = ch4;
     }
 
-    //死时间
-    {
-        quint16 dieTimeLength = ui->spinBox_3->value();
-        jsonObj["DieTimeLength"] = dieTimeLength;
-    }
-
-    //波形
-    {
-        quint16 dieTimeLength = ui->spinBox_3->value();
-        jsonObj["DieTimeLength"] = dieTimeLength;
-    }
-
     //波形长度
     {
         quint8 waveLength = 0x00;
@@ -267,7 +253,7 @@ void WaveformModel::on_pushButton_start_clicked()
         detectorParameter.triggerThold1 = 0x81;
         detectorParameter.triggerThold2 = 0x81;
         detectorParameter.waveformPolarity = 0x00;
-        detectorParameter.dieTimeLength = 0x05;
+        detectorParameter.deadTime = 0x05 * 10;
         detectorParameter.gain = 0x00;
         detectorParameter.waveLength = 0x01;
         detectorParameter.transferModel = 0x03;// 0x00-能谱 0x03-波形 0x05-符合模式
@@ -287,7 +273,7 @@ void WaveformModel::on_pushButton_start_clicked()
             detectorParameter.triggerThold1 = jsonObj["TriggerThold1"].toInt();
             detectorParameter.triggerThold2 = jsonObj["TriggerThold2"].toInt();
             detectorParameter.waveformPolarity = jsonObj["WaveformPolarity"].toInt();
-            detectorParameter.dieTimeLength = jsonObj["DieTimeLength"].toInt();
+            detectorParameter.deadTime = jsonObj["DeadTime"].toInt();
             detectorParameter.waveLength = jsonObj["WaveLength"].toInt();
             detectorParameter.triggerModel = jsonObj["TriggerModel"].toInt();
             detectorParameter.gain = jsonObj["DetectorGain"].toInt();

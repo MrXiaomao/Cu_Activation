@@ -265,7 +265,7 @@ void CommandHelper::openRelay()
     if (socketRelay->isOpen())
         socketRelay->disconnectFromHost();
 
-    disconnect(socketRelay, &QTcpSocket::readyRead, this, nullptr);
+    disconnect(socketRelay, nullptr, this, nullptr);
 
     socketRelay->setProperty("firstQuery", true);
     //接收数据
@@ -389,7 +389,7 @@ void CommandHelper::openDetector()
     if (socketDetector->isOpen())
         socketDetector->disconnectFromHost();
 
-    disconnect(socketDetector, &QTcpSocket::readyRead, this, nullptr);
+    disconnect(socketDetector, nullptr, this, nullptr);
 
     //网络异常
 #if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)

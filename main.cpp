@@ -48,6 +48,11 @@ void AppMessageHandler(QtMsgType type, const QMessageLogContext& /*context*/, co
     if (type == QtWarningMsg)
         return;
 
+    if (type == QtDebugMsg){
+        std::cout << "debug >> " << msg.toStdString() << std::endl;;
+        return;
+    }
+
     // 确保logs目录存在
     QDir dir(QDir::currentPath() + "/logs");
     if (!dir.exists()) {

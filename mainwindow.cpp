@@ -286,6 +286,36 @@ void MainWindow::InitMainWindowUi()
 {
     // 获取当前时间
     ui->textEdit_log->clear();
+    ui->spinBox_1_leftE->setMaximum(MULTI_CHANNEL);
+    ui->spinBox_1_rightE->setMaximum(MULTI_CHANNEL);
+    ui->spinBox_2_leftE->setMaximum(MULTI_CHANNEL);
+    ui->spinBox_2_rightE->setMaximum(MULTI_CHANNEL);
+    ui->spinBox_leftE->setMaximum(MULTI_CHANNEL);
+    ui->spinBox_rightE->setMaximum(MULTI_CHANNEL);
+    connect(ui->spinBox_1_leftE, QOverload<int>::of(&QSpinBox::valueChanged), this, [=](int v){
+        int EnWin[4] = {ui->spinBox_1_leftE->value(), ui->spinBox_1_rightE->value(),
+                                ui->spinBox_2_leftE->value(), ui->spinBox_2_rightE->value()};
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+        plotWidget->slotUpdateEnTimeWidth(EnWin);
+    });
+    connect(ui->spinBox_1_rightE, QOverload<int>::of(&QSpinBox::valueChanged), this, [=](int v){
+        int EnWin[4] = {ui->spinBox_1_leftE->value(), ui->spinBox_1_rightE->value(),
+                                ui->spinBox_2_leftE->value(), ui->spinBox_2_rightE->value()};
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+        plotWidget->slotUpdateEnTimeWidth(EnWin);
+    });
+    connect(ui->spinBox_2_leftE, QOverload<int>::of(&QSpinBox::valueChanged), this, [=](int v){
+        int EnWin[4] = {ui->spinBox_1_leftE->value(), ui->spinBox_1_rightE->value(),
+                                ui->spinBox_2_leftE->value(), ui->spinBox_2_rightE->value()};
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+        plotWidget->slotUpdateEnTimeWidth(EnWin);
+    });
+    connect(ui->spinBox_2_rightE, QOverload<int>::of(&QSpinBox::valueChanged), this, [=](int v){
+        int EnWin[4] = {ui->spinBox_1_leftE->value(), ui->spinBox_1_rightE->value(),
+                                ui->spinBox_2_leftE->value(), ui->spinBox_2_rightE->value()};
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+        plotWidget->slotUpdateEnTimeWidth(EnWin);
+    });
 
     QString path = QApplication::applicationDirPath() + "/config";
     QDir dir(path);
@@ -1521,4 +1551,10 @@ void MainWindow::on_action_start_measure_triggered()
         ui->action_start_measure->setIconText(tr("退出离线测试模式"));
         this->setProperty("test", true);
     }
+}
+
+void MainWindow::on_checkBox_gauss_stateChanged(int arg1)
+{
+    PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+    plotWidget->slotShowGaussInfor(arg1 == Qt::CheckState::Checked);
 }

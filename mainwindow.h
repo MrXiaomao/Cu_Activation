@@ -109,6 +109,8 @@ private slots:
 
     void on_action_start_measure_triggered();
 
+    void on_checkBox_gauss_stateChanged(int arg1);
+
 private:
     Ui::MainWindow *ui = nullptr;
     SpectrumModel *spectrummodel = nullptr;//能谱模型

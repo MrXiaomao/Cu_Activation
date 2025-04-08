@@ -39,13 +39,14 @@ public slots:
     void slotPlotClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event);
     void slotBeforeReplot();
     void slotRestorePlot();
+    void slotUpdateEnTimeWidth(int* timeWidth);
 
     //批量刷新
     void slotUpdatePlotDatas(SingleSpectrum, vector<CoincidenceResult>, int refreshTime);
 
     void slotResetPlot();
     void slotGauss(int leftE, int rightE);
-
+    void slotShowGaussInfor(bool visible);
 
 protected:
     virtual bool eventFilter(QObject *watched, QEvent *event) override;

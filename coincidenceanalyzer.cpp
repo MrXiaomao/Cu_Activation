@@ -227,11 +227,7 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
     int count1 = 0;
     for (int i=0; i<length1; i++)
     {
-#ifdef QT_NO_DEBUG
         if(data1.at(i).energy>EnWindowWidth[0] && data1.at(i).energy <=EnWindowWidth[1]) count1++;
-#else
-        count1++;
-#endif
     }
     tmpCoinResult.CountRate1 = count1;
 
@@ -239,11 +235,7 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
     int count2 = 0;
     for (int i=0; i<length2; i++)
     {
-#ifdef QT_NO_DEBUG
         if(data2.at(i).energy>EnWindowWidth[2] && data2.at(i).energy <=EnWindowWidth[3]) count2++;
-#else
-        count2++;
-#endif
     }
     tmpCoinResult.CountRate2 = count2;
 
@@ -253,7 +245,7 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
                 coinResult.back().ConCount_single = 0;
     }
 
-    //当任一一个探测器没有信号，则说明没有符合事件
+    //当任何一个探测器没有信号，则说明没有符合事件
     if(length1==0 || length2==0)  {
         coinResult.push_back(tmpCoinResult);
         return ;
@@ -311,6 +303,14 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
           type |= temp_data.detectorID;
           count++;
         }
+
+       //处理最后一次事件
+       if(temp.empty()){
+            if(type==0b11){
+                if(count == 2) tmpCoinResult.ConCount_single++; //单符合事件
+                if(count > 2) tmpCoinResult.ConCount_multiple++; //多符合事件，单独记录
+            }
+       }
     }
     coinResult.push_back(tmpCoinResult);
 }

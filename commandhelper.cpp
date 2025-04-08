@@ -1467,7 +1467,7 @@ void CommandHelper::slotAnalyzeNetFrame()
                 const unsigned char *ptrOffset = (const unsigned char *)validFrame.constData();
 
                 //通道号(8字节)
-                ptrOffset += 4;
+                ptrOffset += 4;//跨过包头四字节
                 quint64 channel = static_cast<quint64>(ptrOffset[0]) << 56 |
                                  static_cast<quint64>(ptrOffset[1]) << 48 |
                                  static_cast<quint64>(ptrOffset[2]) << 40 |
@@ -1486,14 +1486,14 @@ void CommandHelper::slotAnalyzeNetFrame()
 
                 std::vector<TimeEnergy> temp;
                 while (ref++<=1024){
-                    long long t = static_cast<quint64>(ptrOffset[0]) << 40 |
+                    unsigned long long t = static_cast<quint64>(ptrOffset[0]) << 40 |
                             static_cast<quint64>(ptrOffset[1]) << 32 |
                             static_cast<quint64>(ptrOffset[2]) << 24 |
                             static_cast<quint64>(ptrOffset[3]) << 16 |
                             static_cast<quint64>(ptrOffset[4]) << 8 |
                             static_cast<quint64>(ptrOffset[5]);
                     t *= 10;
-                    unsigned int e = static_cast<quint16>(ptrOffset[6]) << 8 | static_cast<quint16>(ptrOffset[7]);
+                    unsigned short e = static_cast<quint16>(ptrOffset[6]) << 8 | static_cast<quint16>(ptrOffset[7]);
                     ptrOffset += 8;
 
                     if (t != 0x00)
@@ -1515,72 +1515,70 @@ void CommandHelper::slotAnalyzeNetFrame()
             // 使用示例
             //std::vector<uint8_t> data = {0x01, 0x02, 0x03, 0x01, 0x02, 0x03};
             //std::vector<uint8_t> target = {0x00, 0x00, 0xaa, 0x0b1};
-            if (0x03 == detectorParameter.transferModel){
-                // 波形个数
-                //包头0x0000AAB1 + 通道号（16bit） + 波形数据（4096*16bit） + 包尾0x0000CCD1
-                // 使用示例
-                //std::vector<uint8_t> data = {0x01, 0x02, 0x03, 0x01, 0x02, 0x03};
-                qint32 count = 0;
-                std::vector<uint8_t> target = {0x00, 0x00, 0xaa, 0x0b1};
-                while (true){
-                    quint32 size = handlerPool.size();
-                    quint32 minPkgSize = (4096+5) * 2;
-                    if (size >= minPkgSize){
-                        // 寻找包头
-                        if ((quint8)handlerPool.at(0) == 0x00 && (quint8)handlerPool.at(1) == 0x00 && (quint8)handlerPool.at(2) == 0xaa && (quint8)handlerPool.at(3) == 0xb1){
-                            // 寻找包尾(正常情况包尾正确)
-                            if ((quint8)handlerPool.at(minPkgSize-4) == 0x00 && (quint8)handlerPool.at(minPkgSize-3) == 0x00 && (quint8)handlerPool.at(minPkgSize-2) == 0xcc && (quint8)handlerPool.at(minPkgSize-1) == 0xd1){
-                                handlerPool.remove(0, minPkgSize);
-                                count++;
-                                continue;
-                            } else {
-                                handlerPool.remove(0, 1);
-                            }
-                        } else if ((quint8)handlerPool.at(0) == 0x12 && (quint8)handlerPool.at(1) == 0x34
-                                   && (quint8)handlerPool.at(10) == 0xab && (quint8)handlerPool.at(11) == 0xcd){
-                           handlerPool.remove(0, 12);
-
-                           if (nullptr != pfSave){
-                               pfSave->close();
-                               delete pfSave;
-                               pfSave = nullptr;
-                           }
-
-                           //测量停止是否需要清空所有数据
-                           handlerPool.clear();
-                           emit sigMeasureStop();
-                           break;
+            // 波形个数
+            //包头0x0000AAB1 + 通道号（16bit） + 波形数据（4096*16bit） + 包尾0x0000CCD1
+            // 使用示例
+            //std::vector<uint8_t> data = {0x01, 0x02, 0x03, 0x01, 0x02, 0x03};
+            qint32 count = 0;
+            std::vector<uint8_t> target = {0x00, 0x00, 0xaa, 0x0b1};
+            while (true){
+                quint32 size = handlerPool.size();
+                quint32 minPkgSize = (4096+5) * 2;
+                if (size >= minPkgSize){
+                    // 寻找包头
+                    if ((quint8)handlerPool.at(0) == 0x00 && (quint8)handlerPool.at(1) == 0x00 && (quint8)handlerPool.at(2) == 0xaa && (quint8)handlerPool.at(3) == 0xb1){
+                        // 寻找包尾(正常情况包尾正确)
+                        if ((quint8)handlerPool.at(minPkgSize-4) == 0x00 && (quint8)handlerPool.at(minPkgSize-3) == 0x00 && (quint8)handlerPool.at(minPkgSize-2) == 0xcc && (quint8)handlerPool.at(minPkgSize-1) == 0xd1){
+                            handlerPool.remove(0, minPkgSize);
+                            count++;
+                            continue;
                         } else {
                             handlerPool.remove(0, 1);
                         }
-                    } else if (handlerPool.size() == 12){
-                        //12 34 00 0F FF 10 00 11 00 00 AB CD
-                        //通过指令来判断测量是否停止
-                        if ((quint8)handlerPool.at(0) == 0x12 && (quint8)handlerPool.at(1) == 0x34
+                    } else if ((quint8)handlerPool.at(0) == 0x12 && (quint8)handlerPool.at(1) == 0x34
                                 && (quint8)handlerPool.at(10) == 0xab && (quint8)handlerPool.at(11) == 0xcd){
-                            handlerPool.remove(0, 12);
+                        handlerPool.remove(0, 12);
 
-                            if (nullptr != pfSave){
-                                pfSave->close();
-                                delete pfSave;
-                                pfSave = nullptr;
-                            }
-
-                            //测量停止是否需要清空所有数据
-                            //currentSpectrumFrames.clear();
-                            emit sigMeasureStop();
-                            break;
-                        } else {
-                            handlerPool.remove(0, 1);
+                        if (nullptr != pfSave){
+                            pfSave->close();
+                            delete pfSave;
+                            pfSave = nullptr;
                         }
-                    } else {
-                        break;
-                    }
-                }
 
-                if (0 != count)
-                    emit sigRecvPkgCount(count);
+                        //测量停止是否需要清空所有数据
+                        handlerPool.clear();
+                        emit sigMeasureStop();
+                        break;
+                    } else {
+                        handlerPool.remove(0, 1);
+                    }
+                } else if (handlerPool.size() == 12){
+                    //12 34 00 0F FF 10 00 11 00 00 AB CD
+                    //通过指令来判断测量是否停止
+                    if ((quint8)handlerPool.at(0) == 0x12 && (quint8)handlerPool.at(1) == 0x34
+                            && (quint8)handlerPool.at(10) == 0xab && (quint8)handlerPool.at(11) == 0xcd){
+                        handlerPool.remove(0, 12);
+
+                        if (nullptr != pfSave){
+                            pfSave->close();
+                            delete pfSave;
+                            pfSave = nullptr;
+                        }
+
+                        //测量停止是否需要清空所有数据
+                        //currentSpectrumFrames.clear();
+                        emit sigMeasureStop();
+                        break;
+                    } else {
+                        handlerPool.remove(0, 1);
+                    }
+                } else {
+                    break;
+                }
             }
+
+            if (0 != count)
+                emit sigRecvPkgCount(count);
         } else {
             handlerPool.clear();
         }

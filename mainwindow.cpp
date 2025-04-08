@@ -48,6 +48,37 @@ MainWindow::MainWindow(QWidget *parent)
     this->setProperty("pause_plot", false);
     //线性模型
     this->setProperty("ScaleLogarithmicType", false);
+    ui->pushButton_gauss->setToolTip("在左侧图像中\'Ctrl+左键框选\'后，点击\"高斯拟合\"");
+
+    ui->spinBox_timeWidth->setToolTip("请输入10的倍数（如10, 20, 30）");
+    ui->spinBox_timeWidth->setSingleStep(10);
+    connect(ui->spinBox_timeWidth, QOverload<int>::of(&QSpinBox::valueChanged), [=](int value) {
+        if (value % 10 != 0) {
+            ui->spinBox_timeWidth->blockSignals(true);
+            ui->spinBox_timeWidth->setValue((value / 10) * 10);
+            ui->spinBox_timeWidth->blockSignals(false);
+        }
+    });
+
+    ui->spinBox_timeWidth_2->setToolTip("请输入10的倍数（如10, 20, 30）");
+    ui->spinBox_timeWidth_2->setSingleStep(10);
+    connect(ui->spinBox_timeWidth_2, QOverload<int>::of(&QSpinBox::valueChanged), [=](int value) {
+        if (value % 10 != 0) {
+            ui->spinBox_timeWidth_2->blockSignals(true);
+            ui->spinBox_timeWidth_2->setValue((value / 10) * 10);
+            ui->spinBox_timeWidth_2->blockSignals(false);
+        }
+    });
+
+    ui->spinBox_timeWidth->setToolTip("请输入10的倍数（如10, 20, 30）");
+    ui->spinBox_timeWidth->setSingleStep(10);
+    connect(ui->spinBox_timeWidth, QOverload<int>::of(&QSpinBox::valueChanged), [=](int value) {
+        if (value % 10 != 0) {
+            ui->spinBox_timeWidth->blockSignals(true);
+            ui->spinBox_timeWidth->setValue((value / 10) * 10);
+            ui->spinBox_timeWidth->blockSignals(false);
+        }
+    });
 
     connect(this, SIGNAL(sigRefreshUi()), this, SLOT(slotRefreshUi()));
     connect(this, SIGNAL(sigAppengMsg(const QString &, QtMsgType)), this, SLOT(slotAppendMsg(const QString &, QtMsgType)));

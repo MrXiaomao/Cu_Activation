@@ -22,7 +22,7 @@ struct particle_data
 
 CoincidenceAnalyzer::CoincidenceAnalyzer():
 countCoin(0),autoFirst(true),
-GaussCountMin(2000)
+GaussCountMin(2000),GaussMinGapTime(30)
 {
     for(unsigned short i=0; i<MULTI_CHANNEL; i++)
     {
@@ -50,8 +50,8 @@ void CoincidenceAnalyzer::set_callback(std::function<void(SingleSpectrum, vector
 * autoEnWidth [bool]：是否自动修正峰位漂移引起的能窗移动
 */
 void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy> _data2,
-              int E_win[4],
-              int windowWidthT, bool autoEnWidth)
+              int E_win[4], int windowWidthT, 
+              bool countFlag, bool autoEnWidth)
 {
     // 如果是自动调整窗宽，则只在测量开始的首次读取窗宽，后续都自动更新窗宽
     if(autoEnWidth) {
@@ -105,14 +105,20 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
         //对当前一秒数据处理给出能谱
         calculateAllSpectrum(data1,data2);
         
-        //自动拟合，更新能窗
-        if(autoEnWidth) 
-        {
-            AutoEnergyWidth();
-        }
+        //计算计数曲线
+        if (countFlag)
+        {   
+            //自动拟合，更新能窗
+            if(autoEnWidth) 
+            {
+                //距离上次自动高斯拟合的时间间隔，单位：s
+                int GapTime = countCoin - GaussFitLog.back().time;
+                if(GapTime>GaussMinGapTime)  AutoEnergyWidth();
+            }
 
-        //对当前一秒数据处理给出各自的计数以及符合计数
-        Coincidence(data1, data2, EnergyWindow, windowWidthT);
+            //对当前一秒数据处理给出各自的计数以及符合计数
+            Coincidence(data1, data2, EnergyWindow, windowWidthT);
+        }
 
         //删除容器中已经处理的数据点
         if (AllPoint.back().dataPoint1 <= (int)data1.size()) {
@@ -131,7 +137,8 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
         time1_elapseFPGA = lastTime1/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
         time2_elapseFPGA = lastTime2/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
 
-        m_pfunc(AccumulateSpectrum, coinResult);
+        //当只计算能谱时，则不调用回调函数，外部通过GetAccumulateSpectrum获取累积能谱
+        if (countFlag) m_pfunc(AccumulateSpectrum, coinResult);
     }
 
     //将容器中未经处理的数据点添加到缓存保存起来，下次优先处理
@@ -183,6 +190,7 @@ void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> data1, vector<
         }
     }
 
+    AccumulateSpectrum.time = countCoin;
     if(AllSpectrum.size() >= MAX_REMAIN_SPECTRUM) AllSpectrum.erase(AllSpectrum.begin()); //当超过最大能谱数目时，则先进先出
     AllSpectrum.push_back(spec_temp);
 }

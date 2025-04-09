@@ -64,13 +64,15 @@ public:
 
         vector<TimeEnergy>().swap(unusedData1);
         vector<TimeEnergy>().swap(unusedData2);
-
+        
         //自动调整能窗相关参数重新初始化
         autoFirst = true;
         for(int i=0; i<MULTI_CHANNEL; i++)
         {
             GaussFitSpec[0][i] = 0;
             GaussFitSpec[1][i] = 0;
+            AccumulateSpectrum.spectrum[0][i] = 0;
+            AccumulateSpectrum.spectrum[1][i] = 0;
         }
     }
 
@@ -107,9 +109,16 @@ public:
         EnWindow[3] = EnergyWindow[3];
     }
 
+    /// @brief 计算给出能谱曲线、计数曲线，计算的结果放在类成员中
+    /// @param vector<TimeEnergy> data1 探测器1[时间(ns),能量]数据
+    /// @param vector<TimeEnergy> data2 探测器2[时间(ns),能量]数据
+    /// @param int E_win[4] 能窗，探测器1左、右能窗，探测器2左右能窗
+    /// @param int windowWidthT 时间窗，单位ns
+    /// @param bool countFlag 是否计算计数曲线
+    /// @param bool autoEnWidth 是否自动修正能窗
     void calculate(vector<TimeEnergy> data1, vector<TimeEnergy> data2,
             int E_win[4], int windowWidthT, 
-            bool autoEnWidth = false);
+            bool countFlag=true, bool autoEnWidth = false);
 
     //这里加入回调函数，后期做成SDK会出现问题，SDK不存在回调，只存在返回值。
     void set_callback(std::function<void(SingleSpectrum, vector<CoincidenceResult>)> func);
@@ -158,7 +167,8 @@ private:
     // 用于高斯拟合，自动更新能窗
     bool autoFirst; //自动调节符合计算能窗宽度，用于解决峰飘问题，每测量一定数据点之后，自动拟合出高斯曲线，以新的半高宽来作为符合计算能窗。
     int GaussFitSpec[2][MULTI_CHANNEL]; //用于高斯拟合的能谱，每秒钟汇总一次，并且计算能窗内计数点是否到达指定的点数。满足点数后便进行拟合，更新能谱
-    int GaussCountMin; //高斯拟合的最小数据点数
+    int GaussCountMin; //自动高斯拟合的最小数据点数
+    int GaussMinGapTime; //自动高斯拟合的能窗最小时间间隔,单位：s
     unsigned short EnergyWindow[4];//能窗边界，依次存放探测器1左边界、右边界，探测器2左边界、右边界。
     vector<AutoGaussFit> GaussFitLog; //记录修改能窗区间的左右宽度,
 };

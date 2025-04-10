@@ -13,6 +13,13 @@ class QCPItemRect;
 class QCPGraph;
 class QCPAbstractPlottable;
 class QCPItemCurve;
+enum TracerType
+{
+    XAxisTracer,
+    YAxisTracer,
+    DataTracer
+};
+
 class PlotWidget : public QWidget
 {
     Q_OBJECT
@@ -26,27 +33,33 @@ public:
     void initCustomPlot();
     void initMultiCustomPlot();
 
-    void switchShowModel(bool refModel);
-    void switchDataModel(bool log);
+    void switchToCountMode(bool isCountMode);
+    void switchToLogarithmicMode(bool isLogarithmic);
 
     void resetAxisCoords();
     void rescalAxisCoords(QCustomPlot* customPlot);
 
     QCPGraph* getGraph(int index); //0-Det1 1-Det2 2=符合曲线 3-高斯曲线
     void resetPlotDatas(QCustomPlot* customPlot);//右键重设数据初始状态
+    void updateTracerPosition(QCustomPlot*, double, double);
 
 public slots:
     void slotPlotClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event);
     void slotBeforeReplot();
-    void slotRestorePlot();
+    void slotRestorePlot(QMouseEvent*);
     void slotUpdateEnTimeWidth(int* timeWidth);
 
     //批量刷新
-    void slotUpdatePlotDatas(SingleSpectrum, vector<CoincidenceResult>, int refreshTime);
+    void slotUpdatePlotDatas(SingleSpectrum, vector<CoincidenceResult>, int refreshTime, int coolTime);
 
     void slotResetPlot();
     void slotGauss(int leftE, int rightE);
     void slotShowGaussInfor(bool visible);
+
+    void slotShowTracer(QMouseEvent *event);//显示跟踪器
+    void slotShowTracerLine(QCustomPlot* customPlot, double key, double value);//显示跟踪线
+
+    void slotCountRefreshTimelength();
 
 protected:
     virtual bool eventFilter(QObject *watched, QEvent *event) override;
@@ -54,11 +67,13 @@ protected:
 signals:
     void sigMouseDoubleClickEvent();
     void sigUpdateMeanValues(QString name, unsigned int minMean, unsigned int maxMean);
+    void sigPausePlot(bool); //是否暂停图像刷新
+    void sigAreaSelected();//拟合区域选择完成
 
-private:    
+private:
     bool showAxis = false;//是否显示轴线
     bool isDragging = false;
-    bool enableDrag = false;
+    bool allowAreaSelected = false;//是否允许鼠标拖选择区域
     bool isPressed = false;
     QPoint dragStart;
 
@@ -83,6 +98,12 @@ private:
 
     QVector<double> energyValues[2];//存储测量开始以后所有数据
     QMutex mutexRefreshPlot;
+
+    QAction *timeAllAction;
+    QAction *timeM10Action;
+    QAction *timeM5Action;
+    QAction *timeM3Action;
+    QAction *timeM1Action;
 };
 
 #endif // PLOTWIDGET_H

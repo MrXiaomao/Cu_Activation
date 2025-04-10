@@ -22108,13 +22108,13 @@ void QCPGraph::getOptimizedScatterData(QVector<QCPGraphData> *scatterData, QCPGr
     // main loop over data points:
     while (it != end)
     {
-      if (it->key < currentIntervalStartKey+keyEpsilon) // data point is still within same pixel, so skip it and expand value span of this pixel if necessary
+      if (it->key <= currentIntervalStartKey+keyEpsilon) // data point is still within same pixel, so skip it and expand value span of this pixel if necessary
       {
-        if (it->value < minValue && it->value > valueMinRange && it->value < valueMaxRange)
+        if (it->value <= minValue && it->value >= valueMinRange && it->value <= valueMaxRange)
         {
           minValue = it->value;
           minValueIt = it;
-        } else if (it->value > maxValue && it->value > valueMinRange && it->value < valueMaxRange)
+        } else if (it->value >= maxValue && it->value >= valueMinRange && it->value <= valueMaxRange)
         {
           maxValue = it->value;
           maxValueIt = it;
@@ -22131,7 +22131,7 @@ void QCPGraph::getOptimizedScatterData(QVector<QCPGraphData> *scatterData, QCPGr
           int c = 0;
           while (intervalIt != it)
           {
-            if ((c % dataModulo == 0 || intervalIt == minValueIt || intervalIt == maxValueIt) && intervalIt->value > valueMinRange && intervalIt->value < valueMaxRange)
+            if ((c % dataModulo == 0 || intervalIt == minValueIt || intervalIt == maxValueIt) && intervalIt->value >= valueMinRange && intervalIt->value <= valueMaxRange)
               scatterData->append(*intervalIt);
             ++c;
             if (!doScatterSkip)
@@ -22175,7 +22175,7 @@ void QCPGraph::getOptimizedScatterData(QVector<QCPGraphData> *scatterData, QCPGr
       int c = 0;
       while (intervalIt != it)
       {
-        if ((c % dataModulo == 0 || intervalIt == minValueIt || intervalIt == maxValueIt) && intervalIt->value > valueMinRange && intervalIt->value < valueMaxRange)
+        if ((c % dataModulo == 0 || intervalIt == minValueIt || intervalIt == maxValueIt) && intervalIt->value >= valueMinRange && intervalIt->value <= valueMaxRange)//snowwolf 2025/04/10
           scatterData->append(*intervalIt);
         ++c;
         if (!doScatterSkip)
@@ -22192,7 +22192,7 @@ void QCPGraph::getOptimizedScatterData(QVector<QCPGraphData> *scatterData, QCPGr
           }
         }
       }
-    } else if (currentIntervalStart->value > valueMinRange && currentIntervalStart->value < valueMaxRange)
+    } else if (currentIntervalStart->value >= valueMinRange && currentIntervalStart->value <= valueMaxRange)
       scatterData->append(*currentIntervalStart);
     
   } else // don't use adaptive sampling algorithm, transfer points one-to-one from the data container into the output
@@ -30069,6 +30069,9 @@ double QCPItemText::selectTest(const QPointF &pos, bool onlySelectable, QVariant
 /* inherits documentation from base class */
 void QCPItemText::draw(QCPPainter *painter)
 {
+    if (mText.isEmpty())
+        return;
+
   QPointF pos(position->pixelPosition());
   QTransform transform = painter->transform();
   transform.translate(pos.x(), pos.y());

@@ -6,7 +6,6 @@
 #include "dataanalysiswidget.h"
 #include "plotwidget.h"
 #include "FPGASetting.h"
-#include "qcustomplot.h"
 #include "splashwidget.h"
 
 #include <QFileDialog>
@@ -23,6 +22,7 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QWhatsThis>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -245,12 +245,12 @@ MainWindow::MainWindow(QWidget *parent)
     // qRegisterMetaType<vector<CurrentPoint>>("vector<CurrentPoint>");
     qRegisterMetaType<vector<CoincidenceResult>>("vector<CoincidenceResult>");
     std::cout << "main thread id:" << QThread::currentThreadId() << std::endl;
-    connect(commandHelper, &CommandHelper::sigPlot, this, [=](SingleSpectrum r1, vector<CoincidenceResult> r3, int refreshUI_time){
+    connect(commandHelper, &CommandHelper::sigPlot, this, [=](SingleSpectrum r1, vector<CoincidenceResult> r3, int refreshUI_time, int cool_time){
         lastRecvDataTime = QDateTime::currentDateTime();
         bool pause_plot = this->property("pause_plot").toBool();
         if (!pause_plot){
             PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
-            plotWidget->slotUpdatePlotDatas(r1, r3, refreshUI_time);
+            plotWidget->slotUpdatePlotDatas(r1, r3, refreshUI_time, cool_time);
 
             ui->lcdNumber_CountRate1->display(r3.back().CountRate1);
             ui->lcdNumber_CountRate2->display(r3.back().CountRate2);
@@ -417,10 +417,10 @@ void MainWindow::InitMainWindowUi()
     grp->addButton(ui->radioButton_ref, 0);
     grp->addButton(ui->radioButton_spectrum, 1);
     connect(grp, QOverload<int>::of(&QButtonGroup::idClicked), this, [=](int index){
-        commandHelper->switchShowModel(index == 0);
+        commandHelper->switchToCountMode(index == 0);
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
         plotWidget->slotResetPlot();
-        plotWidget->switchShowModel(index == 0);
+        plotWidget->switchToCountMode(index == 0);
 
         if (0 == index){
             ui->widget_gauss->hide();
@@ -570,11 +570,39 @@ void MainWindow::initCustomPlot()
             if (currentDetectorIndex == 0){
                 ui->spinBox_1_leftE->setValue(minMean);
                 ui->spinBox_1_rightE->setValue(maxMean);
+            } else{
+                ui->spinBox_2_leftE->setValue(minMean);
+                ui->spinBox_2_rightE->setValue(maxMean);
             }
 
            ui->spinBox_leftE->setValue(minMean);
            ui->spinBox_rightE->setValue(maxMean);
         });
+
+        connect(customPlotWidget, &PlotWidget::sigPausePlot, this, [=](bool pause){
+            this->setProperty("pause_plot", pause);
+            if (this->property("pause_plot").toBool()){
+                ui->action_refresh->setIcon(QIcon(":/resource/work.png"));
+                ui->action_refresh->setText(tr("恢复刷新"));
+                ui->action_refresh->setIconText(tr("恢复刷新"));
+            } else {
+                this->setProperty("pause_plot", false);
+                ui->action_refresh->setIcon(QIcon(":/resource/pause.png"));
+                ui->action_refresh->setText(tr("暂停刷新"));
+                ui->action_refresh->setIconText(tr("暂停刷新"));
+
+                ui->pushButton_refresh->setIcon(QIcon());
+            }
+        });
+
+        connect(customPlotWidget, &PlotWidget::sigAreaSelected, this, [=](){
+            QWhatsThis::showText(ui->pushButton_refresh->mapToGlobal(ui->pushButton_refresh->geometry().bottomRight()), tr("需点击刷新按钮，拟合区域才会设置生效"), ui->pushButton_refresh);
+            ui->pushButton_refresh->setIcon(QIcon(":/resource/warn.png"));
+
+            //恢复刷新状态
+            //QWhatsThis::showText(ui->pushButton_gauss->mapToGlobal(ui->pushButton_refresh->geometry().bottomRight()), tr("点击按钮，查看拟合曲线效果图"), ui->pushButton_gauss);
+        });
+
         ui->widget_plot->layout()->addWidget(customPlotWidget);
     }
 }
@@ -967,6 +995,9 @@ void MainWindow::on_pushButton_refresh_clicked()
 
     int timewidth = ui->spinBox_timeWidth->value();
     commandHelper->updateParamter(stepT, EnWin, timewidth, true);
+    this->setProperty("pause-plot", false);
+
+    ui->pushButton_refresh->setIcon(QIcon(  ));
 }
 
 void MainWindow::on_action_close_triggered()
@@ -976,16 +1007,12 @@ void MainWindow::on_action_close_triggered()
 
 void MainWindow::on_action_refresh_triggered()
 {
+    PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+
     if (!this->property("pause_plot").toBool()){
-        this->setProperty("pause_plot", true);
-        ui->action_refresh->setIcon(QIcon(":/resource/work.png"));
-        ui->action_refresh->setText(tr("恢复刷新"));
-        ui->action_refresh->setIconText(tr("恢复刷新"));
+        emit plotWidget->sigPausePlot(true);
     } else {
-        this->setProperty("pause_plot", false);
-        ui->action_refresh->setIcon(QIcon(":/resource/pause.png"));
-        ui->action_refresh->setText(tr("暂停刷新"));
-        ui->action_refresh->setIconText(tr("暂停刷新"));
+        emit plotWidget->sigPausePlot(false);
     }
 }
 
@@ -1194,10 +1221,14 @@ void MainWindow::slotRefreshUi()
             ui->action_detector_connect->setEnabled(false);
 
             //测量过程中不允许修改能窗幅值
-            ui->spinBox_1_leftE->setEnabled(false);
-            ui->spinBox_1_rightE->setEnabled(false);
-            ui->spinBox_2_leftE->setEnabled(false);
-            ui->spinBox_2_rightE->setEnabled(false);
+            ui->spinBox_1_leftE->setEnabled(true);
+            ui->spinBox_1_rightE->setEnabled(true);
+            ui->spinBox_2_leftE->setEnabled(true);
+            ui->spinBox_2_rightE->setEnabled(true);
+            ui->spinBox_1_leftE_2->setEnabled(false);
+            ui->spinBox_1_rightE_2->setEnabled(false);
+            ui->spinBox_2_leftE_2->setEnabled(false);
+            ui->spinBox_2_rightE_2->setEnabled(false);
 
             // 测量中禁用符合分辨时间
             ui->spinBox_timeWidth->setEnabled(false);
@@ -1214,6 +1245,16 @@ void MainWindow::slotRefreshUi()
             ui->pushButton_measure_3->setEnabled(false);
             ui->pushButton_refresh_3->setEnabled(false);
         } else if (this->property("measur-model").toInt() == mmAuto){//自动测量
+            //测量过程中不允许修改能窗幅值
+            ui->spinBox_1_leftE->setEnabled(false);
+            ui->spinBox_1_rightE->setEnabled(false);
+            ui->spinBox_2_leftE->setEnabled(false);
+            ui->spinBox_2_rightE->setEnabled(false);
+            ui->spinBox_1_leftE_2->setEnabled(false);
+            ui->spinBox_1_rightE_2->setEnabled(false);
+            ui->spinBox_2_leftE_2->setEnabled(false);
+            ui->spinBox_2_rightE_2->setEnabled(false);
+
             ui->pushButton_measure_2->setText(tr("停止测量"));
             ui->pushButton_measure_2->setEnabled(true);
             
@@ -1524,7 +1565,7 @@ void MainWindow::on_action_line_log_triggered()
         this->setProperty("ScaleLogarithmicType", false);
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
         plotWidget->slotResetPlot();
-        plotWidget->switchDataModel(false);
+        plotWidget->switchToLogarithmicMode(false);
 
         ui->action_line_log->setText(tr("对数"));
         ui->action_line_log->setIconText(tr("对数"));
@@ -1532,7 +1573,7 @@ void MainWindow::on_action_line_log_triggered()
     } else {
         this->setProperty("ScaleLogarithmicType", true);
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
-        plotWidget->switchDataModel(true);
+        plotWidget->switchToLogarithmicMode(true);
 
         ui->action_line_log->setText(tr("线性"));
         ui->action_line_log->setIconText(tr("线性"));

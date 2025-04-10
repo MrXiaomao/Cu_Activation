@@ -525,7 +525,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </sizepolicy>
              </property>
              <property name="currentIndex">
-              <number>1</number>
+              <number>0</number>
              </property>
              <widget class="QWidget" name="tab_3">
               <property name="sizePolicy">
@@ -600,6 +600,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          <width>105</width>
                          <height>0</height>
                         </size>
+                       </property>
+                       <property name="whatsThis">
+                        <string>符合能窗范围发生改变，需重新刷新后生效！</string>
                        </property>
                        <property name="text">
                         <string>刷新</string>
@@ -1556,7 +1559,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                         <number>1</number>
                        </property>
                        <property name="maximum">
-                        <number>4096</number>
+                        <number>8192</number>
                        </property>
                        <property name="value">
                         <number>400</number>
@@ -1582,7 +1585,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                         <number>1</number>
                        </property>
                        <property name="maximum">
-                        <number>4096</number>
+                        <number>8192</number>
                        </property>
                        <property name="value">
                         <number>600</number>
@@ -1619,7 +1622,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                         <number>1</number>
                        </property>
                        <property name="maximum">
-                        <number>4096</number>
+                        <number>8192</number>
                        </property>
                        <property name="value">
                         <number>400</number>
@@ -1645,7 +1648,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                         <number>1</number>
                        </property>
                        <property name="maximum">
-                        <number>4096</number>
+                        <number>8192</number>
                        </property>
                        <property name="value">
                         <number>600</number>
@@ -2126,12 +2129,25 @@ li.checked::marker { content: &quot;\2612&quot;; }
                      <number>0</number>
                     </property>
                     <item>
+                     <widget class="QLabel" name="label_6">
+                      <property name="text">
+                       <string>拟合区域：</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
                      <widget class="QSpinBox" name="spinBox_leftE">
                       <property name="minimum">
                        <number>1</number>
                       </property>
                       <property name="maximum">
-                       <number>4096</number>
+                       <number>8192</number>
+                      </property>
+                      <property name="singleStep">
+                       <number>100</number>
                       </property>
                       <property name="value">
                        <number>400</number>
@@ -2157,7 +2173,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        <number>1</number>
                       </property>
                       <property name="maximum">
-                       <number>4096</number>
+                       <number>8192</number>
+                      </property>
+                      <property name="singleStep">
+                       <number>100</number>
                       </property>
                       <property name="value">
                        <number>600</number>

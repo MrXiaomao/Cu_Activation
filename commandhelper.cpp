@@ -66,8 +66,55 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
     coincidenceAnalyzer->set_callback([=](SingleSpectrum r1, vector<CoincidenceResult> r3) {
         long count = r3.size();
         int _stepT = this->stepT;
+        int coolTime = this->detectorParameter.cool_timelength;
         if (count <= 0)
             return;
+
+        //保存信息
+        if (r1.time != currentEnergyTime){
+            //有新的能谱数据产生
+            QString coincidenceResultFile = currentFilename + ".计数.csv";
+            {
+                QFile file(coincidenceResultFile);
+                if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+                    QTextStream out(&file);
+                    out << "time,CountRate1,CountRate2,ConCount_single,ConCount_multiple";
+                    CoincidenceResult coincidenceResult = r3.back();
+                    for (size_t i=0; i<r3.size(); ++i){
+                        out << r1.time << "," << coincidenceResult.CountRate1 << "," << coincidenceResult.CountRate2 << "," << coincidenceResult.ConCount_single << "," << coincidenceResult.ConCount_multiple;
+                    }
+
+                    file.flush();
+                    file.close();
+                }
+            }
+
+            QString singleSpectrumResultFile = currentFilename + ".能量.csv";
+            {
+                QFile file(singleSpectrumResultFile);
+                if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+                    QTextStream out(&file);
+                    out << "time,Det1-Energy,Det2-Energy";
+
+                    out << r1.time;
+                    for (size_t j=0; j<MULTI_CHANNEL; ++j){
+                        out << "," << r1.spectrum[0][j] << "," << r1.spectrum[1][j];//Qt::endl
+                    }
+
+                    file.flush();
+                    file.close();
+                }
+            }
+
+            currentEnergyTime = r1.time;
+        }
+
+        //冷却时长 cool_timelength
+        if (r1.time < coolTime){
+            return ;
+        } else {
+            //冷却时长内的计数0处理
+        }
 
         //时间步长，求均值
         if (_stepT > 1){
@@ -76,12 +123,15 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
 
                 for (size_t i=0; i < count/_stepT; i++){
                     CoincidenceResult v;
-                    for (int j=0; j<_stepT; ++j){
+                    for (int j=0; j<_stepT; ++j){                        
                         size_t posI = i*_stepT + j;
-                        v.CountRate1 += r3[posI].CountRate1;
-                        v.CountRate2 += r3[posI].CountRate2;
-                        v.ConCount_single += r3[posI].ConCount_single;
-                        v.ConCount_multiple += r3[posI].ConCount_multiple;
+                        if (posI + 1 >= coolTime){
+                            //冷却时长内的数据才是有效数据
+                            v.CountRate1 += r3[posI].CountRate1;
+                            v.CountRate2 += r3[posI].CountRate2;
+                            v.ConCount_single += r3[posI].ConCount_single;
+                            v.ConCount_multiple += r3[posI].ConCount_multiple;
+                        }
                     }
 
                     //给出平均计数率cps,注意，这里是整除，当计数率小于1cps时会变成零。
@@ -92,54 +142,29 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                     rr3.push_back(v);
                 }
 
-                sigPlot(r1, rr3, _stepT);
+                sigPlot(r1, rr3, _stepT, coolTime);
             }
         } else{
-            sigPlot(r1, r3, _stepT);
+            vector<CoincidenceResult> rr3;
+            for (size_t i=0; i < count; i++){
+                CoincidenceResult v;
+                if (i+1 >= coolTime){
+                    //冷却时长内的数据才是有效数据
+                    rr3.push_back(r3.at(i));
+                } else {
+                    rr3.push_back(v);
+                }
+            }
+
+            sigPlot(r1, rr3, _stepT, coolTime);
         }
     });
 
     connect(this, &CommandHelper::sigMeasureStop, this, [=](){
         //测量停止保存符合运算结果
-        QString coincidenceResultFile = currentFilename + ".coincidence.csv";
-        {
-            QFile file(coincidenceResultFile);
-            if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
-                QTextStream out(&file);
-                out << "CountRate1,CountRate2,ConCount_single,ConCount_multiple";
-
-                vector<CoincidenceResult> coincidenceResult = coincidenceAnalyzer->GetCoinResult();
-                for (size_t i=0; i<coincidenceResult.size(); ++i){
-                    out << coincidenceResult[i].CountRate1 << "," << coincidenceResult[i].CountRate2 << "," << coincidenceResult[i].ConCount_single << "," << coincidenceResult[i].ConCount_multiple;
-                }
-
-                file.flush();
-                file.close();
-            }
-        }
-
-        QString singleSpectrumResultFile = currentFilename + ".singleSpectrum.csv";
-        {
-            QFile file(singleSpectrumResultFile);
-            if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
-                QTextStream out(&file);
-                out << "time,Det1-Energy,Det2-Energy";
-
-                vector<SingleSpectrum> singleSpectrum = coincidenceAnalyzer->GetSpectrum();
-                for (size_t i=0; i<singleSpectrum.size(); ++i){
-                    for (size_t j=0; j<MULTI_CHANNEL; ++j){
-                        out << singleSpectrum[i].time << "," << singleSpectrum[i].spectrum[0][j] << "," << singleSpectrum[i].spectrum[1][j];//Qt::endl
-                    }
-                }
-
-                file.flush();
-                file.close();
-            }
-        }
-
         QString configResultFile = currentFilename + ".config.csv";
         {
-            QFile file(singleSpectrumResultFile);
+            QFile file(configResultFile);
             if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
                 QTextStream out(&file);
 
@@ -426,38 +451,6 @@ void CommandHelper::closeDetector()
 
     socketDetector->close();
     emit sigDetectorStatus(false);
-}
-
-void CommandHelper::makeFrame()
-{
-    //清空
-    frame.clear();
-    QByteArray data;
-
-    //帧头
-    quint8 fs = 0x55;
-    quint16 fe = 0xFE;
-    quint16 fl = 0x0000;//帧长度
-    quint32 dsn = 0x00000000;
-    quint8 pid = 0x00;
-    quint8 mid = 0x00;
-    quint16 ml = 0x0000;
-
-    QDataStream dataStream(&frame, QIODevice::WriteOnly);
-    dataStream << (quint8)fs;//FS
-    dataStream << (quint16)fl;//FL
-    dataStream << (quint32)dsn;//DSN
-    dataStream << (quint8)pid;//PID
-    dataStream << (quint8)mid;//MID
-    dataStream << (quint16)ml;//ML
-    dataStream << data;//DATA
-    dataStream << (quint8)crc();
-    dataStream << (quint8)fe;
-}
-
-quint8 CommandHelper::crc()
-{
-    return 0x00;
 }
 
 //触发阈值1
@@ -1140,6 +1133,15 @@ void CommandHelper::slotDoTasks()
         detTimeEnergy.timeEnergy.swap(data2);
         currentSpectrumFrames.push_back(detTimeEnergy);
 
+        if (this->reCalculateing){
+            cacheSpectrumFrames.push_back(detTimeEnergy);
+        } else {
+            if (cacheSpectrumFrames.size() > 0){
+                currentSpectrumFrames.insert(currentSpectrumFrames.begin(), cacheSpectrumFrames.begin(), cacheSpectrumFrames.end());
+                std::vector<DetTimeEnergy>().swap(cacheSpectrumFrames);
+            }
+        }
+
         QThread::msleep(30);
     }
 }
@@ -1694,7 +1696,7 @@ void CommandHelper::slotPlotUpdateFrame()
 
                     if (data1_2.size() > 0 && data2_2.size() > 0 ){
                         QDateTime now = QDateTime::currentDateTime();
-                        coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, false);
+                        coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, false);
 #ifdef QT_NO_DEBUG
 
 #else
@@ -1717,6 +1719,12 @@ void CommandHelper::slotPlotUpdateFrame()
 void CommandHelper::updateParamter(int _stepT, int _EnWin[4], int _timewidth/* = 50*/, bool reset/* = false*/)
 {
     QMutexLocker locker(&mutexReset);
+    if (reset){
+        reset = (this->EnWindow[0] == _EnWin[0]) &&
+                (this->EnWindow[1] == _EnWin[1]) &&
+                (this->EnWindow[2] == _EnWin[2]) &&
+                (this->EnWindow[3] == _EnWin[3]);
+    }
     this->stepT = _stepT;
     this->EnWindow[0] = _EnWin[0];
     this->EnWindow[1] = _EnWin[1];
@@ -1727,52 +1735,22 @@ void CommandHelper::updateParamter(int _stepT, int _EnWin[4], int _timewidth/* =
     currentSpectrumFrames.clear();
 
     if (reset){
-        //根据_stepT重新计算
+        //读取历史数据重新进行运算
+        //this->reCalculateing = true;
 
+        //std::vector<DetTimeEnergy> hisTimeEnergy = SysUtils::getDetTimeEnergy(this->currentFilename.toStdString());
+        //CoincidenceAnalyzer* newCoincidenceAnalyzer = new CoincidenceAnalyzer();
+        //newCoincidenceAnalyzer->initialize();
+        //newCoincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, false);
+        //newCoincidenceAnalyzer->set_callback([=](SingleSpectrum r1, vector<CoincidenceResult> r3) {
+        //}
+
+        //delete coincidenceAnalyzer;
+        //coincidenceAnalyzer = newCoincidenceAnalyzer;
     }
-//    //计数模式需要重新刷新图像
-//    if (this->refModel){
-//        for (auto frame : totalStepCountFrames){
-//            if (frame.dataT > currentRefreshStepNs[frame.channel] * this->stepT){
-//                PariticalCountFrame sFrame;
-//                sFrame.channel = frame.channel;
-//                sFrame.dataT = currentRefreshStepNs[frame.channel] * this->stepT;
-//                sFrame.dataE = 0;
-//                for (auto a : currentStepCountFrames){
-//                    sFrame.dataE += a.dataE;
-//                }
-
-//                currentRefreshStepNs[frame.channel]++;
-//                currentStepCountFrames.clear();
-//                emit sigRefreshCountData(sFrame);
-
-//                //未处理的数据一定要放回缓存
-//                currentStepCountFrames.push_back(frame);
-//            } else {
-//                currentStepCountFrames.push_back(frame);
-//            }
-//        }
-//    } else {
-//        for (auto frame : totalStepSpectrumFrames){
-//            if (frame.stepT > currentRefreshStepNs[frame.channel] * this->stepT){
-//                PariticalSpectrumFrame sFrame;
-//                sFrame.channel = frame.channel;
-//                sFrame.dataE = GetSpectrum(currentStepSpectrumFrames[frame.channel].dataE, maxEnergy, maxCh);
-
-//                currentRefreshStepNs[frame.channel]++;
-//                currentStepSpectrumFrames.clear();
-//                emit sigRefreshSpectrum(sFrame);
-
-//                //未处理的数据一定要放回缓存
-//                currentStepSpectrumFrames.push_back(frame);
-//            } else {
-//                currentStepSpectrumFrames.push_back(frame);
-//            }
-//        }
-//    }
 }
 
-void CommandHelper::switchShowModel(bool _refModel)
+void CommandHelper::switchToCountMode(bool _refModel)
 {
     this->refModel = _refModel;
 }

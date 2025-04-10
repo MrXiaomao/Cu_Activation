@@ -142,7 +142,7 @@
      <value type="QString">-e</value>
      <value type="QString">cpu-cycles</value>
      <value type="QString">--call-graph</value>
-     <value type="QString">dwarf,4096</value>
+     <value type="QString">dwarf,8192</value>
      <value type="QString">-F</value>
      <value type="QString">250</value>
     </valuelist>

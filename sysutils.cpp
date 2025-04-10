@@ -169,3 +169,88 @@ bool fit_GaussCurve(int count, std::vector<double> sx, std::vector<double> sy, d
         return false;
     }
 }*/
+
+std::vector<DetTimeEnergy> SysUtils::getDetTimeEnergy(std::string filename)
+{
+    std::vector<DetTimeEnergy> result;
+    FILE* input_file = fopen(filename.c_str(), "rb");
+    if (ferror(input_file))
+        return result;
+
+    uint32_t full_buffer_size = 1026 * 8;
+    std::vector<uint8_t> read_buffer(full_buffer_size, 0);
+    std::vector<uint8_t> cache_buffer(full_buffer_size * 2, 0);
+
+    while (!feof(input_file)){
+        std::vector<uint8_t>().swap(read_buffer);
+        size_t read_size = fread(reinterpret_cast<char*>(read_buffer.data()), 1, full_buffer_size, input_file);
+        cache_buffer.insert(cache_buffer.end(), read_buffer.begin(), read_buffer.end());
+
+        uint8_t *offsetPtr = cache_buffer.data();
+        uint32_t buffer_size = cache_buffer.size();
+        while (buffer_size >= full_buffer_size){
+            //判断头部
+            if ((uint8_t)offsetPtr[0] == 0x00 && (uint8_t)offsetPtr[1] == 0x00 && (uint8_t)offsetPtr[2] == 0xaa && (uint8_t)offsetPtr[3] == 0xb3){
+                offsetPtr = read_buffer.data() + full_buffer_size - 4;
+                //判断尾部
+                if ((uint8_t)offsetPtr[0] == 0x00 && (uint8_t)offsetPtr[1] == 0x00 && (uint8_t)offsetPtr[2] == 0xcc && (uint8_t)offsetPtr[3] == 0xd3){
+                    // 分拣数据
+                    offsetPtr = cache_buffer.data();
+
+                    //通道号(8字节)
+                    offsetPtr += 4;
+                    uint64_t channel = static_cast<uint64_t>(offsetPtr[0]) << 56 |
+                                      static_cast<uint64_t>(offsetPtr[1]) << 48 |
+                                      static_cast<uint64_t>(offsetPtr[2]) << 40 |
+                                      static_cast<uint64_t>(offsetPtr[3]) << 32 |
+                                      static_cast<uint64_t>(offsetPtr[4]) << 24 |
+                                      static_cast<uint64_t>(offsetPtr[5]) << 16 |
+                                      static_cast<uint64_t>(offsetPtr[6]) << 8 |
+                                      static_cast<uint64_t>(offsetPtr[7]);
+
+                    //通道值转换
+                    channel = (channel == 0xFFF1) ? 0 : 1;
+
+                    //粒子模式数据1024*8byte,前6字节:时间,后2字节:能量
+                    int ref = 1;
+                    offsetPtr += 8;
+
+                    std::vector<TimeEnergy> temp;
+                    while (ref++<=1024){
+                        long long t = static_cast<uint64_t>(offsetPtr[0]) << 40 |
+                                      static_cast<uint64_t>(offsetPtr[1]) << 32 |
+                                      static_cast<uint64_t>(offsetPtr[2]) << 24 |
+                                      static_cast<uint64_t>(offsetPtr[3]) << 16 |
+                                      static_cast<uint64_t>(offsetPtr[4]) << 8 |
+                                      static_cast<uint64_t>(offsetPtr[5]);
+                        t *= 10;
+                        unsigned int e = static_cast<uint16_t>(offsetPtr[6]) << 8 | static_cast<uint16_t>(offsetPtr[7]);
+                        offsetPtr += 8;
+
+                        if (t != 0x00)
+                            temp.push_back(TimeEnergy(t, e));
+                    }
+
+                    //数据分拣完毕
+                    {
+                        DetTimeEnergy detTimeEnergy;
+                        detTimeEnergy.channel = channel;
+                        detTimeEnergy.timeEnergy.swap(temp);
+                        result.push_back(detTimeEnergy);
+                    }
+
+                    cache_buffer.erase(cache_buffer.begin(), cache_buffer.begin() + full_buffer_size);
+                }
+            } else {
+                cache_buffer.erase(cache_buffer.begin());
+            }
+
+            buffer_size = cache_buffer.size();
+        }
+    }
+
+    fclose(input_file);
+    input_file = nullptr;
+
+    return result;
+}

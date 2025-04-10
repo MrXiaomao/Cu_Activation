@@ -112,17 +112,11 @@ public:
     }
 
     void startWork();
-    void switchShowModel(bool refModel);
+    void switchToCountMode(bool refModel);
     void updateParamter(int stepT, int EnWin[4], int timewidth = 50, bool reset = false);
     void saveFileName(QString);
     void setDefaultCacheDir(QString dir);
     bool isConnected();//探测器是否连接
-
-    enum Detector{
-        Detector_1 = 0,
-        Detector_2 = 1,
-        Detector_Count = 2
-    };
 
     enum WorkStatusFlag {
         NoWork = 0,     // 未开始
@@ -157,7 +151,7 @@ signals:
     void sigCoincidenceResult(quint32, CoincidenceResult);
     void sigSingleSpectrum(SingleSpectrum);
     void sigCurrentPoint(quint32, CurrentPoint);
-    void sigPlot(SingleSpectrum, vector<CoincidenceResult>, int refreshT);
+    void sigPlot(SingleSpectrum, vector<CoincidenceResult>, int refreshT, int coolTime);
 
     void sigDoTasks();
     void sigAnalyzeFrame();
@@ -180,22 +174,17 @@ private:
     QMutex mutexPlot;//缓冲池交换帧数据所用 spectrumFrameCachePool
     QMutex mutexReset;//更新数据所用，一般用于开始测量，需要重置数据项
     quint32 SequenceNumber;// 帧序列号
-    QLiteThread* analyzeNetDataThread;
-    QLiteThread* plotUpdateThread;
+    QLiteThread* analyzeNetDataThread;//处理网络数据线程，将数据进行解析成时间能量队
+    QLiteThread* plotUpdateThread;//能谱信息处理线程
+    quint32 currentEnergyTime = 0;// 能谱时间
+    bool reCalculateing = false;//正在对所有能量数据进行重新运算
 
-    QThread netWorkerThread;
-    QThread energyWorkerThread;
-    NetWorker *netWorker;
-    EnergyWorker *energyWorker;
+    // QThread netWorkerThread;
+    // QThread energyWorkerThread;
+    // NetWorker *netWorker;
+    // EnergyWorker *energyWorker;
 
     CoincidenceAnalyzer* coincidenceAnalyzer;
-    //void analyzerCalback(deque<SingleSpectrum>, vector<CurrentPoint>, vector<CoincidenceResult>);
-signals:
-    void operate();
-
-protected:
-    void makeFrame();
-    quint8 crc();
 
 public slots:
     void openRelay();
@@ -270,6 +259,7 @@ private:
     unsigned int maxEnergy = 8192;
 
     std::vector<DetTimeEnergy> currentSpectrumFrames;//网络新接收的能谱数据（一般指未处理，未分步长的数据）
+    std::vector<DetTimeEnergy> cacheSpectrumFrames;
 };
 
 

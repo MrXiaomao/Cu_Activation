@@ -47,7 +47,7 @@ struct StepTimeEnergy{
 //通道+(步长+能量/计数...序列)
 struct DetStepTimeEnergy{
     unsigned char channel;
-    std::deque<StepTimeEnergy> timeEnergy;
+    std::vector<StepTimeEnergy> timeEnergy;
 };
 
 //typedef struct tagPariticalCountFrame{
@@ -69,7 +69,7 @@ struct DetStepTimeEnergy{
 // data:能量点数组
 // maxEnergy: 多道中最大道址对应的能量值。
 // ch: 多道道数
-// vector<unsigned short> GetSpectrum(const vector<unsigned short>& data, unsigned int maxEnergy=8192, int ch=4096);
+// vector<unsigned short> GetSpectrum(const vector<unsigned short>& data, unsigned int maxEnergy=8192, int ch=8192);
 
 // 计算data中数据在指定能量区间的数据个数
 // data：输入的能量数据点
@@ -91,6 +91,8 @@ class SysUtils
 {
 public:
     SysUtils();
+
+    static std::vector<DetTimeEnergy> getDetTimeEnergy(std::string filename);
 };
 
 #endif // SYSUTILS_H

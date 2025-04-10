@@ -114,7 +114,7 @@ RC_ICONS = $$PWD/resource/logo.ico
 #PRECOMPILED_HEADER += pch.h
 
 # 定义输出目录变量
-OUTPUT_DIR_BASE = $$PWD/../../build
+OUTPUT_DIR_BASE = $$PWD/build
 
 #message($${TARGET}":" "$$QT_ARCH" "$$QMAKE_CXX")
 

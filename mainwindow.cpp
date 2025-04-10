@@ -363,13 +363,16 @@ void MainWindow::InitMainWindowUi()
         QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
         QJsonObject jsonObj = jsonDoc.object();
 
-        QString cacheDir = jsonObj["defaultCache"].toString();
+        QString cachePath = QApplication::applicationDirPath() + "/cache";
+        QDir dir(cachePath);
+        if (!dir.exists())
+            dir.mkdir(cachePath);
+        QString cacheDir = QCoreApplication::applicationDirPath() + "/cache";
+        if(jsonObj.contains("defaultCache")) cacheDir = jsonObj["defaultCache"].toString();
         commandHelper->setDefaultCacheDir(cacheDir);
 
         ui->lineEdit_path->setText(jsonObj["path"].toString());
         ui->lineEdit_filename->setText(jsonObj["filename"].toString());
-
-
     } else {
         ui->lineEdit_path->setText("./");
         ui->lineEdit_filename->setText("test.dat");

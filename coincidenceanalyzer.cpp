@@ -40,15 +40,6 @@ void CoincidenceAnalyzer::set_callback(std::function<void(SingleSpectrum, vector
     m_pfunc = func;
 }
 
-/**calculate 处理[时间、能量]数据对，给出能谱、探测器计数、符合计数
-* TimeEnergy：结构体，时间(ns)：能量(无单位)
-* E_win[0]：探测器1左能窗
-* E_win[1]：探测器1右能窗
-* E_win[2]：探测器2左能窗
-* E_win[3]：探测器2右能窗
-* windowWidthT [int]：符合时间窗,单位ns
-* autoEnWidth [bool]：是否自动修正峰位漂移引起的能窗移动
-*/
 void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy> _data2,
               int E_win[4], int windowWidthT, 
               bool countFlag, bool autoEnWidth)

@@ -29,7 +29,7 @@ PlotWidget::PlotWidget(QWidget *parent) : QWidget(parent)
     SPECTRUM_X_AXIS_LOWER = 0;
     SPECTRUM_X_AXIS_UPPER = MULTI_CHANNEL;
     SPECTRUM_Y_AXIS_LOWER = 0;
-    SPECTRUM_Y_AXIS_UPPER = 1e4;
+    SPECTRUM_Y_AXIS_UPPER = 1e3;
 
     /*合并模式：2个探测器在同一个图形上*/
     this->setProperty("isMergeMode", false);
@@ -1797,7 +1797,7 @@ void PlotWidget::switchToLogarithmicMode(bool isLogarithmic)
                 customPlot->yAxis->setTicker(ticker);
 
                 customPlot->yAxis->setScaleType(QCPAxis::ScaleType::stLinear);
-                customPlot->yAxis->setRange(0, 1e4);
+                customPlot->yAxis->setRange(0, 1e3);
                 customPlot->yAxis->setNumberFormat("f");
                 customPlot->yAxis->setNumberPrecision(0);
 
@@ -1833,7 +1833,7 @@ void PlotWidget::switchToLogarithmicMode(bool isLogarithmic)
                 customPlot->yAxis->setTicker(ticker);
 
                 customPlot->yAxis->setScaleType(QCPAxis::ScaleType::stLinear);
-                customPlot->yAxis->setRange(0, 1e4);
+                customPlot->yAxis->setRange(0, 1e3);
                 customPlot->yAxis->setNumberFormat("f");
                 customPlot->yAxis->setNumberPrecision(0);
 

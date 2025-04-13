@@ -215,6 +215,15 @@ void SpectrumModel::on_pushButton_start_clicked()
         detectorParameter.gain = 0x00;
         detectorParameter.transferModel = 0x00;// 0x00-能谱 0x03-波形 0x05-符合模式
         detectorParameter.measureModel = mmManual;
+        
+        // 默认打开梯形成形
+        detectorParameter.isTrapShaping = true;
+        detectorParameter.TrapShape_risePoint = 20;
+        detectorParameter.TrapShape_peakPoint = 20;
+        detectorParameter.TrapShape_fallPoint = 20;
+        detectorParameter.TrapShape_constTime1 = (int16_t)0.9558*65536;
+        detectorParameter.TrapShape_constTime2 = (int16_t)0.9556*65536;
+        detectorParameter.TrapShape_baseLine = 20;
 
         // 打开 JSON 文件
         QFile file(QApplication::applicationDirPath() + "/config/spectrum.json");

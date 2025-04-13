@@ -361,6 +361,7 @@ void CommandHelper::handleManualMeasureNetData()
 
             if (cmdPool.size() > 0)
                 socketDetector->write(cmdPool.first());
+                qDebug()<<"Send HEX: "<<binaryData.toHex();
             else{
                 //最后指令是软件触发模式
 
@@ -395,6 +396,7 @@ void CommandHelper::handleAutoMeasureNetData()
     if (workStatus == Preparing){
         QByteArray command = cmdPool.first();
         if (binaryData.compare(command) == 0){
+            qDebug()<<"Recieve HEX: "<<binaryData.toHex();
             binaryData.remove(0, command.size());
             cmdPool.erase(cmdPool.begin());
 
@@ -410,6 +412,8 @@ void CommandHelper::handleAutoMeasureNetData()
         }
     } else if (workStatus == Waiting){
         if (binaryData.compare(cmdExternalTrigger) == 0){
+            qDebug()<<"Recieve HEX: "<<binaryData.toHex();
+            qInfo()<<"接收到硬触发信号";
             // 自动测量正式开始
             binaryData.remove(0, cmdExternalTrigger.size());
 
@@ -584,27 +588,6 @@ QByteArray CommandHelper::getCmdTriggerThold1(quint16 ch1, quint16 ch2)
     return command;
 }
 
-//触发阈值2
-QByteArray CommandHelper::getCmdTriggerThold2(quint16 ch3, quint16 ch4)
-{
-    QByteArray command;
-    QDataStream dataStream(&command, QIODevice::WriteOnly);
-    dataStream << (quint8)0x12;
-    dataStream << (quint8)0x34;
-    dataStream << (quint8)0x00;
-    dataStream << (quint8)0x0f;
-    dataStream << (quint8)0xfe;
-    dataStream << (quint8)0x12;
-
-    dataStream << (quint16)ch3;
-    dataStream << (quint16)ch4;
-
-    dataStream << (quint8)0xab;
-    dataStream << (quint8)0xcd;
-
-    return command;
-}
-
 //波形极性
 QByteArray CommandHelper::getCmdWaveformPolarity(quint8 v)
 {
@@ -762,6 +745,80 @@ QByteArray CommandHelper::getCmdDetectorGain(quint8 ch1, quint8 ch2, quint8 ch3,
     return command;
 }
 
+//是否梯形成形
+QByteArray CommandHelper::getCmdDetectorTS_flag(bool flag)
+{
+    QByteArray command;
+    QDataStream dataStream(&command, QIODevice::WriteOnly);
+    dataStream << (quint8)0x12;
+    dataStream << (quint8)0x34;
+    dataStream << (quint8)0x00;
+    dataStream << (quint8)0x0f;
+    dataStream << (quint8)0xfc;
+    dataStream << (quint8)0x10;
+    dataStream << (quint8)0x00;
+    dataStream << (quint8)0x00;
+    dataStream << (quint8)0x00;
+    if(flag) dataStream << (quint8)0x11; //开启梯形成形
+    else dataStream << (quint8)0x00;//关闭梯形成形
+    dataStream << (quint8)0xab;
+    dataStream << (quint8)0xcd;
+}
+
+//梯形成形 上升沿、平顶、下降沿参数
+QByteArray CommandHelper::getCmdDetectorTS_PointPara(quint8 rise, quint8 peak, quint8 fall)
+{
+    QByteArray command;
+    QDataStream dataStream(&command, QIODevice::WriteOnly);
+    dataStream << (quint8)0x12;
+    dataStream << (quint8)0x34;
+    dataStream << (quint8)0x00;
+    dataStream << (quint8)0x0f;
+    dataStream << (quint8)0xfc;
+    dataStream << (quint8)0x11;
+    dataStream << (quint8)0x00;
+    dataStream << (quint8)rise;
+    dataStream << (quint8)peak;
+    dataStream << (quint8)fall;
+    dataStream << (quint8)0xab;
+    dataStream << (quint8)0xcd;
+}
+
+//梯形成形 时间常数，time1,time2
+QByteArray CommandHelper::getCmdDetectorTS_TimePara(quint16 time1, quint16 time2)
+{
+    QByteArray command;
+    QDataStream dataStream(&command, QIODevice::WriteOnly);
+    dataStream << (quint8)0x12;
+    dataStream << (quint8)0x34;
+    dataStream << (quint8)0x00;
+    dataStream << (quint8)0x0f;
+    dataStream << (quint8)0xfc;
+    dataStream << (quint8)0x12;
+    dataStream << (quint16)time2;
+    dataStream << (quint16)time1;
+    dataStream << (quint8)0xab;
+    dataStream << (quint8)0xcd;
+}
+
+//梯形成形 基线的噪声下限
+QByteArray CommandHelper::getCmdDetectorTS_BaseLine(quint16 baseLineLowLimit)
+{
+    QByteArray command;
+    QDataStream dataStream(&command, QIODevice::WriteOnly);
+    dataStream << (quint8)0x12;
+    dataStream << (quint8)0x34;
+    dataStream << (quint8)0x00;
+    dataStream << (quint8)0x0f;
+    dataStream << (quint8)0xfc;
+    dataStream << (quint8)0x13;
+    dataStream << (quint8)0x00;
+    dataStream << (quint8)0x00;
+    dataStream << (quint16)baseLineLowLimit;
+    dataStream << (quint8)0xab;
+    dataStream << (quint8)0xcd;
+}
+
 //传输模式
 QByteArray CommandHelper::getCmdTransferModel(quint8 mode)
 {
@@ -817,12 +874,44 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
         qWarning() << tr("创建缓存文件失败，文件名：%1").arg(currentFilename);
     }
 
-    // 触发阈值
-    qInfo() << QString("设置触发阈值, 值1=%1 值2=%2").arg(detectorParameter.triggerThold1).arg(detectorParameter.triggerThold2);
-
     cmdPool.clear();
     if (detectorParameter.transferModel == 0x05){
         // 粒子模式
+
+        //阈值
+        cmdPool.push_back(getCmdTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2));
+        //"设置波形极性
+        cmdPool.push_back(getCmdWaveformPolarity(detectorParameter.waveformPolarity));
+        //设置死时间
+        cmdPool.push_back(getCmdDeadTime(detectorParameter.deadTime));
+        // 探测器增益
+        cmdPool.push_back(getCmdDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00));
+        // 传输模式
+        cmdPool.push_back(getCmdTransferModel(detectorParameter.transferModel));
+        //梯形成形
+        if(detectorParameter.isTrapShaping) {
+            //开启梯形成形
+            cmdPool.push_back(getCmdDetectorTS_flag(true));
+            // 梯形成形 上升沿、平顶、下降沿参数
+            cmdPool.push_back(getCmdDetectorTS_PointPara(detectorParameter.TrapShape_risePoint, 
+                detectorParameter.TrapShape_peakPoint,
+                detectorParameter.TrapShape_fallPoint));
+            // 梯形成形 时间常数，time1,time2
+            cmdPool.push_back(getCmdDetectorTS_TimePara(detectorParameter.TrapShape_constTime1,
+                detectorParameter.TrapShape_constTime2));
+            //基线的噪声下限
+            cmdPool.push_back(getCmdDetectorTS_BaseLine(detectorParameter.TrapShape_baseLine));
+        }
+        else{
+            //关闭梯形成形
+            cmdPool.push_back(getCmdDetectorTS_flag(false));
+            //基线的噪声下限
+            cmdPool.push_back(getCmdDetectorTS_BaseLine(8140));
+        }
+        // 软触发模式
+        cmdPool.push_back(cmdSoftTrigger);
+    } else if (detectorParameter.transferModel == 0x00){
+        //能谱模式
 
         //阈值
         cmdPool.push_back(getCmdTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2));
@@ -836,21 +925,26 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
         cmdPool.push_back(getCmdDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00));
         // 传输模式
         cmdPool.push_back(getCmdTransferModel(detectorParameter.transferModel));
-        // 软触发模式
-        cmdPool.push_back(cmdSoftTrigger);
-    } else if (detectorParameter.transferModel == 0x00){
-        //能谱模式
-
-        //阈值
-        cmdPool.push_back(getCmdTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2));
-        //"设置波形极性
-        cmdPool.push_back(getCmdWaveformPolarity(detectorParameter.waveformPolarity));
-        //设置死时间
-        cmdPool.push_back(getCmdDeadTime(detectorParameter.deadTime));
-        // 探测器增益
-        cmdPool.push_back(getCmdDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00));
-        // 传输模式
-        cmdPool.push_back(getCmdTransferModel(detectorParameter.transferModel));
+        //梯形成形
+        if(detectorParameter.isTrapShaping) {
+            //开启梯形成形
+            cmdPool.push_back(getCmdDetectorTS_flag(true));
+            // 梯形成形 上升沿、平顶、下降沿参数
+            cmdPool.push_back(getCmdDetectorTS_PointPara(detectorParameter.TrapShape_risePoint, 
+                detectorParameter.TrapShape_peakPoint,
+                detectorParameter.TrapShape_fallPoint));
+            // 梯形成形 时间常数，time1,time2
+            cmdPool.push_back(getCmdDetectorTS_TimePara(detectorParameter.TrapShape_constTime1,
+                detectorParameter.TrapShape_constTime2));
+            //基线的噪声下限
+            cmdPool.push_back(getCmdDetectorTS_BaseLine(detectorParameter.TrapShape_baseLine));
+        }
+        else{
+            //关闭梯形成形
+            cmdPool.push_back(getCmdDetectorTS_flag(false));
+            //基线的噪声下限
+            cmdPool.push_back(getCmdDetectorTS_BaseLine(8140));
+        }
         // 开始测量，软触发模式
         cmdPool.push_back(cmdSoftTrigger);
     } else if (detectorParameter.transferModel == 0x03){
@@ -866,6 +960,26 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
         cmdPool.push_back(getCmdWaveformLength(detectorParameter.waveLength));
         // 波形触发模式
         cmdPool.push_back(getCmdWaveformTriggerModel(detectorParameter.triggerModel));
+        //梯形成形
+        if(detectorParameter.isTrapShaping) {
+            //开启梯形成形
+            cmdPool.push_back(getCmdDetectorTS_flag(true));
+            // 梯形成形 上升沿、平顶、下降沿参数
+            cmdPool.push_back(getCmdDetectorTS_PointPara(detectorParameter.TrapShape_risePoint, 
+                detectorParameter.TrapShape_peakPoint,
+                detectorParameter.TrapShape_fallPoint));
+            // 梯形成形 时间常数，time1,time2
+            cmdPool.push_back(getCmdDetectorTS_TimePara(detectorParameter.TrapShape_constTime1,
+                detectorParameter.TrapShape_constTime2));
+            //基线的噪声下限
+            cmdPool.push_back(getCmdDetectorTS_BaseLine(detectorParameter.TrapShape_baseLine));
+        }
+        else{
+            //关闭梯形成形
+            cmdPool.push_back(getCmdDetectorTS_flag(false));
+            //基线的噪声下限
+            cmdPool.push_back(getCmdDetectorTS_BaseLine(8140));
+        }
         // 传输模式
         cmdPool.push_back(getCmdTransferModel(detectorParameter.transferModel));
         // 开始测量，软触发模式
@@ -873,6 +987,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     }
 
     socketDetector->write(cmdPool.first());
+    qDebug()<<"Send HEX: "<<binaryData.toHex();
 }
 
 void CommandHelper::slotStopManualMeasure()
@@ -1106,8 +1221,8 @@ void CommandHelper::netFrameWorkThead()
                     ptrOffset += 6;
 
                     //死时间:16bit
-                    ptrOffset += 2;
                     unsigned short dietime = static_cast<quint16>(ptrOffset[0]) << 8 | static_cast<quint16>(ptrOffset[1]);
+                    ptrOffset += 2;
 
                     //幅度:16bit
                     unsigned short e = static_cast<quint16>(ptrOffset[0]) << 8 | static_cast<quint16>(ptrOffset[1]);

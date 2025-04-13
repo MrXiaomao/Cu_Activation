@@ -114,7 +114,7 @@ RC_ICONS = $$PWD/resource/logo.ico
 #PRECOMPILED_HEADER += pch.h
 
 # 定义输出目录变量
-OUTPUT_DIR_BASE = $$PWD/../../build
+OUTPUT_DIR_BASE = $$PWD/build
 
 #message($${TARGET}":" "$$QT_ARCH" "$$QMAKE_CXX")
 
@@ -214,14 +214,14 @@ message(GIT_TIME":  ""$$GIT_TIME")
 message(APP_VERSION":  ""$$APP_VERSION")
 
 contains(QT_ARCH, x86_64) {
-    win32: LIBS += -L$$PWD/3rdParty/ftcoreimc_win_v1.3.0.9n/lib/x64/ -lftcoreimc
-    DEPENDPATH += $$PWD/3rdParty/ftcoreimc_win_v1.3.0.9n/lib/x64/
+    win32: LIBS += -L$$PWD/3rdParty/ftcoreimc_win_v1.3.1.0n/lib/x64/ -lftcoreimc
+    DEPENDPATH += $$PWD/3rdParty/ftcoreimc_win_v1.3.1.0n/lib/x64/
 } else {
-    win32: LIBS += -L$$PWD/3rdParty/ftcoreimc_win_v1.3.0.9n/lib/x86/ -lftcoreimc
-    DEPENDPATH += $$PWD/3rdParty/ftcoreimc_win_v1.3.0.9n/lib/x86/
+    win32: LIBS += -L$$PWD/3rdParty/ftcoreimc_win_v1.3.1.0n/lib/x86/ -lftcoreimc
+    DEPENDPATH += $$PWD/3rdParty/ftcoreimc_win_v1.3.1.0n/lib/x86/
 }
 
-INCLUDEPATH += $$PWD/3rdParty/ftcoreimc_win_v1.3.0.9n/inc
+INCLUDEPATH += $$PWD/3rdParty/ftcoreimc_win_v1.3.1.0n/inc
 
 #win32: LIBS += -L$$PWD/dwarfstack-2.2/lib/ -ldwarfstack
 

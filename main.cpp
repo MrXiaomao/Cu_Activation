@@ -51,7 +51,7 @@ void AppMessageHandler(QtMsgType type, const QMessageLogContext& /*context*/, co
 
     if (type == QtDebugMsg){
         std::cout << "debug >> " << msg.toLocal8Bit().toStdString() << std::endl;;
-        return;
+        // return;
     }
 
     // 确保logs目录存在

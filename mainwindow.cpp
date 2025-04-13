@@ -164,7 +164,7 @@ MainWindow::MainWindow(QWidget *parent)
         emit sigRefreshUi();
     });
 
-    // 自动测量开始
+    // 测量开始
     connect(commandHelper, &CommandHelper::sigMeasureStart, this, [=](qint8 mmode, qint8 tmode){
         if (tmode == 0x02 || tmode == 0x03)
             return;//波形测量、能谱测量
@@ -832,6 +832,16 @@ void MainWindow::on_pushButton_measure_clicked()
             detectorParameter.waveformPolarity = 0x00;
             detectorParameter.deadTime = 0x0A;
             detectorParameter.gain = 0x00;
+            
+            // 默认打开梯形成形
+            detectorParameter.isTrapShaping = true;
+            detectorParameter.TrapShape_risePoint = 20;
+            detectorParameter.TrapShape_peakPoint = 20;
+            detectorParameter.TrapShape_fallPoint = 20;
+            detectorParameter.TrapShape_constTime1 = (int16_t)0.9558*65536;
+            detectorParameter.TrapShape_constTime2 = (int16_t)0.9556*65536;
+            detectorParameter.TrapShape_baseLine = 20;
+
             detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
             detectorParameter.measureModel = mmManual;
             detectorParameter.cool_timelength = ui->spinBox_cool_timelength->value();
@@ -874,7 +884,7 @@ void MainWindow::on_pushButton_measure_clicked()
             commandHelper->updateParamter(stepT, EnWin, timewidth, false);
             commandHelper->slotStartManualMeasure(detectorParameter);
 
-            QTimer::singleShot(3000, this, [=](){
+            QTimer::singleShot(30000, this, [=](){
                 //指定时间未收到开始测量指令，则按钮恢复初始状态
                 if (this->property("measure-status").toUInt() == msPrepare){
                     commandHelper->slotStopManualMeasure();
@@ -887,7 +897,7 @@ void MainWindow::on_pushButton_measure_clicked()
         ui->pushButton_measure->setEnabled(false);
         commandHelper->slotStopManualMeasure();
 
-        QTimer::singleShot(3000, this, [=](){
+        QTimer::singleShot(30000, this, [=](){
             //指定时间未收到停止测量指令，则按钮恢复初始状态
             if (this->property("measure-status").toUInt() != msEnd){
                 ui->pushButton_measure->setEnabled(true);
@@ -912,6 +922,16 @@ void MainWindow::on_pushButton_measure_2_clicked()
         detectorParameter.waveformPolarity = 0x00;
         detectorParameter.deadTime = 0x05*10;
         detectorParameter.gain = 0x00;
+
+        // 默认打开梯形成形
+        detectorParameter.isTrapShaping = true;
+        detectorParameter.TrapShape_risePoint = 20;
+        detectorParameter.TrapShape_peakPoint = 20;
+        detectorParameter.TrapShape_fallPoint = 20;
+        detectorParameter.TrapShape_constTime1 = (int16_t)0.9558*65536;
+        detectorParameter.TrapShape_constTime2 = (int16_t)0.9556*65536;
+        detectorParameter.TrapShape_baseLine = 20;
+
         detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
         detectorParameter.measureModel = mmAuto;
         this->setProperty("measur-model", detectorParameter.measureModel);
@@ -954,7 +974,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         commandHelper->slotStartAutoMeasure(detectorParameter);
 
         ui->pushButton_measure_2_tip->setText(tr("等待触发..."));
-        QTimer::singleShot(3000, this, [=](){
+        QTimer::singleShot(30000, this, [=](){
             //指定时间未收到开始测量指令，则按钮恢复初始状态
             if (this->property("measure-status").toUInt() == msPrepare){
                 commandHelper->slotStopAutoMeasure();
@@ -965,7 +985,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         ui->pushButton_measure_2->setEnabled(false);
         commandHelper->slotStopAutoMeasure();
 
-        QTimer::singleShot(3000, this, [=](){
+        QTimer::singleShot(30000, this, [=](){
             //指定时间未收到停止测量指令，则按钮恢复初始状态
             if (this->property("measure-status").toUInt() != msEnd){
                 ui->pushButton_measure_2->setEnabled(true);

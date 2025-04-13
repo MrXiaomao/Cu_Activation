@@ -58,6 +58,21 @@ typedef struct tagDetectorParameter{
     // 测量模式
     int8_t measureModel;//01-手动测量 02-自动测量 03-标定测量
 
+    //梯形成形
+    bool isTrapShaping;
+    //基线下限位置，基线是高斯噪声，这里是指基线下限，无梯形成形的时候必须是8140（十进制）；有梯形成形的时候默认值20（十进制）,可调节
+    int32_t TrapShape_baseLine;
+    //梯形成形上升沿点数，默认20
+    int8_t TrapShape_risePoint;
+    //梯形成形平顶点数，默认20
+    int8_t TrapShape_peakPoint;
+    //梯形成形下降沿点数，默认20
+    int8_t TrapShape_fallPoint;
+    //梯形成形时间常数t1 （乘以65536后取整）   默认为t1= 0.9558*65536；t2= 0.9556*65536；
+    int16_t TrapShape_constTime1;
+    //梯形成形时间常数t2 （乘以65536后取整）   默认为t1= 0.9558*65536；t2= 0.9556*65536；
+    int16_t TrapShape_constTime2;
+
     int32_t cool_timelength;//冷却时长
 } DetectorParameter;
 

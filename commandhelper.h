@@ -119,9 +119,6 @@ public slots:
     //触发阈值1
     QByteArray getCmdTriggerThold1(quint16 ch1, quint16 ch2);
 
-    //触发阈值2
-    QByteArray getCmdTriggerThold2(quint16 ch3, quint16 ch4);
-
     //波形极性
     QByteArray getCmdWaveformPolarity(quint8 v = 0x00);
 
@@ -139,6 +136,18 @@ public slots:
 
     //探测器增益
     QByteArray getCmdDetectorGain(quint8 ch1, quint8 ch2, quint8 ch3, quint8 ch4);
+    
+    //是否梯形成形
+    QByteArray getCmdDetectorTS_flag(bool flag);
+
+    //梯形成形 上升沿、平顶、下降沿参数
+    QByteArray getCmdDetectorTS_PointPara(quint8 rise, quint8 peak, quint8 fall);
+
+    //梯形成形 时间常数，time1,time2
+    QByteArray getCmdDetectorTS_TimePara(quint16 time1, quint16 time2);
+    
+    //梯形成形 基线的噪声下限
+    QByteArray getCmdDetectorTS_BaseLine(quint16 baseLineLowLimit);
 
     //传输模式
     QByteArray getCmdTransferModel(quint8 mode);

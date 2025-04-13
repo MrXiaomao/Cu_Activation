@@ -1101,7 +1101,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                                     .arg(QString::number(result[1], 'f', 0))
                                                     .arg(QString::number(result[0], 'f', 3))
                                                     .arg(QString::number(int(result[1] - result[0]*0.5), 10))//十进制输出整数
-                                                    .arg(QString::number(int(result[1] + result[0]*0.5), 10))
+                                                    .arg(QString::number(int(result[1] + result[0]*0.5), 10));
 
                                             gaussResultItemText->setText(info);
                                             //double key, value;

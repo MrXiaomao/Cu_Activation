@@ -356,12 +356,15 @@ void CommandHelper::handleManualMeasureNetData()
     if (workStatus == Preparing){
         QByteArray command = cmdPool.first();
         if (binaryData.compare(command) == 0){
+            qDebug()<<"Recieve HEX: "<<binaryData.toHex();
             binaryData.remove(0, command.size());
             cmdPool.erase(cmdPool.begin());
 
             if (cmdPool.size() > 0)
+            {
                 socketDetector->write(cmdPool.first());
-                qDebug()<<"Send HEX: "<<binaryData.toHex();
+                qDebug()<<"Send HEX: "<<cmdPool.first().toHex();
+            }
             else{
                 //最后指令是软件触发模式
 
@@ -401,7 +404,10 @@ void CommandHelper::handleAutoMeasureNetData()
             cmdPool.erase(cmdPool.begin());
 
             if (cmdPool.size() > 0)
+            {
                 socketDetector->write(cmdPool.first());
+                qDebug()<<"Send HEX: "<<cmdPool.first().toHex();
+            }
             else{
                 //最后指令是硬触发模式
                 workStatus = Waiting;
@@ -763,6 +769,8 @@ QByteArray CommandHelper::getCmdDetectorTS_flag(bool flag)
     else dataStream << (quint8)0x00;//关闭梯形成形
     dataStream << (quint8)0xab;
     dataStream << (quint8)0xcd;
+
+    return command;
 }
 
 //梯形成形 上升沿、平顶、下降沿参数
@@ -782,6 +790,8 @@ QByteArray CommandHelper::getCmdDetectorTS_PointPara(quint8 rise, quint8 peak, q
     dataStream << (quint8)fall;
     dataStream << (quint8)0xab;
     dataStream << (quint8)0xcd;
+
+    return command;
 }
 
 //梯形成形 时间常数，time1,time2
@@ -799,6 +809,8 @@ QByteArray CommandHelper::getCmdDetectorTS_TimePara(quint16 time1, quint16 time2
     dataStream << (quint16)time1;
     dataStream << (quint8)0xab;
     dataStream << (quint8)0xcd;
+
+    return command;
 }
 
 //梯形成形 基线的噪声下限
@@ -817,6 +829,8 @@ QByteArray CommandHelper::getCmdDetectorTS_BaseLine(quint16 baseLineLowLimit)
     dataStream << (quint16)baseLineLowLimit;
     dataStream << (quint8)0xab;
     dataStream << (quint8)0xcd;
+
+    return command;
 }
 
 //传输模式
@@ -987,7 +1001,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     }
 
     socketDetector->write(cmdPool.first());
-    qDebug()<<"Send HEX: "<<binaryData.toHex();
+    qDebug()<<"Send HEX: "<<cmdPool.first().toHex();
 }
 
 void CommandHelper::slotStopManualMeasure()

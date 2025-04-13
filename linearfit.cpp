@@ -137,7 +137,7 @@ bool Gaussian::setSample(std::vector<double> x, std::vector<double> y, int count
     // 核能谱单能峰扣除背景后，其净计数近似服从高斯分布：y(x) = a*exp[-4*ln2*(x-u)^2/FWHM^2]
     // a为峰值，u为峰位道址，FWHM 为半高宽。
     // 将高斯函数变化为多项式，取对数,整理为二次多项式形式，b=c1x^2+c2x+c3;
-    // b = lny, c1=-4ln2/(FWHM^2);c2=8ln2*u/FWHM^2; c2=-4ln2*u^2/FWHM^2+lna
+    // b = lny, c1=-4ln2/(FWHM^2);c2=8ln2*u/FWHM^2; c3=-4ln2*u^2/FWHM^2+lna
     // **需要注意的是，由于这里取对数，需要保证sy的值大于0. 因此当 输入的sy中存在0时，拟合结果会可能是错误，
     // **这里简单的将拟合数据y为0的时候直接设置为1e-20.这对于能谱拟合是可以的，但是对于非能谱领域，需要重新考虑。
     

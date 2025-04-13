@@ -1097,10 +1097,11 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                         //显示拟合数据
                                         QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
                                         if (gaussResultItemText){
-                                            QString info = QString("半高宽：%1\n峰: %2 = %3")
-                                                    .arg(QString::number(result[0], 'f', 3))
+                                            QString info = QString("峰位: %1\n半高宽: %2,\n左能窗: %3\n右能窗: %4")
                                                     .arg(QString::number(result[1], 'f', 0))
-                                                    .arg(QString::number(result[2], 'f', 3));
+                                                    .arg(QString::number(result[0], 'f', 3))
+                                                    .arg(QString::number(int(result[1] - result[0]*0.5), 10))//十进制输出整数
+                                                    .arg(QString::number(int(result[1] + result[0]*0.5), 10))
 
                                             gaussResultItemText->setText(info);
                                             //double key, value;

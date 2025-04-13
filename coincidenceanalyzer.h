@@ -112,8 +112,9 @@ public:
         autoFirst = true;
         for(int i=0; i<MULTI_CHANNEL; i++)
         {
-            GaussFitSpec[0][i] = 0;
-            GaussFitSpec[1][i] = 0;
+            GaussFitSpec.time = 0;
+            GaussFitSpec.spectrum[0][i] = 0;
+            GaussFitSpec.spectrum[1][i] = 0;
             AccumulateSpectrum.spectrum[0][i] = 0;
             AccumulateSpectrum.spectrum[1][i] = 0;
         }
@@ -200,7 +201,7 @@ private:
     int countCoin; //符合计数曲线的数据点个数,一个数据点对应1s.
     vector<CoincidenceResult> coinResult; //将所有处理的数据都存放在这个容器中，FPGA时钟每一秒钟产生一个点
     vector<SingleSpectrum> AllSpectrum;  //将处理的能谱数据都存放在这个容器中，FPGA时钟每一秒钟产生一个能谱，只存放最近一个小时的能谱。单端队列
-    SingleSpectrum AccumulateSpectrum; //累积能谱,将每秒的能谱进行累积后的能谱。
+    SingleSpectrum AccumulateSpectrum; //累积能谱,将每秒的能谱进行累积后的能谱
     vector<CurrentPoint> AllPoint; //每一秒内的各探测器的数据点个数
     vector<TimeEnergy> unusedData1, unusedData2;//用于存储未处理完的数据信息
     std::function<void(SingleSpectrum, vector<CoincidenceResult>)> m_pfunc = nullptr;
@@ -208,7 +209,7 @@ private:
     
     // 用于高斯拟合，自动更新能窗
     bool autoFirst; //自动调节符合计算能窗宽度，用于解决峰飘问题，每测量一定数据点之后，自动拟合出高斯曲线，以新的半高宽来作为符合计算能窗。
-    int GaussFitSpec[2][MULTI_CHANNEL]; //用于高斯拟合的能谱，每秒钟汇总一次，并且计算能窗内计数点是否到达指定的点数。满足点数后便进行拟合，更新能谱
+    SingleSpectrum GaussFitSpec; // 用于高斯拟合的能谱，每秒钟汇总一次，并且计算能窗内计数点是否到达指定的点数。满足点数后便进行拟合，更新能谱
     int GaussCountMin; //自动高斯拟合的最小数据点数
     int GaussMinGapTime; //自动高斯拟合的能窗最小时间间隔,单位：s
     unsigned short EnergyWindow[4];//能窗边界，依次存放探测器1左边界、右边界，探测器2左边界、右边界。

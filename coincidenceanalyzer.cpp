@@ -21,17 +21,18 @@ struct particle_data
 
 CoincidenceAnalyzer::CoincidenceAnalyzer():
 countCoin(0),autoFirst(true),
-GaussCountMin(2000),
+GaussCountMin(100000),
 #ifdef Q_NO_DEBUG
-GaussMinGapTime(30)
+GaussMinGapTime(180)
 #else
-GaussMinGapTime(30)
+GaussMinGapTime(180)
 #endif
 {
     for(unsigned short i=0; i<MULTI_CHANNEL; i++)
     {
-        GaussFitSpec[0][i] = 0;
-        GaussFitSpec[1][i] = 0;
+        GaussFitSpec.time = 0;
+        GaussFitSpec.spectrum[0][i] = 0;
+        GaussFitSpec.spectrum[1][i] = 0;
     }
     EnergyWindow[0] = 1;
     EnergyWindow[1] = MULTI_CHANNEL - 1;
@@ -185,6 +186,10 @@ void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> data1, vector<
             AccumulateSpectrum.spectrum[1][i] += spectrum2[i];
         }
     }
+    
+    //由于绘图出现最后一道计数较大，因此最后一道强制置零
+    AccumulateSpectrum.spectrum[0][MULTI_CHANNEL-1] = 0;
+    AccumulateSpectrum.spectrum[1][MULTI_CHANNEL-1] = 0;
 
     AccumulateSpectrum.time = countCoin;
     if(AllSpectrum.size() >= MAX_REMAIN_SPECTRUM) AllSpectrum.erase(AllSpectrum.begin()); //当超过最大能谱数目时，则先进先出
@@ -324,27 +329,32 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
 {
     SingleSpectrum tempSpec = AllSpectrum.back();
 
-    //计算能窗内数据点数
+    //计算自动拟合的数据点数
     int sumEnergy1 = 0; 
     int sumEnergy2 = 0;
 
     for(unsigned short i=0; i<MULTI_CHANNEL; i++)
     {
-        GaussFitSpec[0][i] += tempSpec.spectrum[0][i];
-        GaussFitSpec[1][i] += tempSpec.spectrum[1][i];
-        if(i >= EnergyWindow[0] && i <= EnergyWindow[1]) sumEnergy1 += GaussFitSpec[0][i];
-        if(i >= EnergyWindow[2] && i <= EnergyWindow[3]) sumEnergy2 += GaussFitSpec[1][i];
+        GaussFitSpec.time = tempSpec.time;
+        GaussFitSpec.spectrum[0][i] += tempSpec.spectrum[0][i];
+        GaussFitSpec.spectrum[1][i] += tempSpec.spectrum[1][i];
+        
+        //记录全谱的计数
+        sumEnergy1 += GaussFitSpec.spectrum[0][i];
+        sumEnergy2 += GaussFitSpec.spectrum[1][i];
     }
 
     bool changed = false;
 
-    if(sumEnergy1 > GaussCountMin)  
+    if(sumEnergy1 > GaussCountMin && sumEnergy2 > GaussCountMin)  
     {
         double result[3];
         vector<double> sx,sy;
         for(unsigned short i=0; i<MULTI_CHANNEL; i++)
         {
-            if(i >= EnergyWindow[0] && i <= EnergyWindow[1]) {sx.push_back(i*1.0); sy.push_back(GaussFitSpec[0][i]);}
+            if(i >= EnergyWindow[0] && i <= EnergyWindow[1]) {sx.push_back(i*1.0); sy.push_back(GaussFitSpec.spectrum[0][i]);}
+            //重置
+            GaussFitSpec.spectrum[0][i] = 0;
         }
         
         int fcount = EnergyWindow[1] - EnergyWindow[0] + 1;
@@ -366,13 +376,16 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
         }
     }
 
-    if(sumEnergy2 > GaussCountMin)  
+    if(sumEnergy1 > GaussCountMin && sumEnergy2 > GaussCountMin)  
     {
         double result[3];
         vector<double> sx,sy;
         for(unsigned short i=0; i<MULTI_CHANNEL; i++)
         {
-            if(i >= EnergyWindow[2] && i <= EnergyWindow[3]) {sx.push_back(i*1.0); sy.push_back(GaussFitSpec[1][i]);}
+            if(i >= EnergyWindow[2] && i <= EnergyWindow[3]) {sx.push_back(i*1.0); sy.push_back(GaussFitSpec.spectrum[1][i]);}
+            //重置
+            GaussFitSpec.time = 0;//注意这里是在探测器2之后才重置
+            GaussFitSpec.spectrum[1][i] = 0;
         }
 
         int fcount = EnergyWindow[3] - EnergyWindow[2] + 1;

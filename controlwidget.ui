@@ -126,6 +126,9 @@ background-color: rgb(96, 96, 96);</string>
         <property name="decimals">
          <number>4</number>
         </property>
+        <property name="minimum">
+         <double>5.000000000000000</double>
+        </property>
         <property name="maximum">
          <double>999.990000000000009</double>
         </property>
@@ -133,7 +136,7 @@ background-color: rgb(96, 96, 96);</string>
          <double>0.010000000000000</double>
         </property>
         <property name="value">
-         <double>0.500000000000000</double>
+         <double>5.000000000000000</double>
         </property>
        </widget>
       </item>
@@ -143,13 +146,13 @@ background-color: rgb(96, 96, 96);</string>
          <number>4</number>
         </property>
         <property name="maximum">
-         <double>5.000000000000000</double>
+         <double>1.000000000000000</double>
         </property>
         <property name="singleStep">
          <double>0.010000000000000</double>
         </property>
         <property name="value">
-         <double>1.000000000000000</double>
+         <double>0.500000000000000</double>
         </property>
        </widget>
       </item>
@@ -328,6 +331,9 @@ background-color: rgb(96, 96, 96);</string>
         <property name="decimals">
          <number>4</number>
         </property>
+        <property name="minimum">
+         <double>5.000000000000000</double>
+        </property>
         <property name="maximum">
          <double>999.990000000000009</double>
         </property>
@@ -335,7 +341,7 @@ background-color: rgb(96, 96, 96);</string>
          <double>0.010000000000000</double>
         </property>
         <property name="value">
-         <double>1.000000000000000</double>
+         <double>5.000000000000000</double>
         </property>
        </widget>
       </item>

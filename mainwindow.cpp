@@ -23,6 +23,7 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QWhatsThis>
+#include <iostream>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -180,13 +181,17 @@ MainWindow::MainWindow(QWidget *parent)
         //开启测量时钟
         if (mmode == mmManual || mmode == mmAuto){//手动/自动测量
             //测量倒计时时钟
-            QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
-            measureTimer->start();
 
-            //测量时长时钟
-            measureStartTime = lastRecvDataTime;
-            QTimer* measureRefTimer = this->findChild<QTimer*>("measureRefTimer");
-            measureRefTimer->start(500);
+            //能谱测量不需要开启倒计时
+            if (tmode != 0x00){
+                QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
+                measureTimer->start();
+
+                //测量时长时钟
+                measureStartTime = lastRecvDataTime;
+                QTimer* measureRefTimer = this->findChild<QTimer*>("measureRefTimer");
+                measureRefTimer->start(500);
+            }
         }
 
         QString msg = tr("测量正式开始");
@@ -260,6 +265,17 @@ MainWindow::MainWindow(QWidget *parent)
     //DirectConnection replot 子线程操作，不会堵塞，但是会崩溃
     //QueuedConnection replot 主线程操作，刷新慢
 
+    connect(commandHelper, &CommandHelper::sigUpdateAutoEnWidth, this, [=](std::vector<unsigned short> EnWidth){
+        ui->spinBox_1_leftE_2->setValue(EnWidth[0]);
+        ui->spinBox_1_rightE_2->setValue(EnWidth[1]);
+
+        ui->spinBox_2_leftE_2->setValue(EnWidth[2]);
+        ui->spinBox_2_rightE_2->setValue(EnWidth[3]);
+
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+        plotWidget->slotUpdateEnTimeWidth(EnWidth.data());
+    }, Qt::QueuedConnection/*防止堵塞*/);
+
     emit sigRefreshUi();
 
     // 创建图表
@@ -321,32 +337,47 @@ void MainWindow::InitMainWindowUi()
     ui->spinBox_1_rightE->setMaximum(MULTI_CHANNEL);
     ui->spinBox_2_leftE->setMaximum(MULTI_CHANNEL);
     ui->spinBox_2_rightE->setMaximum(MULTI_CHANNEL);
+
+    ui->spinBox_1_leftE_2->setMaximum(MULTI_CHANNEL);
+    ui->spinBox_1_rightE_2->setMaximum(MULTI_CHANNEL);
+    ui->spinBox_2_leftE_2->setMaximum(MULTI_CHANNEL);
+    ui->spinBox_2_rightE_2->setMaximum(MULTI_CHANNEL);
+
+    ui->spinBox_1_leftE_3->setMaximum(MULTI_CHANNEL);
+    ui->spinBox_1_rightE_3->setMaximum(MULTI_CHANNEL);
+    ui->spinBox_2_leftE_3->setMaximum(MULTI_CHANNEL);
+    ui->spinBox_2_rightE_3->setMaximum(MULTI_CHANNEL);
+
     ui->spinBox_leftE->setMaximum(MULTI_CHANNEL);
     ui->spinBox_rightE->setMaximum(MULTI_CHANNEL);
+
     connect(ui->spinBox_1_leftE, QOverload<int>::of(&QSpinBox::valueChanged), this, [=](int v){
-        int EnWin[4] = {ui->spinBox_1_leftE->value(), ui->spinBox_1_rightE->value(),
-                                ui->spinBox_2_leftE->value(), ui->spinBox_2_rightE->value()};
+        unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
+                                (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
         plotWidget->slotUpdateEnTimeWidth(EnWin);
     });
     connect(ui->spinBox_1_rightE, QOverload<int>::of(&QSpinBox::valueChanged), this, [=](int v){
-        int EnWin[4] = {ui->spinBox_1_leftE->value(), ui->spinBox_1_rightE->value(),
-                                ui->spinBox_2_leftE->value(), ui->spinBox_2_rightE->value()};
+        unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
+                                   (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
         plotWidget->slotUpdateEnTimeWidth(EnWin);
     });
     connect(ui->spinBox_2_leftE, QOverload<int>::of(&QSpinBox::valueChanged), this, [=](int v){
-        int EnWin[4] = {ui->spinBox_1_leftE->value(), ui->spinBox_1_rightE->value(),
-                                ui->spinBox_2_leftE->value(), ui->spinBox_2_rightE->value()};
+        unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
+                                   (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
         plotWidget->slotUpdateEnTimeWidth(EnWin);
     });
     connect(ui->spinBox_2_rightE, QOverload<int>::of(&QSpinBox::valueChanged), this, [=](int v){
-        int EnWin[4] = {ui->spinBox_1_leftE->value(), ui->spinBox_1_rightE->value(),
-                                ui->spinBox_2_leftE->value(), ui->spinBox_2_rightE->value()};
+        unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
+                                   (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
         plotWidget->slotUpdateEnTimeWidth(EnWin);
     });
+    // connect(ui->spinBox_1_rightE, SIGNAL(valueChanged(int)), ui->spinBox_1_leftE, SLOT(valueChanged(int)));
+    // connect(ui->spinBox_2_leftE, SIGNAL(valueChanged(int)), ui->spinBox_1_leftE, SLOT(valueChanged(int)));
+    // connect(ui->spinBox_2_rightE, SIGNAL(valueChanged(int)), ui->spinBox_1_leftE, SLOT(valueChanged(int)));
 
     QString path = QApplication::applicationDirPath() + "/config";
     QDir dir(path);
@@ -828,16 +859,18 @@ void MainWindow::on_pushButton_measure_clicked()
             ui->action_refresh->setEnabled(true);
             ui->pushButton_measure->setEnabled(false);
 
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
-            plotWidget->slotResetPlot();
-
             ui->pushButton_measure_2->setEnabled(false);
             int stepT = ui->spinBox_step->value();
-            int EnWin[4] = {ui->spinBox_1_leftE->value(), ui->spinBox_1_rightE->value(),
-                                    ui->spinBox_2_leftE->value(), ui->spinBox_2_rightE->value()};
+            unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
+                                       (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
             int timewidth = ui->spinBox_timeWidth->value();
             QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
             measureTimer->setInterval(ui->spinBox_timelength->value() * 1000);
+
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+            plotWidget->slotResetPlot();
+            plotWidget->slotUpdateEnTimeWidth(EnWin);
+
             commandHelper->updateParamter(stepT, EnWin, timewidth, false);
             commandHelper->slotStartManualMeasure(detectorParameter);
 
@@ -872,7 +905,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
 
         this->setProperty("measure-status", msPrepare);
 
-        //手动测量
+        //自动测量
         DetectorParameter detectorParameter;
         detectorParameter.triggerThold1 = 0x81;
         detectorParameter.triggerThold2 = 0x81;
@@ -911,8 +944,8 @@ void MainWindow::on_pushButton_measure_2_clicked()
         plotWidget->slotResetPlot();
 
         int stepT = ui->spinBox_step_2->value();
-        int EnWin[4] = {ui->spinBox_1_leftE->value(), ui->spinBox_1_rightE->value(),
-            ui->spinBox_2_leftE->value(), ui->spinBox_2_rightE->value()};
+        unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE_2->value(), (unsigned short)ui->spinBox_1_rightE_2->value(),
+                                   (unsigned short)ui->spinBox_2_leftE_2->value(), (unsigned short)ui->spinBox_2_rightE_2->value()};
         int timewidth = ui->spinBox_timeWidth->value();
         QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
         measureTimer->setInterval(ui->spinBox_timelength_2->value() * 1000);
@@ -988,19 +1021,23 @@ void MainWindow::on_pushButton_refresh_clicked()
     this->save();
 
     int stepT = ui->spinBox_step->value();
-    int EnWin[4] = {ui->spinBox_1_leftE->value(), ui->spinBox_1_rightE->value(),
-        ui->spinBox_2_leftE->value(), ui->spinBox_2_rightE->value()};
+    unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
+                               (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
 
     if (ui->radioButton_ref->isChecked()){
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
         plotWidget->slotResetPlot();
     }
 
+    //SplashWidget::instance()->setInfo(tr("能量信息正在重新进行计算，请等待..."), false);
+    //SplashWidget::instance()->exec();
+
     int timewidth = ui->spinBox_timeWidth->value();
     commandHelper->updateParamter(stepT, EnWin, timewidth, true);
-    this->setProperty("pause-plot", false);
 
-    ui->pushButton_refresh->setIcon(QIcon(  ));
+    //取消画面暂停刷新
+    this->setProperty("pause-plot", false);
+    ui->pushButton_refresh->setIcon(QIcon());
 }
 
 void MainWindow::on_action_close_triggered()
@@ -1380,6 +1417,15 @@ void MainWindow::load()
             ui->spinBox_step->setValue(jsonObjM1["step"].toInt());
             //符合分辨时间
             ui->spinBox_timeWidth->setValue(jsonObjM1["timewidth"].toInt());
+
+            //探测器1能窗左侧
+            ui->spinBox_1_leftE->setValue(jsonObjM1["Det1_EnWidth_left"].toInt());
+            //探测器1能窗右侧
+            ui->spinBox_1_rightE->setValue(jsonObjM1["Det1_EnWidth_right"].toInt());
+            //探测器2能窗左侧
+            ui->spinBox_2_leftE->setValue(jsonObjM1["Det2_EnWidth_left"].toInt());
+            //探测器2能窗右侧
+            ui->spinBox_2_rightE->setValue(jsonObjM1["Det2_EnWidth_right"].toInt());
         }
 
         //自动
@@ -1394,6 +1440,14 @@ void MainWindow::load()
             ui->spinBox_step_2->setValue(jsonObjM2["step"].toInt());
             //符合分辨时间
             ui->spinBox_timeWidth_2->setValue(jsonObjM2["timewidth"].toInt());
+            //探测器1能窗左侧
+            ui->spinBox_1_leftE_2->setValue(jsonObjM2["Det1_EnWidth_left"].toInt());
+            //探测器1能窗右侧
+            ui->spinBox_1_rightE_2->setValue(jsonObjM2["Det1_EnWidth_right"].toInt());
+            //探测器2能窗左侧
+            ui->spinBox_2_leftE_2->setValue(jsonObjM2["Det2_EnWidth_left"].toInt());
+            //探测器2能窗右侧
+            ui->spinBox_2_rightE_2->setValue(jsonObjM2["Det2_EnWidth_right"].toInt());
         }
 
         //标定
@@ -1410,6 +1464,14 @@ void MainWindow::load()
             ui->spinBox_timeWidth_3->setValue(jsonObjM3["timewidth"].toInt());
             //中子产额
             ui->spinBox_neutron_yield->setValue(jsonObjM3["neutron_yield"].toInt());
+            //探测器1能窗左侧
+            ui->spinBox_1_leftE_3->setValue(jsonObjM3["Det1_EnWidth_left"].toInt());
+            //探测器1能窗右侧
+            ui->spinBox_1_rightE_3->setValue(jsonObjM3["Det1_EnWidth_right"].toInt());
+            //探测器2能窗左侧
+            ui->spinBox_2_leftE_3->setValue(jsonObjM3["Det2_EnWidth_left"].toInt());
+            //探测器2能窗右侧
+            ui->spinBox_2_rightE_3->setValue(jsonObjM3["Det2_EnWidth_right"].toInt());
         }
 
         //公共
@@ -1445,11 +1507,6 @@ void MainWindow::save()
 
         //手动
         QJsonObject jsonObjM1;
-        if (jsonObj.contains("M1")){
-            jsonObjM1 = jsonObj["M1"].toObject();
-        } else {
-            //jsonObj.insert("M1", jsonObjM1);
-        }
         //测量时长
         jsonObjM1["timelength"] = ui->spinBox_timelength->value();
         //量程选取
@@ -1468,17 +1525,10 @@ void MainWindow::save()
         jsonObjM1["Det2_EnWidth_left"] = ui->spinBox_2_leftE->value();
         //探测器2能窗右侧
         jsonObjM1["Det2_EnWidth_right"] = ui->spinBox_2_rightE->value();
-        if (!jsonObj.contains("M1")){
-            jsonObj.insert("M1", jsonObjM1);
-        }
+        jsonObj["M1"] = jsonObjM1;
 
         //自动
         QJsonObject jsonObjM2;
-        if (jsonObj.contains("M2")){
-            jsonObjM2 = jsonObj["M2"].toObject();
-        } else {
-            //jsonObj.insert("M2", jsonObjM2);
-        }
         //测量时长
         jsonObjM2["timelength"] = ui->spinBox_timelength_2->value();
         //量程选取
@@ -1495,17 +1545,10 @@ void MainWindow::save()
         jsonObjM2["Det2_EnWidth_left"] = ui->spinBox_2_leftE_2->value();
         //探测器2能窗右侧
         jsonObjM2["Det2_EnWidth_right"] = ui->spinBox_2_rightE_2->value();
-        if (!jsonObj.contains("M2")){
-            jsonObj.insert("M2", jsonObjM2);
-        }
+        jsonObj["M2"] = jsonObjM2;
 
         //标定
         QJsonObject jsonObjM3;
-        if (jsonObj.contains("M3")){
-            jsonObjM3 = jsonObj["M3"].toObject();
-        } else {
-            //jsonObj.insert("M3", jsonObjM3);
-        }
         //测量时长
         jsonObjM3["timelength"] = ui->spinBox_timelength_3->value();
         //量程选取
@@ -1524,26 +1567,17 @@ void MainWindow::save()
         jsonObjM3["Det2_EnWidth_right"] = ui->spinBox_2_rightE_3->value();
         //中子产额
         jsonObjM3["neutron_yield"] = ui->spinBox_neutron_yield->value();
-        if (!jsonObj.contains("M3")){
-            jsonObj.insert("M3", jsonObjM3);
-        }
+        jsonObj["M3"] = jsonObjM3;
 
         //公共
         QJsonObject jsonObjPub;
-        if (jsonObj.contains("Public")){
-            jsonObjPub = jsonObj["Public"].toObject();
-        } else {
-            //jsonObj.insert("Public", jsonObjPub);
-        }
         //高斯拟合
         jsonObjPub["Gauss_leftE"] = ui->spinBox_leftE->value();
         jsonObjPub["Gauss_rightE"] = ui->spinBox_rightE->value();
         //保存数据
         jsonObjPub["path"] = ui->lineEdit_path->text();
-        jsonObjPub["filename"] = ui->lineEdit_filename->text();
-        if (!jsonObj.contains("Public")){
-            jsonObj.insert("Public", jsonObjPub);
-        }
+        jsonObjPub["filename"] = ui->lineEdit_filename->text();        
+        jsonObj["Public"] = jsonObjPub;
 
         file.open(QIODevice::WriteOnly | QIODevice::Text);
         QJsonDocument jsonDocNew(jsonObj);
@@ -1555,6 +1589,18 @@ void MainWindow::save()
 void MainWindow::on_pushButton_refresh_2_clicked()
 {
     this->save();
+
+    int stepT = ui->spinBox_step_2->value();
+    unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE_2->value(), (unsigned short)ui->spinBox_1_rightE_2->value(),
+                               (unsigned short)ui->spinBox_2_leftE_2->value(), (unsigned short)ui->spinBox_2_rightE_2->value()};
+
+    if (ui->radioButton_ref->isChecked()){
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+        plotWidget->slotResetPlot();
+    }
+
+    int timewidth = ui->spinBox_timeWidth_2->value();
+    commandHelper->updateParamter(stepT, EnWin, timewidth, false);
 }
 
 void MainWindow::on_pushButton_refresh_3_clicked()

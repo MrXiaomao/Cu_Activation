@@ -10,99 +10,19 @@
 #include "qlitethread.h"
 #include "sysutils.h"
 #include "coincidenceanalyzer.h"
-typedef struct tagDetectorParameter{
-    // 触发阈值
-    qint16 triggerThold1, triggerThold2;
-
-    // 波形极性
-    /*
-        00:正极性
-        01:负极性
-        默认正极性
-    */
-    qint8 waveformPolarity;
-
-
-    // 能谱模式/粒子模式死时间 单位ns
-    qint16 deadTime;
-    // 能谱刷新时间
-    quint32 refreshTimeLength;
-    //波形长度
-    quint32 waveLength;
-    //波形触发模式
-    qint8 triggerModel;
-
-    // 探测器增益
-    qint8 gain;
-
-    // 传输模式
-    /*
-    00:能谱
-    03:波形
-    05:粒子模式
-    */
-    qint8 transferModel;
-
-    // 测量模式
-    qint8 measureModel;//00-手动测量 01-自动测量 02-标定测量
-
-    qint32 cool_timelength;//冷却时长
-} DetectorParameter;
-
-class NetWorker : public QObject
-{
-    Q_OBJECT
-public:
-    void push_back(QByteArray binaryData){
-        QMutexLocker locker(&mutexCache);
-        cachePool.push_back(binaryData);
-    };
-public slots:
-    void doWork();
-
-signals:
-    void resultReady(const QString &result);
-    void sigMeasureStop();
-    //网络包数大小
-    void sigRecvDataSize(qint32);
-    void sigRecvPkgCount(qint32);
-
-    //分拣完毕
-    void sigDispatchEnergyPkg(DetTimeEnergy);
-
-private:
-    QMutex mutexCache;
-    QByteArray cachePool;
-    QByteArray handlerPool;
-    DetectorParameter detectorParameter;
-    QFile *pfSave = nullptr;
-    bool taskFinished = false;
-};
-
-class EnergyWorker : public QObject
-{
-    Q_OBJECT
-public slots:
-    void doWork();
-
-    void handleDispatchEnergyPkg(DetTimeEnergy detTimeEnergy){
-        QMutexLocker locker(&mutexPlot);
-        currentSpectrumFrames.push_back(detTimeEnergy);
-    }
-signals:
-    void resultReady(const QString &result);
-
-private:
-    QMutex mutexPlot;
-    std::vector<DetTimeEnergy> currentSpectrumFrames;//网络新接收的能谱数据（一般指未处理，未分步长的数据;
-};
-
 
 class QLiteThread;
 class CommandHelper : public QObject
 {
     Q_OBJECT
 public:
+    enum Measure_model{
+        mmNone = 0x00,
+        mmManual= 0x01, // 手动
+        mmAuto = 0x02, // 自动
+        mmDefine = 0x03, // 标定
+    };
+
     explicit CommandHelper(QObject *parent = nullptr);
     ~CommandHelper();
 
@@ -111,12 +31,16 @@ public:
         return &commandHelper;
     }
 
+    void initCommand();//初始化常用指令
     void startWork();
     void switchToCountMode(bool refModel);
-    void updateParamter(int stepT, int EnWin[4], int timewidth = 50, bool reset = false);
+    void updateParamter(int stepT, unsigned short EnWin[4], int timewidth = 50, bool reset = false);
     void saveFileName(QString);
     void setDefaultCacheDir(QString dir);
     bool isConnected();//探测器是否连接
+
+    void handleManualMeasureNetData();//处理手动测量网络数据
+    void handleAutoMeasureNetData();//处理自动测量网络数据
 
     enum WorkStatusFlag {
         NoWork = 0,     // 未开始
@@ -165,9 +89,12 @@ signals:
     void sigRecvDataSize(qint32);
     void sigRecvPkgCount(qint32);
 
+    //更新自动能宽
+    void sigUpdateAutoEnWidth(std::vector<unsigned short>);
+
 private:
     QByteArray frame;
-    QByteArray command;
+    //QByteArray command;
     QByteArray cachePool;
     QByteArray handlerPool;
     QMutex mutexCache;//缓冲池交换网络数据所用 cachePool
@@ -179,12 +106,8 @@ private:
     quint32 currentEnergyTime = 0;// 能谱时间
     bool reCalculateing = false;//正在对所有能量数据进行重新运算
 
-    // QThread netWorkerThread;
-    // QThread energyWorkerThread;
-    // NetWorker *netWorker;
-    // EnergyWorker *energyWorker;
-
     CoincidenceAnalyzer* coincidenceAnalyzer;
+    void analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult> r3);
 
 public slots:
     void openRelay();
@@ -194,34 +117,31 @@ public slots:
     void closeDetector();
 
     //触发阈值1
-    void slotTriggerThold1(quint16 ch1, quint16 ch2);
+    QByteArray getCmdTriggerThold1(quint16 ch1, quint16 ch2);
 
     //触发阈值2
-    void slotTriggerThold2(quint16 ch3, quint16 ch4);
+    QByteArray getCmdTriggerThold2(quint16 ch3, quint16 ch4);
 
     //波形极性
-    void slotWaveformPolarity(quint8 v = 0x00);
+    QByteArray getCmdWaveformPolarity(quint8 v = 0x00);
 
     //波形触发模式
-    void slotWaveformTriggerModel(quint8 mode = 0x00);
+    QByteArray getCmdWaveformTriggerModel(quint8 mode = 0x00);
 
     //波形长度
-    void slotWaveformLength(quint8 v = 0x04);
+    QByteArray getCmdWaveformLength(quint8 v = 0x04);
 
     //能谱模式/粒子模式死时间
-    void slotDeadTime(quint16 deadTime);
+    QByteArray getCmdDeadTime(quint16 deadTime);
 
     //能谱刷新时间
-    void slotSpectnumRefreshTimeLength(quint32 refreshTimelength);
+    QByteArray getCmdSpectnumRefreshTimeLength(quint32 refreshTimelength);
 
     //探测器增益
-    void slotDetectorGain(quint8 ch1, quint8 ch2, quint8 ch3, quint8 ch4);
+    QByteArray getCmdDetectorGain(quint8 ch1, quint8 ch2, quint8 ch3, quint8 ch4);
 
     //传输模式
-    void slotTransferModel(quint8 mode);
-
-    //开始测量
-    void slotStart(qint8 mode);
+    QByteArray getCmdTransferModel(quint8 mode);
 
     //开始手工测量
     void slotStartManualMeasure(DetectorParameter p);
@@ -232,14 +152,19 @@ public slots:
     void slotStartAutoMeasure(DetectorParameter p);
     void slotStopAutoMeasure();
 
-public slots:
-    void slotDoTasks();
-    void slotAnalyzeNetFrame();
-    void slotPlotUpdateFrame();
+public:
+    void netFrameWorkThead();
+    void detTimeEnergyWorkThread();
 
 private:
     QTcpSocket *socketRelay;    //继电器
     QTcpSocket *socketDetector;//探测器
+
+    QByteArray cmdSoftTrigger;//软件触发，开始测量
+    QByteArray cmdHardTrigger;//硬件触发，开始测量
+    QByteArray cmdStopTrigger;//停止测量
+    QByteArray cmdExternalTrigger;//外触发信号，硬件触发信号反馈
+    QVector<QByteArray> cmdPool;
 
     WorkStatusFlag workStatus = NoWork;
     DetectorParameter detectorParameter;
@@ -252,7 +177,8 @@ private:
     QString defaultCacheDir;
     QString currentFilename;
     int stepT = 1; //界面图像刷新时间
-    int EnWindow[4]; // 探测器1左能窗、右能窗；探测器2左能窗、右能窗
+    unsigned short EnWindow[4]; // 探测器1左能窗、右能窗；探测器2左能窗、右能窗
+    std::vector<unsigned short> autoEnWindow; // 探测器1左能窗、右能窗；探测器2左能窗、右能窗
     int timeWidth = 50;//时间窗宽度，单位ns(符合分辨时间)
     qint64 lastClockT = 0;
     bool refModel = false;

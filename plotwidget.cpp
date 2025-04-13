@@ -239,7 +239,7 @@ void PlotWidget::initCustomPlot(){
 
             connect(btn, &QPushButton::clicked, this, [=](){
                 btn->setEnabled(false);
-                QWhatsThis::showText(btn->mapToGlobal(btn->geometry().bottomRight()), tr("请长按鼠标右键或Ctrl+鼠标右键，在能谱图上框选出符合能窗范围"), this);
+                QWhatsThis::showText(btn->mapToGlobal(btn->geometry().bottomRight()), tr("请长按鼠标左键或Ctrl+鼠标左键，在能谱图上框选出符合能窗范围"), this);
                 //图像进入区域选择模式
                 this->allowAreaSelected = true;
                 this->setProperty("allowAreaSelected-plot-name", customPlot->objectName());
@@ -305,6 +305,18 @@ void PlotWidget::initCustomPlot(){
     connect(timeM5Action, SIGNAL(triggered()), this, SLOT(slotCountRefreshTimelength()));
     connect(timeM3Action, SIGNAL(triggered()), this, SLOT(slotCountRefreshTimelength()));
     connect(timeM1Action, SIGNAL(triggered()), this, SLOT(slotCountRefreshTimelength()));
+    QActionGroup *actGrp = new QActionGroup(this);
+    actGrp->addAction(timeAllAction);
+    actGrp->addAction(timeM10Action);
+    actGrp->addAction(timeM5Action);
+    actGrp->addAction(timeM3Action);
+    actGrp->addAction(timeM1Action);
+    actGrp->setExclusive(true);
+    QList<QAction*> actions = actGrp->actions();
+    for (auto action : actions){
+        action->setCheckable(true);
+    }
+    timeAllAction->setChecked(true);
 
     // QVector<double> keys, values;
     // for (int i=0; i<8192; ++i){
@@ -585,10 +597,8 @@ void PlotWidget::dispatchAdditionalDragFunction(QCustomPlot *customPlot)
     itemStraightLineRight->setObjectName("itemStraightLineRight");
 
     //程序开始启动，还未设置能窗区域范围，所以这里先不显示出来，框选之后才会显示
-    itemStraightLineLeft->point1->setCoords(0, 0);
-    itemStraightLineLeft->point2->setCoords(0, 0);
-    itemStraightLineRight->point1->setCoords(0, 0);
-    itemStraightLineRight->point2->setCoords(0, 0);
+    itemStraightLineLeft->setVisible(false);
+    itemStraightLineRight->setVisible(false);
 }
 
 
@@ -1353,7 +1363,7 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
                     customPlotDet12->yAxis->setRange(customPlotDet12->yAxis->range().lower, maxEnergy / RANGE_SCARRE_LOWER);
                 }
 
-                customPlotDet12->replot();
+                customPlotDet12->replot(refreshPriority);
             }
         }
     } else {
@@ -1575,7 +1585,7 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
             coordsTipItemYLine->setVisible(false);
 
             customPlot->rescaleAxes(true);
-            customPlot->replot();
+            customPlot->replot(refreshPriority);
         }
     }
 }
@@ -1921,35 +1931,43 @@ void PlotWidget::slotGauss(int leftE, int rightE)
     }
 }
 
-void PlotWidget::slotUpdateEnTimeWidth(int* timeWidth)
+void PlotWidget::slotUpdateEnTimeWidth(unsigned short* timeWidth)
 {
+    if (this->property("isCountMode").toBool())
+        return;
+
     if (this->property("isMergeMode").toBool()){
         QCustomPlot* customPlotDet12 = this->findChild<QCustomPlot*>("Det12");
         QCPItemStraightLine* itemStraightLineLeft = customPlotDet12->findChild<QCPItemStraightLine*>("itemStraightLineLeft");
         if (itemStraightLineLeft){
             itemStraightLineLeft->point1->setCoords(timeWidth[0], customPlotDet12->yAxis->range().lower);
             itemStraightLineLeft->point2->setCoords(timeWidth[0], customPlotDet12->yAxis->range().upper);
+            itemStraightLineLeft->setVisible(true);
         }
         QCPItemStraightLine* itemStraightLineRight = customPlotDet12->findChild<QCPItemStraightLine*>("itemStraightLineRight");
         if (itemStraightLineRight){
             itemStraightLineRight->point1->setCoords(timeWidth[1], customPlotDet12->yAxis->range().lower);
             itemStraightLineRight->point2->setCoords(timeWidth[1], customPlotDet12->yAxis->range().upper);
+            itemStraightLineRight->setVisible(true);
         }
 
         customPlotDet12->replot(QCustomPlot::rpQueuedReplot);
     } else {
         QCustomPlot* customPlotDet1 = this->findChild<QCustomPlot*>("Det1");
         QCustomPlot* customPlotDet2 = this->findChild<QCustomPlot*>("Det2");
+
         {
             QCPItemStraightLine* itemStraightLineLeft = customPlotDet1->findChild<QCPItemStraightLine*>("itemStraightLineLeft");
             if (itemStraightLineLeft){
                 itemStraightLineLeft->point1->setCoords(timeWidth[0], customPlotDet1->yAxis->range().lower);
                 itemStraightLineLeft->point2->setCoords(timeWidth[0], customPlotDet1->yAxis->range().upper);
+                itemStraightLineLeft->setVisible(true);
             }
             QCPItemStraightLine* itemStraightLineRight = customPlotDet1->findChild<QCPItemStraightLine*>("itemStraightLineRight");
             if (itemStraightLineRight){
                 itemStraightLineRight->point1->setCoords(timeWidth[1], customPlotDet2->yAxis->range().lower);
                 itemStraightLineRight->point2->setCoords(timeWidth[1], customPlotDet2->yAxis->range().upper);
+                itemStraightLineRight->setVisible(true);
             }
         }
         {
@@ -1957,11 +1975,13 @@ void PlotWidget::slotUpdateEnTimeWidth(int* timeWidth)
             if (itemStraightLineLeft){
                 itemStraightLineLeft->point1->setCoords(timeWidth[2], customPlotDet2->yAxis->range().lower);
                 itemStraightLineLeft->point2->setCoords(timeWidth[2], customPlotDet2->yAxis->range().upper);
+                itemStraightLineLeft->setVisible(true);
             }
             QCPItemStraightLine* itemStraightLineRight = customPlotDet2->findChild<QCPItemStraightLine*>("itemStraightLineRight");
             if (itemStraightLineRight){
                 itemStraightLineRight->point1->setCoords(timeWidth[3], customPlotDet2->yAxis->range().lower);
                 itemStraightLineRight->point2->setCoords(timeWidth[3], customPlotDet2->yAxis->range().upper);
+                itemStraightLineRight->setVisible(true);
             }
         }
 

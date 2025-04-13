@@ -53,11 +53,22 @@ void SplashWidget::setInfo(const QString &info, int fontSizeMain, int timeout)
     ui->label_Info->setText(info);
 }
 
+void SplashWidget::setInfo(const QString &info, bool allowClose, int fontSizeMain, int timeout)
+{
+    if (allowClose)
+        ui->pushButton_cancel->show();
+    else
+        ui->pushButton_cancel->hide();
+
+    setInfo(info, fontSizeMain, timeout);
+}
+
 #include "controlhelper.h"
 void SplashWidget::on_pushButton_cancel_clicked()
 {
     ControlHelper::instance()->single_stop(0x01);
     ControlHelper::instance()->single_stop(0x02);
 
-    this->close();
+    emit sigCancel();
+    this->close();    
 }

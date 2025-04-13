@@ -47,7 +47,7 @@ public slots:
     void slotPlotClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event);
     void slotBeforeReplot();
     void slotRestorePlot(QMouseEvent*);
-    void slotUpdateEnTimeWidth(int* timeWidth);
+    void slotUpdateEnTimeWidth(unsigned short* timeWidth);
 
     //批量刷新
     void slotUpdatePlotDatas(SingleSpectrum, vector<CoincidenceResult>, int refreshTime, int coolTime);

@@ -22,6 +22,9 @@ public:
 
     //设置提示信息
     void setInfo(const QString &info, int fontSizeMain = 15, int timeout = 0);
+    void setInfo(const QString &info, bool allowClose, int fontSizeMain = 15, int timeout = 0);
+
+    Q_SIGNAL void sigCancel();
 
 protected:
     //void showEvent(QShowEvent *);

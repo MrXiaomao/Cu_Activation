@@ -114,7 +114,7 @@ RC_ICONS = $$PWD/resource/logo.ico
 #PRECOMPILED_HEADER += pch.h
 
 # 定义输出目录变量
-OUTPUT_DIR_BASE = $$PWD/build
+OUTPUT_DIR_BASE = $$PWD/../../build
 
 #message($${TARGET}":" "$$QT_ARCH" "$$QMAKE_CXX")
 
@@ -209,9 +209,9 @@ DEFINES += GIT_BRANCH=\"\\\"$$GIT_BRANCH\\\"\"
 DEFINES += GIT_TIME=\"\\\"$$GIT_TIME\\\"\"
 DEFINES += APP_VERSION=\"\\\"$$APP_VERSION\\\"\"
 
-#message(GIT_BRANCH":  ""$$GIT_BRANCH")
-#message(GIT_TIME":  ""$$GIT_TIME")
-#message(APP_VERSION":  ""$$APP_VERSION")
+message(GIT_BRANCH":  ""$$GIT_BRANCH")
+message(GIT_TIME":  ""$$GIT_TIME")
+message(APP_VERSION":  ""$$APP_VERSION")
 
 contains(QT_ARCH, x86_64) {
     win32: LIBS += -L$$PWD/3rdParty/ftcoreimc_win_v1.3.0.9n/lib/x64/ -lftcoreimc

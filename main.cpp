@@ -10,6 +10,7 @@
 #include <QSplashScreen>
 #include <QMutex>
 #include <QTranslator>
+#include <iostream>
 
 QString QtMsgTypeToString(QtMsgType type)
 {
@@ -49,7 +50,7 @@ void AppMessageHandler(QtMsgType type, const QMessageLogContext& /*context*/, co
         return;
 
     if (type == QtDebugMsg){
-        std::cout << "debug >> " << msg.toStdString() << std::endl;;
+        std::cout << "debug >> " << msg.toLocal8Bit().toStdString() << std::endl;;
         return;
     }
 

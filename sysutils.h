@@ -2,97 +2,73 @@
 #define SYSUTILS_H
 
 #include <vector>
-#include <queue>
-#include <deque>
-#include <iostream>
+#include "coincidenceanalyzer.h"
 
 using namespace std;
 
-//fpga时间+能量
-struct TimeEnergy{
-    unsigned long long time; // 单位ns，八个字节int
-    unsigned short energy; // 单位暂无,两个字节无符号数
-    TimeEnergy(){
-        this->time = 0;
-        this->energy = 0;
-    }
-    TimeEnergy(unsigned long long time, unsigned short energy){
-        this->time = time;
-        this->energy = energy;
-    };
+enum Measure_status{
+    msNone = 0x00,
+    msEnd = 0x00, // 停止
+    msPrepare = 0x01, // 准备
+    msWaiting = 0x02, // 等待触发（自动测量有一个等待时间段）
+    msStart = 0x03,// 开始，测量中
 };
 
-//通道+(fpga时间+能量...序列)
-struct DetTimeEnergy{
-    unsigned char channel;
-    std::vector<TimeEnergy> timeEnergy;
+enum Measure_model{
+    mmNone = 0x00,
+    mmManual= 0x01, // 手动
+    mmAuto = 0x02, // 自动
+    mmDefine = 0x03, // 标定
 };
 
-//步长+计数
-struct StepTimeCount{
-    unsigned long long time; // 单位s
-    unsigned short count; // 计数
-    StepTimeCount(){}
-    StepTimeCount(unsigned long long time, unsigned short count){
-        this->time = time;
-        this->count = count;
-    }
-};
-//步长+能量
-struct StepTimeEnergy{
-    unsigned long long time; // 单位s
-    vector<unsigned short> energy; // 单位暂无,两个字节无符号数
-};
 
-//通道+(步长+能量/计数...序列)
-struct DetStepTimeEnergy{
-    unsigned char channel;
-    std::vector<StepTimeEnergy> timeEnergy;
-};
+typedef struct tagDetectorParameter{
+    // 触发阈值
+    int16_t triggerThold1, triggerThold2;
 
-//typedef struct tagPariticalCountFrame{
-//    unsigned long long channel;
-//    unsigned long stepT;
-//    unsigned long long dataT;
-//    unsigned short dataE;
-//}PariticalCountFrame;
+    // 波形极性
+    /*
+        00:正极性
+        01:负极性
+        默认正极性
+    */
+    int8_t waveformPolarity;
 
 
-//typedef struct tagPariticalSpectrumFrame{
-//    unsigned long long channel;
-//    unsigned long stepT;
-//    std::vector<unsigned long long> dataT;
-//    std::vector<unsigned short> dataE;
-//}PariticalSpectrumFrame;
+    // 能谱模式/粒子模式死时间 单位ns
+    int16_t deadTime;
+    // 能谱刷新时间
+    int32_t refreshTimeLength;
+    //波形长度
+    int32_t waveLength;
+    //波形触发模式
+    int8_t triggerModel;
 
-// 根据输入能量数据，绘制出能谱，
-// data:能量点数组
-// maxEnergy: 多道中最大道址对应的能量值。
-// ch: 多道道数
-// vector<unsigned short> GetSpectrum(const vector<unsigned short>& data, unsigned int maxEnergy=8192, int ch=8192);
+    // 探测器增益
+    int8_t gain;
 
-// 计算data中数据在指定能量区间的数据个数
-// data：输入的能量数据点
-// leftE：左区间
-// rightE：右区间
-// stepT统计的时间步长, 单位s(底层固定=1，应用层自己根据时长刷新数据）
-// return double：计数率,cps
-double GetCount(const vector<unsigned short> &data, int leftE, int rightE, int stepT = 1);
+    // 传输模式
+    /*
+    00:能谱
+    03:波形
+    05:粒子模式
+    */
+    int8_t transferModel;
 
-// count  待拟合数据长度
-// sx 待拟合数据x数组，
-// sy 待拟合数据y数组
-// 返回值result, result[0]为半高宽FWHM,result[1] 为峰位，result[2]为峰值。
-// return, 拟合是否成功
-// 待拟合函数：y(x) = a*exp[-4ln2(x-u)^2/FWHM^2]，a=result[2],u=result[1],FWHM=result[0].
-// bool fit_GaussCurve(int count, std::vector<double> sx, std::vector<double> sy, double* result);
+    // 测量模式
+    int8_t measureModel;//01-手动测量 02-自动测量 03-标定测量
+
+    int32_t cool_timelength;//冷却时长
+} DetectorParameter;
 
 class SysUtils
 {
 public:
     SysUtils();
 
-    static std::vector<DetTimeEnergy> getDetTimeEnergy(std::string filename);
+    static std::vector<DetTimeEnergy> getDetTimeEnergy(const char* filename);
+
+    static void realAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy)> callback);
 };
 
 #endif // SYSUTILS_H

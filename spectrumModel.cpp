@@ -214,6 +214,7 @@ void SpectrumModel::on_pushButton_start_clicked()
         detectorParameter.refreshTimeLength = 0x01;
         detectorParameter.gain = 0x00;
         detectorParameter.transferModel = 0x00;// 0x00-能谱 0x03-波形 0x05-符合模式
+        detectorParameter.measureModel = mmManual;
 
         // 打开 JSON 文件
         QFile file(QApplication::applicationDirPath() + "/config/spectrum.json");

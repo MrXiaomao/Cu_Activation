@@ -258,7 +258,7 @@ void WaveformModel::on_pushButton_start_clicked()
         detectorParameter.waveLength = 0x01;
         detectorParameter.transferModel = 0x03;// 0x00-能谱 0x03-波形 0x05-符合模式
         detectorParameter.triggerModel = 0x00;
-        detectorParameter.measureModel = 0x02;
+        detectorParameter.measureModel = mmManual;
 
         // 打开 JSON 文件
         QFile file(QApplication::applicationDirPath() + "/config/wave.json");

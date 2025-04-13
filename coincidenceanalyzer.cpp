@@ -1,6 +1,5 @@
 #include "coincidenceanalyzer.h"
 #include <queue>
-#include "sysutils.h"
 #include "linearfit.h"
 
 using namespace std;
@@ -22,7 +21,12 @@ struct particle_data
 
 CoincidenceAnalyzer::CoincidenceAnalyzer():
 countCoin(0),autoFirst(true),
-GaussCountMin(2000),GaussMinGapTime(30)
+GaussCountMin(2000),
+#ifdef Q_NO_DEBUG
+GaussMinGapTime(30)
+#else
+GaussMinGapTime(30)
+#endif
 {
     for(unsigned short i=0; i<MULTI_CHANNEL; i++)
     {
@@ -41,27 +45,26 @@ void CoincidenceAnalyzer::set_callback(std::function<void(SingleSpectrum, vector
 }
 
 void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy> _data2,
-              int E_win[4], int windowWidthT, 
+              unsigned short E_win[4], int windowWidthT,
               bool countFlag, bool autoEnWidth)
 {
     // 如果是自动调整窗宽，则只在测量开始的首次读取窗宽，后续都自动更新窗宽
     if(autoEnWidth) {
-        autoFirst = false;
+        if (autoFirst){
+            EnergyWindow[0] = E_win[0];
+            EnergyWindow[1] = E_win[1];
+            EnergyWindow[2] = E_win[2];
+            EnergyWindow[3] = E_win[3];
+            autoFirst = false;
+        }
     }
-    else{
+    else {
         EnergyWindow[0] = E_win[0];
         EnergyWindow[1] = E_win[1];
         EnergyWindow[2] = E_win[2];
         EnergyWindow[3] = E_win[3];
     }
 
-    if(autoFirst)  
-    {
-        EnergyWindow[0] = E_win[0];
-        EnergyWindow[1] = E_win[1];
-        EnergyWindow[2] = E_win[2];
-        EnergyWindow[3] = E_win[3];
-    }
 
     vector<TimeEnergy> data1;
     vector<TimeEnergy> data2;
@@ -103,7 +106,9 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
             if(autoEnWidth) 
             {
                 //距离上次自动高斯拟合的时间间隔，单位：s
-                int GapTime = countCoin - GaussFitLog.back().time;
+                int GapTime = countCoin;
+                if (GaussFitLog.size() > 0)
+                    GapTime -= GaussFitLog.back().time;
                 if(GapTime>GaussMinGapTime)  AutoEnergyWidth();
             }
 
@@ -129,7 +134,7 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
         time2_elapseFPGA = lastTime2/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
 
         //当只计算能谱时，则不调用回调函数，外部通过GetAccumulateSpectrum获取累积能谱
-        if (countFlag) m_pfunc(AccumulateSpectrum, coinResult);
+        if (countFlag && m_pfunc) m_pfunc(AccumulateSpectrum, coinResult);
     }
 
     //将容器中未经处理的数据点添加到缓存保存起来，下次优先处理
@@ -342,7 +347,7 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
             if(i >= EnergyWindow[0] && i <= EnergyWindow[1]) {sx.push_back(i*1.0); sy.push_back(GaussFitSpec[0][i]);}
         }
         
-        int fcount = EnergyWindow[1] - EnergyWindow[2] + 1;
+        int fcount = EnergyWindow[1] - EnergyWindow[0] + 1;
         Gaussian gau;
         if(gau.setSample(sx, sy, fcount, result) && gau.process())
         {

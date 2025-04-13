@@ -26,21 +26,6 @@ public:
     void load();
     void save();
 
-    enum Measure_status{
-        msNone = 0x00,
-        msEnd = 0x00, // 停止
-        msPrepare = 0x01, // 准备
-        msWaiting = 0x02, // 等待触发（自动测量有一个等待时间段）
-        msStart = 0x03,// 开始，测量中
-    };
-
-    enum Measure_model{
-        mmNone = 0x00,
-        mmManual= 0x01, // 手动
-        mmAuto = 0x02, // 自动
-        mmDefine = 0x03, // 标定
-    };
-
 protected:
     virtual bool eventFilter(QObject *watched, QEvent *event) override;
     virtual void closeEvent(QCloseEvent *event) override;

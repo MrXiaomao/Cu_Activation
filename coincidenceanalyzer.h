@@ -5,10 +5,7 @@
 #define COINCIDENCEANALYZER_H
 #include <vector>
 #include <algorithm> // 包含 std::find_if
-#include <queue>
-#include <deque>
-#include <functional>
-#include "sysutils.h"
+#include <functional>// std::function
 #include <mutex>
 
 // #define MULTI_CHANNEL 8192 //能谱多道的道数
@@ -19,6 +16,51 @@ constexpr unsigned short MULTI_CHANNEL = 8192;
 #define MAX_REMAIN_SPECTRUM 3600 //最大存留能谱数目
 
 using namespace std;
+
+//fpga时间+能量
+struct TimeEnergy{
+    unsigned long long time; // 单位ns，八个字节int
+    unsigned short dietime;// 死时间
+    unsigned short energy; // 单位暂无,两个字节无符号数
+    TimeEnergy(){
+        this->time = 0;
+        this->dietime = 0;
+        this->energy = 0;
+    }
+    TimeEnergy(unsigned long long time, unsigned short dietime, unsigned short energy){
+        this->time = time;
+        this->dietime = dietime;
+        this->energy = energy;
+    };
+};
+
+//通道+(fpga时间+能量...序列)
+struct DetTimeEnergy{
+    unsigned char channel;
+    std::vector<TimeEnergy> timeEnergy;
+};
+
+//步长+计数
+struct StepTimeCount{
+    unsigned long long time; // 单位s
+    unsigned short count; // 计数
+    StepTimeCount(){}
+    StepTimeCount(unsigned long long time, unsigned short count){
+        this->time = time;
+        this->count = count;
+    }
+};
+//步长+能量
+struct StepTimeEnergy{
+    unsigned long long time; // 单位s
+    vector<unsigned short> energy; // 单位暂无,两个字节无符号数
+};
+
+//通道+(步长+能量/计数...序列)
+struct DetStepTimeEnergy{
+    unsigned char channel;
+    std::vector<StepTimeEnergy> timeEnergy;
+};
 
 // 符合计数的结果
 struct CoincidenceResult{
@@ -64,7 +106,8 @@ public:
 
         vector<TimeEnergy>().swap(unusedData1);
         vector<TimeEnergy>().swap(unusedData2);
-        
+        vector<AutoGaussFit>().swap(GaussFitLog);
+
         //自动调整能窗相关参数重新初始化
         autoFirst = true;
         for(int i=0; i<MULTI_CHANNEL; i++)
@@ -102,22 +145,22 @@ public:
         return GaussFitLog;
     }
 
-    inline void GetEnWidth(unsigned short EnWindow[]){ 
-        EnWindow[0] = EnergyWindow[0];
-        EnWindow[1] = EnergyWindow[1];
-        EnWindow[2] = EnergyWindow[2];
-        EnWindow[3] = EnergyWindow[3];
+    inline void GetEnWidth(std::vector<unsigned short>& EnWindow){
+        EnWindow.push_back(EnergyWindow[0]);
+        EnWindow.push_back(EnergyWindow[1]);
+        EnWindow.push_back(EnergyWindow[2]);
+        EnWindow.push_back(EnergyWindow[3]);
     }
 
     /// @brief 计算给出能谱曲线、计数曲线，计算的结果放在类成员中
     /// @param vector<TimeEnergy> data1 探测器1[时间(ns),能量]数据
     /// @param vector<TimeEnergy> data2 探测器2[时间(ns),能量]数据
-    /// @param int E_win[4] 能窗，探测器1左、右能窗，探测器2左右能窗
+    /// @param unsigned short E_win[4] 能窗，探测器1左、右能窗，探测器2左右能窗
     /// @param int windowWidthT 时间窗，单位ns
     /// @param bool countFlag 是否计算计数曲线
     /// @param bool autoEnWidth 是否自动修正能窗
     void calculate(vector<TimeEnergy> data1, vector<TimeEnergy> data2,
-            int E_win[4], int windowWidthT, 
+            unsigned short E_win[4], int windowWidthT,
             bool countFlag=true, bool autoEnWidth = false);
 
     //这里加入回调函数，后期做成SDK会出现问题，SDK不存在回调，只存在返回值。
@@ -156,12 +199,11 @@ private:
 private:
     int countCoin; //符合计数曲线的数据点个数,一个数据点对应1s.
     vector<CoincidenceResult> coinResult; //将所有处理的数据都存放在这个容器中，FPGA时钟每一秒钟产生一个点
-    // vector<SingleSpectrum> AllSpectrum;
     vector<SingleSpectrum> AllSpectrum;  //将处理的能谱数据都存放在这个容器中，FPGA时钟每一秒钟产生一个能谱，只存放最近一个小时的能谱。单端队列
     SingleSpectrum AccumulateSpectrum; //累积能谱,将每秒的能谱进行累积后的能谱。
     vector<CurrentPoint> AllPoint; //每一秒内的各探测器的数据点个数
     vector<TimeEnergy> unusedData1, unusedData2;//用于存储未处理完的数据信息
-    std::function<void(SingleSpectrum, vector<CoincidenceResult>)> m_pfunc;
+    std::function<void(SingleSpectrum, vector<CoincidenceResult>)> m_pfunc = nullptr;
     mutex mtx;
     
     // 用于高斯拟合，自动更新能窗

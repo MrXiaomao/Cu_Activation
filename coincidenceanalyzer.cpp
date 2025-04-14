@@ -90,7 +90,7 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
     time1_elapseFPGA = data1.back().time/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
     time2_elapseFPGA = data2.back().time/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
 
-    int deltaT = 1; //单位秒
+    int deltaT = 2; //单位秒
     //必须存够1秒的数据才进行处理
     while(time1_elapseFPGA >= deltaT && time2_elapseFPGA >= deltaT)
     {
@@ -187,9 +187,11 @@ void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> data1, vector<
         }
     }
     
-    //由于绘图出现最后一道计数较大，因此最后一道强制置零
-    AccumulateSpectrum.spectrum[0][MULTI_CHANNEL-1] = 0;
-    AccumulateSpectrum.spectrum[1][MULTI_CHANNEL-1] = 0;
+    //由于绘图出现最后3道计数较大，因此最后3道强制置零
+    for (int i=0; i<3; ++i){
+        AccumulateSpectrum.spectrum[0][MULTI_CHANNEL-i-1] = 0;
+        AccumulateSpectrum.spectrum[1][MULTI_CHANNEL-i-1] = 0;
+    }
 
     AccumulateSpectrum.time = countCoin;
     if(AllSpectrum.size() >= MAX_REMAIN_SPECTRUM) AllSpectrum.erase(AllSpectrum.begin()); //当超过最大能谱数目时，则先进先出

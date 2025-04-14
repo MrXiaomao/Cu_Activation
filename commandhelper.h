@@ -34,6 +34,7 @@ public:
     void initCommand();//初始化常用指令
     void startWork();
     void switchToCountMode(bool refModel);
+    void updateStepTime(int stepT, int timewidth = 50);
     void updateParamter(int stepT, unsigned short EnWin[4], int timewidth = 50, bool reset = false);
     void saveFileName(QString);
     void setDefaultCacheDir(QString dir);
@@ -105,6 +106,7 @@ private:
     QLiteThread* plotUpdateThread;//能谱信息处理线程
     quint32 currentEnergyTime = 0;// 能谱时间
     bool reCalculateing = false;//正在对所有能量数据进行重新运算
+    quint64 tmCalculate = 0;// 记录下重新运算的时间戳，单位：毫秒
 
     CoincidenceAnalyzer* coincidenceAnalyzer;
     void analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult> r3);

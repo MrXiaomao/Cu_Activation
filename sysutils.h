@@ -5,7 +5,7 @@
 #include "coincidenceanalyzer.h"
 
 using namespace std;
-
+#define MAX_SPECTUM (MULTI_CHANNEL + 100)
 enum Measure_status{
     msNone = 0x00,
     msEnd = 0x00, // 停止
@@ -69,9 +69,9 @@ typedef struct tagDetectorParameter{
     //梯形成形下降沿点数，默认20
     int8_t TrapShape_fallPoint;
     //梯形成形时间常数t1 （乘以65536后取整）   默认为t1= 0.9558*65536；t2= 0.9556*65536；
-    int16_t TrapShape_constTime1;
+    uint16_t TrapShape_constTime1;
     //梯形成形时间常数t2 （乘以65536后取整）   默认为t1= 0.9558*65536；t2= 0.9556*65536；
-    int16_t TrapShape_constTime2;
+    uint16_t TrapShape_constTime2;
 
     int32_t cool_timelength;//冷却时长
 } DetectorParameter;

@@ -127,14 +127,16 @@ MainWindow::MainWindow(QWidget *parent)
         float axis01_target_position = this->property("axis01-target-position").toFloat();
         float axis02_target_position = this->property("axis02-target-position").toFloat();
 
-        // 0.003误差3mm
-        if (qAbs(f1-axis01_target_position)<=MAX_MISTAKE_VALUE && qAbs(f2-axis02_target_position)<=MAX_MISTAKE_VALUE){
-            //if (!this->property("axis-prepared").toBool()){
-            //    this->setProperty("axis-prepared", true);
+        // 误差5um
+        if (qAbs(f1/1000-axis01_target_position)<=MAX_MISTAKE_VALUE && qAbs(f2/1000-axis02_target_position)<=MAX_MISTAKE_VALUE){
+            if (!this->property("axis-prepared").toBool())
+            {
+                this->setProperty("axis-prepared", true);
+                emit sigRefreshUi();
 
                 SplashWidget::instance()->hide();
                 emit sigAppengMsg(tr("位移平台已到位"), QtInfoMsg);
-            //}
+            }
         } else{
             this->setProperty("axis-prepared", false);
         }
@@ -435,12 +437,14 @@ void MainWindow::InitMainWindowUi()
     connect(ui->comboBox_range_2, QOverload<int>::of(&QComboBox::currentIndexChanged), ui->comboBox_range, &QComboBox::setCurrentIndex);
     connect(ui->comboBox_range_3, QOverload<int>::of(&QComboBox::currentIndexChanged), ui->comboBox_range, &QComboBox::setCurrentIndex);
     connect(ui->comboBox_range, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [=](int index){
-        QPair<float, float> pair = controlHelper->gotoAbs(index);
-        this->setProperty("axis01-target-position", pair.first);
-        this->setProperty("axis02-target-position", pair.second);
+        if (controlHelper->connected()){
+            QPair<float, float> pair = controlHelper->gotoAbs(index);
+            this->setProperty("axis01-target-position", pair.first);
+            this->setProperty("axis02-target-position", pair.second);
 
-        SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待..."));
-        SplashWidget::instance()->exec();
+            SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待...\n正在移动位移平台至目标位置..."));
+            SplashWidget::instance()->exec();
+        }
     });
 
     // 显示计数/能谱
@@ -625,16 +629,16 @@ void MainWindow::initCustomPlot()
                 ui->action_refresh->setText(tr("暂停刷新"));
                 ui->action_refresh->setIconText(tr("暂停刷新"));
 
-                ui->pushButton_refresh->setIcon(QIcon());
+                ui->pushButton_confirm->setIcon(QIcon());
             }
         });
 
         connect(customPlotWidget, &PlotWidget::sigAreaSelected, this, [=](){
-            QWhatsThis::showText(ui->pushButton_refresh->mapToGlobal(ui->pushButton_refresh->geometry().bottomRight()), tr("需点击刷新按钮，拟合区域才会设置生效"), ui->pushButton_refresh);
-            ui->pushButton_refresh->setIcon(QIcon(":/resource/warn.png"));
+            QWhatsThis::showText(ui->pushButton_confirm->mapToGlobal(ui->pushButton_confirm->geometry().bottomRight()), tr("需点击确认按钮，拟合区域才会设置生效"), ui->pushButton_confirm);
+            ui->pushButton_confirm->setIcon(QIcon(":/resource/warn.png"));
 
             //恢复刷新状态
-            //QWhatsThis::showText(ui->pushButton_gauss->mapToGlobal(ui->pushButton_refresh->geometry().bottomRight()), tr("点击按钮，查看拟合曲线效果图"), ui->pushButton_gauss);
+            //QWhatsThis::showText(ui->pushButton_gauss->mapToGlobal(ui->pushButton_confirm->geometry().bottomRight()), tr("点击按钮，查看拟合曲线效果图"), ui->pushButton_gauss);
         });
 
         ui->widget_plot->layout()->addWidget(customPlotWidget);
@@ -715,10 +719,14 @@ void MainWindow::on_action_displacement_triggered()
 {
     if (this->property("test").isValid() && this->property("test").toBool()){
         this->setProperty("control_fault", false);
-        if (this->property("control_on").toBool())
+        if (this->property("control_on").toBool()){
             this->setProperty("control_on", false);
-        else
+            this->setProperty("axis-prepared", false);
+        }
+        else{
             this->setProperty("control_on", true);
+            this->setProperty("axis-prepared", true);
+        }
         slotRefreshUi();
         return;
     }
@@ -730,10 +738,10 @@ void MainWindow::on_action_displacement_triggered()
     }
 
     //断开连接之前先关闭电源
-    if (this->property("control_on").toBool()){
-        commandHelper->closeDetector();
-        commandHelper->closeRelay();
-    }
+    // if (this->property("control_on").toBool()){
+    //     commandHelper->closeDetector();
+    //     commandHelper->closeRelay();
+    // }
 
     //位移平台
     if (!this->property("control_on").toBool()){
@@ -838,8 +846,8 @@ void MainWindow::on_pushButton_measure_clicked()
             detectorParameter.TrapShape_risePoint = 20;
             detectorParameter.TrapShape_peakPoint = 20;
             detectorParameter.TrapShape_fallPoint = 20;
-            detectorParameter.TrapShape_constTime1 = (int16_t)0.9558*65536;
-            detectorParameter.TrapShape_constTime2 = (int16_t)0.9556*65536;
+            detectorParameter.TrapShape_constTime1 = 63150;
+            detectorParameter.TrapShape_constTime2 = 62259;
             detectorParameter.TrapShape_baseLine = 20;
 
             detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
@@ -928,8 +936,8 @@ void MainWindow::on_pushButton_measure_2_clicked()
         detectorParameter.TrapShape_risePoint = 20;
         detectorParameter.TrapShape_peakPoint = 20;
         detectorParameter.TrapShape_fallPoint = 20;
-        detectorParameter.TrapShape_constTime1 = (int16_t)0.9558*65536;
-        detectorParameter.TrapShape_constTime2 = (int16_t)0.9556*65536;
+        detectorParameter.TrapShape_constTime1 = 63150;
+        detectorParameter.TrapShape_constTime2 = 62259;
         detectorParameter.TrapShape_baseLine = 20;
 
         detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
@@ -1041,9 +1049,7 @@ void MainWindow::on_pushButton_refresh_clicked()
     this->save();
 
     int stepT = ui->spinBox_step->value();
-    unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
-                               (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
-
+    int timewidth = ui->spinBox_timeWidth->value();
     if (ui->radioButton_ref->isChecked()){
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
         plotWidget->slotResetPlot();
@@ -1051,13 +1057,7 @@ void MainWindow::on_pushButton_refresh_clicked()
 
     //SplashWidget::instance()->setInfo(tr("能量信息正在重新进行计算，请等待..."), false);
     //SplashWidget::instance()->exec();
-
-    int timewidth = ui->spinBox_timeWidth->value();
-    commandHelper->updateParamter(stepT, EnWin, timewidth, true);
-
-    //取消画面暂停刷新
-    this->setProperty("pause-plot", false);
-    ui->pushButton_refresh->setIcon(QIcon());
+    commandHelper->updateStepTime(stepT, timewidth);
 }
 
 void MainWindow::on_action_close_triggered()
@@ -1263,7 +1263,7 @@ void MainWindow::slotRefreshUi()
 
     //测量
     if (this->property("measure-status").toUInt() == msStart){
-        ui->action_refresh->setEnabled(true);
+        ui->action_refresh->setEnabled(true);        
         ui->pushButton_measure_2_tip->setText("");
 
         ui->comboBox_range->setEnabled(false);
@@ -1273,6 +1273,7 @@ void MainWindow::slotRefreshUi()
             ui->pushButton_measure->setText(tr("停止测量"));
             ui->pushButton_measure->setEnabled(true);
             ui->pushButton_refresh->setEnabled(true);
+            ui->pushButton_confirm->setEnabled(true);
 
             ui->spinBox_timelength->setEnabled(false);
             ui->spinBox_cool_timelength->setEnabled(false);
@@ -1325,10 +1326,12 @@ void MainWindow::slotRefreshUi()
 
             //手动测量
             ui->pushButton_measure->setEnabled(false);
-            ui->pushButton_refresh->setEnabled(true);
+            ui->pushButton_refresh->setEnabled(false);
+            ui->pushButton_confirm->setEnabled(false);
 
             //标定测量
             ui->pushButton_measure_3->setEnabled(false);
+            ui->pushButton_refresh_3->setEnabled(false);
         }  else if (this->property("measur-model").toInt() == mmDefine){//标定测量
             ui->pushButton_measure_3->setText(tr("停止测量"));
             ui->pushButton_measure_3->setEnabled(true);
@@ -1339,10 +1342,12 @@ void MainWindow::slotRefreshUi()
 
             //手动测量
             ui->pushButton_measure->setEnabled(false);
-            ui->pushButton_refresh->setEnabled(true);
+            ui->pushButton_refresh->setEnabled(false);
+            ui->pushButton_confirm->setEnabled(false);
 
             //自动测量
             ui->pushButton_measure_2->setEnabled(false);
+            ui->pushButton_refresh_2->setEnabled(false);
         }
     } else {
         ui->pushButton_measure->setText(tr("开始测量"));
@@ -1376,13 +1381,14 @@ void MainWindow::slotRefreshUi()
         ui->spinBox_2_rightE_3->setEnabled(true);
         ui->spinBox_timeWidth_3->setEnabled(true);
 
-        if (this->property("detector_on").toBool()){
+        //位移平台到位才允许开始测量
+        if (this->property("detector_on").toBool() && this->property("axis-prepared").toBool()){
 //            ui->action_power->setEnabled(true);
 //            ui->action_detector_connect->setEnabled(true);
 //            ui->action_refresh->setEnabled(false);
 
             //公共
-            ui->pushButton_save->setEnabled(true);
+            ui->pushButton_save->setEnabled(true);            
 
             ui->pushButton_measure->setEnabled(true);
             ui->pushButton_measure_2->setEnabled(true);
@@ -1401,6 +1407,7 @@ void MainWindow::slotRefreshUi()
 
         ui->pushButton_gauss->setEnabled(false);
         ui->pushButton_refresh->setEnabled(false);
+        ui->pushButton_confirm->setEnabled(false);
         ui->pushButton_refresh_2->setEnabled(false);
         ui->pushButton_refresh_3->setEnabled(false);
     }
@@ -1699,3 +1706,47 @@ void MainWindow::on_checkBox_gauss_stateChanged(int arg1)
     PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
     plotWidget->slotShowGaussInfor(arg1 == Qt::CheckState::Checked);
 }
+
+void MainWindow::on_pushButton_confirm_clicked()
+{
+    if (QMessageBox::question(this, tr("提示"), tr("您确定用当前能宽值来进行运算吗？\r\n\r\n提醒：整个测量过程中只允许设置能宽一次。"), QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) != QMessageBox::Yes)
+        return ;
+
+    this->save();
+
+    int stepT = ui->spinBox_step->value();
+    unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
+                               (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
+
+    PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+    if (ui->radioButton_ref->isChecked()){
+        plotWidget->slotResetPlot();
+    }
+
+    //SplashWidget::instance()->setInfo(tr("能量信息正在重新进行计算，请等待..."), false);
+    //SplashWidget::instance()->exec();
+
+    int timewidth = ui->spinBox_timeWidth->value();
+    commandHelper->updateParamter(stepT, EnWin, timewidth, true);
+
+    //取消画面暂停刷新
+    this->setProperty("pause-plot", false);
+    ui->pushButton_confirm->setIcon(QIcon());
+
+    ui->spinBox_1_leftE->setEnabled(false);
+    ui->spinBox_1_rightE->setEnabled(false);
+    ui->spinBox_2_leftE->setEnabled(false);
+    ui->spinBox_2_rightE->setEnabled(false);
+    ui->pushButton_confirm->setEnabled(false);
+
+    //自动切换到计数模式
+    commandHelper->switchToCountMode(true);
+    plotWidget->slotResetPlot();
+    plotWidget->switchToCountMode(true);
+    ui->widget_gauss->hide();
+    ui->radioButton_ref->setChecked(true);
+
+    plotWidget->areaSelectFinished();
+    emit plotWidget->sigPausePlot(false);
+}
+

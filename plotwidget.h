@@ -42,6 +42,7 @@ public:
     QCPGraph* getGraph(int index); //0-Det1 1-Det2 2=符合曲线 3-高斯曲线
     void resetPlotDatas(QCustomPlot* customPlot);//右键重设数据初始状态
     void updateTracerPosition(QCustomPlot*, double, double);
+    void areaSelectFinished();
 
 public slots:
     void slotPlotClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event);
@@ -104,6 +105,9 @@ private:
     QAction *timeM5Action;
     QAction *timeM3Action;
     QAction *timeM1Action;
+
+    QAction *allowSelectAreaAction;//选择拟合区域
+    QAction *resetPlotAction;//恢复图像状态
 };
 
 #endif // PLOTWIDGET_H

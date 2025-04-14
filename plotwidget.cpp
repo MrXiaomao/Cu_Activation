@@ -27,7 +27,7 @@ PlotWidget::PlotWidget(QWidget *parent) : QWidget(parent)
 
     //能谱模式下
     SPECTRUM_X_AXIS_LOWER = 0;
-    SPECTRUM_X_AXIS_UPPER = MULTI_CHANNEL;
+    SPECTRUM_X_AXIS_UPPER = MAX_SPECTUM;
     SPECTRUM_Y_AXIS_LOWER = 0;
     SPECTRUM_Y_AXIS_UPPER = 1e3;
 
@@ -35,6 +35,8 @@ PlotWidget::PlotWidget(QWidget *parent) : QWidget(parent)
     this->setProperty("isMergeMode", false);
     /*当前激活的探测器，默认值第一个*/
     this->setProperty("SelectDetIndex", 0);
+    /*默认显示高斯信息*/
+    this->setProperty("showGaussInfo", true);
 }
 
 void PlotWidget::resetAxisCoords()
@@ -220,11 +222,7 @@ void PlotWidget::initCustomPlot(){
             //label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
             //containWidget->layout()->addWidget(label);
 
-            QPushButton *btn = new QPushButton(tr("选择拟合区域"), containWidget);
-            btn->setObjectName(QString("gausssBtnDet%1").arg(i));
-            btn->setEnabled(false);
             hLayout->addWidget(label);
-            hLayout->addWidget(btn);
             hLayout->addItem(new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Fixed));
             containWidget->layout()->addItem(hLayout);
 
@@ -236,30 +234,6 @@ void PlotWidget::initCustomPlot(){
 
             dispatchAdditionalTipFunction(customPlot);
             dispatchAdditionalDragFunction(customPlot);
-
-            connect(btn, &QPushButton::clicked, this, [=](){
-                btn->setEnabled(false);
-                QWhatsThis::showText(btn->mapToGlobal(btn->geometry().bottomRight()), tr("请长按鼠标左键或Ctrl+鼠标左键，在能谱图上框选出符合能窗范围"), this);
-                //图像进入区域选择模式
-                this->allowAreaSelected = true;
-                this->setProperty("allowAreaSelected-plot-name", customPlot->objectName());
-
-                //隐藏拟合曲线和提示信息框
-                QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
-                gaussResultItemText->setText("");
-                getGraph(3)->data()->clear();
-
-                //禁止拖拽
-                customPlot->setInteraction(QCP::iRangeDrag, false);
-                //图像停止刷新
-                emit sigPausePlot(true);
-                QTimer::singleShot(30000, this, [=](){
-                    btn->setEnabled(true);
-                    emit sigPausePlot(false);
-                });
-
-                customPlot->replot();
-            });
         }
     }
 
@@ -318,6 +292,56 @@ void PlotWidget::initCustomPlot(){
     }
     timeAllAction->setChecked(true);
 
+    allowSelectAreaAction = new QAction(tr("选择拟合区域"), this);
+    resetPlotAction = new QAction(tr("恢复图像状态"), this);
+    connect(allowSelectAreaAction, &QAction::triggered, this, [=](){
+        QWhatsThis::showText(QCursor::pos(), tr("请长按鼠标左键或Ctrl+鼠标左键，在能谱图上框选出符合能窗范围"), this);
+        //图像进入区域选择模式
+        this->allowAreaSelected = true;
+
+        //隐藏拟合曲线和提示信息框
+        // QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
+        // gaussResultItemText->setText("");
+        // getGraph(3)->data()->clear();
+
+        //禁止拖拽
+        for (int i=1; i<=2; ++i){
+            QCustomPlot *customPlot = this->findChild<QCustomPlot*>(QString("Det%1").arg(i));
+            customPlot->setInteraction(QCP::iRangeDrag, false);
+
+            QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
+            gaussResultItemText->setText("");
+
+            customPlot->graph(1)->data()->clear();
+            customPlot->replot();
+        }
+
+        //图像停止刷新
+        emit sigPausePlot(true);
+        // QTimer::singleShot(30000, this, [=](){
+        //     btn->setEnabled(true);
+        //     emit sigPausePlot(false);
+        // });
+
+        // customPlot->replot();
+    });
+
+    connect(resetPlotAction, &QAction::triggered, this, [=](){
+        this->setProperty("autoRefreshModel", true);
+        for (int i=1; i<=2; ++i){
+            QCustomPlot *customPlot = this->findChild<QCustomPlot*>(QString("Det%1").arg(i));
+            customPlot->rescaleAxes(true);
+
+            QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
+            gaussResultItemText->setText("");
+
+            customPlot->graph(1)->data()->clear();
+            customPlot->replot();
+        }
+        emit sigPausePlot(false); //是否暂停图像刷新
+        emit sigAreaSelected();//拟合区域选择取消
+    });
+
     // QVector<double> keys, values;
     // for (int i=0; i<8192; ++i){
     //     keys << i;
@@ -326,6 +350,12 @@ void PlotWidget::initCustomPlot(){
     // QCustomPlot *customPlot = this->findChild<QCustomPlot*>("Det2");
     // customPlot->graph(0)->setData(keys, values);
     // customPlot->replot();
+}
+
+void PlotWidget::areaSelectFinished()
+{
+    this->allowAreaSelected = false;
+    this->setProperty("disableAreaSelect", true);
 }
 
 void PlotWidget::slotCountRefreshTimelength()
@@ -568,9 +598,9 @@ void PlotWidget::dispatchAdditionalDragFunction(QCustomPlot *customPlot)
     gaussResultItemText->setObjectName("gaussResultItemText");
     gaussResultItemText->setColor(QColor(0,128,128,255));// 字体色
     gaussResultItemText->setPen(QColor(130,130,130,100));// 边框
-    gaussResultItemText->setBrush(QBrush(QColor(255,255,225,100)));// 背景色
+    gaussResultItemText->setBrush(QBrush(QColor(255,255,225,200)));// 背景色
     gaussResultItemText->setPositionAlignment(Qt::AlignBottom | Qt::AlignLeft);
-    gaussResultItemText->position->setType(QCPItemPosition::ptPlotCoords);
+    gaussResultItemText->position->setType(QCPItemPosition::ptAbsolute);
     gaussResultItemText->setTextAlignment(Qt::AlignLeft);
     gaussResultItemText->setFont(QFont(font().family(), 12));
     gaussResultItemText->setPadding(QMargins(5, 5, 5, 5));
@@ -737,9 +767,9 @@ QCustomPlot *PlotWidget::allocCustomPlot(QString objName, QWidget *parent)
             if (range.lower < 0)
                 //customPlot->xAxis->setRangeLower(0);
                 customPlot->xAxis->setRange(0, oldRange.size());
-            if (range.upper > MULTI_CHANNEL)
-                //customPlot->xAxis->setRangeUpper(MULTI_CHANNEL);
-                customPlot->xAxis->setRange(MULTI_CHANNEL - oldRange.size(), MULTI_CHANNEL);
+            if (range.upper > MAX_SPECTUM)
+                //customPlot->xAxis->setRangeUpper(MAX_SPECTUM);
+                customPlot->xAxis->setRange(MAX_SPECTUM - oldRange.size(), MAX_SPECTUM);
             if (range.size() < 60)
                 customPlot->xAxis->setRange(range.lower, range.lower + 60);//0.01~1000
         } else {
@@ -884,7 +914,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                     if (this->property("isCountMode").toBool())
                         return QWidget::eventFilter(watched, event);
 
-                    if (this->allowAreaSelected && this->property("allowAreaSelected-plot-name").toString() == customPlot->objectName()){
+                    if (this->allowAreaSelected/* && this->property("allowAreaSelected-plot-name").toString() == customPlot->objectName()*/){
                         this->isPressed = true;
                         this->dragStart = e->pos();
                         this->setProperty("SelectDetIndex", customPlot->property("SelectDetIndex").toUInt());
@@ -921,11 +951,11 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                         contextMenu.addAction(timeM1Action);
                         contextMenu.exec(QCursor::pos());
                     } else {
-                        this->setProperty("autoRefreshModel", true);
-                        customPlot->rescaleAxes(true);
-                        customPlot->replot();
-                        emit sigPausePlot(false); //是否暂停图像刷新
-                        emit sigAreaSelected();//拟合区域选择取消
+                        QMenu contextMenu(customPlot);
+                        if (!this->property("disableAreaSelect").isValid() || !this->property("disableAreaSelect").toBool())
+                            contextMenu.addAction(allowSelectAreaAction);
+                        contextMenu.addAction(resetPlotAction);
+                        contextMenu.exec(QCursor::pos());
                     }
 
                     setCursor(Qt::ArrowCursor);
@@ -1038,6 +1068,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                 if (e->button() == Qt::LeftButton) { //松开鼠标左键
                     setCursor(Qt::ArrowCursor);
 
+                    this->setProperty("ActiveCustomPlotName", customPlot->objectName());
                     if (this->allowAreaSelected){
                         {
                             QMutexLocker locker(&mutexRefreshPlot);
@@ -1079,10 +1110,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                 graph->setData(keys, values, colors);
                                 customPlot->replot();
 
-                                QPushButton *btn1 = this->findChild<QPushButton*>(QString("gausssBtnDet%1").arg(customPlot->property("SelectDetIndex").toUInt() + 1));
-                                btn1->setEnabled(true);
-
-                                emit sigPausePlot(false);
+                                //emit sigPausePlot(false);
                                 emit sigAreaSelected();
                             }
 
@@ -1097,7 +1125,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                         //显示拟合数据
                                         QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
                                         if (gaussResultItemText){
-                                            QString info = QString("峰位: %1\n半高宽: %2,\n左能窗: %3\n右能窗: %4")
+                                            QString info = QString("峰  位: %1\n半高宽: %2\n左能窗: %3\n右能窗: %4")
                                                     .arg(QString::number(result[1], 'f', 0))
                                                     .arg(QString::number(result[0], 'f', 3))
                                                     .arg(QString::number(int(result[1] - result[0]*0.5), 10))//十进制输出整数
@@ -1114,8 +1142,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
 
                                         //计算符合能窗
                                         unsigned int minMean = (result[1] - result[0] / 2);
-                                        unsigned int maxMean = (result[1] + result[0] / 2);
-                                        this->setProperty("ActiveCustomPlotName", customPlot->objectName());
+                                        unsigned int maxMean = (result[1] + result[0] / 2);                                        
                                         emit sigUpdateMeanValues(customPlot->objectName(), minMean, maxMean);
                                     }
                                 }
@@ -1125,9 +1152,9 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
 
                     this->isPressed = false;
                     this->isDragging = false;
-                    this->allowAreaSelected = false;
+                    //this->allowAreaSelected = false;
 
-                    customPlot->setInteraction(QCP::iRangeDrag, true);
+                    //customPlot->setInteraction(QCP::iRangeDrag, true);
                 }
             }
         } else if (event->type() == QEvent::MouseButtonDblClick){
@@ -1191,6 +1218,11 @@ void PlotWidget::slotBeforeReplot()
         coordsTipItemXLine->start->setCoords(key, value);
         graph->pixelsToCoords(pixels.x() + 1, pixels.y() - 32, key, value);
         coordsTipItemXLine->end->setCoords(key, value);
+    }
+
+    QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
+    if (gaussResultItemText){
+        gaussResultItemText->position->setCoords(customPlot->axisRect()->topLeft() + QPointF(50., 100.));
     }
 
     double key = customPlot->property("tracer-key").toDouble();
@@ -1562,10 +1594,7 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
 
     if (r1.time == 0x01){
         //当第一次数据过来，将区域选择按钮设为可用
-        for (int i=1; i<=2; ++i){
-            QPushButton *btn1 = this->findChild<QPushButton*>(QString("gausssBtnDet%1").arg(i));
-            btn1->setEnabled(true);
-        }
+        this->setProperty("disableAreaSelect", false);
 
         QList<QCustomPlot*> customPlots = this->findChildren<QCustomPlot*>();
         for (auto customPlot : customPlots){
@@ -1661,13 +1690,6 @@ void PlotWidget::switchToCountMode(bool isCountMode)
 
             //符合结果隐藏
             containWidgetCoincidenceResult->setVisible(true);
-
-            //隐藏高斯拟合按钮
-            for (int i=0; i<2; ++i){
-                QPushButton *btn1 = this->findChild<QPushButton*>(QString("gausssBtnDet%1").arg(i+1));
-                btn1->hide();
-            }
-
         } else {
             getGraph(0)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssPlus, 3));
             getGraph(1)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssPlus, 3));
@@ -1680,12 +1702,6 @@ void PlotWidget::switchToCountMode(bool isCountMode)
 
             //符合结果隐藏
             containWidgetCoincidenceResult->setVisible(false);
-
-            //显示高斯拟合按钮
-            for (int i=0; i<2; ++i){
-                QPushButton *btn1 = this->findChild<QPushButton*>(QString("gausssBtnDet%1").arg(i+1));
-                btn1->show();
-            }
         }
 
         resetAxisCoords();
@@ -1721,15 +1737,17 @@ void PlotWidget::switchToCountMode(bool isCountMode)
                 QCPItemStraightLine* itemStraightLineRight = customPlot->findChild<QCPItemStraightLine*>("itemStraightLineRight");
                 if (itemStraightLineLeft) itemStraightLineLeft->setVisible(false);
                 if (itemStraightLineRight) itemStraightLineRight->setVisible(false);
+
+                //隐藏峰值信息
+                QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
+                if (gaussResultItemText) gaussResultItemText->setVisible(false);
+
+                //隐藏高斯曲线
+                if (customPlot->graphCount() >= 2)
+                    customPlot->graph(0)->setVisible(false);
             }
 
             containWidgetCoincidenceResult->setVisible(true);
-
-            //隐藏示高斯拟合按钮
-            for (int i=0; i<2; ++i){
-                QPushButton *btn1 = this->findChild<QPushButton*>(QString("gausssBtnDet%1").arg(i+1));
-                btn1->hide();
-            }
         } else {
             getGraph(0)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssPlus, 3));
             getGraph(1)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssPlus, 3));
@@ -1742,8 +1760,8 @@ void PlotWidget::switchToCountMode(bool isCountMode)
             customPlotDet1->graph(1)->setVisible(true);
             customPlotDet2->graph(1)->setVisible(true);
 
-            customPlotDet1->xAxis->setRange(0, MULTI_CHANNEL);
-            customPlotDet2->xAxis->setRange(0,MULTI_CHANNEL);
+            customPlotDet1->xAxis->setRange(0, MAX_SPECTUM);
+            customPlotDet2->xAxis->setRange(0,MAX_SPECTUM);
 
             QList<QCustomPlot*> customPlots = this->findChildren<QCustomPlot*>();
             for (auto customPlot : customPlots){
@@ -1751,15 +1769,18 @@ void PlotWidget::switchToCountMode(bool isCountMode)
                 QCPItemStraightLine* itemStraightLineRight = customPlot->findChild<QCPItemStraightLine*>("itemStraightLineRight");
                 if (itemStraightLineLeft) itemStraightLineLeft->setVisible(true);
                 if (itemStraightLineRight) itemStraightLineRight->setVisible(true);
+
+                //显示峰值信息
+                bool visible = this->property("showGaussInfo").toBool();
+                QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
+                if (gaussResultItemText) gaussResultItemText->setVisible(visible);
+
+                //显示高斯曲线
+                if (customPlot->graphCount() >= 2)
+                    customPlot->graph(0)->setVisible(visible);
             }
 
             containWidgetCoincidenceResult->setVisible(false);
-
-            //显示高斯拟合按钮
-            for (int i=0; i<2; ++i){
-                QPushButton *btn1 = this->findChild<QPushButton*>(QString("gausssBtnDet%1").arg(i+1));
-                btn1->show();
-            }
         }
 
         resetAxisCoords();
@@ -1952,7 +1973,7 @@ void PlotWidget::slotUpdateEnTimeWidth(unsigned short* timeWidth)
             itemStraightLineRight->setVisible(true);
         }
 
-        customPlotDet12->replot(QCustomPlot::rpQueuedReplot);
+        customPlotDet12->replot(QCustomPlot::rpQueuedRefresh);
     } else {
         QCustomPlot* customPlotDet1 = this->findChild<QCustomPlot*>("Det1");
         QCustomPlot* customPlotDet2 = this->findChild<QCustomPlot*>("Det2");
@@ -1986,13 +2007,14 @@ void PlotWidget::slotUpdateEnTimeWidth(unsigned short* timeWidth)
             }
         }
 
-        customPlotDet1->replot(QCustomPlot::rpQueuedReplot);
-        customPlotDet2->replot(QCustomPlot::rpQueuedReplot);
+        customPlotDet1->replot(QCustomPlot::rpQueuedRefresh);
+        customPlotDet2->replot(QCustomPlot::rpQueuedRefresh);
     }
 }
 
 void PlotWidget::slotShowGaussInfor(bool visible)
 {
+    this->setProperty("showGaussInfo", visible);
     if (this->property("isMergeMode").toBool()){
         QCustomPlot* customPlotDet12 = this->findChild<QCustomPlot*>("Det12");
         QCPItemText* gaussResultItemText = customPlotDet12->findChild<QCPItemText*>("gaussResultItemText");
@@ -2001,9 +2023,11 @@ void PlotWidget::slotShowGaussInfor(bool visible)
         QCustomPlot* customPlotDet1 = this->findChild<QCustomPlot*>("Det1");
         QCustomPlot* customPlotDet2 = this->findChild<QCustomPlot*>("Det2");
         QCPItemText* gaussResultItemText = customPlotDet1->findChild<QCPItemText*>("gaussResultItemText");
-        gaussResultItemText->setVisible(visible);
+        gaussResultItemText->setVisible(visible);        
+        customPlotDet1->replot(QCustomPlot::rpQueuedRefresh);
 
         gaussResultItemText = customPlotDet2->findChild<QCPItemText*>("gaussResultItemText");
         gaussResultItemText->setVisible(visible);
+        customPlotDet2->replot(QCustomPlot::rpQueuedRefresh);
     }
 }

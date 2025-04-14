@@ -5,7 +5,7 @@
 #include <QMutex>
 #include "ftcoreimc.h"
 #include "qlitethread.h"
-#define MAX_MISTAKE_VALUE   1e-2
+#define MAX_MISTAKE_VALUE   0.005 //误差5um
 class ControlHelper : public QObject
 {
     Q_OBJECT

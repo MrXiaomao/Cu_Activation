@@ -209,7 +209,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                 }
             }
 
-            if (detectorParameter.measureModel == mmAuto)//自动测量，需要获取能宽
+            if (detectorParameter.measureModel == mmAuto && this->reCalculateing)//自动测量，需要获取能宽
             {
                 autoEnWindow.clear();
                 coincidenceAnalyzer->GetEnWidth(autoEnWindow);
@@ -356,14 +356,14 @@ void CommandHelper::handleManualMeasureNetData()
     if (workStatus == Preparing){
         QByteArray command = cmdPool.first();
         if (binaryData.compare(command) == 0){
-            qDebug()<<"Recieve HEX: "<<binaryData.toHex();
+            qDebug()<<"Recieve HEX: "<<binaryData.toHex(' ');
             binaryData.remove(0, command.size());
             cmdPool.erase(cmdPool.begin());
 
             if (cmdPool.size() > 0)
             {
                 socketDetector->write(cmdPool.first());
-                qDebug()<<"Send HEX: "<<cmdPool.first().toHex();
+                qDebug()<<"Send HEX: "<<cmdPool.first().toHex(' ');
             }
             else{
                 //最后指令是软件触发模式
@@ -399,14 +399,15 @@ void CommandHelper::handleAutoMeasureNetData()
     if (workStatus == Preparing){
         QByteArray command = cmdPool.first();
         if (binaryData.compare(command) == 0){
-            qDebug()<<"Recieve HEX: "<<binaryData.toHex();
+            qDebug()<<"Recieve HEX: "<<binaryData.toHex(' ');
             binaryData.remove(0, command.size());
             cmdPool.erase(cmdPool.begin());
 
             if (cmdPool.size() > 0)
             {
                 socketDetector->write(cmdPool.first());
-                qDebug()<<"Send HEX: "<<cmdPool.first().toHex();
+                socketDetector->waitForBytesWritten();
+                qDebug()<<"Send HEX: "<<cmdPool.first().toHex(' ');
             }
             else{
                 //最后指令是硬触发模式
@@ -418,7 +419,7 @@ void CommandHelper::handleAutoMeasureNetData()
         }
     } else if (workStatus == Waiting){
         if (binaryData.compare(cmdExternalTrigger) == 0){
-            qDebug()<<"Recieve HEX: "<<binaryData.toHex();
+            qDebug()<<"Recieve HEX: "<<binaryData.toHex(' ');
             qInfo()<<"接收到硬触发信号";
             // 自动测量正式开始
             binaryData.remove(0, cmdExternalTrigger.size());
@@ -907,7 +908,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
             //开启梯形成形
             cmdPool.push_back(getCmdDetectorTS_flag(true));
             // 梯形成形 上升沿、平顶、下降沿参数
-            cmdPool.push_back(getCmdDetectorTS_PointPara(detectorParameter.TrapShape_risePoint, 
+            cmdPool.push_back(getCmdDetectorTS_PointPara(detectorParameter.TrapShape_risePoint,
                 detectorParameter.TrapShape_peakPoint,
                 detectorParameter.TrapShape_fallPoint));
             // 梯形成形 时间常数，time1,time2
@@ -1000,8 +1001,9 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
         cmdPool.push_back(cmdSoftTrigger);
     }
 
+    this->tmCalculate == 0x00;
     socketDetector->write(cmdPool.first());
-    qDebug()<<"Send HEX: "<<cmdPool.first().toHex();
+    qDebug()<<"Send HEX: "<<cmdPool.first().toHex(' ');
 }
 
 void CommandHelper::slotStopManualMeasure()
@@ -1011,9 +1013,7 @@ void CommandHelper::slotStopManualMeasure()
 
     cmdPool.push_back(cmdStopTrigger);
     qint64 writeLen = socketDetector->write(cmdStopTrigger);
-    while (!writeLen){
-        writeLen = socketDetector->write(cmdStopTrigger);
-    }
+    qDebug()<<"Send HEX: "<<cmdStopTrigger.toHex(' ');
 }
 
 //开始自动测量
@@ -1068,9 +1068,10 @@ void CommandHelper::slotStopAutoMeasure()
 
     cmdPool.push_back(cmdStopTrigger);
     qint64 writeLen = socketDetector->write(cmdStopTrigger);
-    while (!writeLen){
-        writeLen = socketDetector->write(cmdStopTrigger);
-    }
+    // while (!writeLen){
+    //     writeLen = socketDetector->write(cmdStopTrigger);
+    // }
+    qDebug()<<"Send HEX: "<<cmdStopTrigger.toHex(' ');
 }
 
 void CommandHelper::netFrameWorkThead()
@@ -1158,15 +1159,29 @@ void CommandHelper::netFrameWorkThead()
                 quint32 size = handlerPool.size();
                 if (size >= minPkgSize){
                     // 寻找包头
-                    if ((quint8)handlerPool.at(0) == 0x00 && (quint8)handlerPool.at(1) == 0x00 && (quint8)handlerPool.at(2) == 0xaa && (quint8)handlerPool.at(3) == 0xb3){
+                    quint8* ptrHead = (quint8*)handlerPool.data();
+                    quint8* ptrTail = (quint8*)handlerPool.data() + minPkgSize - 4;
+                    if ((quint8)ptrHead[0] == 0x00 && (quint8)ptrHead[1] == 0x00 && (quint8)ptrHead[2] == 0xaa && (quint8)ptrHead[3] == 0xb3){
                         // 寻找包尾(正常情况包尾正确)
-                        if ((quint8)handlerPool.at(minPkgSize-4) == 0x00 && (quint8)handlerPool.at(minPkgSize-3) == 0x00 && (quint8)handlerPool.at(minPkgSize-2) == 0xcc && (quint8)handlerPool.at(minPkgSize-1) == 0xd3){
+                        if ((quint8)ptrTail[0] == 0x00 && (quint8)ptrTail[1] == 0x00 && (quint8)ptrTail[2] == 0xcc && (quint8)ptrTail[3] == 0xd3){
                             isNual = true;
                             break;
                         } else {
+                            QFile file("D:\\error1.dat");
+                            if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+                                file.write(handlerPool);
+                                file.flush();
+                                file.close();
+                            }
                             handlerPool.remove(0, 1);
                         }
                     } else {
+                        QFile file("D:\\error2.dat");
+                        if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+                            file.write(handlerPool);
+                            file.flush();
+                            file.close();
+                        }
                         handlerPool.remove(0, 1);
                     }
                 } else if (handlerPool.size() == 12){
@@ -1174,6 +1189,7 @@ void CommandHelper::netFrameWorkThead()
                     //通过指令来判断测量是否停止
                     if (handlerPool.compare(cmdStopTrigger) == 0){
                         handlerPool.remove(0, 12);
+                        qDebug()<<"Recv HEX: "<<cmdStopTrigger.toHex(' ');
 
                         if (nullptr != pfSave){
                             pfSave->close();
@@ -1186,6 +1202,12 @@ void CommandHelper::netFrameWorkThead()
                         emit sigMeasureStop();
                         break;
                     } else {
+                        QFile file("D:\\error3.dat");
+                        if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+                            file.write(handlerPool);
+                            file.flush();
+                            file.close();
+                        }
                         handlerPool.remove(0, 1);
                     }
                 } else {
@@ -1288,6 +1310,7 @@ void CommandHelper::netFrameWorkThead()
                     } else if (handlerPool.size() == 12){
                         if (handlerPool.compare(cmdStopTrigger) == 0){
                             handlerPool.remove(0, 12);
+                            qDebug()<<"Recv HEX: "<<cmdStopTrigger.toHex(' ');
 
                             if (nullptr != pfSave){
                                 pfSave->close();
@@ -1337,8 +1360,7 @@ void CommandHelper::detTimeEnergyWorkThread()
 
                 QMutexLocker locker(&mutexReset);
                 //2、处理缓存区数据
-                if (swapFrames.size() > 0){
-                    vector<TimeEnergy> data1_2, data2_2;
+                if (swapFrames.size() > 0){                    
                     while (!swapFrames.empty()){
                         DetTimeEnergy detTimeEnergy = swapFrames.front();
                         swapFrames.erase(swapFrames.begin());
@@ -1359,11 +1381,19 @@ void CommandHelper::detTimeEnergyWorkThread()
                         }
                     }
 
-                    if (data1_2.size() > 0 && data2_2.size() > 0 ){
+                    if (data1_2.size() > 0 || data2_2.size() > 0 ){
                         QDateTime now = QDateTime::currentDateTime();
-                        if (!this->reCalculateing){
-                            if (detectorParameter.measureModel == mmAuto)//自动测量，需要获取能宽
-                                coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, true);
+                        {
+                            if (detectorParameter.measureModel == mmAuto){//自动测量，需要获取能宽
+                                if (this->tmCalculate == 0x00){
+                                    this->tmCalculate == data1_2.at(0).time / 1e6;
+                                }
+
+                                if (this->reCalculateing)
+                                    coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, true);
+                                else
+                                    coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, false);
+                            }
                             else
                                coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, false);
                         }
@@ -1386,6 +1416,14 @@ void CommandHelper::detTimeEnergyWorkThread()
     }
 }
 
+void CommandHelper::updateStepTime(int _stepT, int _timewidth)
+{
+    QMutexLocker locker(&mutexReset);
+    this->stepT = _stepT;
+    this->timeWidth = _timewidth;
+    currentSpectrumFrames.clear();
+}
+
 void CommandHelper::updateParamter(int _stepT, unsigned short _EnWin[4], int _timewidth/* = 50*/, bool reset/* = false*/)
 {
     QMutexLocker locker(&mutexReset);
@@ -1403,9 +1441,10 @@ void CommandHelper::updateParamter(int _stepT, unsigned short _EnWin[4], int _ti
     this->timeWidth = _timewidth;
     currentSpectrumFrames.clear();
 
-    if (0/*reset*/){
+    if (reset){
         //读取历史数据重新进行运算
         this->reCalculateing = true;
+        return;
 
         QLiteThread *calThread = new QLiteThread();
         calThread->setObjectName("calThread");

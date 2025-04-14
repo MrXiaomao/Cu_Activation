@@ -96,6 +96,8 @@ private slots:
 
     void on_checkBox_gauss_stateChanged(int arg1);
 
+    void on_pushButton_confirm_clicked();
+
 private:
     Ui::MainWindow *ui = nullptr;
     SpectrumModel *spectrummodel = nullptr;//能谱模型

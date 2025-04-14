@@ -76,7 +76,7 @@ signals:
     void sigCoincidenceResult(quint32, CoincidenceResult);
     void sigSingleSpectrum(SingleSpectrum);
     void sigCurrentPoint(quint32, CurrentPoint);
-    void sigPlot(SingleSpectrum, vector<CoincidenceResult>, int refreshT, int coolTime);
+    void sigPlot(SingleSpectrum, vector<CoincidenceResult>, int refreshT);
 
     void sigDoTasks();
     void sigAnalyzeFrame();

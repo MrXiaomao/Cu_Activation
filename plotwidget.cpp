@@ -1244,10 +1244,8 @@ void PlotWidget::slotBeforeReplot()
 
 #include <QtMath>
 #include <math.h>
-void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult> r3, int refreshTime, int coolTime)
+void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult> r3, int refreshTime)
 {
-    //暂不考虑冷却时长
-    coolTime = 0;
     QMutexLocker locker(&mutexRefreshPlot);
     QCustomPlot::RefreshPriority refreshPriority = QCustomPlot::rpQueuedReplot;
     if (this->property("isMergeMode").toBool()){
@@ -1261,13 +1259,10 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
                 QVector<QColor> colors;
                 for (size_t i=0; i<r3.size(); ++i){
                     uint32_t key = (i+1)*refreshTime;
-                    if (key >= coolTime){
-                        //冷却却时长外的信息不显示
-                        keys << key;
-                        values << r3[i].CountRate1;
-                        colors << clrLine;
-                        maxPoint = qMax(maxPoint, (double)r3[i].CountRate1);
-                    }
+                    keys << key;
+                    values << r3[i].CountRate1;
+                    colors << clrLine;
+                    maxPoint = qMax(maxPoint, (double)r3[i].CountRate1);
                 }
 
                 customPlotDet12->graph(0)->setData(keys, values, colors);
@@ -1282,13 +1277,10 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
                 QVector<QColor> colors;
                 for (size_t i=0; i<r3.size(); ++i){
                     uint32_t key = (i+1)*refreshTime;
-                    if (key >= coolTime){
-                        //能却时长外的信息不显示
-                        keys << key;
-                        values << r3[i].CountRate2;
-                        colors << clrLine2;
-                        maxPoint = qMax(maxPoint, (double)r3[i].CountRate2);
-                    }
+                    keys << key;
+                    values << r3[i].CountRate2;
+                    colors << clrLine2;
+                    maxPoint = qMax(maxPoint, (double)r3[i].CountRate2);
                 }
 
                 if (customPlotDet12->graph(1)->visible()){
@@ -1320,13 +1312,10 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
 
                 for (size_t i=0; i<r3.size(); ++i){
                     uint32_t key = (i+1)*refreshTime;
-                    if (key >= coolTime){
-                        //能却时长外的信息不显示
-                        keys << key;
-                        values << r3[i].ConCount_single;
-                        colors << clrLine;
-                        maxCount = qMax(maxCount, (double)r3[i].ConCount_single);
-                    }
+                    keys << key;
+                    values << r3[i].ConCount_single;
+                    colors << clrLine;
+                    maxCount = qMax(maxCount, (double)r3[i].ConCount_single);
                 }
 
                 if (maxCount > customPlotCoincidenceResult->yAxis->range().upper * RANGE_SCARRE_UPPER){
@@ -1412,13 +1401,10 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
 
                 for (size_t i=0; i<r3.size(); ++i){
                     uint32_t key = (i+1)*refreshTime;
-                    if (key >= coolTime){
-                        //能却时长外的信息不显示
-                        keys << key;
-                        values << r3[i].CountRate1;
-                        colors << clrLine;
-                        maxValue = qMax(maxValue, (double)r3[i].CountRate1);
-                    }
+                    keys << key;
+                    values << r3[i].CountRate1;
+                    colors << clrLine;
+                    maxValue = qMax(maxValue, (double)r3[i].CountRate1);
                 }
 
                 customPlotDet1->graph(0)->setData(keys, values, colors);
@@ -1455,13 +1441,10 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
 
                 for (size_t i=0; i<r3.size(); ++i){
                     uint32_t key = (i+1)*refreshTime;
-                    if (key >= coolTime){
-                        //能却时长外的信息不显示
-                        keys << key;
-                        values << r3[i].CountRate2;
-                        colors << clrLine;
-                        maxValue = qMax(maxValue, (double)r3[i].CountRate2);
-                    }
+                    keys << key;
+                    values << r3[i].CountRate2;
+                    colors << clrLine;
+                    maxValue = qMax(maxValue, (double)r3[i].CountRate2);
                 }
 
                 if (customPlotDet2->graph(0)->visible()){
@@ -1500,13 +1483,10 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
 
                 for (size_t i=0; i<r3.size(); ++i){
                     uint32_t key = (i+1)*refreshTime;
-                    if (key >= coolTime){
-                        //能却时长外的信息不显示
-                        keys << key;
-                        values << r3[i].ConCount_single;
-                        colors << clrLine;
-                        maxValue = qMax(maxValue, (double)r3[i].ConCount_single);
-                    }
+                    keys << key;
+                    values << r3[i].ConCount_single;
+                    colors << clrLine;
+                    maxValue = qMax(maxValue, (double)r3[i].ConCount_single);
                 }
 
                 if (maxValue > customPlotCoincidenceResult->yAxis->range().upper * RANGE_SCARRE_UPPER){

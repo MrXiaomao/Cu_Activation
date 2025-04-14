@@ -112,7 +112,6 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
     coincidenceAnalyzer->set_callback([=](SingleSpectrum r1, vector<CoincidenceResult> r3) {
         long count = r3.size();
         int _stepT = this->stepT;
-        int coolTime = this->detectorParameter.cool_timelength;
         if (count <= 0)
             return;
 
@@ -155,13 +154,6 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
             currentEnergyTime = r1.time;
         }
 
-        //冷却时长 cool_timelength
-        if (r1.time < coolTime){
-            return ;
-        } else {
-            //冷却时长内的计数0处理
-        }
-
         //时间步长，求均值
         if (_stepT > 1){
             if (count>1 && (count % _stepT == 0)){
@@ -171,13 +163,10 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                     CoincidenceResult v;
                     for (int j=0; j<_stepT; ++j){
                         size_t posI = i*_stepT + j;
-                        if (posI + 1 >= coolTime){
-                            //冷却时长内的数据才是有效数据
-                            v.CountRate1 += r3[posI].CountRate1;
-                            v.CountRate2 += r3[posI].CountRate2;
-                            v.ConCount_single += r3[posI].ConCount_single;
-                            v.ConCount_multiple += r3[posI].ConCount_multiple;
-                        }
+                        v.CountRate1 += r3[posI].CountRate1;
+                        v.CountRate2 += r3[posI].CountRate2;
+                        v.ConCount_single += r3[posI].ConCount_single;
+                        v.ConCount_multiple += r3[posI].ConCount_multiple;
                     }
 
                     //给出平均计数率cps,注意，这里是整除，当计数率小于1cps时会变成零。
@@ -195,18 +184,12 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                     emit sigUpdateAutoEnWidth(autoEnWindow);
                 }
 
-                emit sigPlot(r1, rr3, _stepT, coolTime);
+                emit sigPlot(r1, rr3, _stepT);
             }
         } else{
             vector<CoincidenceResult> rr3;
             for (size_t i=0; i < count; i++){
-                CoincidenceResult v;
-                if (i+1 >= coolTime){
-                    //冷却时长内的数据才是有效数据
-                    rr3.push_back(r3.at(i));
-                } else {
-                    rr3.push_back(v);
-                }
+                rr3.push_back(r3.at(i));
             }
 
             if (detectorParameter.measureModel == mmAuto && this->reCalculateing)//自动测量，需要获取能宽
@@ -217,7 +200,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                 emit sigUpdateAutoEnWidth(autoEnWindow);
             }
 
-            emit sigPlot(r1, rr3, _stepT, coolTime);
+            emit sigPlot(r1, rr3, _stepT);
         }
     });
 
@@ -1683,7 +1666,7 @@ void CommandHelper::analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult>
 {
     long count = r3.size();
     int _stepT = this->stepT;
-    int coolTime = this->detectorParameter.cool_timelength;
+    
     if (count <= 0)
         return;
 
@@ -1733,13 +1716,6 @@ void CommandHelper::analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult>
         currentEnergyTime = r1.time;
     }
 
-    //冷却时长 cool_timelength
-    if (r1.time < coolTime){
-        return ;
-    } else {
-        //冷却时长内的计数0处理
-    }
-
     //时间步长，求均值
     if (_stepT > 1){
         if (count>1 && (count % _stepT == 0)){
@@ -1749,13 +1725,11 @@ void CommandHelper::analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult>
                 CoincidenceResult v;
                 for (int j=0; j<_stepT; ++j){
                     size_t posI = i*_stepT + j;
-                    if (posI + 1 >= coolTime){
-                        //冷却时长内的数据才是有效数据
-                        v.CountRate1 += r3[posI].CountRate1;
-                        v.CountRate2 += r3[posI].CountRate2;
-                        v.ConCount_single += r3[posI].ConCount_single;
-                        v.ConCount_multiple += r3[posI].ConCount_multiple;
-                    }
+                    //冷却时长内的数据才是有效数据
+                    v.CountRate1 += r3[posI].CountRate1;
+                    v.CountRate2 += r3[posI].CountRate2;
+                    v.ConCount_single += r3[posI].ConCount_single;
+                    v.ConCount_multiple += r3[posI].ConCount_multiple;
                 }
 
                 //给出平均计数率cps,注意，这里是整除，当计数率小于1cps时会变成零。
@@ -1766,20 +1740,14 @@ void CommandHelper::analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult>
                 rr3.push_back(v);
             }
 
-            sigPlot(r1, rr3, _stepT, coolTime);
+            sigPlot(r1, rr3, _stepT);
         }
     } else{
         vector<CoincidenceResult> rr3;
         for (size_t i=0; i < count; i++){
-            CoincidenceResult v;
-            if (i+1 >= coolTime){
-                //冷却时长内的数据才是有效数据
-                rr3.push_back(r3.at(i));
-            } else {
-                rr3.push_back(v);
-            }
+            rr3.push_back(r3.at(i));
         }
 
-        sigPlot(r1, rr3, _stepT, coolTime);
+        sigPlot(r1, rr3, _stepT);
     }
 }

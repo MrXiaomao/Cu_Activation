@@ -51,7 +51,7 @@ public slots:
     void slotUpdateEnTimeWidth(unsigned short* timeWidth);
 
     //批量刷新
-    void slotUpdatePlotDatas(SingleSpectrum, vector<CoincidenceResult>, int refreshTime, int coolTime);
+    void slotUpdatePlotDatas(SingleSpectrum, vector<CoincidenceResult>, int refreshTime);
 
     void slotResetPlot();
     void slotGauss(int leftE, int rightE);

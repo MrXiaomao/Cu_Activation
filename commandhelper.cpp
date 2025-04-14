@@ -192,7 +192,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                 rr3.push_back(r3.at(i));
             }
 
-            if (detectorParameter.measureModel == mmAuto && this->reCalculateing)//自动测量，需要获取能宽
+            if (detectorParameter.measureModel == mmAuto)//自动测量，需要获取能宽
             {
                 autoEnWindow.clear();
                 coincidenceAnalyzer->GetEnWidth(autoEnWindow);
@@ -1372,10 +1372,7 @@ void CommandHelper::detTimeEnergyWorkThread()
                                     this->tmCalculate == data1_2.at(0).time / 1e6;
                                 }
 
-                                if (this->reCalculateing)
-                                    coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, true);
-                                else
-                                    coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, false);
+                                coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, true);
                             }
                             else
                                coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, false);
@@ -1425,10 +1422,9 @@ void CommandHelper::updateParamter(int _stepT, unsigned short _EnWin[4], int _ti
     currentSpectrumFrames.clear();
 
     if (reset){
-        //读取历史数据重新进行运算
-        this->reCalculateing = true;
         return;
 
+        //读取历史数据重新进行运算
         QLiteThread *calThread = new QLiteThread();
         calThread->setObjectName("calThread");
         calThread->setWorkThreadProc([=](){

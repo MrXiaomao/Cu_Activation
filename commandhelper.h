@@ -105,7 +105,6 @@ private:
     QLiteThread* analyzeNetDataThread;//处理网络数据线程，将数据进行解析成时间能量队
     QLiteThread* plotUpdateThread;//能谱信息处理线程
     quint32 currentEnergyTime = 0;// 能谱时间
-    bool reCalculateing = false;//正在对所有能量数据进行重新运算
     quint64 tmCalculate = 0;// 记录下重新运算的时间戳，单位：毫秒
 
     CoincidenceAnalyzer* coincidenceAnalyzer;

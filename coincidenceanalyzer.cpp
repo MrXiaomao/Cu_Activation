@@ -45,6 +45,12 @@ void CoincidenceAnalyzer::set_callback(std::function<void(SingleSpectrum, vector
     m_pfunc = func;
 }
 
+void CoincidenceAnalyzer::set_callback(pfRealCallbackFunction func, void *callbackUser)
+{
+    m_pfuncEx = func;
+    m_pfuncUser = callbackUser;
+}
+
 void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy> _data2,
               unsigned short E_win[4], int windowWidthT,
               bool countFlag, bool autoEnWidth)
@@ -135,7 +141,10 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
         time2_elapseFPGA = lastTime2/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
 
         //当只计算能谱时，则不调用回调函数，外部通过GetAccumulateSpectrum获取累积能谱
-        if (countFlag && m_pfunc) m_pfunc(AccumulateSpectrum, coinResult);
+        if (countFlag && m_pfunc)
+            m_pfunc(AccumulateSpectrum, coinResult);
+        if (countFlag && m_pfuncEx)
+            m_pfuncEx(AccumulateSpectrum, coinResult, m_pfuncUser);
     }
 
     //将容器中未经处理的数据点添加到缓存保存起来，下次优先处理

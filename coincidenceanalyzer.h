@@ -167,6 +167,9 @@ public:
     //这里加入回调函数，后期做成SDK会出现问题，SDK不存在回调，只存在返回值。
     void set_callback(std::function<void(SingleSpectrum, vector<CoincidenceResult>)> func);
 
+    //C/C++标准回调导出
+    typedef void (*pfRealCallbackFunction)(SingleSpectrum, vector<CoincidenceResult>, void *callbackUser);
+    void set_callback(pfRealCallbackFunction func, void *callbackUser);
 private:
     // 统计给出两个探测器各自当前一秒钟测量数据的能谱，当前一秒钟没有测量信号，则能谱全为零
     void calculateAllSpectrum(vector<TimeEnergy> data1, vector<TimeEnergy> data2);
@@ -205,6 +208,8 @@ private:
     vector<CurrentPoint> AllPoint; //每一秒内的各探测器的数据点个数
     vector<TimeEnergy> unusedData1, unusedData2;//用于存储未处理完的数据信息
     std::function<void(SingleSpectrum, vector<CoincidenceResult>)> m_pfunc = nullptr;
+    pfRealCallbackFunction m_pfuncEx = nullptr;
+    void* m_pfuncUser = nullptr;
     mutex mtx;
     
     // 用于高斯拟合，自动更新能窗

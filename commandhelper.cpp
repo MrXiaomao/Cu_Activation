@@ -44,24 +44,46 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
     //连接成功
     connect(socketRelay, &QTcpSocket::connected, this, [=](){
         //发送查询指令
-        QByteArray command;
-        QDataStream dataStream(&command, QIODevice::WriteOnly);
-        dataStream << (quint8)0x48;
-        dataStream << (quint8)0x3a;
-        dataStream << (quint8)0x01;
-        dataStream << (quint8)0x53;
-        dataStream << (quint8)0x00;
-        dataStream << (quint8)0x00;
-        dataStream << (quint8)0x00;
-        dataStream << (quint8)0x00;
-        dataStream << (quint8)0x00;
-        dataStream << (quint8)0x00;
-        dataStream << (quint8)0x00;
-        dataStream << (quint8)0x00;
-        dataStream << (quint8)0xd6;
-        dataStream << (quint8)0x45;
-        dataStream << (quint8)0x44;
-        socketRelay->write(command);
+        if (socketRelay->property("relay-status").toString() == "query"){
+            QByteArray command;
+            QDataStream dataStream(&command, QIODevice::WriteOnly);
+            dataStream << (quint8)0x48;
+            dataStream << (quint8)0x3a;
+            dataStream << (quint8)0x01;
+            dataStream << (quint8)0x53;
+            dataStream << (quint8)0x00;
+            dataStream << (quint8)0x00;
+            dataStream << (quint8)0x00;
+            dataStream << (quint8)0x00;
+            dataStream << (quint8)0x00;
+            dataStream << (quint8)0x00;
+            dataStream << (quint8)0x00;
+            dataStream << (quint8)0x00;
+            dataStream << (quint8)0xd6;
+            dataStream << (quint8)0x45;
+            dataStream << (quint8)0x44;
+            socketRelay->write(command);
+        } else if (socketRelay->property("relay-status").toString() == "open"){
+            //发送开启指令
+            QByteArray command;
+            QDataStream dataStream(&command, QIODevice::WriteOnly);
+            dataStream << (quint8)0x48;
+            dataStream << (quint8)0x3a;
+            dataStream << (quint8)0x01;
+            dataStream << (quint8)0x57;
+            dataStream << (quint8)0x01;
+            dataStream << (quint8)0x01;
+            dataStream << (quint8)0x00;
+            dataStream << (quint8)0x00;
+            dataStream << (quint8)0x00;
+            dataStream << (quint8)0x00;
+            dataStream << (quint8)0x00;
+            dataStream << (quint8)0x00;
+            dataStream << (quint8)0xdc;
+            dataStream << (quint8)0x45;
+            dataStream << (quint8)0x44;
+            socketRelay->write(command);
+        }
     });
 
     //接收数据
@@ -73,12 +95,8 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
             if (binaryData.at(0) == 0x48 && binaryData.at(1) == 0x3a && binaryData.at(2) == 0x01 && binaryData.at(3) == 0x54){
                 if (binaryData.at(4) == 0x00 || binaryData.at(5) == 0x00){
                     //继电器未开启
-
-                    if (!socketRelay->property("firstQuery").toBool()){
-                        // 如果已经发送过开启指令，则直接上报状态即可
-                        emit sigRelayStatus(false);
-                    } else {
-                        socketRelay->setProperty("firstQuery", false);
+                    if (socketRelay->property("relay-status").toString() == "query"){
+                        socketRelay->setProperty("relay-status", "none");
 
                         //发送开启指令
                         QByteArray command;
@@ -99,6 +117,9 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                         dataStream << (quint8)0x45;
                         dataStream << (quint8)0x44;
                         socketRelay->write(command);
+                    } else{
+                        // 如果已经发送过开启指令，则直接上报状态即可
+                        emit sigRelayStatus(false);
                     }
                 } else if (binaryData.at(4) == 0x01 || binaryData.at(5) == 0x01){
                     //已经开启
@@ -108,101 +129,12 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
         }
     });
 
+    coincidenceAnalyzer->set_callback(analyzerRealCalback, this);
+
     //coincidenceAnalyzer->set_callback(std::bind(&CommandHelper::analyzerCalback, this, placeholders::_1, placeholders::_2));
-    coincidenceAnalyzer->set_callback([=](SingleSpectrum r1, vector<CoincidenceResult> r3) {
-        long count = r3.size();
-        int _stepT = this->stepT;
-        if (count <= 0)
-            return;
-
-        //保存信息
-        if (r1.time != currentEnergyTime){
-            //有新的能谱数据产生
-            QString coincidenceResultFile = currentFilename + ".计数.csv";
-            {
-                QFile file(coincidenceResultFile);
-                if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
-                    QTextStream out(&file);
-                    out << "time,CountRate1,CountRate2,ConCount_single,ConCount_multiple";
-                    CoincidenceResult coincidenceResult = r3.back();
-                    for (size_t i=0; i<r3.size(); ++i){
-                        out << r1.time << "," << coincidenceResult.CountRate1 << "," << coincidenceResult.CountRate2 << "," << coincidenceResult.ConCount_single << "," << coincidenceResult.ConCount_multiple;
-                    }
-
-                    file.flush();
-                    file.close();
-                }
-            }
-
-            QString singleSpectrumResultFile = currentFilename + ".能量.csv";
-            {
-                QFile file(singleSpectrumResultFile);
-                if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
-                    QTextStream out(&file);
-                    out << "time,Det1-Energy,Det2-Energy";
-
-                    out << r1.time;
-                    for (size_t j=0; j<MULTI_CHANNEL; ++j){
-                        out << "," << r1.spectrum[0][j] << "," << r1.spectrum[1][j];//Qt::endl
-                    }
-
-                    file.flush();
-                    file.close();
-                }
-            }
-
-            currentEnergyTime = r1.time;
-        }
-
-        //时间步长，求均值
-        if (_stepT > 1){
-            if (count>1 && (count % _stepT == 0)){
-                vector<CoincidenceResult> rr3;
-
-                for (size_t i=0; i < count/_stepT; i++){
-                    CoincidenceResult v;
-                    for (int j=0; j<_stepT; ++j){
-                        size_t posI = i*_stepT + j;
-                        v.CountRate1 += r3[posI].CountRate1;
-                        v.CountRate2 += r3[posI].CountRate2;
-                        v.ConCount_single += r3[posI].ConCount_single;
-                        v.ConCount_multiple += r3[posI].ConCount_multiple;
-                    }
-
-                    //给出平均计数率cps,注意，这里是整除，当计数率小于1cps时会变成零。
-                    v.CountRate1 /= _stepT;
-                    v.CountRate2 /= _stepT;
-                    v.ConCount_single /= _stepT;
-                    v.ConCount_multiple /= _stepT;
-                    rr3.push_back(v);
-                }
-
-                if (detectorParameter.measureModel == mmAuto)//自动测量，需要获取能宽
-                {
-                    autoEnWindow.clear();
-                    coincidenceAnalyzer->GetEnWidth(autoEnWindow);
-                    emit sigUpdateAutoEnWidth(autoEnWindow);
-                }
-
-                emit sigPlot(r1, rr3, _stepT);
-            }
-        } else{
-            vector<CoincidenceResult> rr3;
-            for (size_t i=0; i < count; i++){
-                rr3.push_back(r3.at(i));
-            }
-
-            if (detectorParameter.measureModel == mmAuto)//自动测量，需要获取能宽
-            {
-                autoEnWindow.clear();
-                coincidenceAnalyzer->GetEnWidth(autoEnWindow);
-                std::cout << "autoEnWindow: [" << autoEnWindow[0] << ", " << autoEnWindow[1] << "] [" <<  autoEnWindow[2] << ", " << autoEnWindow[3] << "]" << std::endl;
-                emit sigUpdateAutoEnWidth(autoEnWindow);
-            }
-
-            emit sigPlot(r1, rr3, _stepT);
-        }
-    });
+    // coincidenceAnalyzer->set_callback([=](SingleSpectrum r1, vector<CoincidenceResult> r3) {
+    //     this->doEnWindowData(r1, r3);
+    // });
 
     connect(this, &CommandHelper::sigMeasureStop, this, [=](){
         //测量停止保存符合运算结果
@@ -214,13 +146,13 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
 
                 if (detectorParameter.transferModel == 0x05){
                     // 保存粒子测量参数
-                    out << "阈值1;" << detectorParameter.triggerThold1;
-                    out << "阈值2;" << detectorParameter.triggerThold2;
-                    out << "波形极性;" << ((detectorParameter.waveformPolarity==0x00) ? tr("正极性") : tr("负极性"));
-                    out << "死时间;" << detectorParameter.deadTime;
-                    out << "波形触发模式;" << ((detectorParameter.triggerModel==0x00) ? tr("normal") : tr("auto"));
+                    out << tr("阈值1:") << detectorParameter.triggerThold1;
+                    out << tr("阈值2:") << detectorParameter.triggerThold2;
+                    out << tr("波形极性:") << ((detectorParameter.waveformPolarity==0x00) ? tr("正极性") : tr("负极性"));
+                    out << tr("死时间:") << detectorParameter.deadTime;
+                    out << tr("波形触发模式:") << ((detectorParameter.triggerModel==0x00) ? tr("normal") : tr("auto"));
                     if (gainValue.contains(detectorParameter.gain))
-                        out << "探测器增益;" << gainValue[detectorParameter.gain];
+                        out << tr("探测器增益:") << gainValue[detectorParameter.gain];
                 }
 
                 file.flush();
@@ -281,6 +213,115 @@ CommandHelper::~CommandHelper(){
     coincidenceAnalyzer = nullptr;
 }
 
+void CommandHelper::analyzerRealCalback(SingleSpectrum r1, vector<CoincidenceResult> r3, void *callbackUser)
+{
+    CommandHelper *pThis = (CommandHelper*)callbackUser;
+    pThis->doEnWindowData(r1, r3);
+}
+
+void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> r3)
+{
+    long count = r3.size();
+    int _stepT = this->stepT;
+    if (count <= 0)
+        return;
+
+    //保存信息
+    if (r1.time != currentEnergyTime){
+        //有新的能谱数据产生
+        QString coincidenceResultFile = currentFilename + ".计数.csv";
+        {
+            QFile file(coincidenceResultFile);
+            if (file.open(QIODevice::ReadWrite | QIODevice::Text | QIODevice::Truncate)) {
+                QTextStream out(&file);
+                out << "time,CountRate1,CountRate2,ConCount_single,ConCount_multiple" << Qt::endl;
+                CoincidenceResult coincidenceResult = r3.back();
+                for (size_t i=0; i<r3.size(); ++i){
+                    out << i + 1 << "," << coincidenceResult.CountRate1 << "," << coincidenceResult.CountRate2 << "," << coincidenceResult.ConCount_single << "," << coincidenceResult.ConCount_multiple << Qt::endl;
+                }
+
+                file.flush();
+                file.close();
+            }
+        }
+
+        QString singleSpectrumResultFile = currentFilename + ".能量.csv";
+        {
+            QFile file(singleSpectrumResultFile);
+            if (file.open(QIODevice::ReadWrite | QIODevice::Text | QIODevice::Append)) {
+                QTextStream out(&file);
+                out << "time,Det1-Energy,Det2-Energy" << Qt::endl;
+
+                out << r1.time;
+                for (size_t j=0; j<MULTI_CHANNEL; ++j){
+                        out << "," << r1.spectrum[0][j];
+                }
+
+                out << Qt::endl;
+                out << r1.time;
+                for (size_t j=0; j<MULTI_CHANNEL; ++j){
+                    out << "," << r1.spectrum[1][j];
+                }
+
+                out << Qt::endl;
+                file.flush();
+                file.close();
+            }
+        }
+
+        currentEnergyTime = r1.time;
+    }
+
+    //时间步长，求均值
+    if (_stepT > 1){
+        if (count>1 && (count % _stepT == 0)){
+            vector<CoincidenceResult> rr3;
+
+            for (size_t i=0; i < count/_stepT; i++){
+                CoincidenceResult v;
+                for (int j=0; j<_stepT; ++j){
+                    size_t posI = i*_stepT + j;
+                    v.CountRate1 += r3[posI].CountRate1;
+                    v.CountRate2 += r3[posI].CountRate2;
+                    v.ConCount_single += r3[posI].ConCount_single;
+                    v.ConCount_multiple += r3[posI].ConCount_multiple;
+                }
+
+                //给出平均计数率cps,注意，这里是整除，当计数率小于1cps时会变成零。
+                v.CountRate1 /= _stepT;
+                v.CountRate2 /= _stepT;
+                v.ConCount_single /= _stepT;
+                v.ConCount_multiple /= _stepT;
+                rr3.push_back(v);
+            }
+
+            if (detectorParameter.measureModel == mmAuto)//自动测量，需要获取能宽
+            {
+                autoEnWindow.clear();
+                coincidenceAnalyzer->GetEnWidth(autoEnWindow);
+                emit sigUpdateAutoEnWidth(autoEnWindow);
+            }
+
+            emit sigPlot(r1, rr3, _stepT);
+        }
+    } else{
+        vector<CoincidenceResult> rr3;
+        for (size_t i=0; i < count; i++){
+            rr3.push_back(r3.at(i));
+        }
+
+        if (detectorParameter.measureModel == mmAuto)//自动测量，需要获取能宽
+        {
+            autoEnWindow.clear();
+            coincidenceAnalyzer->GetEnWidth(autoEnWindow);
+            std::cout << "autoEnWindow: [" << autoEnWindow[0] << ", " << autoEnWindow[1] << "] [" <<  autoEnWindow[2] << ", " << autoEnWindow[3] << "]" << std::endl;
+            emit sigUpdateAutoEnWidth(autoEnWindow);
+        }
+
+        emit sigPlot(r1, rr3, _stepT);
+    }
+}
+
 void CommandHelper::initCommand()
 {
     QDataStream dataStream(&cmdSoftTrigger, QIODevice::WriteOnly);
@@ -339,7 +380,7 @@ void CommandHelper::handleManualMeasureNetData()
     if (workStatus == Preparing){
         QByteArray command = cmdPool.first();
         if (binaryData.compare(command) == 0){
-            qDebug()<<"Recieve HEX: "<<binaryData.toHex(' ');
+            qDebug()<<"Recv HEX: "<<binaryData.toHex(' ');
             binaryData.remove(0, command.size());
             cmdPool.erase(cmdPool.begin());
 
@@ -382,7 +423,7 @@ void CommandHelper::handleAutoMeasureNetData()
     if (workStatus == Preparing){
         QByteArray command = cmdPool.first();
         if (binaryData.compare(command) == 0){
-            qDebug()<<"Recieve HEX: "<<binaryData.toHex(' ');
+            qDebug()<<"Recv HEX: "<<binaryData.toHex(' ');
             binaryData.remove(0, command.size());
             cmdPool.erase(cmdPool.begin());
 
@@ -402,7 +443,7 @@ void CommandHelper::handleAutoMeasureNetData()
         }
     } else if (workStatus == Waiting){
         if (binaryData.compare(cmdExternalTrigger) == 0){
-            qDebug()<<"Recieve HEX: "<<binaryData.toHex(' ');
+            qDebug()<<"Recv HEX: "<<binaryData.toHex(' ');
             qInfo()<<"接收到硬触发信号";
             // 自动测量正式开始
             binaryData.remove(0, cmdExternalTrigger.size());
@@ -461,7 +502,7 @@ void CommandHelper::initSocket(QTcpSocket** _socket)
     *_socket = socket;
 }
 
-void CommandHelper::openRelay()
+void CommandHelper::openRelay(bool first)
 {
     QFile file(QApplication::applicationDirPath() + "/config/ip.json");
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -489,7 +530,10 @@ void CommandHelper::openRelay()
     if (socketRelay->isOpen())
         socketRelay->disconnectFromHost();
 
-    socketRelay->setProperty("firstQuery", true);
+    if (first)
+        socketRelay->setProperty("relay-status", "query");
+    else
+        socketRelay->setProperty("relay-status", "open");
     socketRelay->connectToHost(ip, port);
 }
 
@@ -847,6 +891,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     coincidenceAnalyzer->initialize();
     workStatus = Preparing;
     detectorParameter = p;
+    this->reChangeEnWindow = false;
 
     //连接之前清空缓冲区
     QMutexLocker locker(&mutexCache);
@@ -984,7 +1029,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
         cmdPool.push_back(cmdSoftTrigger);
     }
 
-    this->tmCalculate == 0x00;
+    this->tmChangeEnWindow == 0x00;
     socketDetector->write(cmdPool.first());
     qDebug()<<"Send HEX: "<<cmdPool.first().toHex(' ');
 }
@@ -1139,33 +1184,66 @@ void CommandHelper::netFrameWorkThead()
             const quint32 minPkgSize = 1025 * 16;
             bool isNual = false;
             while (true){
+                quint8* ptrHead = (quint8*)handlerPool.data();
                 quint32 size = handlerPool.size();
                 if (size >= minPkgSize){
-                    // 寻找包头
-                    quint8* ptrHead = (quint8*)handlerPool.data();
-                    quint8* ptrTail = (quint8*)handlerPool.data() + minPkgSize - 4;
+                    // 寻找包头                    
+                    quint8* ptrTail = (quint8*)ptrHead + minPkgSize - 4;
                     if ((quint8)ptrHead[0] == 0x00 && (quint8)ptrHead[1] == 0x00 && (quint8)ptrHead[2] == 0xaa && (quint8)ptrHead[3] == 0xb3){
                         // 寻找包尾(正常情况包尾正确)
                         if ((quint8)ptrTail[0] == 0x00 && (quint8)ptrTail[1] == 0x00 && (quint8)ptrTail[2] == 0xcc && (quint8)ptrTail[3] == 0xd3){
                             isNual = true;
                             break;
                         } else {
-                            QFile file("D:\\error1.dat");
-                            if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-                                file.write(handlerPool);
-                                file.flush();
-                                file.close();
-                            }
-                            handlerPool.remove(0, 1);
+                            // QFile file("D:\\error1.dat");
+                            // if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+                            //     file.write(handlerPool);
+                            //     file.flush();
+                            //     file.close();
+                            // }
+
+                            //重新寻找包头
+                            goto reFindPkgHead;
                         }
                     } else {
-                        QFile file("D:\\error2.dat");
-                        if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-                            file.write(handlerPool);
-                            file.flush();
-                            file.close();
+reFindPkgHead:
+                        quint32 headOffset = 0;
+                        ptrTail = ptrHead + size - 12;//这里假设理想状态下（停止指令总是在所有指令的末尾出现），命令字节长度是12，所以这里要预留12个字节
+                        ++ptrHead;
+                        ++headOffset;
+                        while (ptrHead != ptrTail){
+                            if ((quint8)ptrHead[0] == 0x00 && (quint8)ptrHead[1] == 0x00 && (quint8)ptrHead[2] == 0xaa && (quint8)ptrHead[3] == 0xb3){                                
+                                QFile file("D:\\error1.txt");
+                                if (file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+                                    file.write(QString("%1\r\n").arg(headOffset).toStdString().c_str());
+                                    file.flush();
+                                    file.close();
+                                }
+
+
+                                QFile file2("D:\\error1.dat");
+                                if (file2.open(QIODevice::WriteOnly | QIODevice::Append)) {
+                                    file2.write((const char*)handlerPool.data(), headOffset);
+                                    file2.flush();
+                                    file2.close();
+                                }
+
+                                //找到新的头了
+                                handlerPool.remove(0, headOffset);
+
+                                headOffset = 0;
+                                break;
+                            }
+
+                            ++headOffset;
+                            ++ptrHead;
                         }
-                        handlerPool.remove(0, 1);
+
+                        if (headOffset != 0x00){
+                            handlerPool.remove(0, headOffset);
+                        }
+
+                        //handlerPool.remove(0, 1);
                     }
                 } else if (handlerPool.size() == 12){
                     //12 34 00 0F FF 10 00 11 00 00 AB CD
@@ -1199,6 +1277,7 @@ void CommandHelper::netFrameWorkThead()
             }
 
             if (isNual){
+                QDateTime tmStart = QDateTime::currentDateTime();
                 //复制有效数据
                 validFrame.append(handlerPool.data(), minPkgSize);
                 handlerPool.remove(0, minPkgSize);
@@ -1259,6 +1338,12 @@ void CommandHelper::netFrameWorkThead()
                     detTimeEnergy.timeEnergy.swap(temp);                    
                     currentSpectrumFrames.push_back(detTimeEnergy);
                 }
+
+                QDateTime tmStop = QDateTime::currentDateTime();
+                static bool bFirst = true;
+                if (bFirst)
+                    qDebug() << "frame analyze time: " << tmStart.msecsTo(tmStop) << "ms";
+                bFirst = false;
             }
         } else if (detectorParameter.transferModel == 0x03){
             // 波形个数
@@ -1368,11 +1453,14 @@ void CommandHelper::detTimeEnergyWorkThread()
                         QDateTime now = QDateTime::currentDateTime();
                         {
                             if (detectorParameter.measureModel == mmAuto){//自动测量，需要获取能宽
-                                if (this->tmCalculate == 0x00){
-                                    this->tmCalculate == data1_2.at(0).time / 1e6;
+                                if (this->tmChangeEnWindow == 0x00){
+                                    this->tmChangeEnWindow == data1_2.at(0).time / 1e6;
                                 }
 
-                                coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, true);
+                                if (this->reChangeEnWindow)
+                                    coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, true);
+                                else
+                                    coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, false);
                             }
                             else
                                coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, false);
@@ -1407,12 +1495,12 @@ void CommandHelper::updateStepTime(int _stepT, int _timewidth)
 void CommandHelper::updateParamter(int _stepT, unsigned short _EnWin[4], int _timewidth/* = 50*/, bool reset/* = false*/)
 {
     QMutexLocker locker(&mutexReset);
-    if (reset){
-        reset = (this->EnWindow[0] != _EnWin[0]) ||
-                (this->EnWindow[1] != _EnWin[1]) ||
-                (this->EnWindow[2] != _EnWin[2]) ||
-                (this->EnWindow[3] != _EnWin[3]);
-    }
+    // if (reset){
+    //     reset = (this->EnWindow[0] != _EnWin[0]) ||
+    //             (this->EnWindow[1] != _EnWin[1]) ||
+    //             (this->EnWindow[2] != _EnWin[2]) ||
+    //             (this->EnWindow[3] != _EnWin[3]);
+    // }
     this->stepT = _stepT;
     this->EnWindow[0] = _EnWin[0];
     this->EnWindow[1] = _EnWin[1];
@@ -1420,8 +1508,12 @@ void CommandHelper::updateParamter(int _stepT, unsigned short _EnWin[4], int _ti
     this->EnWindow[3] = _EnWin[3];
     this->timeWidth = _timewidth;
     currentSpectrumFrames.clear();
+    this->reChangeEnWindow = reset;
+    return;
 
     if (reset){
+        //读取历史数据重新进行运算
+        this->reChangeEnWindow = true;
         return;
 
         //读取历史数据重新进行运算

@@ -105,7 +105,14 @@ MainWindow::MainWindow(QWidget *parent)
 
         //外设连接成功，主动连接电源
         if (this->property("control_on").toBool()){
-            commandHelper->openRelay();
+            commandHelper->openRelay(true);
+
+            QPair<float, float> pair = controlHelper->gotoAbs(ui->comboBox_range->currentIndex());
+            this->setProperty("axis01-target-position", pair.first);
+            this->setProperty("axis02-target-position", pair.second);
+
+            SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待...\n正在移动位移平台至目标位置..."));
+            SplashWidget::instance()->exec();
         }
 
         QString msg = QString(tr("外设状态：%2")).arg(on ? tr("开") : tr("关"));
@@ -252,12 +259,12 @@ MainWindow::MainWindow(QWidget *parent)
     // qRegisterMetaType<vector<CurrentPoint>>("vector<CurrentPoint>");
     qRegisterMetaType<vector<CoincidenceResult>>("vector<CoincidenceResult>");
     std::cout << "main thread id:" << QThread::currentThreadId() << std::endl;
-    connect(commandHelper, &CommandHelper::sigPlot, this, [=](SingleSpectrum r1, vector<CoincidenceResult> r3, int refreshUI_time, int cool_time){
+    connect(commandHelper, &CommandHelper::sigPlot, this, [=](SingleSpectrum r1, vector<CoincidenceResult> r3, int refreshUI_time){
         lastRecvDataTime = QDateTime::currentDateTime();
         bool pause_plot = this->property("pause_plot").toBool();
         if (!pause_plot){
             PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
-            plotWidget->slotUpdatePlotDatas(r1, r3, refreshUI_time, cool_time);
+            plotWidget->slotUpdatePlotDatas(r1, r3, refreshUI_time);
 
             ui->lcdNumber_CountRate1->display(r3.back().CountRate1);
             ui->lcdNumber_CountRate2->display(r3.back().CountRate2);
@@ -886,6 +893,7 @@ void MainWindow::on_pushButton_measure_clicked()
             measureTimer->setInterval(ui->spinBox_timelength->value() * 1000);
 
             PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+            plotWidget->slotStart();
             plotWidget->slotResetPlot();
             plotWidget->slotUpdateEnTimeWidth(EnWin);
 
@@ -969,6 +977,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         ui->start_time_text->setText("0000-00-00 00:00:00");
 
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+        plotWidget->slotStart();
         plotWidget->slotResetPlot();
 
         int stepT = ui->spinBox_step_2->value();
@@ -1511,6 +1520,7 @@ void MainWindow::load()
             //保存数据
             ui->lineEdit_path->setText(jsonObjPub["path"].toString());
             ui->lineEdit_filename->setText(jsonObjPub["filename"].toString());
+            ui->comboBox_range->setCurrentIndex(jsonObjPub["select-range"].toInt());  //量程索引值
         }
     }
 }
@@ -1603,7 +1613,8 @@ void MainWindow::save()
         jsonObjPub["Gauss_rightE"] = ui->spinBox_rightE->value();
         //保存数据
         jsonObjPub["path"] = ui->lineEdit_path->text();
-        jsonObjPub["filename"] = ui->lineEdit_filename->text();        
+        jsonObjPub["filename"] = ui->lineEdit_filename->text();
+        jsonObjPub["select-range"] = ui->comboBox_range->currentIndex();  //量程索引值
         jsonObj["Public"] = jsonObjPub;
 
         file.open(QIODevice::WriteOnly | QIODevice::Text);

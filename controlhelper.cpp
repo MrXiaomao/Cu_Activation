@@ -104,6 +104,7 @@ bool ControlHelper::connected()
 /// 连接网络（Modbus-TCP），初始化，返回句柄。
 bool ControlHelper::open_tcp()
 {
+    load();
     int ret = fti_open_tcp(mIp.toStdString().c_str(), mPort, FT_TRUE, &mHandle);
     mConnected = ret == FT_SUCCESS;
     emit sigControlStatus(mConnected);
@@ -134,7 +135,7 @@ bool ControlHelper::close()
         return false;
 
     QMutexLocker locker(&mutex);
-    int ret = fti_close(mHandle) == FT_SUCCESS;
+    int ret = fti_close(mHandle);
     if (ret != FT_SUCCESS){
         int errRef = 1;
         while (errRef < 3){

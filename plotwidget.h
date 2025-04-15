@@ -53,6 +53,7 @@ public slots:
     //批量刷新
     void slotUpdatePlotDatas(SingleSpectrum, vector<CoincidenceResult>, int refreshTime);
 
+    void slotStart();
     void slotResetPlot();
     void slotGauss(int leftE, int rightE);
     void slotShowGaussInfor(bool visible);

@@ -105,13 +105,16 @@ private:
     QLiteThread* analyzeNetDataThread;//处理网络数据线程，将数据进行解析成时间能量队
     QLiteThread* plotUpdateThread;//能谱信息处理线程
     quint32 currentEnergyTime = 0;// 能谱时间
-    quint64 tmCalculate = 0;// 记录下重新运算的时间戳，单位：毫秒
+    bool reChangeEnWindow = false;
+    quint64 tmChangeEnWindow = 0;// 记录下重新运算的时间戳，单位：毫秒
 
     CoincidenceAnalyzer* coincidenceAnalyzer;
     void analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult> r3);
 
+    void doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> r3);
+    static void analyzerRealCalback(SingleSpectrum r1, vector<CoincidenceResult> r3, void *callbackUser);
 public slots:
-    void openRelay();
+    void openRelay(bool first = false);
     void closeRelay();
 
     void openDetector();

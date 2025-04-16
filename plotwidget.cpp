@@ -1133,16 +1133,15 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                 {
                                     if (!std::isnan(result[0]) && !std::isnan(result[1]) && !std::isnan(result[2])){
                                         //计算符合能窗
-                                        int minMean = (result[1] - result[0] / 2);
-                                        if (minMean < 0)
-                                            minMean = 0;
+                                        int leftWindow = (result[1] - result[0] / 2);
+                                        if (leftWindow < 0) leftWindow = 0;
 
-                                        int maxMean = (result[1] + result[0] / 2);
-                                        if (maxMean < 0)
-                                            maxMean = MULTI_CHANNEL;
-                                        else if (maxMean > MULTI_CHANNEL)
-                                            maxMean = MULTI_CHANNEL;
-                                        emit sigUpdateMeanValues(customPlot->objectName(), minMean, maxMean);
+                                        int rightWindow = (result[1] + result[0] / 2);
+                                        if (rightWindow < 0 || rightWindow > MULTI_CHANNEL)
+                                        {
+                                            rightWindow = MULTI_CHANNEL;
+                                        }
+                                        emit sigUpdateMeanValues(customPlot->objectName(), leftWindow, rightWindow);
 
                                         //显示拟合数据
                                         QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
@@ -1150,8 +1149,8 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                             QString info = QString("峰  位: %1\n半高宽: %2\n左能窗: %3\n右能窗: %4")
                                                                .arg(QString::number(result[1], 'f', 0))
                                                                .arg(QString::number(result[0], 'f', 3))
-                                                               .arg(QString::number(minMean, 10))//十进制输出整数
-                                                               .arg(QString::number(maxMean, 10));
+                                                               .arg(QString::number(leftWindow, 10))//十进制输出整数
+                                                               .arg(QString::number(rightWindow, 10));
 
                                             gaussResultItemText->setText(info);
                                             //double key, value;

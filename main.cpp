@@ -169,7 +169,7 @@ void cleanOldLogs(int refsToKeep)
 int main(int argc, char *argv[])
 {
     QApplication::setStyle(QStyleFactory::create("fusion"));//WindowsVista fusion windows
-    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling, false); // 启用高DPI缩放支持
+    QApplication::setAttribute(Qt::AA_DisableHighDpiScaling); // 禁用高DPI缩放支持
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps); // 使用高DPI位图
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 
@@ -181,6 +181,12 @@ int main(int argc, char *argv[])
 //    QFont defaultFont = QApplication::font();
 //    defaultFont.setPointSizeF(defaultFont.pointSizeF() * dpiScale);
 //    QApplication::setFont(defaultFont);
+
+    if (qEnvironmentVariableIsEmpty("QT_FONT_DPI"))
+    {
+        qputenv("QT_FONT_DPI", "96");
+        qputenv("QT_SCALE_FACTOR", "1.0");
+    }
 
     qDebug() << APP_VERSION;
     qDebug() << GIT_BRANCH;

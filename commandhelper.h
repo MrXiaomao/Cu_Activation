@@ -185,6 +185,7 @@ private:
     qint8 prepareStep = 0;
     void initSocket(QTcpSocket** socket);
     bool taskFinished = false;
+    bool sendStopCmd = false;
 
 private:
     QString defaultCacheDir;

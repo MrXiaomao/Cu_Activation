@@ -125,12 +125,22 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
 
         //删除容器中已经处理的数据点
         if (AllPoint.back().dataPoint1 <= (int)data1.size()) {
-            data1.erase(data1.begin(), data1.begin() + AllPoint.back().dataPoint1);
+            //data1.erase(data1.begin(), data1.begin() + AllPoint.back().dataPoint1);
+
+            TimeEnergy* data = data1.data();
+            int removeSize = AllPoint.back().dataPoint1; // 要移除的长度
+            memmove(data, data + removeSize, data1.size() - removeSize);
+            data1.resize(data1.size() - removeSize);
         } else {
             data1.clear(); // 如果N大于容器的大小，清空容器
         }
         if (AllPoint.back().dataPoint2 <= (int)data2.size()) {
-            data2.erase(data2.begin(), data2.begin() + AllPoint.back().dataPoint2);
+            //data2.erase(data2.begin(), data2.begin() + AllPoint.back().dataPoint2);
+
+            TimeEnergy* data = data2.data();
+            int removeSize = AllPoint.back().dataPoint2; // 要移除的长度
+            memmove(data, data + removeSize, data2.size() - removeSize);
+            data2.resize(data2.size() - removeSize);
         } else {
             data2.clear(); // 如果N大于容器的大小，清空容器
         }
@@ -170,7 +180,7 @@ void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> data1, vector<
         vector<int> dataE;
         for(int i=0; i < length1; i++)
         {
-            dataE.push_back(data1.at(i).energy);
+            dataE.push_back(data1[i].energy);
         }
         vector<int> spectrum1  = GetSingleSpectrum(dataE, MAX_ENERGY, MULTI_CHANNEL);
 
@@ -185,7 +195,7 @@ void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> data1, vector<
         vector<int> dataE;
         for(int i=0; i < length2; i++)
         {
-            dataE.push_back(data2.at(i).energy);
+            dataE.push_back(data2[i].energy);
         }
         vector<int> spectrum2 = GetSingleSpectrum(dataE, MAX_ENERGY, MULTI_CHANNEL);
 
@@ -203,7 +213,14 @@ void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> data1, vector<
     }
 
     AccumulateSpectrum.time = countCoin;
-    if(AllSpectrum.size() >= MAX_REMAIN_SPECTRUM) AllSpectrum.erase(AllSpectrum.begin()); //当超过最大能谱数目时，则先进先出
+    if(AllSpectrum.size() >= MAX_REMAIN_SPECTRUM){
+        //AllSpectrum.erase(AllSpectrum.begin()); //当超过最大能谱数目时，则先进先出
+
+        SingleSpectrum* data = AllSpectrum.data();
+        int removeSize = 1; // 要移除的长度
+        memmove(data, data + removeSize, AllSpectrum.size() - 1);
+        AllSpectrum.resize(AllSpectrum.size() - 1);
+    }
     AllSpectrum.push_back(spec_temp);
 }
 
@@ -247,7 +264,7 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
     int count1 = 0;
     for (int i=0; i<length1; i++)
     {
-        if(data1.at(i).energy>EnWindowWidth[0] && data1.at(i).energy <=EnWindowWidth[1]) count1++;
+        if(data1[i].energy>EnWindowWidth[0] && data1[i].energy <=EnWindowWidth[1]) count1++;
     }
     tmpCoinResult.CountRate1 = count1;
 
@@ -255,7 +272,7 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
     int count2 = 0;
     for (int i=0; i<length2; i++)
     {
-        if(data2.at(i).energy>EnWindowWidth[2] && data2.at(i).energy <=EnWindowWidth[3]) count2++;
+        if(data2[i].energy>EnWindowWidth[2] && data2[i].energy <=EnWindowWidth[3]) count2++;
     }
     tmpCoinResult.CountRate2 = count2;
 

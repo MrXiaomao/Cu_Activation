@@ -72,39 +72,36 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
         EnergyWindow[3] = E_win[3];
     }
 
+    //合并上次没处理完的数据与新数据
+    //优化1 减少容器拷贝，使用预分配空间
+    unusedData1.reserve(unusedData1.size() + _data1.size());
+    unusedData1.insert(unusedData1.end(), _data1.begin(), _data1.end());
 
-    vector<TimeEnergy> data1;
-    vector<TimeEnergy> data2;
-    if (unusedData1.size() > 0){
-        data1.insert(data1.end(), unusedData1.begin(), unusedData1.end());
-        unusedData1.clear();
-    }
-    data1.insert(data1.end(), _data1.begin(), _data1.end());
-    if (unusedData2.size() > 0){
-        data2.insert(data2.end(), unusedData2.begin(), unusedData2.end());
-        unusedData2.clear();
-    }
-    data2.insert(data2.end(), _data2.begin(), _data2.end());
+    unusedData2.reserve(unusedData2.size() + _data2.size());
+    unusedData2.insert(unusedData2.end(), _data2.begin(), _data2.end());
 
-    if (data1.size()<=0 || data2.size() <= 0){
+    if (unusedData1.size()<=0 || unusedData2.size() <= 0){
         return;
     }
 
     // 准备计算
     int time1_elapseFPGA;//计算FPGA当前最大时间与上一时刻的时间差,单位：秒
     int time2_elapseFPGA;//计算FPGA当前最大时间与上一时刻的时间差,单位：秒
-    time1_elapseFPGA = data1.back().time/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
-    time2_elapseFPGA = data2.back().time/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
+    time1_elapseFPGA = unusedData1.back().time/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
+    time2_elapseFPGA = unusedData2.back().time/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
 
     int deltaT = 2; //单位秒
     //必须存够1秒的数据才进行处理
     while(time1_elapseFPGA >= deltaT && time2_elapseFPGA >= deltaT)
     {
         //先计算出当前一秒的数据点个数
-        GetDataPoint(data1, data2);
-
+        GetDataPoint(unusedData1, unusedData2);
+        std::cout<< "coincidenceAnalyzer.countCoin=" <<countCoin \
+                 << ", count1=" << AllPoint[countCoin-1].dataPoint1 \
+                 << ", count2=" << AllPoint[countCoin-1].dataPoint2
+                 <<std::endl;
         //对当前一秒数据处理给出能谱
-        calculateAllSpectrum(data1,data2);
+        calculateAllSpectrum(unusedData1, unusedData2);
         
         //计算计数曲线
         if (countFlag)
@@ -120,33 +117,26 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
             }
 
             //对当前一秒数据处理给出各自的计数以及符合计数
-            Coincidence(data1, data2, EnergyWindow, windowWidthT);
+            Coincidence(unusedData1, unusedData2, EnergyWindow, windowWidthT);
         }
 
         //删除容器中已经处理的数据点
-        if (AllPoint.back().dataPoint1 <= (int)data1.size()) {
-            //data1.erase(data1.begin(), data1.begin() + AllPoint.back().dataPoint1);
-
-            TimeEnergy* data = data1.data();
-            int removeSize = AllPoint.back().dataPoint1; // 要移除的长度
-            memmove(data, data + removeSize, data1.size() - removeSize);
-            data1.resize(data1.size() - removeSize);
+        if (AllPoint.back().dataPoint1 <= (int)unusedData1.size()) {
+            // 交换法，适合大规模数据
+            vector<TimeEnergy>(unusedData1.begin() + AllPoint.back().dataPoint1, unusedData1.end()).swap(unusedData1);
         } else {
-            data1.clear(); // 如果N大于容器的大小，清空容器
-        }
-        if (AllPoint.back().dataPoint2 <= (int)data2.size()) {
-            //data2.erase(data2.begin(), data2.begin() + AllPoint.back().dataPoint2);
-
-            TimeEnergy* data = data2.data();
-            int removeSize = AllPoint.back().dataPoint2; // 要移除的长度
-            memmove(data, data + removeSize, data2.size() - removeSize);
-            data2.resize(data2.size() - removeSize);
-        } else {
-            data2.clear(); // 如果N大于容器的大小，清空容器
+            unusedData1.clear(); // 如果N大于容器的大小，清空容器
         }
 
-        long long lastTime1 = data1.back().time;
-        long long lastTime2 = data2.back().time;
+        if (AllPoint.back().dataPoint2 <= (int)unusedData2.size()) {
+            // 交换法，适合大规模数据
+            vector<TimeEnergy>(unusedData2.begin() + AllPoint.back().dataPoint2, unusedData2.end()).swap(unusedData2);
+        } else {
+            unusedData2.clear(); // 如果N大于容器的大小，清空容器
+        }
+
+        long long lastTime1 = unusedData1.back().time;
+        long long lastTime2 = unusedData2.back().time;
         time1_elapseFPGA = lastTime1/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
         time2_elapseFPGA = lastTime2/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
 
@@ -156,12 +146,6 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
         if (countFlag && m_pfuncEx)
             m_pfuncEx(AccumulateSpectrum, coinResult, m_pfuncUser);
     }
-
-    //将容器中未经处理的数据点添加到缓存保存起来，下次优先处理
-    if (data1.size() > 0)
-        unusedData1.insert(unusedData1.end(), data1.begin(), data1.end());
-    if (data2.size() > 0)
-        unusedData2.insert(unusedData2.end(), data2.begin(), data2.end());
 }
 
 /* calculateAllSpectrum:统计给出两个探测器各自当前一秒钟测量数据的能谱，当前一秒钟没有测量信号，则能谱全为零
@@ -175,14 +159,17 @@ void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> data1, vector<
 
     int length1 = AllPoint.back().dataPoint1;
     int length2 = AllPoint.back().dataPoint2;
+    int binWidth = MAX_ENERGY/MULTI_CHANNEL;
     if(length1>0)
     {
-        vector<int> dataE;
+        vector<int> spectrum1(MULTI_CHANNEL, 0);
         for(int i=0; i < length1; i++)
         {
-            dataE.push_back(data1[i].energy);
+            int binIndex = data1[i].energy/binWidth;
+            if(binIndex >=0 && binIndex < MULTI_CHANNEL) {
+                spectrum1[binIndex]++;
+            }
         }
-        vector<int> spectrum1  = GetSingleSpectrum(dataE, MAX_ENERGY, MULTI_CHANNEL);
 
         for(int i = 0; i<MULTI_CHANNEL; i++)
         {
@@ -192,12 +179,14 @@ void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> data1, vector<
     }
     if(length2>0)
     {
-        vector<int> dataE;
+        vector<int> spectrum2(MULTI_CHANNEL, 0);
         for(int i=0; i < length2; i++)
         {
-            dataE.push_back(data2[i].energy);
+            int binIndex = data2[i].energy/binWidth;
+            if(binIndex >=0 && binIndex < MULTI_CHANNEL) {
+                spectrum2[binIndex]++;
+            }
         }
-        vector<int> spectrum2 = GetSingleSpectrum(dataE, MAX_ENERGY, MULTI_CHANNEL);
 
         for(int i = 0; i<MULTI_CHANNEL; i++)
         {
@@ -214,12 +203,9 @@ void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> data1, vector<
 
     AccumulateSpectrum.time = countCoin;
     if(AllSpectrum.size() >= MAX_REMAIN_SPECTRUM){
-        //AllSpectrum.erase(AllSpectrum.begin()); //当超过最大能谱数目时，则先进先出
-
-        SingleSpectrum* data = AllSpectrum.data();
-        int removeSize = 1; // 要移除的长度
-        memmove(data, data + removeSize, AllSpectrum.size() - 1);
-        AllSpectrum.resize(AllSpectrum.size() - 1);
+        // 删除头部元素
+        // 交换法，适合大规模数据
+        vector<SingleSpectrum>(AllSpectrum.begin() + 1, AllSpectrum.end()).swap(AllSpectrum);
     }
     AllSpectrum.push_back(spec_temp);
 }
@@ -260,11 +246,20 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
     CoincidenceResult tmpCoinResult;
     int length1 = AllPoint.back().dataPoint1;
     int length2 = AllPoint.back().dataPoint2;
+
+    // 取出待处理数据，按照顺序排列
+    vector<TimeEnergy> data_temp1,data_temp2;
+    data_temp1.reserve(length1);
+    data_temp2.reserve(length2);
+
     //统计探测器1在能窗内的计数
     int count1 = 0;
     for (int i=0; i<length1; i++)
     {
-        if(data1[i].energy>EnWindowWidth[0] && data1[i].energy <=EnWindowWidth[1]) count1++;
+        if(data1[i].energy>EnWindowWidth[0] && data1[i].energy <=EnWindowWidth[1]) {
+            count1++;
+            data_temp1.push_back(data1[i]);
+        }
     }
     tmpCoinResult.CountRate1 = count1;
 
@@ -272,10 +267,15 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
     int count2 = 0;
     for (int i=0; i<length2; i++)
     {
-        if(data2[i].energy>EnWindowWidth[2] && data2[i].energy <=EnWindowWidth[3]) count2++;
+        if(data2[i].energy>EnWindowWidth[2] && data2[i].energy <=EnWindowWidth[3]) {
+            count2++;
+            data_temp2.push_back(data2[i]);
+        }
     }
     tmpCoinResult.CountRate2 = count2;
 
+    //这里是适用于什么情况，没看懂 ???
+    // 好像是当某一秒其中一个探测器没有数据，另一个探测器有数据。
     if(length1>0 || length2>0){
         if(length1==0 || length2==0)
             if (coinResult.size() > 0)
@@ -288,30 +288,20 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
         return ;
     }
 
-    // 取出待处理数据，按照顺序排列
-    vector<TimeEnergy> data_temp1,data_temp2;
-    copy(data1.begin(), data1.begin()+length1, back_inserter(data_temp1));//部分拷贝
-    copy(data2.begin(), data2.begin()+length2, back_inserter(data_temp2));
+    //优化2: 使用批量构建优先队列
+    vector<particle_data> tempVec;
+    tempVec.reserve(data_temp1.size() + data_temp2.size());
+    for(auto& data : data_temp1) {
+        tempVec.emplace_back(data.time, data.energy, 0b01);
+    }
+    for(auto& data : data_temp2) {
+        tempVec.emplace_back(data.time, data.energy, 0b10);
+    }
 
-    //
-    priority_queue<particle_data> q;
-    for(auto data:data_temp1)
-    {
-        //判断粒子能量是否在范围内
-        if(data.energy > EnWindowWidth[0] && data.energy < EnWindowWidth[1]){
-            q.push(particle_data(data.time, data.energy, 0b01));
-        }
-    }
-    for(auto data:data_temp2)
-    {
-        //判断粒子能量是否在范围内
-        if(data.energy > EnWindowWidth[2] && data.energy < EnWindowWidth[3]){
-            q.push(particle_data(data.time, data.energy, 0b10));
-        }
-    }
+    priority_queue<particle_data> orderTimeEn(std::less<particle_data>(), std::move(tempVec));
 
     // 使用临时队列遍历
-    priority_queue<particle_data> temp(q); // 复制原队列到临时队列
+    priority_queue<particle_data> temp(orderTimeEn); // 复制原队列到临时队列
     long long startTime = 0; //符合事件的起始时刻
     unsigned char type = 0b00; //用来判断是否存在不同探头的符合事件
     int count = 0; //符合事件中的信号个数
@@ -494,41 +484,43 @@ vector<int> CoincidenceAnalyzer::computeHistogram(const vector<int>& data, const
 }
 
 //找到第一个大于value的下标。返回是否查找到的标记
-bool CoincidenceAnalyzer::find_index_above(vector<TimeEnergy> data,long long value, int& index)
+bool CoincidenceAnalyzer::find_index_above(vector<TimeEnergy> data, unsigned long long value, int& index)
 {
     // 使用 std::find_if 和 lambda 表达式来查找第一个大于 value 的元素
-    auto it = find_if(data.begin(), data.end(), [value](TimeEnergy x) { return x.time >= value; });
-
+    // 自定义比较函数
+    auto comp = [](unsigned long long val, const TimeEnergy& te) {
+        return te.time >=val;
+    };
+    
+    // 使用 upper_bound 进行二分查找
+    auto it = std::upper_bound(data.begin(), data.end(), value, comp);
+    
     // 检查是否找到了元素
     if (it != data.end()) {
-        // 找到了，输出该元素的下标
-//        cout << "第一个大于 " << value << " 的元素下标是: " << distance(data.begin(), it) << std::endl;
         index = distance(data.begin(), it);
         return true;
     } else {
         // 没有找到
-//        cout << "没有找到大于 " << value << " 的元素。" << endl;
         return false;
     }
 }
 
 //找到最后一个小于value的下标。返回是否查找到的标记
-bool CoincidenceAnalyzer::find_index_below(vector<TimeEnergy> data, long long value, int& index)
+bool CoincidenceAnalyzer::find_index_below(vector<TimeEnergy> data, unsigned long long value, int& index)
 {
-    // 使用 std::find_if 和 lambda 表达式来查找第一个小于 value 的元素
-    auto it = find_if(data.rbegin(), data.rend(), [value](TimeEnergy x) { return x.time < value; });
-
-    // 检查是否找到了元素
-    if (it != data.rend()) {
-        // 找到了，输出该元素的下标
-//        cout << "第一个小于 " << value << " 的元素下标是: " << distance(data.begin(), it) << std::endl;
-        index = data.rend() - it - 1;//distance(data.rbegin(), it);
-
+    auto it = std::upper_bound(data.begin(), data.end(), value,
+    [](unsigned long long val, const TimeEnergy& te) {
+        return val <= te.time;  // 注意这里的比较顺序和条件
+    });
+    
+    if (it != data.begin()) {
+        // 最后一个小于value的元素是前一个位置
+        index = distance(data.begin(), it);
+        index--;
         return true;
+        // 使用 last_less->time 或 last_less->energy
     } else {
-        // 没有找到
-//        cout << "没有找到小于 " << value << " 的元素。" << endl;
+        // 所有元素都 >= value，没有小于value的元素
         return false;
     }
-
 }

@@ -76,8 +76,8 @@ struct CurrentPoint{
 };
 
 struct SingleSpectrum{ //存放每秒钟的能谱数据。1s产生一个能谱
-    int time; //时刻(单位s)，以FPGA时钟进行计时，给出当前的能谱对应的时刻，第1个谱对应time=1。
-    int spectrum[2][MULTI_CHANNEL] = {0, 0}; //探测器1能谱
+    unsigned int time; //时刻(单位s)，以FPGA时钟进行计时，给出当前的能谱对应的时刻，第1个谱对应time=1。
+    unsigned int spectrum[2][MULTI_CHANNEL] = {0, 0}; //探测器1能谱
 };
 
 struct AutoGaussFit{
@@ -195,10 +195,10 @@ private:
     vector<int> computeHistogram(const vector<int>& data, const vector<int>& binEdges);
 
     //找到不大于value的最后一个数的下标。返回是否查找到的标记
-    bool find_index_above(vector<TimeEnergy> data,long long value, int& index);
+    bool find_index_above(vector<TimeEnergy> data, unsigned long long value, int& index);
 
     //找到第一个小于value的下标。返回是否查找到的标记
-    bool find_index_below(vector<TimeEnergy> data, long long value, int& index);
+    bool find_index_below(vector<TimeEnergy> data, unsigned long long value, int& index);
 
 private:
     int countCoin; //符合计数曲线的数据点个数,一个数据点对应1s.

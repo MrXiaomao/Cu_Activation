@@ -221,7 +221,7 @@ void CommandHelper::analyzerRealCalback(SingleSpectrum r1, vector<CoincidenceRes
 
 void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> r3)
 {
-    long count = r3.size();
+    size_t count = r3.size();
     int _stepT = this->stepT;
     if (count <= 0)
         return;
@@ -1041,7 +1041,7 @@ void CommandHelper::slotStopManualMeasure()
         return;
 
     cmdPool.push_back(cmdStopTrigger);
-    qint64 writeLen = socketDetector->write(cmdStopTrigger);
+    socketDetector->write(cmdStopTrigger);
     sendStopCmd = true;
     qDebug()<<"Send HEX: "<<cmdStopTrigger.toHex(' ');
 }
@@ -1098,7 +1098,7 @@ void CommandHelper::slotStopAutoMeasure()
         return;
 
     cmdPool.push_back(cmdStopTrigger);
-    qint64 writeLen = socketDetector->write(cmdStopTrigger);
+    socketDetector->write(cmdStopTrigger);
     sendStopCmd = true;
     qDebug()<<"Send HEX: "<<cmdStopTrigger.toHex(' ');
 }
@@ -1117,6 +1117,8 @@ void CommandHelper::netFrameWorkThead()
                 }
             } else {
                 handlerPool.append(cachePool);
+                qDebug() << "cachePool.size = " << cachePool.capacity();
+                qDebug() << "handlerPool1.size = " << handlerPool.capacity();
                 cachePool.clear();
             }
         }
@@ -1166,122 +1168,132 @@ void CommandHelper::netFrameWorkThead()
                                       static_cast<quint32>(ptrOffset[3]);
                 }
             }
-        } else if (detectorParameter.transferModel == 0x05){
+        } else if (detectorParameter.transferModel == 0x05)
+        {
             const quint32 minPkgSize = 1025 * 16;
             bool isNual = false;
+            bool foundStop = false;
+
+            QDateTime tmStart = QDateTime::currentDateTime();
+
+            //----------------------------------寻找包头包尾---------------------------------//
+            int HeadIndex = -1; // 赋初值在0-258之外
+            int TailIndex = -1;
             while (true){
-                
                 // 先尝试寻找完整数据包（数据包、指令包两类）
-                quint8* ptrHead = (quint8*)handlerPool.data();
                 quint32 size = handlerPool.size();
                 if (size >= minPkgSize){
-
-                    // 寻找包头 00 00 aa b3                   
-                    quint8* ptrTail = (quint8*)ptrHead + minPkgSize - 4;
-                    if ((quint8)ptrHead[0] == 0x00 && (quint8)ptrHead[1] == 0x00 && (quint8)ptrHead[2] == 0xaa && (quint8)ptrHead[3] == 0xb3){
-                        // 寻找包尾 00 00 cc d3
-                        if ((quint8)ptrTail[0] == 0x00 && (quint8)ptrTail[1] == 0x00 && (quint8)ptrTail[2] == 0xcc && (quint8)ptrTail[3] == 0xd3){
-                            isNual = true;
+                    // DataHead 寻找包头 00 00 aa b3 
+                    for (int i = 0; i < handlerPool.size() - 1; i++)
+                    {
+                        if ((quint8)handlerPool[i] == 0x00 && (quint8)handlerPool[i + 1] == 0x00
+                            && (quint8)handlerPool[i + 2] == 0xaa && (quint8)handlerPool[i + 3] == 0xb3)
+                        {
+                            HeadIndex = i;
                             break;
-                        } else {
-                            //尝试寻找下一个包头
-                            goto reFindPkgHead;
                         }
-                    } else {
-reFindPkgHead:
-                        quint32 headOffset = 0;
-                        ptrTail = ptrHead + size - 12;//这里假设理想状态下（停止指令总是在所有指令的末尾出现），命令字节长度是12，所以这里要预留12个字节
-                        ++ptrHead;
-                        ++headOffset;
-                        while (ptrHead != ptrTail){
-                            if ((quint8)ptrHead[0] == 0x00 && (quint8)ptrHead[1] == 0x00 && (quint8)ptrHead[2] == 0xaa && (quint8)ptrHead[3] == 0xb3){                                
-                                QFile file("D:\\error1.txt");
-                                if (file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
-                                    file.write(QString("%1\r\n").arg(headOffset).toStdString().c_str());
-                                    file.flush();
-                                    file.close();
-                                }
-
-                                QFile file2("D:\\error1.dat");
-                                if (file2.open(QIODevice::WriteOnly | QIODevice::Append)) {
-                                    file2.write((const char*)handlerPool.data(), headOffset);
-                                    file2.flush();
-                                    file2.close();
-                                }
-
-                                //找到新的头了
-                                char* data = handlerPool.data();
-                                int removeSize = headOffset; // 要移除的长度
-                                memmove(data, data + removeSize, handlerPool.size() - removeSize);
-                                handlerPool.resize(handlerPool.size() - removeSize);
-                                headOffset = 0;
-                                break;
-                            }
-
-                            ++headOffset;
-                            ++ptrHead;
-                        }
-
-                        if (headOffset != 0x00){
-                            //此地正常情况，不应该进来
-                            char* data = handlerPool.data();
-                            int removeSize = headOffset; // 要移除的长度
-                            memmove(data, data + removeSize, handlerPool.size() - removeSize);
-                            handlerPool.resize(handlerPool.size() - removeSize);
-                        }
-
-                        //handlerPool.remove(0, 1);
                     }
-                } else if (handlerPool.size() == 12){
+
+                    // DataTail 寻找包尾 00 00 cc d3
+                    // 有包头的情况下，才找包尾
+                    if(HeadIndex>=0){
+                        int posTail = HeadIndex + minPkgSize - 4;
+                        // 直接尝试找到包尾
+                        if ((quint8)handlerPool[posTail] == 0x00 && (quint8)handlerPool[posTail + 1] == 0x00
+                            && (quint8)handlerPool[posTail + 2] == 0xcc && (quint8)handlerPool[posTail + 3] == 0xd3)
+                        {
+                            TailIndex = posTail;
+                        }
+                        else //只见包头，不见包尾，说明这个数据包破损或者说异常
+                        {
+                            for (int i = 0; i < handlerPool.size() - 1; i++)
+                            {
+                                if ((quint8)handlerPool[i] == 0x00 && (quint8)handlerPool[i + 1] == 0x00
+                                    && (quint8)handlerPool[i + 2] == 0xcc && (quint8)handlerPool[i + 3] == 0xd3)
+                                {
+                                    TailIndex = i;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if(sendStopCmd) //且识别到已经发送停止指令，则可以检查是否读取到停止指令的返回。//当数据包小于minPkgSize，
+                { 
                     //12 34 00 0F FF 10 00 11 00 00 AB CD
                     //通过指令来判断测量是否停止
-                    if (handlerPool.compare(cmdStopTrigger) == 0){
-                        handlerPool.clear();
+                    if (handlerPool.contains(cmdStopTrigger))
+                    {   
+                        foundStop = true; 
                         qDebug()<<"Recv HEX: "<<cmdStopTrigger.toHex(' ');
-
                         if (nullptr != pfSave){
                             pfSave->close();
                             delete pfSave;
                             pfSave = nullptr;
                         }
+                    }
+                }
 
-                        //测量停止是否需要清空所有数据
-                        //currentSpectrumFrames.clear();
-                        emit sigMeasureStop();
-                        break;
-                    } else{
-                        //此地正常情况，不应该进来
+                if ((HeadIndex == -1) || (TailIndex == -1)){ // 没找到包头包尾
+                    if(!foundStop) //也没有找到停止指令
+                    {
+                        //清空所有数据
+                        handlerPool.clear();
                         break;
                     }
-                } else {
+                }
+
+                if (HeadIndex > TailIndex) // 如果包头大于包尾则清除包头之前的数据
+                {
+                    //清空包头之前的数据
+                    handlerPool.remove(0, HeadIndex);
+                    // handlerPool.squeeze(); //释放无效内存
+                    break;
+                }
+
+                if(TailIndex-HeadIndex == minPkgSize-4){
+                    isNual = true;
                     break;
                 }
             }
 
-            if (isNual){
-                QDateTime tmStart = QDateTime::currentDateTime();
+            //发现停止指令
+            if(foundStop) {
+                //清空所有数据
+                handlerPool.clear();
+                emit sigMeasureStop();
+            }
+
+            //没有停止指令，且发现一个有效数据包
+            if (isNual && (!foundStop)){
                 //复制有效数据
-                validFrame.append(handlerPool.data(), minPkgSize);
+                validFrame.append(handlerPool.data()+HeadIndex, minPkgSize);
+                qDebug() << "validFrame.size = " << validFrame.capacity();
+                qDebug() << "handlerPool2.size = " << handlerPool.capacity();
 
                 char* data = handlerPool.data();
                 int removeSize = minPkgSize; // 要移除的长度
                 memmove(data, data + removeSize, handlerPool.size() - removeSize);
                 handlerPool.resize(handlerPool.size() - removeSize);
-                //handlerPool.remove(0, minPkgSize);
 
+                qDebug() << "After remove - size:" << handlerPool.size()
+                         << "capacity:" << handlerPool.capacity();
+                qDebug() << "handlerPool3.size = " << handlerPool.capacity();
+/*
                 //处理数据
                 const unsigned char *ptrOffset = (const unsigned char *)validFrame.constData();
 
                 //通道号(8字节)
                 ptrOffset += 4;
                 quint64 channel = static_cast<quint64>(ptrOffset[0]) << 56 |
-                                 static_cast<quint64>(ptrOffset[1]) << 48 |
-                                 static_cast<quint64>(ptrOffset[2]) << 40 |
-                                 static_cast<quint64>(ptrOffset[3]) << 32 |
-                                 static_cast<quint64>(ptrOffset[4]) << 24 |
-                                 static_cast<quint64>(ptrOffset[5]) << 16 |
-                                 static_cast<quint64>(ptrOffset[6]) << 8 |
-                                 static_cast<quint64>(ptrOffset[7]);
+                                  static_cast<quint64>(ptrOffset[1]) << 48 |
+                                  static_cast<quint64>(ptrOffset[2]) << 40 |
+                                  static_cast<quint64>(ptrOffset[3]) << 32 |
+                                  static_cast<quint64>(ptrOffset[4]) << 24 |
+                                  static_cast<quint64>(ptrOffset[5]) << 16 |
+                                  static_cast<quint64>(ptrOffset[6]) << 8 |
+                                  static_cast<quint64>(ptrOffset[7]);
 
                 //通道值转换
                 channel = (channel == 0xFFF1) ? 0 : 1;
@@ -1292,21 +1304,22 @@ reFindPkgHead:
 
                 std::vector<TimeEnergy> temp;
                 while (ref++<=1024){
-                    //空置48biy
+                    //空置48bit
                     ptrOffset += 6;
 
                     //时间:48bit
-                    long long t = static_cast<quint64>(ptrOffset[0]) << 40 |
-                            static_cast<quint64>(ptrOffset[1]) << 32 |
-                            static_cast<quint64>(ptrOffset[2]) << 24 |
-                            static_cast<quint64>(ptrOffset[3]) << 16 |
-                            static_cast<quint64>(ptrOffset[4]) << 8 |
-                            static_cast<quint64>(ptrOffset[5]);
+                    unsigned long long t = static_cast<quint64>(ptrOffset[0]) << 40 |
+                                  static_cast<quint64>(ptrOffset[1]) << 32 |
+                                  static_cast<quint64>(ptrOffset[2]) << 24 |
+                                  static_cast<quint64>(ptrOffset[3]) << 16 |
+                                  static_cast<quint64>(ptrOffset[4]) << 8 |
+                                  static_cast<quint64>(ptrOffset[5]);
                     t *= 10;
                     ptrOffset += 6;
 
                     //死时间:16bit
                     unsigned short dietime = static_cast<quint16>(ptrOffset[0]) << 8 | static_cast<quint16>(ptrOffset[1]);
+                    dietime *=10;
                     ptrOffset += 2;
 
                     //幅度:16bit
@@ -1325,12 +1338,9 @@ reFindPkgHead:
                     detTimeEnergy.timeEnergy.swap(temp);                    
                     currentSpectrumFrames.push_back(detTimeEnergy);
                 }
-
+*/
                 QDateTime tmStop = QDateTime::currentDateTime();
-                static bool bFirst = true;
-                if (bFirst)
-                    qDebug() << "frame analyze time: " << tmStart.msecsTo(tmStop) << "ms";
-                bFirst = false;
+                qDebug() << "frame analyze time: " << tmStart.msecsTo(tmStop) << "ms";
             }
         } else if (detectorParameter.transferModel == 0x03){
             // 波形个数
@@ -1392,7 +1402,7 @@ reFindPkgHead:
             handlerPool.clear();
         }
 
-        QThread::msleep(1);
+        // QThread::msleep(1);
     }
 }
 
@@ -1416,7 +1426,7 @@ void CommandHelper::detTimeEnergyWorkThread()
                 QMutexLocker locker(&mutexReset);
                 //2、处理缓存区数据
                 if (swapFrames.size() > 0){
-                    for (int i=0; i<swapFrames.size(); ++i){
+                    for (size_t i=0; i<swapFrames.size(); ++i){
                         DetTimeEnergy detTimeEnergy = swapFrames[i];
 
                         // 根据步长，将数据添加到当前处理缓存
@@ -1425,7 +1435,7 @@ void CommandHelper::detTimeEnergyWorkThread()
                             qDebug() << "error";
                         }
 
-                        for (int i=0; i<detTimeEnergy.timeEnergy.size(); ++i){
+                        for (size_t i=0; i<detTimeEnergy.timeEnergy.size(); ++i){
                             TimeEnergy timeEnergy = detTimeEnergy.timeEnergy[i];
 
                             if (channel == 0x00){
@@ -1441,24 +1451,25 @@ void CommandHelper::detTimeEnergyWorkThread()
                         if (1){
                             if (detectorParameter.measureModel == mmAuto){//自动测量，需要获取能宽
                                 if (this->tmChangeEnWindow == 0x00){
-                                    this->tmChangeEnWindow = data1_2.[0].time / 1e6;
+                                    this->tmChangeEnWindow = data1_2[0].time / 1e6;
                                 }
-
+                                coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, true);
+                            }
+                            else if(detectorParameter.measureModel == mmManual)
+                            {
                                 if (this->reChangeEnWindow)
                                     coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, true);
                                 else
-                                    coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, false);
+                                    // coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, false);
+                                    coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, false, false);
                             }
-                            else
-                               coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, false);
                         }
 #ifdef QT_NO_DEBUG
 
 #else
-    // std::cout << "[" << now.toString("hh:mm:ss.zzz").toStdString() \
-    //     << "] coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime()) \
-    //     << ", data1.count=" << data1_2.size() \
-    //     << ", data2.count=" << data2_2.size() << std::endl;
+    // qDebug()<< "coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime()) \
+    //     << "ms, data1.count=" << data1_2.size() \
+    //     << ", data2.count=" << data2_2.size();
 #endif
                         data1_2.clear();
                         data2_2.clear();
@@ -1739,7 +1750,7 @@ bool CommandHelper::isConnected()
 
 void CommandHelper::analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult> r3)
 {
-    long count = r3.size();
+    size_t count = r3.size();
     int _stepT = this->stepT;
     
     if (count <= 0)

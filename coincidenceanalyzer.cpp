@@ -96,10 +96,7 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
     {
         //先计算出当前一秒的数据点个数
         GetDataPoint(unusedData1, unusedData2);
-        std::cout<< "coincidenceAnalyzer.countCoin=" <<countCoin \
-                 << ", count1=" << AllPoint[countCoin-1].dataPoint1 \
-                 << ", count2=" << AllPoint[countCoin-1].dataPoint2
-                 <<std::endl;
+
         //对当前一秒数据处理给出能谱
         calculateAllSpectrum(unusedData1, unusedData2);
         

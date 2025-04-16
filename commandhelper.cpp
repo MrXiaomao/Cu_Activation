@@ -1117,8 +1117,6 @@ void CommandHelper::netFrameWorkThead()
                 }
             } else {
                 handlerPool.append(cachePool);
-                qDebug() << "cachePool.size = " << cachePool.capacity();
-                qDebug() << "handlerPool1.size = " << handlerPool.capacity();
                 cachePool.clear();
             }
         }
@@ -1244,15 +1242,16 @@ void CommandHelper::netFrameWorkThead()
                     }
                 }
 
-                if (HeadIndex > TailIndex) // 如果包头大于包尾则清除包头之前的数据
+                if (HeadIndex>-1 && HeadIndex > TailIndex) // 如果找到包头，且包头大于包尾则清除包头之前的数据
                 {
                     //清空包头之前的数据
-                    handlerPool.remove(0, HeadIndex);
-                    // handlerPool.squeeze(); //释放无效内存
+                    // handlerPool.remove(0, HeadIndex);
+                    //使用指针重构（最高效但需谨慎）, 不移动数据，时间复杂度 O(1)
+                    handlerPool = QByteArray(handlerPool.constData() + HeadIndex, handlerPool.size() - HeadIndex);
                     break;
                 }
 
-                if(TailIndex-HeadIndex == minPkgSize-4){
+                if((TailIndex-HeadIndex) == (minPkgSize-4)){
                     isNual = true;
                     break;
                 }
@@ -1269,18 +1268,11 @@ void CommandHelper::netFrameWorkThead()
             if (isNual && (!foundStop)){
                 //复制有效数据
                 validFrame.append(handlerPool.data()+HeadIndex, minPkgSize);
-                qDebug() << "validFrame.size = " << validFrame.capacity();
-                qDebug() << "handlerPool2.size = " << handlerPool.capacity();
 
-                char* data = handlerPool.data();
-                int removeSize = minPkgSize; // 要移除的长度
-                memmove(data, data + removeSize, handlerPool.size() - removeSize);
-                handlerPool.resize(handlerPool.size() - removeSize);
+                //使用指针重构（最高效但需谨慎）, 不移动数据，时间复杂度 O(1)
+                handlerPool = QByteArray(handlerPool.constData() + minPkgSize, handlerPool.size() - minPkgSize);
+                // qDebug() << "handlerPool.capacity = " << handlerPool.capacity();//观察内存占用情况
 
-                qDebug() << "After remove - size:" << handlerPool.size()
-                         << "capacity:" << handlerPool.capacity();
-                qDebug() << "handlerPool3.size = " << handlerPool.capacity();
-/*
                 //处理数据
                 const unsigned char *ptrOffset = (const unsigned char *)validFrame.constData();
 
@@ -1338,9 +1330,9 @@ void CommandHelper::netFrameWorkThead()
                     detTimeEnergy.timeEnergy.swap(temp);                    
                     currentSpectrumFrames.push_back(detTimeEnergy);
                 }
-*/
+
                 QDateTime tmStop = QDateTime::currentDateTime();
-                qDebug() << "frame analyze time: " << tmStart.msecsTo(tmStop) << "ms";
+                // qDebug() << "frame analyze time: " << tmStart.msecsTo(tmStop) << "ms";
             }
         } else if (detectorParameter.transferModel == 0x03){
             // 波形个数
@@ -1460,8 +1452,7 @@ void CommandHelper::detTimeEnergyWorkThread()
                                 if (this->reChangeEnWindow)
                                     coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, true);
                                 else
-                                    // coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, false);
-                                    coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, false, false);
+                                    coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, false);
                             }
                         }
 #ifdef QT_NO_DEBUG

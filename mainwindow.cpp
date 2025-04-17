@@ -512,18 +512,48 @@ void MainWindow::InitMainWindowUi()
     ui->statusbar->addWidget(label_axis02);
     ui->statusbar->addWidget(new QLabel(ui->statusbar), 1);
     ui->statusbar->addWidget(nullptr, 1);
-    ui->statusbar->addPermanentWidget(label_systemtime);    
+    ui->statusbar->addPermanentWidget(label_systemtime);
 
     //日志窗口重置位置
+
+//#include <QPaintDevice>
+    //逻辑DPI
+    int horizontalDPI = logicalDpiX();
+    int verticalDPI  = logicalDpiY();
+    //物理DPI （和逻辑DPI不一定相同）
+    int horizontalDPI2 = physicalDpiX();
+    int verticalDPI2  = physicalDpiY();
     int screenValidHeight = QGuiApplication::primaryScreen()->size().height();
+    screenValidHeight = screenValidHeight *  96 / verticalDPI;
     if (screenValidHeight <= 768){
         // 分页
-        int index = ui->tabWidget_client->addTab(ui->widget_log, tr("日志视窗"));
+        QWidget *tabWidget_workLog = new QWidget();
+        tabWidget_workLog->setObjectName(QString::fromUtf8("tabWidget_workLog"));
+        QHBoxLayout *horizontalLayout_21 = new QHBoxLayout(tabWidget_workLog);
+        horizontalLayout_21->setObjectName(QString::fromUtf8("horizontalLayout_21"));
+        horizontalLayout_21->setContentsMargins(0, 0, 0, 0);
+        QSizePolicy sizePolicy3(QSizePolicy::Preferred, QSizePolicy::Expanding);
+        sizePolicy3.setHeightForWidth(ui->widget_log->sizePolicy().hasHeightForWidth());
+        ui->widget_log->setSizePolicy(sizePolicy3);
+
+        //删除标题栏
+        QWidget* lTitleBar = ui->dockWidget_2->titleBarWidget();
+        QWidget* lEmptyWidget = new QWidget();
+        ui->dockWidget_2->setTitleBarWidget(lEmptyWidget);
+        delete lTitleBar;
+
+        horizontalLayout_21->addWidget(ui->widget_log);
+        ui->widget_log->setMaximumHeight(16777215);        
+        int index = ui->tabWidget_client->addTab(tabWidget_workLog/*ui->widget_log*/, tr("日志视窗"));
         ui->tabWidget_client->tabBar()->setTabButton(index, QTabBar::RightSide, nullptr);//tab取消关闭按钮
     } else if (screenValidHeight <= 1080){
         // 右侧
-        ui->widget_right->layout()->removeItem(ui->verticalSpacer_3);//移除弹簧
+        ui->widget_right->layout()->removeItem(ui->verticalSpacer_3);//移除弹簧        
+        QSizePolicy sizePolicy3(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        ui->widget_log->setSizePolicy(sizePolicy3);
+        ui->widget_log->setMaximumHeight(16777215);
         ui->widget_right->layout()->addWidget(ui->widget_log);
+        //ui->widget_right->layout()->addItem(ui->verticalSpacer_3);//移除弹簧
     } else {
 
     }

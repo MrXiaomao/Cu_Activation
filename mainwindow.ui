@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1576</width>
-    <height>748</height>
+    <height>682</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -28,26 +28,32 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_3">
     <property name="leftMargin">
-     <number>5</number>
+     <number>0</number>
     </property>
     <property name="topMargin">
      <number>0</number>
     </property>
     <property name="rightMargin">
-     <number>5</number>
+     <number>0</number>
     </property>
     <property name="bottomMargin">
      <number>0</number>
     </property>
     <item>
      <widget class="QTabWidget" name="tabWidget_client">
+      <property name="tabPosition">
+       <enum>QTabWidget::South</enum>
+      </property>
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
       <property name="tabsClosable">
        <bool>true</bool>
       </property>
       <property name="movable">
        <bool>false</bool>
       </property>
-      <widget class="QWidget" name="tabWidget_clientPage1">
+      <widget class="QWidget" name="tabWidget_clientPage">
        <attribute name="title">
         <string>符合测量</string>
        </attribute>
@@ -430,12 +436,6 @@
                 <property name="minimumSize">
                  <size>
                   <width>80</width>
-                  <height>200</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>524287</width>
                   <height>200</height>
                  </size>
                 </property>

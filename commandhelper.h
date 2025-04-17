@@ -16,13 +16,6 @@ class CommandHelper : public QObject
 {
     Q_OBJECT
 public:
-    enum Measure_model{
-        mmNone = 0x00,
-        mmManual= 0x01, // 手动
-        mmAuto = 0x02, // 自动
-        mmDefine = 0x03, // 标定
-    };
-
     explicit CommandHelper(QObject *parent = nullptr);
     ~CommandHelper();
 
@@ -95,7 +88,6 @@ signals:
 
 private:
     QByteArray frame;
-    //QByteArray command;
     QByteArray cachePool;
     QByteArray handlerPool;
     QMutex mutexCache;//缓冲池交换网络数据所用 cachePool

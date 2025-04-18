@@ -103,24 +103,26 @@ MainWindow::MainWindow(QWidget *parent)
         this->setProperty("control_fault", false);
         this->setProperty("control_on", on);
 
-        //外设连接成功，主动连接电源
-        if (this->property("control_on").toBool()){
-            commandHelper->openRelay(true);
-
-            QPair<float, float> pair = controlHelper->gotoAbs(ui->comboBox_range->currentIndex());
-            this->setProperty("axis01-target-position", pair.first);
-            this->setProperty("axis02-target-position", pair.second);
-
-            SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待...\n正在移动位移平台至目标位置..."));
-            SplashWidget::instance()->exec();
-        }
-
         QString msg = QString(tr("外设状态：%2")).arg(on ? tr("开") : tr("关"));
         QLabel* label_Connected = this->findChild<QLabel*>("label_Connected");
         label_Connected->setText(msg);
-
         emit sigAppengMsg(msg, QtInfoMsg);
         emit sigRefreshUi();
+
+        //外设连接成功，主动连接电源
+        if (this->property("control_on").toBool()){
+            //这里采用异步触发，避免堵塞主界面刷新状态
+            QTimer::singleShot(500, this, [=](){
+                commandHelper->openRelay(true);
+
+                QPair<float, float> pair = controlHelper->gotoAbs(ui->comboBox_range->currentIndex());
+                this->setProperty("axis01-target-position", pair.first);
+                this->setProperty("axis02-target-position", pair.second);
+
+                SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待...\n正在移动位移平台至目标位置..."));
+                SplashWidget::instance()->exec();
+            });
+        }            
     });
 
     this->setProperty("axis-prepared", false);
@@ -144,6 +146,8 @@ MainWindow::MainWindow(QWidget *parent)
                 SplashWidget::instance()->hide();
                 emit sigAppengMsg(tr("位移平台已到位"), QtInfoMsg);
             }
+
+            SplashWidget::instance()->hide();
         } else{
             this->setProperty("axis-prepared", false);
         }
@@ -178,12 +182,14 @@ MainWindow::MainWindow(QWidget *parent)
         if (tmode == 0x02 || tmode == 0x03)
             return;//波形测量、能谱测量
 
-        lastRecvDataTime = QDateTime::currentDateTime();
-        QTimer* exceptionCheckTimer = this->findChild<QTimer*>("exceptionCheckTimer");
-        exceptionCheckTimer->start(5000);
-
+        this->lastRecvDataTime = QDateTime::currentDateTime();
         this->setProperty("measure-status", msStart);
         this->setProperty("measure-model", mmode);
+
+        //启动异常检测机制
+        QTimer* exceptionCheckTimer = this->findChild<QTimer*>("exceptionCheckTimer");
+        exceptionCheckTimer->start(1000);
+
         if (mmode == mmAuto)
             ui->start_time_text->setText(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));        
 
@@ -197,7 +203,7 @@ MainWindow::MainWindow(QWidget *parent)
                 measureTimer->start();
 
                 //测量时长时钟
-                measureStartTime = lastRecvDataTime;
+                this->measureStartTime = this->lastRecvDataTime;
                 QTimer* measureRefTimer = this->findChild<QTimer*>("measureRefTimer");
                 measureRefTimer->start(500);
             }
@@ -256,11 +262,10 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     qRegisterMetaType<SingleSpectrum>("SingleSpectrum");
-    // qRegisterMetaType<vector<CurrentPoint>>("vector<CurrentPoint>");
     qRegisterMetaType<vector<CoincidenceResult>>("vector<CoincidenceResult>");
     std::cout << "main thread id:" << QThread::currentThreadId() << std::endl;
     connect(commandHelper, &CommandHelper::sigPlot, this, [=](SingleSpectrum r1, vector<CoincidenceResult> r3, int refreshUI_time){
-        lastRecvDataTime = QDateTime::currentDateTime();
+        this->lastRecvDataTime = QDateTime::currentDateTime();
         bool pause_plot = this->property("pause_plot").toBool();
         if (!pause_plot){
             PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
@@ -359,34 +364,6 @@ void MainWindow::InitMainWindowUi()
 
     ui->spinBox_leftE->setMaximum(MULTI_CHANNEL);
     ui->spinBox_rightE->setMaximum(MULTI_CHANNEL);
-
-    connect(ui->spinBox_1_leftE, QOverload<int>::of(&QSpinBox::valueChanged), this, [=](int v){
-        unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
-                                (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
-        plotWidget->slotUpdateEnTimeWidth(EnWin);
-    });
-    connect(ui->spinBox_1_rightE, QOverload<int>::of(&QSpinBox::valueChanged), this, [=](int v){
-        unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
-                                   (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
-        plotWidget->slotUpdateEnTimeWidth(EnWin);
-    });
-    connect(ui->spinBox_2_leftE, QOverload<int>::of(&QSpinBox::valueChanged), this, [=](int v){
-        unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
-                                   (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
-        plotWidget->slotUpdateEnTimeWidth(EnWin);
-    });
-    connect(ui->spinBox_2_rightE, QOverload<int>::of(&QSpinBox::valueChanged), this, [=](int v){
-        unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
-                                   (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
-        plotWidget->slotUpdateEnTimeWidth(EnWin);
-    });
-    // connect(ui->spinBox_1_rightE, SIGNAL(valueChanged(int)), ui->spinBox_1_leftE, SLOT(valueChanged(int)));
-    // connect(ui->spinBox_2_leftE, SIGNAL(valueChanged(int)), ui->spinBox_1_leftE, SLOT(valueChanged(int)));
-    // connect(ui->spinBox_2_rightE, SIGNAL(valueChanged(int)), ui->spinBox_1_leftE, SLOT(valueChanged(int)));
 
     QString path = QApplication::applicationDirPath() + "/config";
     QDir dir(path);
@@ -609,13 +586,13 @@ void MainWindow::InitMainWindowUi()
     exceptionCheckTimer->setObjectName("exceptionCheckTimer");
     connect(exceptionCheckTimer, &QTimer::timeout, this, [=](){
         // 获取当前时间
-        QDateTime currentDateTime = QDateTime::currentDateTime();
-        if (this->property("measure-status").toUInt() == msPrepare){
-            if (lastRecvDataTime.secsTo(currentDateTime) > 3){
-                exceptionCheckTimer->stop();
-                emit sigAppengMsg(tr("探测器数据异常"), QtCriticalMsg);
-                //QMessageBox::critical(this, tr("错误"), tr("探测器故障，请检查！"));
-            }
+        QDateTime now = QDateTime::currentDateTime();
+        if (this->lastRecvDataTime.secsTo(now) > 1){
+            //exceptionCheckTimer->stop();
+            //emit sigAppengMsg(tr("探测器数据异常"), QtCriticalMsg);
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+            plotWidget->slotUpdatePlotNullData(commandHelper->readTimeStep());
+            this->lastRecvDataTime = now;
         }
     });
     exceptionCheckTimer->stop();
@@ -625,7 +602,42 @@ void MainWindow::InitMainWindowUi()
     });
 
     this->load();
+
+    connect(ui->spinBox_1_leftE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
+    connect(ui->spinBox_1_rightE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
+    connect(ui->spinBox_2_leftE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
+    connect(ui->spinBox_2_rightE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
+
+    connect(ui->spinBox_1_leftE_2, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
+    connect(ui->spinBox_1_rightE_2, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
+    connect(ui->spinBox_2_leftE_2, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
+    connect(ui->spinBox_2_rightE_2, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
+
+    connect(ui->spinBox_1_leftE_3, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
+    connect(ui->spinBox_1_rightE_3, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
+    connect(ui->spinBox_2_leftE_3, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
+    connect(ui->spinBox_2_rightE_3, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
     this->slotAppendMsg(QObject::tr("系统启动"), QtInfoMsg);
+}
+
+void MainWindow::slotUpdateEnTimeWidth()
+{
+    unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
+                               (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
+    if (ui->tabWidget_measure->currentIndex() == 1){
+        EnWin[0] = (unsigned short)ui->spinBox_1_leftE_2->value();
+        EnWin[1] = (unsigned short)ui->spinBox_1_rightE_2->value();
+        EnWin[2] = (unsigned short)ui->spinBox_2_leftE_2->value();
+        EnWin[3] = (unsigned short)ui->spinBox_2_rightE_2->value();
+    } else if (ui->tabWidget_measure->currentIndex() == 2){
+        EnWin[0] = (unsigned short)ui->spinBox_1_leftE_3->value();
+        EnWin[1] = (unsigned short)ui->spinBox_1_rightE_3->value();
+        EnWin[2] = (unsigned short)ui->spinBox_2_leftE_3->value();
+        EnWin[3] = (unsigned short)ui->spinBox_2_rightE_3->value();
+    }
+
+    PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+    plotWidget->slotUpdateEnTimeWidth(EnWin);
 }
 
 #include <QSplitter>
@@ -924,8 +936,12 @@ void MainWindow::on_pushButton_measure_clicked()
 
             PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
             plotWidget->slotStart();
-            plotWidget->slotResetPlot();
             plotWidget->slotUpdateEnTimeWidth(EnWin);
+
+            ui->lcdNumber_2->display("0");
+            ui->lcdNumber_CountRate1->display("0");
+            ui->lcdNumber_CountRate2->display("0");
+            ui->lcdNumber_ConCount_single->display("0");
 
             commandHelper->updateParamter(stepT, EnWin, timewidth, false);
             commandHelper->slotStartManualMeasure(detectorParameter);
@@ -1008,7 +1024,11 @@ void MainWindow::on_pushButton_measure_2_clicked()
 
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
         plotWidget->slotStart();
-        plotWidget->slotResetPlot();
+
+        ui->lcdNumber_2->display("0");
+        ui->lcdNumber_CountRate1->display("0");
+        ui->lcdNumber_CountRate2->display("0");
+        ui->lcdNumber_ConCount_single->display("0");
 
         int stepT = ui->spinBox_step_2->value();
         unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE_2->value(), (unsigned short)ui->spinBox_1_rightE_2->value(),

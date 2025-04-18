@@ -52,6 +52,8 @@ public slots:
 
     //批量刷新
     void slotUpdatePlotDatas(SingleSpectrum, vector<CoincidenceResult>, int refreshTime);
+    //更新空数据
+    void slotUpdatePlotNullData(int refreshTime);
 
     void slotStart();
     void slotResetPlot();

@@ -37,6 +37,9 @@ public:
     void saveFileName(QString);
     void setDefaultCacheDir(QString dir);
     bool isConnected();//探测器是否连接
+    unsigned int readTimeStep(){
+        return this->stepT;
+    }
 
     void handleManualMeasureNetData();//处理手动测量网络数据
     void handleAutoMeasureNetData();//处理自动测量网络数据
@@ -103,7 +106,7 @@ private:
     QLiteThread* plotUpdateThread;//能谱信息处理线程
     quint32 currentEnergyTime = 0;// 能谱时间
     bool reChangeEnWindow = false;
-    quint64 tmChangeEnWindow = 0;// 记录下重新运算的时间戳，单位：毫秒
+    quint64 tmTriggerEnWindow = 0;// 记录下重新运算的时间戳，单位：毫秒
 
     CoincidenceAnalyzer* coincidenceAnalyzer;
     void analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult> r3);
@@ -178,11 +181,13 @@ private:
 
     WorkStatusFlag workStatus = NoWork;
     DetectorParameter detectorParameter;
-    QFile *pfSave = nullptr;
+    //QFile *pfSaveInvalid = nullptr;//保存非0有效数据文件
+    QFile *pfSaveRaw = nullptr;//保存开始测量之后的所有原始数据
     qint8 prepareStep = 0;
     void initSocket(QTcpSocket** socket);
     bool taskFinished = false;
     bool sendStopCmd = false;
+    bool detectorException = false;
 
 private:
     QString defaultCacheDir;

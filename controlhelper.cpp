@@ -31,7 +31,7 @@ ControlHelper::ControlHelper(QObject *parent) : QObject(parent)
                 byte limits[2];
                 bool ret = single_getpos(0x01, &pos1);
                 if (single_getpos(0x01, &pos1) && single_getpos(0x02, &pos2)){
-                    sigReportAbs(pos1, pos2);
+                    emit sigReportAbs(pos1, pos2);
                 }
 
                 ret = single_getstatus(0x01, &status);
@@ -42,7 +42,7 @@ ControlHelper::ControlHelper(QObject *parent) : QObject(parent)
 //                    }
 
                     single_getlimits(status, limits);
-                    sigReportStatus(0x01, limits[0] == FT_TRUE, limits[1] == FT_TRUE, isrunning == FT_TRUE);
+                    emit sigReportStatus(0x01, limits[0] == FT_TRUE, limits[1] == FT_TRUE, isrunning == FT_TRUE);
                 }
 
                 ret = single_getstatus(0x02, &status);
@@ -54,11 +54,11 @@ ControlHelper::ControlHelper(QObject *parent) : QObject(parent)
 
                     single_getlimits(status, limits);
 
-                    sigReportStatus(0x02, limits[0] == FT_TRUE, limits[1] == FT_TRUE, isrunning == FT_TRUE);
+                    emit sigReportStatus(0x02, limits[0] == FT_TRUE, limits[1] == FT_TRUE, isrunning == FT_TRUE);
                 }
             }
 
-            QThread::msleep(100);
+            QThread::msleep(200);
         }
     });
     mpWorkThread->start();
@@ -370,6 +370,7 @@ bool ControlHelper::single_moveabs(int axis_no, float value)
     if (mHandle == 0)
         return false;
 
+    QMutexLocker locker(&mutex);
     qDebug() << tr("轴") << axis_no << tr("移动位置") << value;
     int ret = fti_single_moveabs(mHandle, mAxiaName[axis_no].toStdString().c_str(), value);
     if (ret != FT_SUCCESS){

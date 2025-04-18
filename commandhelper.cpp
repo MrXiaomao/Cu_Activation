@@ -1231,6 +1231,9 @@ void CommandHelper::netFrameWorkThead()
                             pfSave = nullptr;
                         }
                     }
+
+                    //对于大计数率下，网口数据非常大，处理不过来，直接清空缓存池，但是由于担心清空掉停止指令，所以补发一次停止指令。
+                    if(checkAndClearQByteArray(handlerPool))  slotStopAutoMeasure();
                 }
 
                 if ((HeadIndex == -1) || (TailIndex == -1)){ // 没找到包头包尾
@@ -1272,6 +1275,7 @@ void CommandHelper::netFrameWorkThead()
                 //使用指针重构（最高效但需谨慎）, 不移动数据，时间复杂度 O(1)
                 handlerPool = QByteArray(handlerPool.constData() + minPkgSize, handlerPool.size() - minPkgSize);
                 // qDebug() << "handlerPool.capacity = " << handlerPool.capacity();//观察内存占用情况
+                checkAndClearQByteArray(handlerPool);
 
                 //处理数据
                 const unsigned char *ptrOffset = (const unsigned char *)validFrame.constData();
@@ -1827,4 +1831,19 @@ void CommandHelper::analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult>
 
         sigPlot(r1, rr3, _stepT);
     }
+}
+
+bool CommandHelper::checkAndClearQByteArray(QByteArray &data) {
+    if (data.capacity() > MAX_BYTEARRAY_SIZE) {
+        qWarning() << "探测器计数率超出当前仪器计数率设计的上限，数据会发生丢失，导致计数率失真。\n"
+                   <<"可能原因: 1)、放射性活度过高; 2)波形触发阈值过低导致。";
+                //  <<"容量超过100MB，当前容量:" 
+                //  << data.capacity() / (1024 * 1024) << "MB";
+        data.clear();
+        data.squeeze(); // 释放内存
+        // qWarning() << "已清空并回收内存，当前容量:" 
+        //          << data.capacity() / (1024 * 1024) << "MB";
+        return true;
+    }
+    return false;
 }

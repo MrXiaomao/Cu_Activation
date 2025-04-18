@@ -90,12 +90,12 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
     time1_elapseFPGA = unusedData1.back().time/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
     time2_elapseFPGA = unusedData2.back().time/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
 
-    int deltaT = 2; //单位秒
+    int deltaT = 1; //单位秒
     //必须存够1秒的数据才进行处理
     while(time1_elapseFPGA >= deltaT && time2_elapseFPGA >= deltaT)
     {
-        //先计算出当前一秒的数据点个数
-        GetDataPoint(unusedData1, unusedData2);
+        //先计算出当前一秒的数据点个数,若没有完整一秒数据时，直接退出计算，下一次处理。
+        if(!GetDataPoint(unusedData1, unusedData2)) return;
 
         //对当前一秒数据处理给出能谱
         calculateAllSpectrum(unusedData1, unusedData2);
@@ -425,7 +425,7 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
 }
 
 //统计给出当前一秒内的两个探测器各自数据点的个数
-void CoincidenceAnalyzer::GetDataPoint(vector<TimeEnergy> data1, vector<TimeEnergy> data2)
+bool CoincidenceAnalyzer::GetDataPoint(vector<TimeEnergy> data1, vector<TimeEnergy> data2)
 {
     countCoin++;
     CurrentPoint onePoint;
@@ -455,8 +455,10 @@ void CoincidenceAnalyzer::GetDataPoint(vector<TimeEnergy> data1, vector<TimeEner
         countCoin--;
         onePoint.dataPoint1 = 0; //告知没有处理数据
         onePoint.dataPoint2 = 0; //告知没有处理数据
+        return false;
     }
     AllPoint.push_back(onePoint);
+    return true;
 }
 
 // 计算直方图

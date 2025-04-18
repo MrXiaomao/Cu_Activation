@@ -189,7 +189,7 @@ private:
     vector<int> GetSingleSpectrum(const vector<int>& data, int maxEnergy, unsigned short ch);
     
     //统计给出当前一秒内的两个探测器各自数据点的个数
-    void GetDataPoint(vector<TimeEnergy> data1, vector<TimeEnergy> data2);
+    bool GetDataPoint(vector<TimeEnergy> data1, vector<TimeEnergy> data2);
 
     //统计给出直方图分布，类似matlab中的hist。
     vector<int> computeHistogram(const vector<int>& data, const vector<int>& binEdges);

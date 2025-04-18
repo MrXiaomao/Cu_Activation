@@ -11,6 +11,8 @@
 #include "sysutils.h"
 #include "coincidenceanalyzer.h"
 
+#define MAX_BYTEARRAY_SIZE (20 * 1024 * 1024) // 100 MB
+
 class QLiteThread;
 class CommandHelper : public QObject
 {
@@ -24,6 +26,9 @@ public:
         return &commandHelper;
     }
 
+    //实现容量检查与自动清空功能
+    static bool checkAndClearQByteArray(QByteArray &data); 
+    
     void initCommand();//初始化常用指令
     void startWork();
     void switchToCountMode(bool refModel);

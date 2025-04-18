@@ -214,19 +214,11 @@ message(GIT_TIME":  ""$$GIT_TIME")
 message(APP_VERSION":  ""$$APP_VERSION")
 
 contains(QT_ARCH, x86_64) {
-    win32: LIBS += -L$$PWD/3rdParty/ftcoreimc_win_v1.3.1.0n/lib/x64/ -lftcoreimc
-    DEPENDPATH += $$PWD/3rdParty/ftcoreimc_win_v1.3.1.0n/lib/x64/
+    win32: LIBS += -L$$PWD/3rdParty/ftcoreimc_win_v1.4.0.0/lib/x64/ -lftcoreimc
+    DEPENDPATH += $$PWD/3rdParty/ftcoreimc_win_v1.4.0.0/lib/x64/
 } else {
-    win32: LIBS += -L$$PWD/3rdParty/ftcoreimc_win_v1.3.1.0n/lib/x86/ -lftcoreimc
-    DEPENDPATH += $$PWD/3rdParty/ftcoreimc_win_v1.3.1.0n/lib/x86/
+    win32: LIBS += -L$$PWD/3rdParty/ftcoreimc_win_v1.4.0.0/lib/x86/ -lftcoreimc
+    DEPENDPATH += $$PWD/3rdParty/ftcoreimc_win_v1.4.0.0/lib/x86/
 }
 
-INCLUDEPATH += $$PWD/3rdParty/ftcoreimc_win_v1.3.1.0n/inc
-
-#win32: LIBS += -L$$PWD/dwarfstack-2.2/lib/ -ldwarfstack
-
-#INCLUDEPATH += $$PWD/dwarfstack-2.2/include
-#DEPENDPATH += $$PWD/dwarfstack-2.2/include
-
-#win32:!win32-g++: PRE_TARGETDEPS += $$PWD/dwarfstack-2.2/lib/dwarfstack.lib
-#else:win32-g++: PRE_TARGETDEPS += $$PWD/dwarfstack-2.2/lib/libdwarfstack.a
+INCLUDEPATH += $$PWD/3rdParty/ftcoreimc_win_v1.4.0.0/inc

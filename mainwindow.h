@@ -11,7 +11,7 @@ namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
 class SpectrumModel;
-class DataAnalysisWidget;
+class OfflineDataAnalysisWidget;
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -24,7 +24,7 @@ public:
     void initCustomPlot();
 
     void load();
-    void save();
+    void save(bool bSafeExitFlag = false);
 
 protected:
     virtual bool eventFilter(QObject *watched, QEvent *event) override;
@@ -34,6 +34,7 @@ public slots:
     void slotAppendMsg(const QString &msg, QtMsgType msgType);
     void slotRefreshUi();
     void slotUpdateEnTimeWidth();
+    void slotSafeExit();
 
 signals:
     void sigRefreshUi();
@@ -99,10 +100,16 @@ private slots:
 
     void on_pushButton_confirm_clicked();
 
+    void on_action_analyze_triggered();
+
+    void on_tabWidget_client_currentChanged(int index);
+
+    void on_action_openfile_triggered();
+
 private:
     Ui::MainWindow *ui = nullptr;
     SpectrumModel *spectrummodel = nullptr;//能谱模型
-    DataAnalysisWidget *dataAnalysisWidget = nullptr;//数据解析
+    OfflineDataAnalysisWidget *offlineDataAnalysisWidget = nullptr;//数据解析
     CommandHelper *commandHelper = nullptr;//网络指令
     ControlHelper *controlHelper = nullptr;//网络指令
 

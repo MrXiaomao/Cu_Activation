@@ -6,7 +6,7 @@ CoolingTimeWidget::CoolingTimeWidget(QWidget *parent) :
     ui(new Ui::CoolingTimeWidget)
 {
     ui->setupUi(this);
-    connect(this, SIGNAL(sigUpdateTimeLength(qint32)), this, SLOT(on_update_timelength(qint32)));
+    connect(this, SIGNAL(sigUpdateTimeLength(int)), this, SLOT(on_update_timelength(int)));
 }
 
 CoolingTimeWidget::~CoolingTimeWidget()
@@ -26,7 +26,7 @@ void CoolingTimeWidget::on_pushButton_2_clicked()
     this->close();
 }
 
-void CoolingTimeWidget::on_update_timelength(qint32 value)
+void CoolingTimeWidget::on_update_timelength(int value)
 {
     ui->spinBox->setValue(value);
 }

@@ -16,15 +16,15 @@ public:
     ~CoolingTimeWidget();
 
 signals:
-    void sigAskTimeLength(qint32);
-    void sigUpdateTimeLength(qint32);
+    void sigAskTimeLength(int);
+    void sigUpdateTimeLength(int);
 
 private slots:
     void on_pushButton_clicked();
 
     void on_pushButton_2_clicked();
 
-    void on_update_timelength(qint32);
+    void on_update_timelength(int);
 
 private:
     Ui::CoolingTimeWidget *ui;

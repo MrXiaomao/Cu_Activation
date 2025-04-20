@@ -25,10 +25,10 @@ SOURCES += \
     augmentedmatrix.cpp \
     commandhelper.cpp \
     coolingtimewidget.cpp \
-    dataanalysiswidget.cpp \
     energycalibrationform.cpp \
     equipmentmanagementform.cpp \
     linearfit.cpp \
+    offlinedataanalysiswidget.cpp \
     plotwidget.cpp \
     polynomialfit.cpp \
     qcustomplot.cpp \
@@ -51,10 +51,10 @@ HEADERS += \
     augmentedmatrix.h \
     commandhelper.h \
     coolingtimewidget.h \
-    dataanalysiswidget.h \
     energycalibrationform.h \
     equipmentmanagementform.h \
     linearfit.h \
+    offlinedataanalysiswidget.h \
     pch.h \
     plotwidget.h \
     polynomialfit.h \
@@ -73,8 +73,8 @@ FORMS += \
     cachedirconfigwidget.ui \
     controlwidget.ui \
     coolingtimewidget.ui \
-    dataanalysiswidget.ui \
     energycalibrationform.ui \
+    offlinedataanalysiswidget.ui \
     spectrumModel.ui \
     splashwidget.ui \
     waveformmodel.ui \

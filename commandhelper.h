@@ -34,13 +34,14 @@ public:
     void switchToCountMode(bool refModel);
     void updateStepTime(int stepT, int timewidth = 50);
     void updateParamter(int stepT, unsigned short EnWin[4], int timewidth = 50, bool reset = false);
-    void saveFileName(QString);
+    void exportFile(QString);
     void setDefaultCacheDir(QString dir);
     bool isConnected();//探测器是否连接
     unsigned int readTimeStep(){
         return this->stepT;
     }
 
+protected:
     void handleManualMeasureNetData();//处理手动测量网络数据
     void handleAutoMeasureNetData();//处理自动测量网络数据
 
@@ -194,7 +195,7 @@ private:
     QString currentFilename;
     int stepT = 1; //界面图像刷新时间
     unsigned short EnWindow[4]; // 探测器1左能窗、右能窗；探测器2左能窗、右能窗
-    std::vector<unsigned short> autoEnWindow; // 探测器1左能窗、右能窗；探测器2左能窗、右能窗
+    std::vector<unsigned short> autoEnWindow; // 自动测量反馈给界面的值：探测器1左能窗、右能窗；探测器2左能窗、右能窗
     int timeWidth = 50;//时间窗宽度，单位ns(符合分辨时间)
     qint64 lastClockT = 0;
     bool refModel = false;

@@ -3,7 +3,7 @@
 #include "equipmentmanagementform.h"
 #include "energycalibrationform.h"
 #include "spectrumModel.h"
-#include "dataanalysiswidget.h"
+#include "offlinedataanalysiswidget.h"
 #include "plotwidget.h"
 #include "FPGASetting.h"
 #include "splashwidget.h"
@@ -122,7 +122,7 @@ MainWindow::MainWindow(QWidget *parent)
                 SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待...\n正在移动位移平台至目标位置..."));
                 SplashWidget::instance()->exec();
             });
-        }            
+        }
     });
 
     this->setProperty("axis-prepared", false);
@@ -171,10 +171,39 @@ MainWindow::MainWindow(QWidget *parent)
         if (!on){
             //电源关闭，设备断电，测量强制停止
             this->setProperty("measure-status", msEnd);
+        }else{
+            if (!this->property("last_safe_exit").toBool()){
+                //如果上次是异常退出，这次先关闭继电器，再开继电器
+                commandHelper->closeRelay();
+
+                QTimer::singleShot(500, this, [=](){
+                    this->setProperty("last_safe_exit", true);
+                    commandHelper->openRelay(true);
+
+                    QPair<float, float> pair = controlHelper->gotoAbs(ui->comboBox_range->currentIndex());
+                    this->setProperty("axis01-target-position", pair.first);
+                    this->setProperty("axis02-target-position", pair.second);
+
+                    SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待...\n正在移动位移平台至目标位置..."));
+                    SplashWidget::instance()->exec();
+                });
+            } else {
+                QPair<float, float> pair = controlHelper->gotoAbs(ui->comboBox_range->currentIndex());
+                this->setProperty("axis01-target-position", pair.first);
+                this->setProperty("axis02-target-position", pair.second);
+
+                SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待...\n正在移动位移平台至目标位置..."));
+                SplashWidget::instance()->exec();
+            }
         }
-        QString msg = QString(tr("电源状态：%1")).arg(on ? tr("开") : tr("关"));
-        emit sigAppengMsg(msg, QtInfoMsg);
-        emit sigRefreshUi();
+
+        if (this->property("last_safe_exit").toBool()){
+            //异常退出先不要恢复继电器状态，等重启继电器之后再说吧
+
+            QString msg = QString(tr("电源状态：%1")).arg(on ? tr("开") : tr("关"));
+            emit sigAppengMsg(msg, QtInfoMsg);
+            emit sigRefreshUi();
+        }
     });
 
     // 测量开始
@@ -226,6 +255,9 @@ MainWindow::MainWindow(QWidget *parent)
         QTimer* measureRefTimer = this->findChild<QTimer*>("measureRefTimer");
         measureRefTimer->stop();
 
+        QTimer* exceptionCheckTimer = this->findChild<QTimer*>("exceptionCheckTimer");
+        exceptionCheckTimer->stop();
+
         this->setProperty("measure-status", msEnd);
         QString msg = tr("测量已停止");
         emit sigAppengMsg(msg, QtInfoMsg);
@@ -268,7 +300,7 @@ MainWindow::MainWindow(QWidget *parent)
         this->lastRecvDataTime = QDateTime::currentDateTime();
         bool pause_plot = this->property("pause_plot").toBool();
         if (!pause_plot){
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
             plotWidget->slotUpdatePlotDatas(r1, r3, refreshUI_time);
 
             ui->lcdNumber_CountRate1->display(r3.back().CountRate1);
@@ -286,7 +318,7 @@ MainWindow::MainWindow(QWidget *parent)
         ui->spinBox_2_leftE_2->setValue(EnWidth[2]);
         ui->spinBox_2_rightE_2->setValue(EnWidth[3]);
 
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
         plotWidget->slotUpdateEnTimeWidth(EnWidth.data());
     }, Qt::QueuedConnection/*防止堵塞*/);
 
@@ -345,6 +377,8 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 
 void MainWindow::InitMainWindowUi()
 {
+    ui->toolBar_offline->hide();
+
     // 获取当前时间
     ui->textEdit_log->clear();
     ui->spinBox_1_leftE->setMaximum(MULTI_CHANNEL);
@@ -440,8 +474,7 @@ void MainWindow::InitMainWindowUi()
     grp->addButton(ui->radioButton_spectrum, 1);
     connect(grp, QOverload<int>::of(&QButtonGroup::idClicked), this, [=](int index){
         commandHelper->switchToCountMode(index == 0);
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
-        plotWidget->slotResetPlot();
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
         plotWidget->switchToCountMode(index == 0);
 
         if (0 == index){
@@ -492,14 +525,8 @@ void MainWindow::InitMainWindowUi()
     ui->statusbar->addPermanentWidget(label_systemtime);
 
     //日志窗口重置位置
-
-//#include <QPaintDevice>
-    //逻辑DPI
     int horizontalDPI = logicalDpiX();
     int verticalDPI  = logicalDpiY();
-    //物理DPI （和逻辑DPI不一定相同）
-    int horizontalDPI2 = physicalDpiX();
-    int verticalDPI2  = physicalDpiY();
     int screenValidHeight = QGuiApplication::primaryScreen()->size().height();
     screenValidHeight = screenValidHeight *  96 / verticalDPI;
     if (screenValidHeight <= 768){
@@ -590,7 +617,7 @@ void MainWindow::InitMainWindowUi()
         if (this->lastRecvDataTime.secsTo(now) > 1){
             //exceptionCheckTimer->stop();
             //emit sigAppengMsg(tr("探测器数据异常"), QtCriticalMsg);
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
             plotWidget->slotUpdatePlotNullData(commandHelper->readTimeStep());
             this->lastRecvDataTime = now;
         }
@@ -601,6 +628,8 @@ void MainWindow::InitMainWindowUi()
        this->showMaximized();
     });
 
+    //每次启动，先默认上次软件是正常退出
+    this->setProperty("last_safe_exit", true);
     this->load();
 
     connect(ui->spinBox_1_leftE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
@@ -617,6 +646,8 @@ void MainWindow::InitMainWindowUi()
     connect(ui->spinBox_1_rightE_3, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
     connect(ui->spinBox_2_leftE_3, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
     connect(ui->spinBox_2_rightE_3, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
+
+    slotUpdateEnTimeWidth();
     this->slotAppendMsg(QObject::tr("系统启动"), QtInfoMsg);
 }
 
@@ -636,7 +667,7 @@ void MainWindow::slotUpdateEnTimeWidth()
         EnWin[3] = (unsigned short)ui->spinBox_2_rightE_3->value();
     }
 
-    PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+    PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
     plotWidget->slotUpdateEnTimeWidth(EnWin);
 }
 
@@ -646,10 +677,10 @@ void MainWindow::initCustomPlot()
     //this->setDockNestingEnabled(true);
     {
         PlotWidget *customPlotWidget = new PlotWidget(this);
-        customPlotWidget->setObjectName("real-PlotWidget");
+        customPlotWidget->setObjectName("online-PlotWidget");
         customPlotWidget->initCustomPlot();
         connect(customPlotWidget, &PlotWidget::sigUpdateMeanValues, this, [=](QString name, unsigned int minMean, unsigned int maxMean){
-            if (name == "Det1")
+            if (name == "Energy-Det1")
                 currentDetectorIndex = 0;
             else
                 currentDetectorIndex = 1;
@@ -738,19 +769,45 @@ void MainWindow::on_action_SpectrumModel_triggered()
 
 void MainWindow::on_action_DataAnalysis_triggered()
 {
-    if (dataAnalysisWidget && dataAnalysisWidget->isVisible()){
-        return ;
-    }
-
     //数据解析
-    if (nullptr == dataAnalysisWidget){
-        dataAnalysisWidget = new DataAnalysisWidget(this);
-        //dataAnalysisWidget->setAttribute(Qt::WA_DeleteOnClose, true);
-        //dataAnalysisWidget->setWindowModality(Qt::ApplicationModal);
+    if (nullptr == offlineDataAnalysisWidget){
+        offlineDataAnalysisWidget = new OfflineDataAnalysisWidget(this);
+        connect(offlineDataAnalysisWidget, &OfflineDataAnalysisWidget::sigPausePlot, this, [=](bool pause){
+            this->setProperty("pause_plot", pause);
+            if (this->property("pause_plot").toBool()){
+                ui->action_refresh->setIcon(QIcon(":/resource/work.png"));
+                ui->action_refresh->setText(tr("恢复刷新"));
+                ui->action_refresh->setIconText(tr("恢复刷新"));
+            } else {
+                this->setProperty("pause_plot", false);
+                ui->action_refresh->setIcon(QIcon(":/resource/pause.png"));
+                ui->action_refresh->setText(tr("暂停刷新"));
+                ui->action_refresh->setIconText(tr("暂停刷新"));
+
+                ui->pushButton_confirm->setIcon(QIcon());
+            }
+        });
+
+        int index = ui->tabWidget_client->addTab(offlineDataAnalysisWidget, tr("数据解析"));
+        ui->tabWidget_client->setCurrentIndex(index);
     }
 
-    int index = ui->tabWidget_client->addTab(dataAnalysisWidget, tr("数据解析"));
-    ui->tabWidget_client->setCurrentIndex(index);
+    if (!this->property("offline-filename").isValid()){
+        QString filePath = QFileDialog::getOpenFileName(this, tr("打开文件"),"",tr("能谱文件 (*.dat)"));
+        if (filePath.isEmpty() || !QFileInfo::exists(filePath))
+            return;
+
+        this->setProperty("offline-filename", filePath);
+        if (offlineDataAnalysisWidget && offlineDataAnalysisWidget->isVisible()){
+            offlineDataAnalysisWidget->openEnergyFile(filePath);
+            emit offlineDataAnalysisWidget->sigStart();
+            return ;
+        }
+    } else {
+        ui->tabWidget_client->setCurrentWidget(offlineDataAnalysisWidget);
+    }
+
+    this->setWindowTitle(this->property("offline-filename").toString() + " - Cu_Activation");
 }
 
 #include "waveformmodel.h"
@@ -798,9 +855,9 @@ void MainWindow::on_action_displacement_triggered()
             //controlHelper->single_home(0x01);
             //controlHelper->single_home(0x02);
 
-            QPair<float, float> pair = controlHelper->gotoAbs(0);
-            this->setProperty("axis01-target-position", pair.first);
-            this->setProperty("axis02-target-position", pair.second);
+            // QPair<float, float> pair = controlHelper->gotoAbs(0);
+            // this->setProperty("axis01-target-position", pair.first);
+            // this->setProperty("axis02-target-position", pair.second);
         }
     } else {
         controlHelper->close();
@@ -934,7 +991,7 @@ void MainWindow::on_pushButton_measure_clicked()
             QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
             measureTimer->setInterval(ui->spinBox_timelength->value() * 1000);
 
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
             plotWidget->slotStart();
             plotWidget->slotUpdateEnTimeWidth(EnWin);
 
@@ -1022,7 +1079,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         ui->pushButton_measure_2->setText(tr("停止测量"));
         ui->start_time_text->setText("0000-00-00 00:00:00");
 
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
         plotWidget->slotStart();
 
         ui->lcdNumber_2->display("0");
@@ -1099,7 +1156,7 @@ void MainWindow::on_pushButton_save_clicked()
         file.write(jsonDoc.toJson());
         file.close();
 
-        commandHelper->saveFileName(path + "/" + filename);
+        commandHelper->exportFile(path + "/" + filename);
     }       
 }
 
@@ -1110,7 +1167,7 @@ void MainWindow::on_pushButton_refresh_clicked()
     int stepT = ui->spinBox_step->value();
     int timewidth = ui->spinBox_timeWidth->value();
     if (ui->radioButton_ref->isChecked()){
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
         plotWidget->slotResetPlot();
     }
 
@@ -1126,12 +1183,23 @@ void MainWindow::on_action_close_triggered()
 
 void MainWindow::on_action_refresh_triggered()
 {
-    PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+    if (ui->tabWidget_client->currentWidget()->objectName() == "tabWidget_workLog")
+        return ;
 
-    if (!this->property("pause_plot").toBool()){
-        emit plotWidget->sigPausePlot(true);
-    } else {
-        emit plotWidget->sigPausePlot(false);
+    if (ui->tabWidget_client->currentWidget()->objectName() == "OfflineDataAnalysisWidget"){
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
+        if (!this->property("pause_plot").toBool()){
+            emit plotWidget->sigPausePlot(true);
+        } else {
+            emit plotWidget->sigPausePlot(false);
+        }
+    } else if (ui->tabWidget_client->currentWidget()->objectName() == "onlineDataAnalysisWidget"){
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
+        if (!this->property("pause_plot").toBool()){
+            emit plotWidget->sigPausePlot(true);
+        } else {
+            emit plotWidget->sigPausePlot(false);
+        }
     }
 }
 
@@ -1139,7 +1207,7 @@ void MainWindow::on_pushButton_gauss_clicked()
 {
     this->save();
 
-    PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+    PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
     plotWidget->slotGauss(ui->spinBox_leftE->value(), ui->spinBox_rightE->value());
 }
 
@@ -1225,11 +1293,18 @@ void MainWindow::closeEvent(QCloseEvent *event)
     }
 
     qInstallMessageHandler(nullptr);
+    slotSafeExit();
+
+    event->accept();
+}
+
+void MainWindow::slotSafeExit()
+{
     commandHelper->closeDetector();
     commandHelper->closeRelay();
     controlHelper->close();
 
-    event->accept();
+
 }
 
 #include "cachedirconfigwidget.h"
@@ -1571,11 +1646,14 @@ void MainWindow::load()
             ui->lineEdit_path->setText(jsonObjPub["path"].toString());
             ui->lineEdit_filename->setText(jsonObjPub["filename"].toString());
             ui->comboBox_range->setCurrentIndex(jsonObjPub["select-range"].toInt());  //量程索引值
+
+            bool bSafeExitFlag = jsonObjPub["safe_exit"].toBool();
+            this->setProperty("last_safe_exit", bSafeExitFlag);
         }
     }
 }
 
-void MainWindow::save()
+void MainWindow::save(bool bSafeExitFlag)
 {
     QString path = QApplication::applicationDirPath() + "/config";
     QDir dir(path);
@@ -1662,6 +1740,7 @@ void MainWindow::save()
         jsonObjPub["Gauss_leftE"] = ui->spinBox_leftE->value();
         jsonObjPub["Gauss_rightE"] = ui->spinBox_rightE->value();
         //保存数据
+        jsonObjPub["safe_exit"] = bSafeExitFlag;
         jsonObjPub["path"] = ui->lineEdit_path->text();
         jsonObjPub["filename"] = ui->lineEdit_filename->text();
         jsonObjPub["select-range"] = ui->comboBox_range->currentIndex();  //量程索引值
@@ -1683,7 +1762,7 @@ void MainWindow::on_pushButton_refresh_2_clicked()
                                (unsigned short)ui->spinBox_2_leftE_2->value(), (unsigned short)ui->spinBox_2_rightE_2->value()};
 
     if (ui->radioButton_ref->isChecked()){
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
         plotWidget->slotResetPlot();
     }
 
@@ -1700,7 +1779,7 @@ void MainWindow::on_action_line_log_triggered()
 {
     if (this->property("ScaleLogarithmicType").toBool()){
         this->setProperty("ScaleLogarithmicType", false);
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
         plotWidget->slotResetPlot();
         plotWidget->switchToLogarithmicMode(false);
 
@@ -1709,7 +1788,7 @@ void MainWindow::on_action_line_log_triggered()
         ui->action_line_log->setIcon(QIcon(":/resource/mathlog.png"));
     } else {
         this->setProperty("ScaleLogarithmicType", true);
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
         plotWidget->switchToLogarithmicMode(true);
 
         ui->action_line_log->setText(tr("线性"));
@@ -1764,7 +1843,7 @@ void MainWindow::on_action_start_measure_triggered()
 
 void MainWindow::on_checkBox_gauss_stateChanged(int arg1)
 {
-    PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+    PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
     plotWidget->slotShowGaussInfor(arg1 == Qt::CheckState::Checked);
 }
 
@@ -1779,7 +1858,7 @@ void MainWindow::on_pushButton_confirm_clicked()
     unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
                                (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
 
-    PlotWidget* plotWidget = this->findChild<PlotWidget*>("real-PlotWidget");
+    PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
     if (ui->radioButton_ref->isChecked()){
         plotWidget->slotResetPlot();
     }
@@ -1802,12 +1881,49 @@ void MainWindow::on_pushButton_confirm_clicked()
 
     //自动切换到计数模式
     commandHelper->switchToCountMode(true);
-    plotWidget->slotResetPlot();
     plotWidget->switchToCountMode(true);
     ui->widget_gauss->hide();
     ui->radioButton_ref->setChecked(true);
 
     plotWidget->areaSelectFinished();
     emit plotWidget->sigPausePlot(false);
+}
+
+
+void MainWindow::on_action_analyze_triggered()
+{
+    if (ui->tabWidget_client->currentWidget()->objectName() == "OfflineDataAnalysisWidget"){
+        emit offlineDataAnalysisWidget->sigStart();
+    }
+}
+
+
+void MainWindow::on_tabWidget_client_currentChanged(int /*index*/)
+{
+    if (ui->tabWidget_client->currentWidget()->objectName() == "tabWidget_workLog")
+        return ;
+
+    if (ui->tabWidget_client->currentWidget()->objectName() == "OfflineDataAnalysisWidget"){
+        ui->toolBar_offline->show();
+        ui->toolBar_online->hide();
+        this->setWindowTitle(this->property("offline-filename").toString() + " - Cu_Activation");
+    } else if (ui->tabWidget_client->currentWidget()->objectName() == "onlineDataAnalysisWidget"){
+        ui->toolBar_offline->hide();
+        ui->toolBar_online->show();
+        this->setWindowTitle("Cu_Activation");
+    }
+
+}
+
+
+void MainWindow::on_action_openfile_triggered()
+{
+    QString filePath = QFileDialog::getOpenFileName(this, tr("打开文件"),";",tr("能谱文件 (*.dat)"));
+    if (filePath.isEmpty() || !QFileInfo::exists(filePath))
+        return;
+
+    this->setProperty("offline-filename", filePath);
+    offlineDataAnalysisWidget->openEnergyFile(filePath);
+    this->setWindowTitle(this->property("offline-filename").toString() + " - Cu_Activation");
 }
 

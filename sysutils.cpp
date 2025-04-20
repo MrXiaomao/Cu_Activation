@@ -267,7 +267,7 @@ std::vector<DetTimeEnergy> SysUtils::getDetTimeEnergy(const char* filename)
     return result;
 }
 
-void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy)> callback)
+void SysUtils::realQuickAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy, bool, bool*)> callback)
 {
     FILE* input_file = fopen(filename, "rb");
     if (ferror(input_file))
@@ -276,7 +276,7 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
     uint32_t full_buffer_size = 2050 * 8;
     std::vector<uint8_t> read_buffer(full_buffer_size, 0);
     std::vector<uint8_t> cache_buffer;
-
+    bool interrupted = false;
     while (!feof(input_file)){
         //std::vector<uint8_t>().swap(read_buffer);
         size_t read_size = fread(reinterpret_cast<char*>(read_buffer.data()), 1, full_buffer_size, input_file);
@@ -343,7 +343,14 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
                         DetTimeEnergy detTimeEnergy;
                         detTimeEnergy.channel = channel;
                         detTimeEnergy.timeEnergy.swap(temp);
-                        callback(detTimeEnergy);
+                        callback(detTimeEnergy, false, &interrupted);
+
+                        if (interrupted){
+                            fclose(input_file);
+                            input_file = nullptr;
+                            callback(DetTimeEnergy(), true, &interrupted);
+                            return;
+                        }
                     }
 
                     cache_buffer.erase(cache_buffer.begin(), cache_buffer.begin() + full_buffer_size);
@@ -358,4 +365,107 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
 
     fclose(input_file);
     input_file = nullptr;
+    callback(DetTimeEnergy(), true, nullptr);
+}
+
+void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy, bool/*结束标识*/, bool */*是否被终止*/)> callback)
+{
+    FILE* input_file = fopen(filename, "rb");
+    if (!input_file) {
+        perror("Failed to open file");
+        return;
+    }
+
+    uint32_t full_buffer_size = 2050 * 8;
+    std::vector<uint8_t> read_buffer(full_buffer_size, 0);
+    std::vector<uint8_t> cache_buffer;
+    bool interrupted = false;
+    while (!feof(input_file)){
+        size_t read_size = fread(reinterpret_cast<char*>(read_buffer.data()), 1, full_buffer_size, input_file);
+        cache_buffer.insert(cache_buffer.end(), read_buffer.begin(), read_buffer.begin() + read_size);
+
+        uint32_t buffer_size = cache_buffer.size();
+        while (buffer_size >= full_buffer_size){
+            //判断头部
+            uint8_t *ptrOffset = cache_buffer.data();
+            if ((uint8_t)ptrOffset[0] == 0x00 && (uint8_t)ptrOffset[1] == 0x00 && (uint8_t)ptrOffset[2] == 0xaa && (uint8_t)ptrOffset[3] == 0xb3){
+                ptrOffset = cache_buffer.data() + full_buffer_size - 4;
+                //判断尾部
+                if ((uint8_t)ptrOffset[0] == 0x00 && (uint8_t)ptrOffset[1] == 0x00 && (uint8_t)ptrOffset[2] == 0xcc && (uint8_t)ptrOffset[3] == 0xd3){
+                    // 分拣数据
+                    ptrOffset = cache_buffer.data();
+
+                    //通道号(8字节)
+                    ptrOffset += 4;
+                    uint64_t channel = static_cast<uint64_t>(ptrOffset[0]) << 56 |
+                                       static_cast<uint64_t>(ptrOffset[1]) << 48 |
+                                       static_cast<uint64_t>(ptrOffset[2]) << 40 |
+                                       static_cast<uint64_t>(ptrOffset[3]) << 32 |
+                                       static_cast<uint64_t>(ptrOffset[4]) << 24 |
+                                       static_cast<uint64_t>(ptrOffset[5]) << 16 |
+                                       static_cast<uint64_t>(ptrOffset[6]) << 8 |
+                                       static_cast<uint64_t>(ptrOffset[7]);
+
+                    //通道值转换
+                    channel = (channel == 0xFFF1) ? 0 : 1;
+
+                    //粒子模式数据1024*16byte,前6字节:时间,后2字节:能量
+                    int ref = 1;
+                    ptrOffset += 8;
+
+                    std::vector<TimeEnergy> temp;
+                    while (ref++<=1024){
+                        //空置48biy
+                        ptrOffset += 6;
+
+                        //时间:48bit
+                        long long t = static_cast<uint64_t>(ptrOffset[0]) << 40 |
+                                      static_cast<uint64_t>(ptrOffset[1]) << 32 |
+                                      static_cast<uint64_t>(ptrOffset[2]) << 24 |
+                                      static_cast<uint64_t>(ptrOffset[3]) << 16 |
+                                      static_cast<uint64_t>(ptrOffset[4]) << 8 |
+                                      static_cast<uint64_t>(ptrOffset[5]);
+                        t *= 10;
+                        ptrOffset += 6;
+
+                        //死时间:16bit
+                        ptrOffset += 2;
+                        unsigned short dietime = static_cast<uint16_t>(ptrOffset[0]) << 8 | static_cast<uint16_t>(ptrOffset[1]);
+
+                        //幅度:16bit
+                        unsigned short e = static_cast<uint16_t>(ptrOffset[0]) << 8 | static_cast<uint16_t>(ptrOffset[1]);
+                        ptrOffset += 2;
+
+                        if (t != 0x00 && e != 0x00)
+                            temp.push_back(TimeEnergy(t, dietime, e));
+                    }
+
+                    //数据分拣完毕
+                    {
+                        DetTimeEnergy detTimeEnergy;
+                        detTimeEnergy.channel = channel;
+                        detTimeEnergy.timeEnergy.swap(temp);
+                        callback(detTimeEnergy, false, &interrupted);
+
+                        if (interrupted){
+                            fclose(input_file);
+                            input_file = nullptr;
+                            callback(DetTimeEnergy(), true, &interrupted);
+                            return;
+                        }
+                    }
+
+                    cache_buffer.erase(cache_buffer.begin(), cache_buffer.begin() + full_buffer_size);
+                }
+            } else {
+                cache_buffer.erase(cache_buffer.begin());
+            }
+
+            buffer_size = cache_buffer.size();
+        }
+    }
+
+    fclose(input_file);
+    input_file = nullptr;
+    callback(DetTimeEnergy(), true, nullptr);
 }

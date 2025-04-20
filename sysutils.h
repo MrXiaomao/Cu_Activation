@@ -83,7 +83,13 @@ public:
 
     static std::vector<DetTimeEnergy> getDetTimeEnergy(const char* filename);
 
-    static void realAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy)> callback);
+
+    static void realAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy, bool/*结束标识*/, bool */*是否被终止*/)> callback);
+
+    /*
+     * 快速解析：要求文件除了裸数据，没有其他脏数据
+    */
+    static void realQuickAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy, bool/*结束标识*/, bool */*是否被终止*/)> callback);
 };
 
 #endif // SYSUTILS_H

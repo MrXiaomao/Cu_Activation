@@ -50,7 +50,7 @@ void AppMessageHandler(QtMsgType type, const QMessageLogContext& /*context*/, co
         return;
 
     if (type == QtDebugMsg){
-        std::cout << "debug >> " << msg.toLocal8Bit().toStdString() << std::endl;;
+        std::cout << "[Debug] " << msg.toLocal8Bit().toStdString() << std::endl;;
         // return;
     }
 
@@ -81,74 +81,6 @@ void AppMessageHandler(QtMsgType type, const QMessageLogContext& /*context*/, co
     }
 }
 
-#define TYPE_FLAG 0
-
-#if 1 == TYPE_FLAG
-    #define OUTPUT_QT_HELP_EXAMPLE      // Qt帮助示例输出
-#elif 2 == TYPE_FLAG
-    #define OUTPUT_PURE_EXAMPLE         // 纯净输出（不夹带任何格式，日志所见即所得）
-#elif 3 == TYPE_FLAG
-    #define OUTPUT_FORMAT_QT_EXAMPLE    // 格式化输出到Qt程序输出栏中
-#elif 4 == TYPE_FLAG
-    #define OUTPUT_FORMAT_FILE_EXAMPLE  // 格式化输出到指定输出文件中
-#endif
-
-QString g_fileName;
-#define QT_MESSAGE_PATTERN "[%{time yyyyMMdd h:mm:ss.zzz t}%{if-debug}D%{endif}%{if-info}I%{endif}%{if-warning}W%{endif}%{if-critical}C%{endif}%{if-fatal}F%{endif}]""%{file}:%{line} - %{message}"
-
-void myMessageOutput(QtMsgType type, const QMessageLogContext &context, const QString &msg)
-{
-    QByteArray localMsg = msg.toLocal8Bit();
-    const char *file = context.file ? context.file : "";
-    const char *function = context.function ? context.function : "";
-    switch (type) {
-    case QtDebugMsg:
-        fprintf(stderr, "Debug: %s (%s:%u, %s  %s)\n", localMsg.constData(), file, context.line, function, context.category);
-        break;
-    case QtInfoMsg:
-        fprintf(stderr, "Info: %s (%s:%u, %s  %s)\n", localMsg.constData(), file, context.line, function, context.category);
-        break;
-    case QtWarningMsg:
-        fprintf(stderr, "Warning: %s (%s:%u, %s  %s)\n", localMsg.constData(), file, context.line, function, context.category);
-        break;
-    case QtCriticalMsg:
-        fprintf(stderr, "Critical: %s (%s:%u, %s  %s)\n", localMsg.constData(), file, context.line, function, context.category);
-        break;
-    case QtFatalMsg:
-        fprintf(stderr, "Fatal: %s (%s:%u, %s  %s)\n", localMsg.constData(), file, context.line, function, context.category);
-        break;
-    }
-}
-
-void myMessageOutputForPure(QtMsgType /*type*/, const QMessageLogContext &/*context*/, const QString &msg)
-{
-    QByteArray localMsg = msg.toLocal8Bit();
-    QFile file(g_fileName);
-    if(file.open(QIODevice::Append)) {
-        file.write(localMsg + "\n\n");
-        file.close();
-    }
-}
-
-void myMessageOutputForQtConsole(QtMsgType /*type*/, const QMessageLogContext &/*context*/, const QString &msg)
-{
-    QByteArray localMsg = msg.toLocal8Bit();
-    QFile file(g_fileName);
-    if(file.open(QIODevice::Append)) {
-        file.write(localMsg + "\n\n");
-        file.close();
-    }
-}
-
-void myMessageOutputForFile(QtMsgType type, const QMessageLogContext &context, const QString &msg)
-{
-    QFile file(g_fileName);
-    if(file.open(QIODevice::Append)) {
-        file.write(qFormatLogMessage(type, context, msg).toLocal8Bit() + "\n\n");
-        file.close();
-    }
-}
-
 // 清理旧的日志文件，只保留最近几次的
 void cleanOldLogs(int refsToKeep)
 {
@@ -174,14 +106,6 @@ int main(int argc, char *argv[])
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 
     QApplication a(argc, argv);
-//    // 获取屏幕分辨率和缩放因子
-//    QScreen *screen = QGuiApplication::primaryScreen();
-//    qreal dpiScale = screen->logicalDotsPerInch() / 96.0;
-//    // 设置全局字体并应用缩放因子
-//    QFont defaultFont = QApplication::font();
-//    defaultFont.setPointSizeF(defaultFont.pointSizeF() * dpiScale);
-//    QApplication::setFont(defaultFont);
-
     if (qEnvironmentVariableIsEmpty("QT_FONT_DPI"))
     {
         qputenv("QT_FONT_DPI", "96");
@@ -190,28 +114,6 @@ int main(int argc, char *argv[])
 
     qDebug() << APP_VERSION;
     qDebug() << GIT_BRANCH;
-
-    //////////////////////////
-#ifdef OUTPUT_QT_HELP_EXAMPLE //! Qt帮助示例输出
-    // 指定日志输出函数（安装消息处理程序）
-    qInstallMessageHandler(myMessageOutput);
-#elif defined(OUTPUT_PURE_EXAMPLE) //! 纯净输出（不夹带任何格式，日志所见即所得）
-    g_fileName = "myMessageOutputForPure.log";
-    // 指定日志输出函数（安装消息处理程序）
-    qInstallMessageHandler(myMessageOutputForPure);
-#elif defined(OUTPUT_FORMAT_QT_EXAMPLE) //! 格式化输出到Qt程序输出栏中
-    g_fileName = "myMessageOutputForQtConsole.log";
-    // 设置输出数据格式（设置消息模式）
-    qSetMessagePattern(QT_MESSAGE_PATTERN);
-    // 指定日志输出函数（安装消息处理程序）
-    qInstallMessageHandler(myMessageOutputForQtConsole);
-#elif defined(OUTPUT_FORMAT_FILE_EXAMPLE) //! 格式化输出到指定输出文件中
-    g_fileName = "myMessageOutputForFile.log";
-    // 设置输出数据格式（设置消息模式）
-    qSetMessagePattern(QT_MESSAGE_PATTERN);
-    // 指定日志输出函数（安装消息处理程序）
-    qInstallMessageHandler(myMessageOutputForFile);
-#endif
 
     QTranslator translator;
     if (translator.load(QLocale(), QLatin1String("Cu_Activation"), QLatin1String("_zh_CN.qm"), QLatin1String(":/i18n"))){

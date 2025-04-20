@@ -343,7 +343,7 @@ void WaveformModel::on_pushButton_save_clicked()
         file.write(jsonDoc.toJson());
         file.close();
 
-        commandhelper->saveFileName(path + "/" + filename);
+        commandhelper->exportFile(path + "/" + filename);
     }
 }
 

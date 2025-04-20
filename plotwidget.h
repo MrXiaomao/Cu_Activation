@@ -1,7 +1,7 @@
 #ifndef PLOTWIDGET_H
 #define PLOTWIDGET_H
 
-#include <QDockWidget>
+#include <QStackedWidget>
 #include <QMutex>
 #include "sysutils.h"
 #include "coincidenceanalyzer.h"
@@ -20,13 +20,25 @@ enum TracerType
     DataTracer
 };
 
-class PlotWidget : public QWidget
+class PlotWidget : public QStackedWidget
 {
     Q_OBJECT
+
+    enum Axis_model{
+        amEnDet1 = 0x00,    //能谱1
+        amEnDet2= 0x01,     //能谱2
+        amCountDet1 = 0x02, //计数1
+        amCountDet2 = 0x03, //计数2
+        amCoResult = 0x04,  //符合计数
+
+        amGaussEnDet1 = 0x10,    //高斯1
+        amGaussEnDet2= 0x11,     //高斯2
+    };
+
 public:
     explicit PlotWidget(QWidget *parent = nullptr);
 
-    QCustomPlot *allocCustomPlot(QString objName, QWidget *parent = nullptr);
+    QCustomPlot *allocCustomPlot(QString objName, bool needGauss, QWidget *parent = nullptr);
     void dispatchAdditionalTipFunction(QCustomPlot *customPlot);
     void dispatchAdditionalDragFunction(QCustomPlot *customPlot);
 
@@ -39,7 +51,12 @@ public:
     void resetAxisCoords();
     void rescalAxisCoords(QCustomPlot* customPlot);
 
-    QCPGraph* getGraph(int index); //0-Det1 1-Det2 2=符合曲线 3-高斯曲线
+    QList<QCustomPlot*> getAllEnergyCustomPlot();
+    QList<QCustomPlot*> getAllCountCustomPlot();
+    QList<QCustomPlot*> getAllCustomPlot();
+
+    QCustomPlot* getCustomPlot(int index); //Axis_model
+    QCPGraph* getGraph(int index); //Axis_model
     void resetPlotDatas(QCustomPlot* customPlot);//右键重设数据初始状态
     void updateTracerPosition(QCustomPlot*, double, double);
     void areaSelectFinished();

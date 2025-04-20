@@ -11,7 +11,7 @@
 #include "sysutils.h"
 #include "coincidenceanalyzer.h"
 
-#define MAX_BYTEARRAY_SIZE (20 * 1024 * 1024) // 100 MB
+#define MAX_BYTEARRAY_SIZE (100 * 1024 * 1024) // 100 MB
 
 class QLiteThread;
 class CommandHelper : public QObject

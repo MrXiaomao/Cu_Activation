@@ -1780,7 +1780,7 @@ void MainWindow::on_action_line_log_triggered()
     if (this->property("ScaleLogarithmicType").toBool()){
         this->setProperty("ScaleLogarithmicType", false);
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
-        plotWidget->slotResetPlot();
+        // plotWidget->slotResetPlot();
         plotWidget->switchToLogarithmicMode(false);
 
         ui->action_line_log->setText(tr("对数"));

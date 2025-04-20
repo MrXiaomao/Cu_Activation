@@ -5,8 +5,8 @@
 #include <cmath>
 #include "linearfit.h"
 
-#define RANGE_SCARRE_UPPER 0.8
-#define RANGE_SCARRE_LOWER 0.4
+#define RANGE_SCARRE_UPPER 1.0
+#define RANGE_SCARRE_LOWER 0.5
 #define X_AXIS_LOWER    0
 #define Y_AXIS_LOWER    0
 
@@ -1681,7 +1681,7 @@ void PlotWidget::switchToLogarithmicMode(bool isLogarithmic)
             customPlot->yAxis->setTicker(ticker);
 
             customPlot->yAxis->setScaleType(QCPAxis::ScaleType::stLinear);
-            customPlot->yAxis->setRange(0, 1e3);
+            customPlot->yAxis->setRange(0, 1e2);
             customPlot->yAxis->setNumberFormat("f");
             customPlot->yAxis->setNumberPrecision(0);
 

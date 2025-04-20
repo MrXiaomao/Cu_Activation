@@ -1249,16 +1249,22 @@ void CommandHelper::netFrameWorkThead()
                             pfSaveRaw = nullptr;
                         }
                     } else {
-                        handlerPool.clear();
-                        sigMeasureStop();
+                        // handlerPool.clear();
+                        // 因为有重新发送一次停止测量
+                        // slotStopManualMeasure();
+                        if(handlerPool.size()>12)  
+                        {
+                            int removeSize = handlerPool.size() - 12;
+                            handlerPool = QByteArray(handlerPool.constData() + removeSize, handlerPool.size() - removeSize);
+                        }
+                        // sigMeasureStop();
                     }
-
-                    //对于大计数率下，网口数据非常大，处理不过来，直接清空缓存池，但是由于担心清空掉停止指令，所以补发一次停止指令。
-                    //if(checkAndClearQByteArray(handlerPool))  sigMeasureStop();
-
                     break;
                 }
-
+                
+                //对于大计数率下，网口数据非常大，处理不过来，直接清空缓存池，但是由于担心清空掉停止指令，所以补发一次停止指令。
+                checkAndClearQByteArray(handlerPool);
+                
                 // 先尝试寻找完整数据包（数据包、指令包两类）
                 quint32 size = handlerPool.size();
                 if (size >= minPkgSize){

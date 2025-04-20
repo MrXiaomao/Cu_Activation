@@ -75,6 +75,7 @@ struct CurrentPoint{
     int dataPoint2 = 0; //这次处理的探测器2数据点数
 };
 
+// 包大小65536 Byte
 struct SingleSpectrum{ //存放每秒钟的能谱数据。1s产生一个能谱
     unsigned int time; //时刻(单位s)，以FPGA时钟进行计时，给出当前的能谱对应的时刻，第1个谱对应time=1。
     unsigned int spectrum[2][MULTI_CHANNEL] = {0, 0}; //探测器1能谱

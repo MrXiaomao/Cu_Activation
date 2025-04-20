@@ -80,22 +80,24 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
     unusedData2.reserve(unusedData2.size() + _data2.size());
     unusedData2.insert(unusedData2.end(), _data2.begin(), _data2.end());
 
-    if (unusedData1.size()<=0 || unusedData2.size() <= 0){
+    if ((unusedData1.size()==0) && (unusedData2.size() == 0)){
         return;
     }
 
     // 准备计算
-    int time1_elapseFPGA;//计算FPGA当前最大时间与上一时刻的时间差,单位：秒
-    int time2_elapseFPGA;//计算FPGA当前最大时间与上一时刻的时间差,单位：秒
-    time1_elapseFPGA = unusedData1.back().time/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
-    time2_elapseFPGA = unusedData2.back().time/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
+    int time1_elapseFPGA = 0;//计算FPGA当前最大时间与上一时刻的时间差,单位：秒
+    int time2_elapseFPGA = 0;//计算FPGA当前最大时间与上一时刻的时间差,单位：秒
+    if(unusedData1.size()>0) 
+        time1_elapseFPGA = unusedData1.back().time/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
+    if(unusedData2.size()>0) 
+        time2_elapseFPGA = unusedData2.back().time/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
 
     int deltaT = 1; //单位秒
-    //必须存够1秒的数据才进行处理
-    while(time1_elapseFPGA >= deltaT && time2_elapseFPGA >= deltaT)
+    //都存够1秒的数据才进行处理，或者其中某一个存满2s数据。
+    while((time1_elapseFPGA >= deltaT && time2_elapseFPGA >= deltaT) || time1_elapseFPGA>1 || time2_elapseFPGA>1)
     {
-        //先计算出当前一秒的数据点个数,若没有完整一秒数据时，直接退出计算，下一次处理。
-        if(!GetDataPoint(unusedData1, unusedData2)) return;
+        //先计算出当前一秒的数据点个数,若都没有完整一秒数据时，直接退出计算，下一次处理。
+        GetDataPoint(unusedData1, unusedData2);
 
         //对当前一秒数据处理给出能谱
         calculateAllSpectrum(unusedData1, unusedData2);
@@ -132,10 +134,17 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
             unusedData2.clear(); // 如果N大于容器的大小，清空容器
         }
 
-        long long lastTime1 = unusedData1.back().time;
-        long long lastTime2 = unusedData2.back().time;
-        time1_elapseFPGA = lastTime1/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
-        time2_elapseFPGA = lastTime2/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
+        time1_elapseFPGA = 0;//计算FPGA当前最大时间与上一时刻的时间差,单位：秒
+        time2_elapseFPGA = 0;//计算FPGA当前最大时间与上一时刻的时间差,单位：秒
+        if(unusedData1.size()>0)
+            time1_elapseFPGA = unusedData1.back().time/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
+        else
+            time1_elapseFPGA = 0;
+
+        if(unusedData2.size()>0)
+            time2_elapseFPGA = unusedData2.back().time/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
+        else
+            time2_elapseFPGA = 0;
 
         //当只计算能谱时，则不调用回调函数，外部通过GetAccumulateSpectrum获取累积能谱
         if (countFlag && m_pfunc)
@@ -432,30 +441,33 @@ bool CoincidenceAnalyzer::GetDataPoint(vector<TimeEnergy> data1, vector<TimeEner
 
     long long current_nanosconds = (long long)countCoin * NANOSECONDS;
 
-    int ilocation1_below, ilocation2_below;
-    int ilocation1_above, ilocation2_above;
+    int ilocation1_below = 0;
+    int ilocation2_below = 0;
+    int ilocation1_above = 0; 
+    int ilocation2_above = 0;
     bool find1_below = find_index_below(data1, current_nanosconds, ilocation1_below);
     bool find2_below = find_index_below(data2, current_nanosconds, ilocation2_below);
     bool find1_above = find_index_above(data1, current_nanosconds, ilocation1_above);
     bool find2_above = find_index_above(data2, current_nanosconds, ilocation2_above);
 
-    if(find1_above && find2_above){//FPGA时钟都已经超出当前一秒，故可以取完整一秒内的数据进行处理
-        if(find1_below || find2_below)
-        {
-            //说明当前一秒内有数据
-            onePoint.dataPoint1 = ilocation1_above; //给出本次处理的探测器1数据点数
-            onePoint.dataPoint2 = ilocation2_above;
-        }
-        else{
-            onePoint.dataPoint1 = 0; //给出本次处理的探测器1数据点数
-            onePoint.dataPoint2 = 0;
-        }
+    if(find1_above)
+        onePoint.dataPoint1 = ilocation1_above; //给出本次处理的探测器1数据点数,不论当前这一秒有没有数据，在这一秒之后有数据。
+    else
+    {
+        if(find1_below)
+            onePoint.dataPoint1 = ilocation1_below+1; //当前这一秒有数据，但是在这一秒后没数据，所以只有below,没有above。
+        else
+            onePoint.dataPoint1 = 0;
     }
-    else{//探测器1或者探测器2存在某个没有装满一秒钟的数据，所以这一次不处理数据，计时器减一
-        countCoin--;
-        onePoint.dataPoint1 = 0; //告知没有处理数据
-        onePoint.dataPoint2 = 0; //告知没有处理数据
-        return false;
+
+    if(find2_above)
+        onePoint.dataPoint2 = ilocation2_above; //给出本次处理的探测器1数据点数,不论当前这一秒有没有数据，在这一秒之后有数据。
+    else
+    {
+        if(find2_below)
+            onePoint.dataPoint2 = ilocation2_below; //当前这一秒有数据，但是在这一秒后没数据，所以只有below,没有above。
+        else
+            onePoint.dataPoint2 = 0;
     }
     AllPoint.push_back(onePoint);
     return true;
@@ -485,6 +497,8 @@ vector<int> CoincidenceAnalyzer::computeHistogram(const vector<int>& data, const
 //找到第一个大于value的下标。返回是否查找到的标记
 bool CoincidenceAnalyzer::find_index_above(vector<TimeEnergy> data, unsigned long long value, int& index)
 {
+    if(data.size() ==0 ) return false;
+
     // 使用 std::find_if 和 lambda 表达式来查找第一个大于 value 的元素
     // 自定义比较函数
     auto comp = [](unsigned long long val, const TimeEnergy& te) {
@@ -507,6 +521,8 @@ bool CoincidenceAnalyzer::find_index_above(vector<TimeEnergy> data, unsigned lon
 //找到最后一个小于value的下标。返回是否查找到的标记
 bool CoincidenceAnalyzer::find_index_below(vector<TimeEnergy> data, unsigned long long value, int& index)
 {
+    if(data.size() ==0 ) return false;
+
     auto it = std::upper_bound(data.begin(), data.end(), value,
     [](unsigned long long val, const TimeEnergy& te) {
         return val <= te.time;  // 注意这里的比较顺序和条件

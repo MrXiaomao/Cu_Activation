@@ -389,6 +389,7 @@ void PlotWidget::slotCountRefreshTimelength()
     emit sigPausePlot(false); //是否暂停图像刷新
 }
 
+// 游标显示
 void PlotWidget::dispatchAdditionalTipFunction(QCustomPlot *customPlot)
 {
     // 跟踪的点
@@ -546,6 +547,7 @@ void PlotWidget::slotShowTracerLine(QCustomPlot* customPlot, double key, double 
     coordsTipItemYLine->end->setCoords(customPlot->xAxis->range().upper, value);
 }
 
+//显示游标，以横坐标最近距离为准。
 void PlotWidget::slotShowTracer(QMouseEvent *event)
 {
     //区域选择的时候，不做跟踪处理
@@ -566,8 +568,9 @@ void PlotWidget::slotShowTracer(QMouseEvent *event)
     QCPGraph *graph = customPlot->graph(0);
     QSharedPointer<QCPGraphDataContainer> data = graph->data();
 
-
-    QCPDataRange rangeFind(key, key);
+    //查找横轴最近的点
+    double stepT = data->at(0)->value; //由于本项目是固定时间步长，这里直接取第一个数据即认为是步长
+    QCPDataRange rangeFind(key/stepT, key/stepT);
     if (graph->data()->dataRange().contains(rangeFind)){
         //const QCPGraphData *ghd = data->at(key);
         QVector<QCPGraphData>::const_iterator ghd = data->findBegin(key, false);
@@ -1241,7 +1244,8 @@ void PlotWidget::slotBeforeReplot()
 
     QCPGraph *graph = customPlot->graph(0);
     QSharedPointer<QCPGraphDataContainer> data = graph->data();
-    QCPDataRange rangeFind(key, key);
+    double stepT = data->at(0)->value;
+    QCPDataRange rangeFind(key/stepT, key/stepT);
     if (!graph->data()->dataRange().contains(rangeFind))
         return;
 

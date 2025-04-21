@@ -77,7 +77,7 @@ public slots:
     void slotGauss(int leftE, int rightE);
     void slotShowGaussInfor(bool visible);
 
-    void slotShowTracer(QMouseEvent *event);//显示跟踪器
+    void slotShowTracer(QMouseEvent *event);//显示跟踪器，游标
     void slotShowTracerLine(QCustomPlot* customPlot, double key, double value);//显示跟踪线
 
     void slotCountRefreshTimelength();

@@ -114,7 +114,9 @@ bool FPGASetting::save()
         QJsonDocument jsonDoc(jsonObj);
         file.write(jsonDoc.toJson());
         file.close();
+        return true;
     }
+    return false;
 }
 
 void FPGASetting::load()

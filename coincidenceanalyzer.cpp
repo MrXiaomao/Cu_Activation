@@ -52,7 +52,7 @@ void CoincidenceAnalyzer::set_callback(pfRealCallbackFunction func, void *callba
 }
 
 void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy> _data2,
-              unsigned short E_win[4], int windowWidthT,
+              unsigned short E_win[4], int windowWidthT, int delayTime, 
               bool countFlag, bool autoEnWidth)
 {
     // 如果是自动调整窗宽，则只在测量开始的首次读取窗宽，后续都自动更新窗宽
@@ -116,7 +116,7 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
             }
 
             //对当前一秒数据处理给出各自的计数以及符合计数
-            Coincidence(unusedData1, unusedData2, EnergyWindow, windowWidthT);
+            Coincidence(unusedData1, unusedData2, EnergyWindow, windowWidthT, delayTime);
         }
 
         //删除容器中已经处理的数据点
@@ -247,7 +247,7 @@ vector<int> CoincidenceAnalyzer::GetSingleSpectrum(const vector<int>& data, int 
 */
 void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnergy> data2,
         unsigned short EnWindowWidth[4],
-        int windowWidthT)
+        int windowWidthT, int delayTime)
 {
     CoincidenceResult tmpCoinResult;
     int length1 = AllPoint.back().dataPoint1;
@@ -264,6 +264,7 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
     {
         if(data1[i].energy>EnWindowWidth[0] && data1[i].energy <=EnWindowWidth[1]) {
             count1++;
+            data1[i].time += delayTime;
             data_temp1.push_back(data1[i]);
         }
     }

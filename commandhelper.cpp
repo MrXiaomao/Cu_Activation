@@ -1578,14 +1578,14 @@ void CommandHelper::detTimeEnergyWorkThread()
                                     else
                                         this->tmTriggerEnWindow = data2_2[0].time / 1e6;
                                 }
-                                coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, true);
+                                coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, delayTime, true, true);
                             }
                             else if(detectorParameter.measureModel == mmManual)
                             {
                                 if (this->reChangeEnWindow)
-                                    coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, true);
+                                    coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, delayTime, true, true);
                                 else
-                                    coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, false);
+                                    coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, delayTime, true, false);
                             }
                         }
 #ifdef QT_NO_DEBUG
@@ -1614,7 +1614,7 @@ void CommandHelper::updateStepTime(int _stepT, int _timewidth)
     currentSpectrumFrames.clear();
 }
 
-void CommandHelper::updateParamter(int _stepT, unsigned short _EnWin[4], int _timewidth/* = 50*/, bool reset/* = false*/)
+void CommandHelper::updateParamter(int _stepT, unsigned short _EnWin[4], int _timewidth/* = 50*/, int _delayTime, bool reset/* = false*/)
 {
     QMutexLocker locker(&mutexReset);
     // if (reset){
@@ -1629,6 +1629,7 @@ void CommandHelper::updateParamter(int _stepT, unsigned short _EnWin[4], int _ti
     this->EnWindow[2] = _EnWin[2];
     this->EnWindow[3] = _EnWin[3];
     this->timeWidth = _timewidth;
+    this->delayTime = _delayTime;
     currentSpectrumFrames.clear();
     this->reChangeEnWindow = reset;
     return;

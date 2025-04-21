@@ -182,6 +182,7 @@ void OfflineDataAnalysisWidget::slotStart()
 
     unsigned short EnWindow[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
                                (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
+    int delayTime = ui->spinBox_delayTime->value();//符合延迟时间,ns
     int timeWidth = ui->spinBox_timeWidth->value();//时间窗宽度，单位ns(符合分辨时间)
     QLiteThread *calThread = new QLiteThread();
     calThread->setObjectName("calThread");
@@ -215,7 +216,7 @@ void OfflineDataAnalysisWidget::slotStart()
 
             if (data1_2.size() > 0 || data2_2.size() > 0 ){
                 QDateTime now = QDateTime::currentDateTime();
-                coincidenceAnalyzer->calculate(data1_2, data2_2, (unsigned short*)EnWindow, timeWidth, true, false);
+                coincidenceAnalyzer->calculate(data1_2, data2_2, (unsigned short*)EnWindow, timeWidth, delayTime, true, false);
 #ifdef QT_NO_DEBUG
 
 #else

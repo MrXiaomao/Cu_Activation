@@ -33,7 +33,7 @@ public:
     void startWork();
     void switchToCountMode(bool refModel);
     void updateStepTime(int stepT, int timewidth = 50);
-    void updateParamter(int stepT, unsigned short EnWin[4], int timewidth = 50, bool reset = false);
+    void updateParamter(int stepT, unsigned short EnWin[4], int timewidth = 50, int delayTime = 0, bool reset = false);
     void exportFile(QString);
     void setDefaultCacheDir(QString dir);
     bool isConnected();//探测器是否连接
@@ -196,6 +196,7 @@ private:
     int stepT = 1; //界面图像刷新时间
     unsigned short EnWindow[4]; // 探测器1左能窗、右能窗；探测器2左能窗、右能窗
     std::vector<unsigned short> autoEnWindow; // 自动测量反馈给界面的值：探测器1左能窗、右能窗；探测器2左能窗、右能窗
+    int delayTime; //符合分辨延迟时间，探测器2相对探测器1的延迟时间。单位：ns。
     int timeWidth = 50;//时间窗宽度，单位ns(符合分辨时间)
     qint64 lastClockT = 0;
     bool refModel = false;

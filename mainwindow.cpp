@@ -71,16 +71,6 @@ MainWindow::MainWindow(QWidget *parent)
         }
     });
 
-    ui->spinBox_timeWidth->setToolTip("请输入10的倍数（如10, 20, 30）");
-    ui->spinBox_timeWidth->setSingleStep(10);
-    connect(ui->spinBox_timeWidth, QOverload<int>::of(&QSpinBox::valueChanged), [=](int value) {
-        if (value % 10 != 0) {
-            ui->spinBox_timeWidth->blockSignals(true);
-            ui->spinBox_timeWidth->setValue((value / 10) * 10);
-            ui->spinBox_timeWidth->blockSignals(false);
-        }
-    });
-
     connect(this, SIGNAL(sigRefreshUi()), this, SLOT(slotRefreshUi()));
     connect(this, SIGNAL(sigAppengMsg(const QString &, QtMsgType)), this, SLOT(slotAppendMsg(const QString &, QtMsgType)));
 
@@ -391,11 +381,6 @@ void MainWindow::InitMainWindowUi()
     ui->spinBox_2_leftE_2->setMaximum(MULTI_CHANNEL);
     ui->spinBox_2_rightE_2->setMaximum(MULTI_CHANNEL);
 
-    ui->spinBox_1_leftE_3->setMaximum(MULTI_CHANNEL);
-    ui->spinBox_1_rightE_3->setMaximum(MULTI_CHANNEL);
-    ui->spinBox_2_leftE_3->setMaximum(MULTI_CHANNEL);
-    ui->spinBox_2_rightE_3->setMaximum(MULTI_CHANNEL);
-
     ui->spinBox_leftE->setMaximum(MULTI_CHANNEL);
     ui->spinBox_rightE->setMaximum(MULTI_CHANNEL);
 
@@ -451,9 +436,7 @@ void MainWindow::InitMainWindowUi()
     });
 
     connect(ui->comboBox_range, QOverload<int>::of(&QComboBox::currentIndexChanged), ui->comboBox_range_2, &QComboBox::setCurrentIndex);
-    connect(ui->comboBox_range, QOverload<int>::of(&QComboBox::currentIndexChanged), ui->comboBox_range_3, &QComboBox::setCurrentIndex);
     connect(ui->comboBox_range_2, QOverload<int>::of(&QComboBox::currentIndexChanged), ui->comboBox_range, &QComboBox::setCurrentIndex);
-    connect(ui->comboBox_range_3, QOverload<int>::of(&QComboBox::currentIndexChanged), ui->comboBox_range, &QComboBox::setCurrentIndex);
     connect(ui->comboBox_range, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [=](int index){
         if (controlHelper->connected()){
             QPair<float, float> pair = controlHelper->gotoAbs(index);
@@ -642,11 +625,6 @@ void MainWindow::InitMainWindowUi()
     connect(ui->spinBox_2_leftE_2, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
     connect(ui->spinBox_2_rightE_2, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
 
-    connect(ui->spinBox_1_leftE_3, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
-    connect(ui->spinBox_1_rightE_3, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
-    connect(ui->spinBox_2_leftE_3, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
-    connect(ui->spinBox_2_rightE_3, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
-
     slotUpdateEnTimeWidth();
     this->slotAppendMsg(QObject::tr("系统启动"), QtInfoMsg);
 }
@@ -661,10 +639,7 @@ void MainWindow::slotUpdateEnTimeWidth()
         EnWin[2] = (unsigned short)ui->spinBox_2_leftE_2->value();
         EnWin[3] = (unsigned short)ui->spinBox_2_rightE_2->value();
     } else if (ui->tabWidget_measure->currentIndex() == 2){
-        EnWin[0] = (unsigned short)ui->spinBox_1_leftE_3->value();
-        EnWin[1] = (unsigned short)ui->spinBox_1_rightE_3->value();
-        EnWin[2] = (unsigned short)ui->spinBox_2_leftE_3->value();
-        EnWin[3] = (unsigned short)ui->spinBox_2_rightE_3->value();
+
     }
 
     PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
@@ -987,6 +962,8 @@ void MainWindow::on_pushButton_measure_clicked()
             int stepT = ui->spinBox_step->value();
             unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
                                        (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
+            
+            int delayTime = ui->spinBox_delayTime->value();
             int timewidth = ui->spinBox_timeWidth->value();
             QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
             measureTimer->setInterval(ui->spinBox_timelength->value() * 1000);
@@ -1000,7 +977,7 @@ void MainWindow::on_pushButton_measure_clicked()
             ui->lcdNumber_CountRate2->display("0");
             ui->lcdNumber_ConCount_single->display("0");
 
-            commandHelper->updateParamter(stepT, EnWin, timewidth, false);
+            commandHelper->updateParamter(stepT, EnWin, timewidth, delayTime, false);
             commandHelper->slotStartManualMeasure(detectorParameter);
 
             QTimer::singleShot(30000, this, [=](){
@@ -1090,11 +1067,13 @@ void MainWindow::on_pushButton_measure_2_clicked()
         int stepT = ui->spinBox_step_2->value();
         unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE_2->value(), (unsigned short)ui->spinBox_1_rightE_2->value(),
                                    (unsigned short)ui->spinBox_2_leftE_2->value(), (unsigned short)ui->spinBox_2_rightE_2->value()};
-        int timewidth = ui->spinBox_timeWidth->value();
+        
+        int delayTime = ui->spinBox_delayTime_2->value();
+        int timewidth = ui->spinBox_timeWidth_2->value();
         QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
         measureTimer->setInterval(ui->spinBox_timelength_2->value() * 1000);
 
-        commandHelper->updateParamter(stepT, EnWin, timewidth, false);
+        commandHelper->updateParamter(stepT, EnWin, timewidth, delayTime, false);
         commandHelper->slotStartAutoMeasure(detectorParameter);
 
         ui->pushButton_measure_2_tip->setText(tr("等待触发..."));
@@ -1402,7 +1381,6 @@ void MainWindow::slotRefreshUi()
 
         ui->comboBox_range->setEnabled(false);
         ui->comboBox_range_2->setEnabled(false);
-        ui->comboBox_range_3->setEnabled(false);
         if (this->property("measur-model").toInt() == mmManual){//手动测量
             ui->pushButton_measure->setText(tr("停止测量"));
             ui->pushButton_measure->setEnabled(true);
@@ -1436,9 +1414,6 @@ void MainWindow::slotRefreshUi()
             ui->pushButton_measure_2->setEnabled(false);
             ui->pushButton_refresh_2->setEnabled(false);
 
-            //标定测量
-            ui->pushButton_measure_3->setEnabled(false);
-            ui->pushButton_refresh_3->setEnabled(false);
         } else if (this->property("measur-model").toInt() == mmAuto){//自动测量
             //测量过程中不允许修改能窗幅值
             ui->spinBox_1_leftE->setEnabled(false);
@@ -1462,31 +1437,10 @@ void MainWindow::slotRefreshUi()
             ui->pushButton_measure->setEnabled(false);
             ui->pushButton_refresh->setEnabled(false);
             ui->pushButton_confirm->setEnabled(false);
-
-            //标定测量
-            ui->pushButton_measure_3->setEnabled(false);
-            ui->pushButton_refresh_3->setEnabled(false);
-        }  else if (this->property("measur-model").toInt() == mmDefine){//标定测量
-            ui->pushButton_measure_3->setText(tr("停止测量"));
-            ui->pushButton_measure_3->setEnabled(true);
-
-            //公共
-            ui->pushButton_save->setEnabled(false);
-            ui->pushButton_gauss->setEnabled(true);
-
-            //手动测量
-            ui->pushButton_measure->setEnabled(false);
-            ui->pushButton_refresh->setEnabled(false);
-            ui->pushButton_confirm->setEnabled(false);
-
-            //自动测量
-            ui->pushButton_measure_2->setEnabled(false);
-            ui->pushButton_refresh_2->setEnabled(false);
         }
     } else {
         ui->pushButton_measure->setText(tr("开始测量"));
         ui->pushButton_measure_2->setText(tr("开始测量"));
-        ui->pushButton_measure_3->setText(tr("开始测量"));
 
         // 手动测量
         ui->spinBox_timelength->setEnabled(true);
@@ -1507,14 +1461,6 @@ void MainWindow::slotRefreshUi()
         ui->spinBox_2_rightE_2->setEnabled(true);
         ui->spinBox_timeWidth_2->setEnabled(true);
 
-        // 标定测量
-        ui->comboBox_range_3->setEnabled(true);
-        ui->spinBox_1_leftE_3->setEnabled(true);
-        ui->spinBox_1_rightE_3->setEnabled(true);
-        ui->spinBox_2_leftE_3->setEnabled(true);
-        ui->spinBox_2_rightE_3->setEnabled(true);
-        ui->spinBox_timeWidth_3->setEnabled(true);
-
         //位移平台到位才允许开始测量
         if (this->property("detector_on").toBool() && this->property("axis-prepared").toBool()){
 //            ui->action_power->setEnabled(true);
@@ -1526,7 +1472,6 @@ void MainWindow::slotRefreshUi()
 
             ui->pushButton_measure->setEnabled(true);
             ui->pushButton_measure_2->setEnabled(true);
-            ui->pushButton_measure_3->setEnabled(true);
         } else {
 //            ui->action_power->setEnabled(true);
 //            ui->action_detector_connect->setEnabled(true);
@@ -1536,14 +1481,12 @@ void MainWindow::slotRefreshUi()
             ui->pushButton_save->setEnabled(false);
             ui->pushButton_measure->setEnabled(false);
             ui->pushButton_measure_2->setEnabled(false);
-            ui->pushButton_measure_3->setEnabled(false);
         }
 
         ui->pushButton_gauss->setEnabled(false);
         ui->pushButton_refresh->setEnabled(false);
         ui->pushButton_confirm->setEnabled(false);
         ui->pushButton_refresh_2->setEnabled(false);
-        ui->pushButton_refresh_3->setEnabled(false);
     }
 }
 
@@ -1609,30 +1552,6 @@ void MainWindow::load()
             ui->spinBox_2_leftE_2->setValue(jsonObjM2["Det2_EnWidth_left"].toInt());
             //探测器2能窗右侧
             ui->spinBox_2_rightE_2->setValue(jsonObjM2["Det2_EnWidth_right"].toInt());
-        }
-
-        //标定
-        QJsonObject jsonObjM3;
-        if (jsonObj.contains("M3")){
-            jsonObjM3 = jsonObj["M3"].toObject();
-            //测量时长
-            ui->spinBox_timelength_3->setValue(jsonObjM3["timelength"].toInt());
-            //量程选取
-            ui->comboBox_range_3->setCurrentIndex(jsonObjM3["range"].toInt());
-            //冷却时长
-            ui->spinBox_cool_timelength_3->setValue(jsonObjM3["cool_timelength"].toInt());
-            //符合分辨时间
-            ui->spinBox_timeWidth_3->setValue(jsonObjM3["timewidth"].toInt());
-            //中子产额
-            ui->spinBox_neutron_yield->setValue(jsonObjM3["neutron_yield"].toInt());
-            //探测器1能窗左侧
-            ui->spinBox_1_leftE_3->setValue(jsonObjM3["Det1_EnWidth_left"].toInt());
-            //探测器1能窗右侧
-            ui->spinBox_1_rightE_3->setValue(jsonObjM3["Det1_EnWidth_right"].toInt());
-            //探测器2能窗左侧
-            ui->spinBox_2_leftE_3->setValue(jsonObjM3["Det2_EnWidth_left"].toInt());
-            //探测器2能窗右侧
-            ui->spinBox_2_rightE_3->setValue(jsonObjM3["Det2_EnWidth_right"].toInt());
         }
 
         //公共
@@ -1712,28 +1631,6 @@ void MainWindow::save(bool bSafeExitFlag)
         jsonObjM2["Det2_EnWidth_right"] = ui->spinBox_2_rightE_2->value();
         jsonObj["M2"] = jsonObjM2;
 
-        //标定
-        QJsonObject jsonObjM3;
-        //测量时长
-        jsonObjM3["timelength"] = ui->spinBox_timelength_3->value();
-        //量程选取
-        jsonObjM3["range"] = ui->comboBox_range_3->currentIndex();
-        //冷却时长
-        jsonObjM3["cool_timelength"] = ui->spinBox_cool_timelength_3->value();
-        //符合分辨时间
-        jsonObjM3["timeWidth"] = ui->spinBox_timeWidth_3->value();
-        //探测器1能窗左侧
-        jsonObjM3["Det1_EnWidth_left"] = ui->spinBox_1_leftE_3->value();
-        //探测器1能窗右侧
-        jsonObjM3["Det1_EnWidth_right"] = ui->spinBox_1_rightE_3->value();
-        //探测器2能窗左侧
-        jsonObjM3["Det2_EnWidth_left"] = ui->spinBox_2_leftE_3->value();
-        //探测器2能窗右侧
-        jsonObjM3["Det2_EnWidth_right"] = ui->spinBox_2_rightE_3->value();
-        //中子产额
-        jsonObjM3["neutron_yield"] = ui->spinBox_neutron_yield->value();
-        jsonObj["M3"] = jsonObjM3;
-
         //公共
         QJsonObject jsonObjPub;
         //高斯拟合
@@ -1766,8 +1663,9 @@ void MainWindow::on_pushButton_refresh_2_clicked()
         plotWidget->slotResetPlot();
     }
 
+    int delayTime = ui->spinBox_delayTime_2->value();
     int timewidth = ui->spinBox_timeWidth_2->value();
-    commandHelper->updateParamter(stepT, EnWin, timewidth, false);
+    commandHelper->updateParamter(stepT, EnWin, timewidth, delayTime, false);
 }
 
 void MainWindow::on_pushButton_refresh_3_clicked()
@@ -1866,8 +1764,9 @@ void MainWindow::on_pushButton_confirm_clicked()
     //SplashWidget::instance()->setInfo(tr("能量信息正在重新进行计算，请等待..."), false);
     //SplashWidget::instance()->exec();
 
+    int delayTime = ui->spinBox_delayTime->value();
     int timewidth = ui->spinBox_timeWidth->value();
-    commandHelper->updateParamter(stepT, EnWin, timewidth, true);
+    commandHelper->updateParamter(stepT, EnWin, timewidth, delayTime, true);
 
     //取消画面暂停刷新
     this->setProperty("pause-plot", false);

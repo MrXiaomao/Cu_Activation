@@ -159,10 +159,11 @@ public:
     /// @param vector<TimeEnergy> data2 探测器2[时间(ns),能量]数据
     /// @param unsigned short E_win[4] 能窗，探测器1左、右能窗，探测器2左右能窗
     /// @param int windowWidthT 时间窗，单位ns
+    /// @param int delayTime 符合延迟时间，单位ns。这里特征二通道相对于一通道的延迟。
     /// @param bool countFlag 是否计算计数曲线
     /// @param bool autoEnWidth 是否自动修正能窗
     void calculate(vector<TimeEnergy> data1, vector<TimeEnergy> data2,
-            unsigned short E_win[4], int windowWidthT,
+            unsigned short E_win[4], int windowWidthT, int delayTime=0,
             bool countFlag=true, bool autoEnWidth = false);
 
     //这里加入回调函数，后期做成SDK会出现问题，SDK不存在回调，只存在返回值。
@@ -181,7 +182,7 @@ private:
     //进行符合事件处理
     void Coincidence(vector<TimeEnergy> data1, vector<TimeEnergy> data2,
           unsigned short EnWindowWidth[4],
-          int windowWidthT);
+          int windowWidthT, int delayTime);
 
     // 根据输入能量数据，绘制出能谱，
     // data:能量点数组

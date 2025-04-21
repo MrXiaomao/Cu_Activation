@@ -275,7 +275,7 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
             }
         }
 
-        QString singleSpectrumResultFile = currentFilename + ".能量";
+        /*QString singleSpectrumResultFile = currentFilename + ".能量";
         {
             QFile::OpenMode ioFlags = QIODevice::Truncate;
             if (QFileInfo::exists(singleSpectrumResultFile))
@@ -301,7 +301,7 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
                 file.flush();
                 file.close();
             }
-        }
+        }*/
 
         currentEnergyTime = r1.time;
     }
@@ -1658,7 +1658,7 @@ void CommandHelper::exportFile(QString dstPath)
         QFile::copy(currentFilename + ".配置", dstPath + ".配置");
         if (this->detectorParameter.transferModel == 0x05){
             QFile::copy(currentFilename + ".计数", dstPath + ".计数");
-            QFile::copy(currentFilename + ".能量", dstPath + ".能量");
+            // QFile::copy(currentFilename + ".能量", dstPath + ".能量");
         }
 
         if (QFile::copy(currentFilename, dstPath))        
@@ -1811,7 +1811,7 @@ void CommandHelper::analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult>
             }
         }
 
-        QString singleSpectrumResultFile = currentFilename + ".能量.csv";
+        /*QString singleSpectrumResultFile = currentFilename + ".能量.csv";
         {
             QFile file(singleSpectrumResultFile);
             if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
@@ -1827,7 +1827,7 @@ void CommandHelper::analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult>
                 file.close();
             }
         }
-
+        */
         currentEnergyTime = r1.time;
     }
 

@@ -154,7 +154,7 @@
    <item row="4" column="1">
     <widget class="QSpinBox" name="spinBox_3">
      <property name="minimum">
-      <number>10</number>
+      <number>500</number>
      </property>
      <property name="maximum">
       <number>1000</number>
@@ -163,12 +163,12 @@
       <number>10</number>
      </property>
      <property name="value">
-      <number>10</number>
+      <number>500</number>
      </property>
     </widget>
    </item>
    <item row="5" column="0" colspan="2">
-    <widget class="QWidget" name="" native="true">
+    <widget class="QWidget" name="widget" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
        <horstretch>0</horstretch>

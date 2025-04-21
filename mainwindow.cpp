@@ -1698,11 +1698,13 @@ void MainWindow::on_action_line_log_triggered()
 #include "controlwidget.h"
 void MainWindow::on_action_Moving_triggered()
 {
+    /*
     ControlWidget *w = new ControlWidget(this);
     w->setAttribute(Qt::WA_DeleteOnClose, true);
     w->setWindowFlags(Qt::WindowCloseButtonHint|Qt::Dialog);
     w->setWindowModality(Qt::ApplicationModal);
     w->showNormal();
+    */
 }
 
 #include <QRegExp>

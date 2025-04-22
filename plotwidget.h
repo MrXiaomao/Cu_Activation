@@ -116,6 +116,7 @@ private:
     qint32 SPECTRUM_X_AXIS_UPPER;
     qint32 SPECTRUM_Y_AXIS_LOWER;
     qint32 SPECTRUM_Y_AXIS_UPPER;
+    qint32 SPECTURM_Y_AXIS_LOWER_LOG;
 
     QVector<double> energyValues[2];//存储测量开始以后所有数据
     QMutex mutexRefreshPlot;

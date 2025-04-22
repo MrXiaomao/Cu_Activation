@@ -31,6 +31,8 @@ PlotWidget::PlotWidget(QWidget *parent) : QStackedWidget(parent)
     SPECTRUM_Y_AXIS_LOWER = 0;
     SPECTRUM_Y_AXIS_UPPER = 1e2;
 
+    SPECTURM_Y_AXIS_LOWER_LOG = 1;
+
     /*合并模式：2个探测器在同一个图形上*/
     this->setProperty("isMergeMode", false);
     /*当前激活的探测器，默认值第一个*/
@@ -207,7 +209,7 @@ void PlotWidget::initCustomPlot(){
                 customPlot->xAxis->setLabel(tr("道址"));
             customPlot->yAxis->setLabel(tr("Det-%1 计数").arg(i));
             customPlot->xAxis->setRange(0, MAX_SPECTUM);
-            customPlot->yAxis->setRange(0, MAX_SPECTUM);
+            customPlot->yAxis->setRange(0, SPECTRUM_Y_AXIS_UPPER);
 
             dispatchAdditionalTipFunction(customPlot);
             dispatchAdditionalDragFunction(customPlot);
@@ -369,7 +371,7 @@ void PlotWidget::slotCountRefreshTimelength()
 {
     qint32 timeRange = -1;
     QAction* action = qobject_cast<QAction*>(sender());
-    if (action->text() == tr("最近10分钟"))
+    if (action->text() == tr("最近10分钟(默认)"))
         timeRange = 10*60;
     else if (action->text() == tr("最近5分钟"))
         timeRange = 5*60;
@@ -569,12 +571,12 @@ void PlotWidget::slotShowTracer(QMouseEvent *event)
     QSharedPointer<QCPGraphDataContainer> data = graph->data();
 
     //查找横轴最近的点
-    double stepT = data->at(0)->value; //由于本项目是固定时间步长，这里直接取第一个数据即认为是步长
+    double stepT = data->at(0)->key; //由于本项目是固定时间步长，这里直接取第一个数据即认为是步长
     QCPDataRange rangeFind(key/stepT, key/stepT);
     if (graph->data()->dataRange().contains(rangeFind)){
         //const QCPGraphData *ghd = data->at(key);
         QVector<QCPGraphData>::const_iterator ghd = data->findBegin(key, false);
-        if (ghd != data->constEnd() && ghd->mainKey()>=0 && ghd->mainValue()>=0){
+        if (ghd != data->constEnd() && abs(ghd->mainKey()-key)<stepT && ghd->mainValue()>=0){
             updateTracerPosition(customPlot, ghd->mainKey(), ghd->mainValue());
             if (this->property("isCountMode").toBool())
                 customPlot->setProperty("tracer-key2", ghd->mainKey());
@@ -786,9 +788,9 @@ QCustomPlot *PlotWidget::allocCustomPlot(QString objName, bool needGauss, QWidge
     });
     connect(customPlot->yAxis, QOverload<const QCPRange &>::of(&QCPAxis::rangeChanged), this, [=](const QCPRange &range){
         qint64 maxRange = range.upper - range.lower;
-        if (this->property("isLogarithmic").toBool()){
+        if (this->property("isLogarithmic").toBool()){//对数坐标
             if (maxRange < 1e2){
-               customPlot->yAxis->setRange(Y_AXIS_LOWER, range.lower + 1e2);//0.01~1000
+               customPlot->yAxis->setRange(SPECTURM_Y_AXIS_LOWER_LOG, range.lower + 1e2);//0.01~1000
             }
         } else if (maxRange < 1e2){
             customPlot->yAxis->setRange(range.lower, range.lower + 1e2);//0.01~1000
@@ -1242,16 +1244,17 @@ void PlotWidget::slotBeforeReplot()
     if (this->property("isCountMode").toBool())
         key = customPlot->property("tracer-key2").toDouble();
 
+    //查找最近的点，距离必须在一个步长内
     QCPGraph *graph = customPlot->graph(0);
     QSharedPointer<QCPGraphDataContainer> data = graph->data();
-    double stepT = data->at(0)->value;
+    double stepT = data->at(0)->key;
     QCPDataRange rangeFind(key/stepT, key/stepT);
     if (!graph->data()->dataRange().contains(rangeFind))
         return;
 
     //const QCPGraphData *ghd = data->at(key);
     QVector<QCPGraphData>::const_iterator ghd = data->findBegin(key, false);
-    if (ghd != data->constEnd() && ghd->mainKey()>=0 && ghd->mainValue()>=0){
+    if (ghd != data->constEnd() && abs(ghd->mainKey()-key)<stepT && ghd->mainValue()>=0){
         updateTracerPosition(customPlot, ghd->mainKey(), ghd->mainValue());
     }
 }
@@ -1685,7 +1688,7 @@ void PlotWidget::switchToLogarithmicMode(bool isLogarithmic)
             customPlot->yAxis->setTicker(ticker);
 
             customPlot->yAxis->setScaleType(QCPAxis::ScaleType::stLinear);
-            customPlot->yAxis->setRange(0, 1e2);
+            // customPlot->yAxis->setRange(0, 1e2);
             customPlot->yAxis->setNumberFormat("f");
             customPlot->yAxis->setNumberPrecision(0);
 

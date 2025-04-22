@@ -1,6 +1,14 @@
+/*
+ * @Author: MaoXiaoqing
+ * @Date: 2025-04-06 20:15:30
+ * @LastEditors: Please set LastEditors
+ * @LastEditTime: 2025-04-22 21:09:53
+ * @Description: 符合计算算法
+ */
 #include "coincidenceanalyzer.h"
 #include <queue>
 #include "linearfit.h"
+#include "gaussFit.h"
 
 using namespace std;
 
@@ -371,9 +379,10 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
 
     bool changed = false;
 
+    //探测器1高斯拟合
     if(sumEnergy1 > GaussCountMin && sumEnergy2 > GaussCountMin)  
     {
-        double result[3];
+        
         vector<double> sx,sy;
         for(unsigned short i=0; i<MULTI_CHANNEL; i++)
         {
@@ -383,27 +392,35 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
         }
         
         int fcount = EnergyWindow[1] - EnergyWindow[0] + 1;
-        Gaussian gau;
-        if(gau.setSample(sx, sy, fcount, result) && gau.process())
-        {
-            result[0] = gau.getResult(0);
-            result[1] = gau.getResult(1);
-            result[2] = gau.getResult(2);
+        if(fcount>5){
+            double result[3];
+            bool status = GaussFit(sx, sy, fcount, result);
+            if(status)
+            {
+                double mean = result[1];
+                double FWHM = 2*sqrt(2*log(2))*result[2];
+                changed = true;
+                double Left = mean - FWHM*0.5; // 峰位-0.5*半高宽FWHM
+                double Right = mean + FWHM*0.5; // 峰位+0.5*半高宽FWHM
+                if(Left >= 1) EnergyWindow[0] = (unsigned short) Left;
+                else EnergyWindow[0] = 1u;
 
-            changed = true;
-            double Left = result[1] - result[0]*0.5; // 峰位-0.5*半高宽FWHM
-            double Right = (result[1] + result[0]*0.5); // 峰位+0.5*半高宽FWHM
-            if(Left >= 1) EnergyWindow[0] = (unsigned short) Left;
-            else EnergyWindow[0] = 1u;
-
-            if(Right < MULTI_CHANNEL - 1u) EnergyWindow[1] = (unsigned short)Right;
-            else EnergyWindow[1] = MULTI_CHANNEL-1u;
+                if(Right < MULTI_CHANNEL - 1u) EnergyWindow[1] = (unsigned short)Right;
+                else EnergyWindow[1] = MULTI_CHANNEL-1u;
+            }
+            else
+            {
+                // qCritical()<<"探测器1自动高斯拟合发生异常,可能原因，选取的初始峰位不具有高斯形状，无法进行高斯拟合";
+            }
+        }
+        else{
+            // qCritical()<<"探测器1自动高斯拟合发生异常,待拟合的数据点数小于6个，无法拟合";
         }
     }
 
-    if(sumEnergy1 > GaussCountMin && sumEnergy2 > GaussCountMin)  
+    //探测器2高斯拟合
+    if(sumEnergy1 > GaussCountMin && sumEnergy2 > GaussCountMin)
     {
-        double result[3];
         vector<double> sx,sy;
         for(unsigned short i=0; i<MULTI_CHANNEL; i++)
         {
@@ -412,23 +429,26 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
             GaussFitSpec.time = 0;//注意这里是在探测器2之后才重置
             GaussFitSpec.spectrum[1][i] = 0;
         }
-
+        
         int fcount = EnergyWindow[3] - EnergyWindow[2] + 1;
-        Gaussian gau;
-        if(gau.setSample(sx, sy, fcount, result) && gau.process())
+        double result[3];
+        bool status = GaussFit(sx, sy, fcount, result);
+        if(status)
         {
-            result[0] = gau.getResult(0);
-            result[1] = gau.getResult(1);
-            result[2] = gau.getResult(2);
-
+            double mean = result[1];
+            double FWHM = 2*sqrt(2*log(2))*result[2];
             changed = true;
-            double Left = result[1] - result[0]*0.5;
-            double Right = (result[1] + result[0]*0.5);
+            double Left = mean - FWHM*0.5; // 峰位-0.5*半高宽FWHM
+            double Right = mean + FWHM*0.5; // 峰位+0.5*半高宽FWHM
+
             if(Left >= 1) EnergyWindow[2] = (unsigned short) Left;
             else EnergyWindow[2] = 1u;
 
             if(Right < MULTI_CHANNEL - 1u) EnergyWindow[3] = (unsigned short)Right;
             else EnergyWindow[3] = MULTI_CHANNEL - 1u;
+        }
+        else{
+            // qCritical()<<"探测器2 自动高斯拟合发生异常,可能原因，选取的初始峰位不具有高斯形状，无法进行高斯拟合";
         }
     }
     if(changed) GaussFitLog.push_back({countCoin, EnergyWindow[0], EnergyWindow[1], EnergyWindow[2], EnergyWindow[3]});

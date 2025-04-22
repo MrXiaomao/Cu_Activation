@@ -1,0 +1,347 @@
+/*
+ * @Author: 程梓芸
+ * @Date: 2025-04-22 17:21:41
+ * @LastEditors: Please set LastEditors
+ * @LastEditTime: 2025-04-22 20:55:29
+ * @Description: 改自程梓芸的高斯拟合程序，需要用到GSL库。在原有程序的基础上增加了一个拟合是否成功的判断。
+ */
+
+#include "gaussFit.h"
+#include <algorithm>
+#include <numeric>
+
+ /* model function: a * exp( -1/2 * [ (t - b) / c ]^2 ) */
+ double gaussian(const double a, const double b, const double c, const double t)
+ {
+     const double z = (t - b) / c;
+     return (a * exp(-0.5 * z * z));
+ }
+ 
+ int func_f(const gsl_vector* x, void* params, gsl_vector* f)
+ {
+     struct Fitdata_Cheng* d = (struct Fitdata_Cheng*)params;
+     double a = gsl_vector_get(x, 0);
+     double b = gsl_vector_get(x, 1);
+     double c = gsl_vector_get(x, 2);
+     size_t i;
+ 
+     for (i = 0; i < d->n; ++i)
+     {
+         double ti = d->x[i];
+         double yi = d->y[i];
+         double y = gaussian(a, b, c, ti);
+ 
+         gsl_vector_set(f, i, yi - y);
+     }
+ 
+     return GSL_SUCCESS;
+ }
+ 
+ int func_df(const gsl_vector* x, void* params, gsl_matrix* J)
+ {
+     struct Fitdata_Cheng* d = (struct Fitdata_Cheng*)params;
+     double a = gsl_vector_get(x, 0);
+     double b = gsl_vector_get(x, 1);
+     double c = gsl_vector_get(x, 2);
+     size_t i;
+ 
+     for (i = 0; i < d->n; ++i)
+     {
+         double ti = d->x[i];
+         double zi = (ti - b) / c;
+         double ei = exp(-0.5 * zi * zi);
+ 
+         gsl_matrix_set(J, i, 0, -ei);
+         gsl_matrix_set(J, i, 1, -(a / c) * ei * zi);
+         gsl_matrix_set(J, i, 2, -(a / c) * ei * zi * zi);
+     }
+ 
+     return GSL_SUCCESS;
+ }
+ 
+ int func_fvv(const gsl_vector* x, const gsl_vector* v,
+     void* params, gsl_vector* fvv)
+ {
+     struct Fitdata_Cheng* d = (struct Fitdata_Cheng*)params;
+     double a = gsl_vector_get(x, 0);
+     double b = gsl_vector_get(x, 1);
+     double c = gsl_vector_get(x, 2);
+     double va = gsl_vector_get(v, 0);
+     double vb = gsl_vector_get(v, 1);
+     double vc = gsl_vector_get(v, 2);
+     size_t i;
+ 
+     for (i = 0; i < d->n; ++i)
+     {
+         double ti = d->x[i];
+         double zi = (ti - b) / c;
+         double ei = exp(-0.5 * zi * zi);
+         double Dab = -zi * ei / c;
+         double Dac = -zi * zi * ei / c;
+         double Dbb = a * ei / (c * c) * (1.0 - zi * zi);
+         double Dbc = a * zi * ei / (c * c) * (2.0 - zi * zi);
+         double Dcc = a * zi * zi * ei / (c * c) * (3.0 - zi * zi);
+         double sum;
+ 
+         sum = 2.0 * va * vb * Dab +
+             2.0 * va * vc * Dac +
+             vb * vb * Dbb +
+             2.0 * vb * vc * Dbc +
+             vc * vc * Dcc;
+ 
+         gsl_vector_set(fvv, i, sum);
+     }
+ 
+     return GSL_SUCCESS;
+ }
+ 
+void callback(const size_t iter, void* params,
+    const gsl_multifit_nlinear_workspace* w)
+{
+    gsl_vector* f = gsl_multifit_nlinear_residual(w);
+    gsl_vector* x = gsl_multifit_nlinear_position(w);
+    double avratio = gsl_multifit_nlinear_avratio(w);
+    double rcond;
+
+    (void)params; /* not used */
+
+    /* compute reciprocal condition number of J(x) */
+    gsl_multifit_nlinear_rcond(&rcond, w);
+
+    fprintf(stderr, "iter %2zu: a = %.4f, b = %.4f, c = %.4f, |a|/|v| = %.4f cond(J) = %8.4f, |f(x)| = %.4f\n",
+        iter,
+        gsl_vector_get(x, 0),
+        gsl_vector_get(x, 1),
+        gsl_vector_get(x, 2),
+        avratio,
+        1.0 / rcond,
+        gsl_blas_dnrm2(f));
+ }
+ 
+int solve_system(gsl_vector* x, gsl_multifit_nlinear_fdf* fdf,
+     gsl_multifit_nlinear_parameters* params)
+{
+    const gsl_multifit_nlinear_type* T = gsl_multifit_nlinear_trust;
+    const size_t max_iter = 200;
+    const double xtol = 1.0e-8;
+    const double gtol = 1.0e-8;
+    const double ftol = 1.0e-8;
+    const size_t n = fdf->n;
+    const size_t p = fdf->p;
+    gsl_multifit_nlinear_workspace* work =
+        gsl_multifit_nlinear_alloc(T, params, n, p);
+    gsl_vector* f = gsl_multifit_nlinear_residual(work);
+    gsl_vector* y = gsl_multifit_nlinear_position(work);
+    int info;
+    double chisq0, chisq, rcond;
+
+    /* initialize solver */
+    gsl_multifit_nlinear_init(x, fdf, work);
+
+    /* store initial cost */
+    gsl_blas_ddot(f, f, &chisq0);
+
+    /* iterate until convergence */
+    int status = gsl_multifit_nlinear_driver(max_iter, xtol, gtol, ftol, callback, NULL, &info, work);
+
+    if(status != GSL_SUCCESS){
+        return GSL_FAILURE;
+    }
+    /* store final cost */
+    gsl_blas_ddot(f, f, &chisq);
+
+    /* store cond(J(x)) */
+    gsl_multifit_nlinear_rcond(&rcond, work);
+
+    gsl_vector_memcpy(x, y);
+
+        /* print summary */
+
+    //  fprintf(stderr, "NITER         = %zu\n", gsl_multifit_nlinear_niter(work));
+    //  fprintf(stderr, "NFEV          = %zu\n", fdf->nevalf);
+    //  fprintf(stderr, "NJEV          = %zu\n", fdf->nevaldf);
+    //  fprintf(stderr, "NAEV          = %zu\n", fdf->nevalfvv);
+    //  fprintf(stderr, "initial cost  = %.12e\n", chisq0);
+    //  fprintf(stderr, "final cost    = %.12e\n", chisq);
+    //  fprintf(stderr, "final x       = (%.12e, %.12e, %12e)\n",
+    //      gsl_vector_get(x, 0), gsl_vector_get(x, 1), gsl_vector_get(x, 2));
+    //  fprintf(stderr, "final cond(J) = %.12e\n", 1.0 / rcond);
+
+    gsl_multifit_nlinear_free(work);
+    return GSL_SUCCESS;
+}
+ 
+  
+int testFun(void)
+{
+    const size_t n = 300;  /* number of data points to fit */
+    const size_t p = 3;    /* number of model parameters */
+    const double a = 5.0;  /* amplitude */
+    const double b = 0.4;  /* center */
+    const double c = 0.15; /* width */
+    const gsl_rng_type* T = gsl_rng_default;
+    gsl_vector* f = gsl_vector_alloc(n);
+    gsl_vector* x = gsl_vector_alloc(p);
+    gsl_multifit_nlinear_fdf fdf;
+    gsl_multifit_nlinear_parameters fdf_params =
+        gsl_multifit_nlinear_default_parameters();
+    Fitdata_Cheng fit_data;
+    gsl_rng* r;
+    size_t i;
+
+    gsl_rng_env_setup();
+    r = gsl_rng_alloc(T);
+
+    fit_data.x = (double*)malloc(n * sizeof(double));
+    fit_data.y = (double*)malloc(n * sizeof(double));
+    fit_data.n = n;
+
+    /* generate synthetic data with noise */
+    for (i = 0; i < n; ++i)
+    {
+        double t = (double)i / (double)n;
+        double y0 = gaussian(a, b, c, t);
+        double dy = gsl_ran_gaussian(r, 0.1 * y0);
+
+        fit_data.x[i] = t;
+        fit_data.y[i] = y0 + dy;
+    }
+ 
+    /* define function to be minimized */
+    fdf.f = func_f;
+    fdf.df = func_df;
+    fdf.fvv = func_fvv;
+    fdf.n = n;
+    fdf.p = p;
+    fdf.params = &fit_data;
+
+    /* starting point */
+    gsl_vector_set(x, 0, 1.0);
+    gsl_vector_set(x, 1, 0.0);
+    gsl_vector_set(x, 2, 1.0);
+
+    fdf_params.trs = gsl_multifit_nlinear_trs_lmaccel;
+    int status = solve_system(x, &fdf, &fdf_params);
+     
+    if(status != GSL_SUCCESS){
+        return false;
+    }
+
+    /* print data and model */
+    {
+        double A = gsl_vector_get(x, 0);
+        double B = gsl_vector_get(x, 1);
+        double C = gsl_vector_get(x, 2);
+
+        for (i = 0; i < n; ++i)
+        {
+            double ti = fit_data.x[i];
+            double yi = fit_data.y[i];
+            double fi = gaussian(A, B, C, ti);
+
+            printf("%f %f %f\n", ti, yi, fi);
+        }
+    }
+
+    gsl_vector_free(f);
+    gsl_vector_free(x);
+    gsl_rng_free(r);
+
+    return true;
+ }
+
+ //拟合
+/**
+ * @description: 高斯拟合函数，从程芷芸的原有基础上进行改动
+ * @param {vector<double>} sx
+ * @param {vector<double>} sy
+ * @param {int} n
+ * @param {double*} result
+ * @return {bool} false:拟合失败，true：拟合成功
+ */ 
+bool GaussFit(std::vector<double> sx, std::vector<double> sy, int n, double* result)
+{	 
+    Fitdata_Cheng fit_data;
+    // 准备数据
+	double* fitX = new double[n];
+	double* fitY = new double[n];
+    fit_data.x = fitX;
+    fit_data.y = fitY;
+    for (size_t k = 0; k < n; k++)
+	{
+		fit_data.x[k] = sx[k];
+		fit_data.y[k] = sy[k];
+	}
+    fit_data.n = n;
+    
+	//先大致计算出[A, mu, sigma, base]
+	//A
+    auto maxPosition = max_element(sy.begin(), sy.end());
+	float peak = *maxPosition; 
+
+	//mu
+    double sum = std::accumulate(sx.begin(), sx.end(), 0.0); // 计算和
+    double mean = sum / sx.size(); // 计算均值
+
+	//sigma
+	double accum  = 0.0;  
+	std::for_each (std::begin(sy), std::end(sy), [&](const double d) {  
+		accum  += (d-mean)*(d-mean);  
+	});  
+    double sigma = sqrt(accum/(sy.size()-1)); //方差
+
+
+	const gsl_rng_type* T = gsl_rng_default;	
+	const size_t p = 3;    /* number of model parameters */
+	gsl_vector* f = gsl_vector_alloc(n);
+	gsl_vector* x = gsl_vector_alloc(p);
+	gsl_rng* r;
+	gsl_rng_env_setup();
+	r = gsl_rng_alloc(T);
+
+	gsl_multifit_nlinear_fdf fdf;
+	gsl_multifit_nlinear_parameters fdf_params =
+		gsl_multifit_nlinear_default_parameters();
+	fdf.f = func_f;
+	fdf.df = func_df;
+	fdf.fvv = func_fvv;
+	fdf.n = n;
+	fdf.p = p;
+	fdf.params = &fit_data;
+
+	/* starting point */
+	gsl_vector_set(x, 0, peak);
+	gsl_vector_set(x, 1, mean);
+	gsl_vector_set(x, 2, sigma);
+
+	fdf_params.trs = gsl_multifit_nlinear_trs_lmaccel;
+	int status = solve_system(x, &fdf, &fdf_params);
+    
+    if(status != GSL_SUCCESS){
+        return false;
+    }
+
+	/* print data and model */
+	double A = gsl_vector_get(x, 0);
+	double B = gsl_vector_get(x, 1);
+    double C = gsl_vector_get(x, 2);
+
+    result[0] = A;
+    result[1] = B;
+    result[2] = C;
+	for (int i = 0; i < n; ++i)
+	{
+        double ti = fit_data.x[i];
+		double yi = fit_data.y[i];
+		double fi = gaussian(A, B, C, ti);
+        printf("%f %f %f\n", ti, yi, fi);
+	}
+
+	double _FWHM;
+    _FWHM = C * 2.355;
+
+	gsl_vector_free(f);
+	gsl_vector_free(x);
+	gsl_rng_free(r);
+    return true;
+}

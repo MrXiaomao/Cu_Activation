@@ -4,6 +4,7 @@
 #include <QtMath>
 #include <cmath>
 #include "linearfit.h"
+#include "gaussFit.h"
 
 #define RANGE_SCARRE_UPPER 1.0
 #define RANGE_SCARRE_LOWER 0.5
@@ -1124,18 +1125,20 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                             }
 
                             // 高斯拟合
-                            if (fcount > 0){
+                            if (fcount > 5){
                                 //显示拟合曲线
                                 double result[3];
-                                Gaussian gau;
-                                if(gau.setSample(sx, sy, fcount, result) && gau.process())
+                                bool status = GaussFit(sx, sy, fcount, result);
+                                if(status)
                                 {
                                     if (!std::isnan(result[0]) && !std::isnan(result[1]) && !std::isnan(result[2])){
+                                        double mean = result[1];
+                                        double FWHM = 2*sqrt(2*log(2))*result[2];
                                         //计算符合能窗
-                                        int leftWindow = (result[1] - result[0] / 2);
+                                        int leftWindow = (int)(mean - FWHM*0.5);
                                         if (leftWindow < 0) leftWindow = 0;
 
-                                        int rightWindow = (result[1] + result[0] / 2);
+                                        int rightWindow = (int)(mean + FWHM*0.5);
                                         if (rightWindow < 0 || rightWindow > MULTI_CHANNEL)
                                         {
                                             rightWindow = MULTI_CHANNEL;
@@ -1146,8 +1149,8 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                         QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
                                         if (gaussResultItemText){
                                             QString info = QString("峰  位: %1\n半高宽: %2\n左能窗: %3\n右能窗: %4")
-                                                               .arg(QString::number(result[1], 'f', 0))
-                                                               .arg(QString::number(result[0], 'f', 3))
+                                                               .arg(QString::number(mean, 'f', 0))
+                                                               .arg(QString::number(FWHM, 'f', 3))
                                                                .arg(QString::number(leftWindow, 10))//十进制输出整数
                                                                .arg(QString::number(rightWindow, 10));
 
@@ -1161,6 +1164,14 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                         }
                                     }
                                 }
+                                else
+                                {
+                                    qCritical()<<"高斯拟合发生错误,可能原因：选取的初始峰位不具有高斯形状，无法进行高斯拟合，\n建议：请重新选取高斯曲线区域或等统计涨落变小后再选取";
+                                }
+                            }
+                            else
+                            {
+                                qInfo()<<"框选数据点过少，请至少框选6个及以上数据点";
                             }
                         }
                     }
@@ -1709,7 +1720,7 @@ void PlotWidget::slotGauss(int leftE, int rightE)
         key_from = qMin(key_from, key_to);
         key_to = qMax(key_temp, key_to);
 
-        QCPGraph *graph = getGraph(this->property("PlotIndex").toUInt() | 0x10);//customPlot->graph(0);
+        QCPGraph *graph = getGraph(this->property("PlotIndex").toUInt());//customPlot->graph(0);//getGraph(this->property("PlotIndex").toUInt() | 0x10);
         QVector<double> keys, values, curveKeys;
         QVector<QColor> colors;
         int fcount = 0;
@@ -1736,21 +1747,20 @@ void PlotWidget::slotGauss(int leftE, int rightE)
         // 高斯拟合
         {
             double result[3];
-            Gaussian gau;
-            if(gau.setSample(sx, sy, fcount, result) && gau.process())
+            bool status = GaussFit(sx, sy, fcount, result);
+            if(status)
             {
                 //绘制拟合曲线
                 QCPGraph *curveGraph = customPlot->graph(1);
                 QVector<double> curveValues;
-                double a = result[2];
-                double u = result[1];
-                double FWHM = result[0];
-                double ln2 = log(2);
+                double a = result[0];
+                double mean = result[1];
+                double sigma = result[2];
+                // double base = result[3];
+                
                 for (int i=0; i<curveKeys.size(); ++i){
-                    //a*exp[-4ln2(x-u)^2/FWHM^2]，a=result[2],u=result[1],FWHM=result[0].
                     double x = curveKeys[i];
-                    double v = a*exp(-4*ln2*pow(x-u,2)/pow(FWHM, 2));
-
+                    double v = a*exp(-0.5*pow(x-mean,2)/pow(sigma, 2));
                     curveValues.push_back(v);
                 }
 

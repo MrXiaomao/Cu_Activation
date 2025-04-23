@@ -228,10 +228,10 @@ INCLUDEPATH += $$PWD/3rdParty/ftcoreimc_win_v1.4.0.0/inc
 # 指定 MSYS2 的 GSL 路径（64位示例）
 win32 {
     # GSL 头文件路径
-    INCLUDEPATH += "C:/msys64/mingw64/include"
+    INCLUDEPATH += "$$PWD/3rdParty/gsl/include"
     
     # GSL 库路径
-    LIBS += -L"C:/msys64/mingw64/lib" -lgsl -lgslcblas
+    LIBS += -L$$PWD/3rdParty/gsl/lib -lgsl -lgslcblas
     # LIBS += -L"$$PWD/3rdParty/gsl/lib" -lgsl -lgslcblas
     
     # 如果使用动态链接库（DLL），确保运行时能找到它们

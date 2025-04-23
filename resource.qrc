@@ -51,5 +51,6 @@
         <file>resource/mathlog.png</file>
         <file>resource/circle-green.png</file>
         <file>resource/circle-red.png</file>
+        <file>resource/warn.png</file>
     </qresource>
 </RCC>

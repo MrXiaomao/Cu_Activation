@@ -87,7 +87,7 @@ protected:
 
 signals:
     void sigMouseDoubleClickEvent();
-    void sigUpdateMeanValues(QString name, unsigned int minMean, unsigned int maxMean);
+    void sigUpdateEnWindow(QString name, unsigned int left_En, unsigned int right_En);//更新能窗左右区间
     void sigPausePlot(bool); //是否暂停图像刷新
     void sigAreaSelected();//拟合区域选择完成
 

@@ -175,10 +175,10 @@ QCPGraph* PlotWidget::getGraph(int index)
             QCustomPlot* customPlot = getCustomPlot(index);
             graph = customPlot->graph(0);
         } else if (index == amGaussEnDet1){
-            QCustomPlot* customPlotGauss = getCustomPlot(index);
+            QCustomPlot* customPlotGauss = getCustomPlot(amEnDet1);
             graph = customPlotGauss->graph(1);
         } else if (index == amGaussEnDet2){
-            QCustomPlot* customPlotGauss = getCustomPlot(index);
+            QCustomPlot* customPlotGauss = getCustomPlot(amEnDet2);
             graph = customPlotGauss->graph(1);
         }
     }
@@ -1143,7 +1143,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                         {
                                             rightWindow = MULTI_CHANNEL;
                                         }
-                                        emit sigUpdateMeanValues(customPlot->objectName(), leftWindow, rightWindow);
+                                        emit sigUpdateEnWindow(customPlot->objectName(), leftWindow, rightWindow);
 
                                         //显示拟合数据
                                         QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
@@ -1720,7 +1720,7 @@ void PlotWidget::slotGauss(int leftE, int rightE)
         key_from = qMin(key_from, key_to);
         key_to = qMax(key_temp, key_to);
 
-        QCPGraph *graph = getGraph(this->property("PlotIndex").toUInt());//customPlot->graph(0);//getGraph(this->property("PlotIndex").toUInt() | 0x10);
+        QCPGraph *graph = getGraph(0);//customPlot->graph(0);//getGraph(this->property("PlotIndex").toUInt() | 0x10);
         QVector<double> keys, values, curveKeys;
         QVector<QColor> colors;
         int fcount = 0;
@@ -1765,7 +1765,7 @@ void PlotWidget::slotGauss(int leftE, int rightE)
                 }
 
                 curveGraph->setData(curveKeys, curveValues);
-                curveGraph->setVisible(true);
+                // curveGraph->setVisible(true);
                 customPlot->replot();
             }
         }
@@ -1841,6 +1841,7 @@ void PlotWidget::slotShowGaussInfor(bool visible)
             QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
             gaussResultItemText->setVisible(visible);
             customPlot->replot(QCustomPlot::rpQueuedRefresh);
+            customPlot->graph(1)->setVisible(visible);
         }
     }
 }

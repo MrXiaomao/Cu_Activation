@@ -107,7 +107,7 @@ private:
     QLiteThread* plotUpdateThread;//能谱信息处理线程
     quint32 currentEnergyTime = 0;// 能谱时间
     bool reChangeEnWindow = false;
-    quint64 tmTriggerEnWindow = 0;// 记录下重新运算的时间戳，单位：毫秒
+    quint64 time_SetEnWindow = 0;// 记录下手动测量下，用户设置能窗的时间戳，单位：毫秒
 
     CoincidenceAnalyzer* coincidenceAnalyzer;
     void analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult> r3);

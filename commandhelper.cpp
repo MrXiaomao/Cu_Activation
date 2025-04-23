@@ -1082,7 +1082,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
         cmdPool.push_back(cmdSoftTrigger);
     }
 
-    this->tmTriggerEnWindow = 0x00;
+    this->time_SetEnWindow = 0x00;
     socketDetector->write(cmdPool.first());
     qDebug()<<"Send HEX: "<<cmdPool.first().toHex(' ');
 }
@@ -1572,11 +1572,11 @@ void CommandHelper::detTimeEnergyWorkThread()
                         QDateTime now = QDateTime::currentDateTime();
                         if (1){
                             if (detectorParameter.measureModel == mmAuto){//自动测量，需要获取能宽
-                                if (this->tmTriggerEnWindow == 0x00){
+                                if (this->time_SetEnWindow == 0x00){
                                     if (data1_2.size() > 0)
-                                        this->tmTriggerEnWindow = data1_2[0].time / 1e6;
+                                        this->time_SetEnWindow = data1_2[0].time / 1e6;
                                     else
-                                        this->tmTriggerEnWindow = data2_2[0].time / 1e6;
+                                        this->time_SetEnWindow = data2_2[0].time / 1e6;
                                 }
                                 coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, delayTime, true, true);
                             }

@@ -654,22 +654,22 @@ void MainWindow::initCustomPlot()
         PlotWidget *customPlotWidget = new PlotWidget(this);
         customPlotWidget->setObjectName("online-PlotWidget");
         customPlotWidget->initCustomPlot();
-        connect(customPlotWidget, &PlotWidget::sigUpdateMeanValues, this, [=](QString name, unsigned int minMean, unsigned int maxMean){
+        connect(customPlotWidget, &PlotWidget::sigUpdateEnWindow, this, [=](QString name, unsigned int leftEn, unsigned int rightEn){
             if (name == "Energy-Det1")
                 currentDetectorIndex = 0;
             else
                 currentDetectorIndex = 1;
 
             if (currentDetectorIndex == 0){
-                ui->spinBox_1_leftE->setValue(minMean);
-                ui->spinBox_1_rightE->setValue(maxMean);
+                ui->spinBox_1_leftE->setValue(leftEn);
+                ui->spinBox_1_rightE->setValue(rightEn);
             } else{
-                ui->spinBox_2_leftE->setValue(minMean);
-                ui->spinBox_2_rightE->setValue(maxMean);
+                ui->spinBox_2_leftE->setValue(leftEn);
+                ui->spinBox_2_rightE->setValue(rightEn);
             }
 
-           ui->spinBox_leftE->setValue(minMean);
-           ui->spinBox_rightE->setValue(maxMean);
+           ui->spinBox_leftE->setValue(leftEn);
+           ui->spinBox_rightE->setValue(rightEn);
         });
 
         connect(customPlotWidget, &PlotWidget::sigPausePlot, this, [=](bool pause){

@@ -367,6 +367,10 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 
 void MainWindow::InitMainWindowUi()
 {
+#ifdef QT_NO_DEBUG
+    ui->action_start_measure->hide();
+#endif
+
     ui->toolBar_offline->hide();
 
     // 获取当前时间
@@ -901,7 +905,7 @@ void MainWindow::on_pushButton_measure_clicked()
 {
     if (this->property("measure-status").toUInt() == msNone
             || this->property("measure-status").toUInt() == msEnd){
-        this->save();
+        this->saveConfigJson();
 
         CoolingTimeWidget *w = new CoolingTimeWidget(this);
         w->setAttribute(Qt::WA_DeleteOnClose, true);
@@ -1007,7 +1011,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
     //自动测量
     if (this->property("measure-status").toUInt() == msNone
             || this->property("measure-status").toUInt() == msEnd){
-        this->save();
+        this->saveConfigJson();
 
         this->setProperty("measure-status", msPrepare);
 
@@ -1100,12 +1104,12 @@ void MainWindow::on_pushButton_measure_2_clicked()
 void MainWindow::on_pushButton_measure_3_clicked()
 {
     //标定测量
-    this->save();
+    this->saveConfigJson();
 }
 
 void MainWindow::on_pushButton_save_clicked()
 {
-    this->save();
+    this->saveConfigJson();
 
     //存储文件名
     QString filename = ui->lineEdit_path->text() + "/" + ui->lineEdit_filename->text();
@@ -1141,7 +1145,7 @@ void MainWindow::on_pushButton_save_clicked()
 
 void MainWindow::on_pushButton_refresh_clicked()
 {
-    this->save();
+    this->saveConfigJson();
 
     int stepT = ui->spinBox_step->value();
     int timewidth = ui->spinBox_timeWidth->value();
@@ -1184,7 +1188,7 @@ void MainWindow::on_action_refresh_triggered()
 
 void MainWindow::on_pushButton_gauss_clicked()
 {
-    this->save();
+    this->saveConfigJson();
 
     PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
     plotWidget->slotGauss(ui->spinBox_leftE->value(), ui->spinBox_rightE->value());
@@ -1572,7 +1576,7 @@ void MainWindow::load()
     }
 }
 
-void MainWindow::save(bool bSafeExitFlag)
+void MainWindow::saveConfigJson(bool bSafeExitFlag)
 {
     QString path = QApplication::applicationDirPath() + "/config";
     QDir dir(path);
@@ -1652,7 +1656,7 @@ void MainWindow::save(bool bSafeExitFlag)
 
 void MainWindow::on_pushButton_refresh_2_clicked()
 {
-    this->save();
+    this->saveConfigJson();
 
     int stepT = ui->spinBox_step_2->value();
     unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE_2->value(), (unsigned short)ui->spinBox_1_rightE_2->value(),
@@ -1670,7 +1674,7 @@ void MainWindow::on_pushButton_refresh_2_clicked()
 
 void MainWindow::on_pushButton_refresh_3_clicked()
 {
-    this->save();
+    this->saveConfigJson();
 }
 
 void MainWindow::on_action_line_log_triggered()
@@ -1696,6 +1700,7 @@ void MainWindow::on_action_line_log_triggered()
 }
 
 #include "controlwidget.h"
+//打开位移平台界面
 void MainWindow::on_action_Moving_triggered()
 {
     /*
@@ -1752,7 +1757,7 @@ void MainWindow::on_pushButton_confirm_clicked()
     if (QMessageBox::question(this, tr("提示"), tr("您确定用当前能宽值来进行运算吗？\r\n\r\n提醒：整个测量过程中只允许设置能宽一次。"), QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) != QMessageBox::Yes)
         return ;
 
-    this->save();
+    this->saveConfigJson();
 
     int stepT = ui->spinBox_step->value();
     unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),

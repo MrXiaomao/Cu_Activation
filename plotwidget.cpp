@@ -1600,6 +1600,7 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
 void PlotWidget::slotStart()
 {
     //当第一次数据过来，将区域选择按钮设为可用
+    this->setProperty("autoRefreshModel", true);
     this->setProperty("disableAreaSelect", false);
     QCustomPlot::RefreshPriority refreshPriority = QCustomPlot::rpQueuedReplot;
     QList<QCustomPlot*> customPlots = getAllCustomPlot();
@@ -1626,11 +1627,20 @@ void PlotWidget::slotStart()
         for (int i=0; i<customPlot->graphCount(); ++i)
             customPlot->graph(i)->data()->clear();
 
+        //重设坐标轴范围
+        customPlot->xAxis->setRange(0, 8192);
+        customPlot->yAxis->setRange(0, 100);
+
         customPlot->rescaleAxes(true);
         customPlot->replot(refreshPriority);
     }
 
-    this->slotResetPlot();
+    QMutexLocker locker(&mutexRefreshPlot);
+    QVector<double>(MULTI_CHANNEL, 0).swap(energyValues[0]);
+    QVector<double>(MULTI_CHANNEL, 0).swap(energyValues[1]);
+
+    resetAxisCoords();
+    emit sigPausePlot(false);
 }
 
 void PlotWidget::slotResetPlot()
@@ -1765,8 +1775,10 @@ void PlotWidget::slotGauss(int leftE, int rightE)
                 }
 
                 curveGraph->setData(curveKeys, curveValues);
-                // curveGraph->setVisible(true);
-                customPlot->replot();
+                if (this->property("showGaussInfo").toBool()){
+                    curveGraph->setVisible(true);
+                    customPlot->replot();
+                }
             }
         }
     }
@@ -1835,13 +1847,16 @@ void PlotWidget::slotShowGaussInfor(bool visible)
         QCustomPlot* customPlotDet12 = this->findChild<QCustomPlot*>("Det12");
         QCPItemText* gaussResultItemText = customPlotDet12->findChild<QCPItemText*>("gaussResultItemText");
         gaussResultItemText->setVisible(visible);
+        customPlotDet12->graph(2)->setVisible(visible);
+        customPlotDet12->replot(QCustomPlot::rpQueuedRefresh);
     } else {
         QList<QCustomPlot*> customPlots = getAllEnergyCustomPlot();
         for (auto customPlot : customPlots){
             QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
             gaussResultItemText->setVisible(visible);
-            customPlot->replot(QCustomPlot::rpQueuedRefresh);
+
             customPlot->graph(1)->setVisible(visible);
+            customPlot->replot(QCustomPlot::rpQueuedRefresh);
         }
     }
 }

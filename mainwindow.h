@@ -24,7 +24,7 @@ public:
     void initCustomPlot();
 
     void load();
-    void save(bool bSafeExitFlag = false);
+    void saveConfigJson(bool bSafeExitFlag = false);
 
 protected:
     virtual bool eventFilter(QObject *watched, QEvent *event) override;

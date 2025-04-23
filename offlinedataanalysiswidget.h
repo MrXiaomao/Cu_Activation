@@ -39,7 +39,7 @@ private slots:
 
 private:
     Ui::OfflineDataAnalysisWidget *ui;
-    QString currentFilename;
+    QString validDataFileName;
     CoincidenceAnalyzer* coincidenceAnalyzer = nullptr;
     quint32 stepT = 1;
     bool reAnalyzer = false; // 是否重新开始解析

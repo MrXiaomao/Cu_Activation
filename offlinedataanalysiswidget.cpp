@@ -134,9 +134,9 @@ void OfflineDataAnalysisWidget::initCustomPlot()
 #include <QTextStream>
 void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
 {
-    currentFilename = filePath;
+    validDataFileName = filePath;
 
-    QString configFile = currentFilename + tr(".配置");
+    QString configFile = validDataFileName + tr(".配置");
     if (QFileInfo::exists(configFile)){
         QFile file(configFile);
         if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -191,7 +191,7 @@ void OfflineDataAnalysisWidget::slotStart()
         //coincidenceAnalyzer->set_callback(std::bind(&CommandHelper::analyzerCalback, this, placeholders::_1, placeholders::_2));
 
         QDateTime tmStart = QDateTime::currentDateTime();
-        QByteArray aDatas = currentFilename.toLocal8Bit();
+        QByteArray aDatas = validDataFileName.toLocal8Bit();
         vector<TimeEnergy> data1_2, data2_2;
         SysUtils::realAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, bool eof, bool *interrupted){
             if (eof){

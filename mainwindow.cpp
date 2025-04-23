@@ -368,7 +368,8 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 void MainWindow::InitMainWindowUi()
 {
 #ifdef QT_NO_DEBUG
-    ui->action_start_measure->hide();
+    // ui->action_start_measure->hide();
+    ui->toolBar_online->removeAction(ui->action_start_measure);
 #endif
 
     ui->toolBar_offline->hide();

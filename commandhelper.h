@@ -105,7 +105,7 @@ private:
     quint32 SequenceNumber;// 帧序列号
     QLiteThread* analyzeNetDataThread;//处理网络数据线程，将数据进行解析成时间能量队
     QLiteThread* plotUpdateThread;//能谱信息处理线程
-    quint32 currentEnergyTime = 0;// 能谱时间
+    quint32 currentFPGATime = 0;// FPGA当前时刻，单位：s
     bool reChangeEnWindow = false;
     quint64 time_SetEnWindow = 0;// 记录下手动测量下，用户设置能窗的时间戳，单位：毫秒
 
@@ -183,7 +183,9 @@ private:
     WorkStatusFlag workStatus = NoWork;
     DetectorParameter detectorParameter;
     //QFile *pfSaveInvalid = nullptr;//保存非0有效数据文件
-    QFile *pfSaveRaw = nullptr;//保存开始测量之后的所有原始数据
+    QFile *pfSaveNet = nullptr;//保存开始测量之后的所有网口接收数据
+    QFile *pfSaveVaildData = nullptr;//保存开始测量之后的所有有效数据[时间、死时间、能量] [6字节、2字节、2字节]
+
     qint8 prepareStep = 0;
     void initSocket(QTcpSocket** socket);
     bool taskFinished = false;
@@ -192,7 +194,9 @@ private:
 
 private:
     QString defaultCacheDir;
-    QString currentFilename;
+    QString netDataFileName; //存储网口接收全部原始数据的文件名
+    QString validDataFileName; // 存储有效数据的文件名
+
     int stepT = 1; //界面图像刷新时间
     unsigned short EnWindow[4]; // 探测器1左能窗、右能窗；探测器2左能窗、右能窗
     std::vector<unsigned short> autoEnWindow; // 自动测量反馈给界面的值：探测器1左能窗、右能窗；探测器2左能窗、右能窗

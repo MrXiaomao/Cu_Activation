@@ -50,7 +50,7 @@ void PlotWidget::resetAxisCoords()
         QCustomPlot* customPlotDet12 = this->findChild<QCustomPlot*>("Det12");
         QCustomPlot* customPlotCoincidenceResult = this->findChild<QCustomPlot*>("CoincidenceResult");
 
-        if (this->property("isCountMode").toBool()){
+        if (this->property("isCountModel").toBool()){
             customPlotDet12->xAxis->setRange(COUNT_X_AXIS_LOWER[0], COUNT_X_AXIS_UPPER[0]); // 设置x轴的显示范围
             customPlotCoincidenceResult->xAxis->setRange(COUNT_X_AXIS_LOWER[1], COUNT_X_AXIS_UPPER[1]); // 设置x轴的显示范围
 
@@ -65,7 +65,7 @@ void PlotWidget::resetAxisCoords()
         QCustomPlot* customPlotDet2 = getCustomPlot(amCountDet2);
         QCustomPlot* customPlotCoincidenceResult = getCustomPlot(amCoResult);
 
-        if (this->property("isCountMode").toBool()){
+        if (this->property("isCountModel").toBool()){
             customPlotDet1->xAxis->setRange(COUNT_X_AXIS_LOWER[0], COUNT_X_AXIS_UPPER[0]); // 设置x轴的显示范围
             customPlotDet2->xAxis->setRange(COUNT_X_AXIS_LOWER[0], COUNT_X_AXIS_UPPER[0]); // 设置x轴的显示范围
             customPlotCoincidenceResult->xAxis->setRange(COUNT_X_AXIS_LOWER[1], COUNT_X_AXIS_UPPER[1]); // 设置x轴的显示范围
@@ -99,7 +99,7 @@ void PlotWidget::rescalAxisCoords(QCustomPlot* customPlot)
         minKey = qMin(minKey, (double)graph->data()->at(i)->key);
     }
 
-    if (this->property("isCountMode").toBool()){
+    if (this->property("isCountModel").toBool()){
         customPlot->xAxis->setRange(minKey, minKey + COUNT_X_AXIS_UPPER[0]);//计数模式
         customPlot->yAxis->setRange(Y_AXIS_LOWER, COUNT_Y_AXIS_UPPER[0]/*maxEnergy / RANGE_SCARRE_LOWER*/);
     }
@@ -338,7 +338,7 @@ void PlotWidget::initCustomPlot(){
 
     connect(resetPlotAction, &QAction::triggered, this, [=](){
         this->setProperty("autoRefreshModel", true);
-        if (this->property("isCountMode").toBool()){
+        if (this->property("isCountModel").toBool()){
             QList<QCustomPlot*> customPlots = getAllCountCustomPlot();
             for (auto customPlot : customPlots){
                 customPlot->rescaleAxes(true);
@@ -579,7 +579,7 @@ void PlotWidget::slotShowTracer(QMouseEvent *event)
         QVector<QCPGraphData>::const_iterator ghd = data->findBegin(key, false);
         if (ghd != data->constEnd() && abs(ghd->mainKey()-key)<stepT && ghd->mainValue()>=0){
             updateTracerPosition(customPlot, ghd->mainKey(), ghd->mainValue());
-            if (this->property("isCountMode").toBool())
+            if (this->property("isCountModel").toBool())
                 customPlot->setProperty("tracer-key2", ghd->mainKey());
             else
                 customPlot->setProperty("tracer-key", ghd->mainKey());
@@ -594,7 +594,7 @@ void PlotWidget::slotShowTracer(QMouseEvent *event)
         coordsTipItemArrowLine->setVisible(false);
         coordsTipItemXLine->setVisible(false);
         coordsTipItemYLine->setVisible(false);
-        if (this->property("isCountMode").toBool())
+        if (this->property("isCountModel").toBool())
             customPlot->setProperty("tracer-key2", -1);
         else
             customPlot->setProperty("tracer-key", -1);
@@ -770,7 +770,7 @@ QCustomPlot *PlotWidget::allocCustomPlot(QString objName, bool needGauss, QWidge
     connect(customPlot->xAxis, SIGNAL(rangeChanged(const QCPRange &)), customPlot->xAxis2, SLOT(setRange(const QCPRange &)));
     connect(customPlot->yAxis, SIGNAL(rangeChanged(const QCPRange &)), customPlot->yAxis2, SLOT(setRange(const QCPRange &)));
     connect(customPlot->xAxis, QOverload<const QCPRange &, const QCPRange &>::of(&QCPAxis::rangeChanged), this, [=](const QCPRange &range, const QCPRange &oldRange){
-        if (!this->property("isCountMode").toBool()){
+        if (!this->property("isCountModel").toBool()){
             //能谱模式显示能窗范围
             if (range.lower < 0)
                 //customPlot->xAxis->setRangeLower(0);
@@ -822,7 +822,7 @@ QCustomPlot *PlotWidget::allocCustomPlot(QString objName, bool needGauss, QWidge
         if (this->allowAreaSelected)
             return;
 
-        if (!this->property("isCountMode").toBool())
+        if (!this->property("isCountModel").toBool())
             return ;
 
         this->setProperty("autoRefreshModel", false);
@@ -850,7 +850,7 @@ void PlotWidget::slotRestorePlot(QMouseEvent* e)
     if (e->button() != Qt::LeftButton)
         return;
 
-    if (!this->property("isCountMode").toBool())
+    if (!this->property("isCountModel").toBool())
         return ;
 
     this->setProperty("autoRefreshModel", false);
@@ -919,7 +919,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                         return QWidget::eventFilter(watched, event);
 
                     //计数模式不需要拖拽
-                    if (this->property("isCountMode").toBool())
+                    if (this->property("isCountModel").toBool())
                         return QWidget::eventFilter(watched, event);
 
                     if (this->allowAreaSelected/* && this->property("allowAreaSelected-plot-name").toString() == customPlot->objectName()*/){
@@ -952,7 +952,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                     this->isPressed = false;
                     this->isDragging = false;
 
-                    if (this->property("isCountMode").toBool()){
+                    if (this->property("isCountModel").toBool()){
                         QMenu contextMenu(customPlot);
                         contextMenu.addAction(timeAllAction);
                         contextMenu.addAction(timeM10Action);
@@ -1252,7 +1252,7 @@ void PlotWidget::slotBeforeReplot()
     }
 
     double key = customPlot->property("tracer-key").toDouble();
-    if (this->property("isCountMode").toBool())
+    if (this->property("isCountModel").toBool())
         key = customPlot->property("tracer-key2").toDouble();
 
     //查找最近的点，距离必须在一个步长内
@@ -1278,7 +1278,7 @@ void PlotWidget::slotUpdatePlotNullData(int refreshTime)
         QCustomPlot* customPlotDet12 = this->findChild<QCustomPlot*>("Det12");
         QCustomPlot* customPlotCoincidenceResult = this->findChild<QCustomPlot*>("CoResult");
 
-        if (this->property("isCountMode").toBool()){//计数模式
+        if (this->property("isCountModel").toBool()){//计数模式
         } else {//能谱
             // {//Det1
             //     double maxEnergy = 0;
@@ -1331,7 +1331,7 @@ void PlotWidget::slotUpdatePlotNullData(int refreshTime)
             // }
         }
     } else {
-        if (this->property("isCountMode").toBool()){//计数模式
+        if (this->property("isCountModel").toBool()){//计数模式
             QCustomPlot* customPlotDet1 = getCustomPlot(amCountDet1);
             QCustomPlot* customPlotDet2 = getCustomPlot(amCountDet2);
             QCustomPlot* customPlotCoResult = getCustomPlot(amCoResult);
@@ -1447,7 +1447,7 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
                 }
             }
 
-            if (this->property("isCountMode").toBool())
+            if (this->property("isCountModel").toBool())
                 customPlotDet1->replot(refreshPriority);
         }
 
@@ -1493,7 +1493,7 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
                 }
             }
 
-            if (this->property("isCountMode").toBool())
+            if (this->property("isCountModel").toBool())
                 customPlotDet2->replot(refreshPriority);
         }
 
@@ -1537,7 +1537,7 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
                 }
             }
 
-            if (this->property("isCountMode").toBool())
+            if (this->property("isCountModel").toBool())
                 customPlotCoResult->replot(refreshPriority);
         }
     }
@@ -1566,7 +1566,7 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
                 customPlotDet1->yAxis2->setRange(customPlotDet1->yAxis->range().lower, maxEnergy / RANGE_SCARRE_LOWER);
             }
 
-            if (!this->property("isCountMode").toBool())
+            if (!this->property("isCountModel").toBool())
                 customPlotDet1->replot(refreshPriority);
         }
 
@@ -1591,7 +1591,7 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
                 customPlotDet2->yAxis2->setRange(customPlotDet2->yAxis->range().lower, maxEnergy / RANGE_SCARRE_LOWER);
             }
 
-            if (!this->property("isCountMode").toBool())
+            if (!this->property("isCountModel").toBool())
                 customPlotDet2->replot(refreshPriority);
         }
     }
@@ -1628,8 +1628,17 @@ void PlotWidget::slotStart()
             customPlot->graph(i)->data()->clear();
 
         //重设坐标轴范围
-        customPlot->xAxis->setRange(0, 8192);
-        customPlot->yAxis->setRange(0, 100);
+        if(customPlot->property("isCountModel").toBool())
+        {
+            customPlot->xAxis->setRange(0, 600);
+            customPlot->yAxis->setRange(0, 1000);
+            customPlot->yAxis2->setRange(0, 1000);
+        }
+        else{
+            customPlot->xAxis->setRange(0, 8192);
+            customPlot->yAxis->setRange(0, 100);
+            customPlot->yAxis2->setRange(0, 100);
+        }
 
         customPlot->rescaleAxes(true);
         customPlot->replot(refreshPriority);
@@ -1661,12 +1670,12 @@ void PlotWidget::slotResetPlot()
     }
 }
 
-void PlotWidget::switchToCountMode(bool isCountMode)
+void PlotWidget::switchToCountMode(bool isCountModel)
 {
     QMutexLocker locker(&mutexRefreshPlot);
-    this->setProperty("isCountMode", isCountMode);
-    this->setCurrentIndex(isCountMode ? 1 : 0);
-    if (isCountMode){
+    this->setProperty("isCountModel", isCountModel);
+    this->setCurrentIndex(isCountModel ? 1 : 0);
+    if (isCountModel){
         QList<QCustomPlot*> customPlots = getAllCountCustomPlot();
         for (auto customPlot : customPlots){
             customPlot->replot();

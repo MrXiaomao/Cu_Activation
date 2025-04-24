@@ -929,7 +929,8 @@ void MainWindow::on_pushButton_measure_clicked()
             detectorParameter.waveformPolarity = 0x00;
             detectorParameter.deadTime = 0x0A;
             detectorParameter.gain = 0x00;
-            
+            detectorParameter.measureRange = ui->comboBox_range->currentIndex()+1; //注意：从1开始计数
+
             // 默认打开梯形成形
             detectorParameter.isTrapShaping = true;
             detectorParameter.TrapShape_risePoint = 20;
@@ -1026,6 +1027,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         detectorParameter.waveformPolarity = 0x00;
         detectorParameter.deadTime = 0x05*10;
         detectorParameter.gain = 0x00;
+        detectorParameter.measureRange = ui->comboBox_range_2->currentIndex()+1; //注意：从1开始计数
 
         // 默认打开梯形成形
         detectorParameter.isTrapShaping = true;

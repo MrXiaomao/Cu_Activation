@@ -155,7 +155,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                     out << tr("波形触发模式=") << ((detectorParameter.triggerModel==0x00) ? tr("normal") : tr("auto")) << Qt::endl;
                     if (gainValue.contains(detectorParameter.gain))
                         out << tr("探测器增益=") << gainValue[detectorParameter.gain] << Qt::endl;
-
+                    out << tr("量程选取=")<<detectorParameter.measureRange<< Qt::endl;
                     if (detectorParameter.measureModel == mmManual){
                         //手动
                         out << tr("测量模式=手动") << Qt::endl;
@@ -1277,7 +1277,7 @@ void CommandHelper::netFrameWorkThead()
             }
         } else if (detectorParameter.transferModel == 0x05)
         {
-            const quint32 minPkgSize = 65 * 16;
+            const quint32 minPkgSize = (PARTICLE_NUM_ONE_PAKAGE + 1) * 16;//字节数
             bool isNual = false;
             bool foundStop = false;
 
@@ -1417,31 +1417,30 @@ void CommandHelper::netFrameWorkThead()
 
                 //通道号(4字节)
                 ptrOffset += 4; //包头4字节
-                quint64 channel = static_cast<quint64>(ptrOffset[0]) << 24 |
-                                  static_cast<quint64>(ptrOffset[1]) << 16 |
-                                  static_cast<quint64>(ptrOffset[2]) << 8 |
-                                  static_cast<quint64>(ptrOffset[3]);
+                quint32 channel = static_cast<quint32>(ptrOffset[0]) << 24 |
+                                  static_cast<quint32>(ptrOffset[1]) << 16 |
+                                  static_cast<quint32>(ptrOffset[2]) << 8 |
+                                  static_cast<quint32>(ptrOffset[3]);
                 
                 //序号（4字节）
-                quint64 number =  static_cast<quint64>(ptrOffset[4]) << 24 |
-                                  static_cast<quint64>(ptrOffset[5]) << 16 |
-                                  static_cast<quint64>(ptrOffset[6]) << 8 |
-                                  static_cast<quint64>(ptrOffset[7]);
+                quint32 dataNum = static_cast<quint32>(ptrOffset[4]) << 24 |
+                                  static_cast<quint32>(ptrOffset[5]) << 16 |
+                                  static_cast<quint32>(ptrOffset[6]) << 8 |
+                                  static_cast<quint32>(ptrOffset[7]);
 
                 //通道值转换
                 channel = (channel == 0xFFF1) ? 0 : 1;
 
-                //粒子模式数据64*8byte,前6字节:时间,后2字节:能量
-                int ref = 1;
                 ptrOffset += 8;
-
+                //粒子模式数据(PARTICLE_NUM_ONE_PAKAGE+1)*16byte,6字节:时间，2字节:死时间，2字节:幅度
+                int ref = 1;
                 std::vector<TimeEnergy> temp;
-                while (ref++<=1024){
+                while (ref++ <= PARTICLE_NUM_ONE_PAKAGE){
                     //空置48bit
                     ptrOffset += 6;
 
                     //时间:48bit
-                    unsigned long long t = static_cast<quint64>(ptrOffset[0]) << 40 |
+                    quint64 t = static_cast<quint64>(ptrOffset[0]) << 40 |
                                   static_cast<quint64>(ptrOffset[1]) << 32 |
                                   static_cast<quint64>(ptrOffset[2]) << 24 |
                                   static_cast<quint64>(ptrOffset[3]) << 16 |
@@ -1451,16 +1450,16 @@ void CommandHelper::netFrameWorkThead()
                     ptrOffset += 6;
 
                     //死时间:16bit
-                    unsigned short dietime = static_cast<quint16>(ptrOffset[0]) << 8 | static_cast<quint16>(ptrOffset[1]);
-                    dietime *=10;
+                    unsigned short deathtime = static_cast<quint16>(ptrOffset[0]) << 8 | static_cast<quint16>(ptrOffset[1]);
+                    deathtime *=10;
                     ptrOffset += 2;
 
                     //幅度:16bit
-                    unsigned short e = static_cast<quint16>(ptrOffset[0]) << 8 | static_cast<quint16>(ptrOffset[1]);
+                    unsigned short amplitude = static_cast<quint16>(ptrOffset[0]) << 8 | static_cast<quint16>(ptrOffset[1]);
                     ptrOffset += 2;
 
-                    if (t != 0x00 && e != 0x00)
-                        temp.push_back(TimeEnergy(t, dietime, e));
+                    if (t != 0x00 && amplitude != 0x00)
+                        temp.push_back(TimeEnergy(t, deathtime, amplitude));
                 }
 
                 //数据分拣完毕
@@ -1699,7 +1698,7 @@ void CommandHelper::exportFile(QString dstPath)
                 QDataStream aStream(&fileDst);
 
                 qint32 cachelen = 0;
-                qint32 framelen = 2050*8;
+                qint32 framelen = (PARTICLE_NUM_ONE_PAKAGE + 1)* 16;
                 qint32 offset = 0;
                 unsigned char *buf = new unsigned char[framelen*2];
                 qint32 readlen = fileSrc.read((char*)buf, framelen);
@@ -1713,35 +1712,41 @@ void CommandHelper::exportFile(QString dstPath)
                         if (ptrOffset[framelen-4] == 0x00 && ptrOffset[framelen-3] == 0x00 && ptrOffset[framelen-2] == 0xaa && ptrOffset[framelen-1] == 0xb3){
                             if (ptrOffset[framelen-4] == 0x00 && ptrOffset[framelen-3] == 0x00 && ptrOffset[framelen-2] == 0xcc && ptrOffset[framelen-1] == 0xd3){
                                 //完整帧
-                                ptrOffset += 4;
-                                quint64 channel = static_cast<quint64>(ptrOffset[0]) << 56 |
-                                                 static_cast<quint64>(ptrOffset[1]) << 48 |
-                                                 static_cast<quint64>(ptrOffset[2]) << 40 |
-                                                 static_cast<quint64>(ptrOffset[3]) << 32 |
-                                                 static_cast<quint64>(ptrOffset[4]) << 24 |
-                                                 static_cast<quint64>(ptrOffset[5]) << 16 |
-                                                 static_cast<quint64>(ptrOffset[6]) << 8 |
-                                                 static_cast<quint64>(ptrOffset[7]);
-
+                                ptrOffset += 4; //包头4字节
+                                //通道号 4字节
+                                quint32 channel = static_cast<quint64>(ptrOffset[0]) << 24 |
+                                                 static_cast<quint64>(ptrOffset[1]) << 16 |
+                                                 static_cast<quint64>(ptrOffset[2]) << 8 |
+                                                 static_cast<quint64>(ptrOffset[3]);
                                 //通道值转换
                                 channel = (channel == 0xFFF1) ? 1 : 2;
+                                               
+                                //数据包序号，4字节。两个探测器分别从1开始编号
+                                ptrOffset += 4; //包头4字节
+                                quint32 dataNum = static_cast<quint64>(ptrOffset[0]) << 24 |
+                                                 static_cast<quint64>(ptrOffset[1]) << 16 |
+                                                 static_cast<quint64>(ptrOffset[2]) << 8 |
+                                                 static_cast<quint64>(ptrOffset[3]);
 
-                                //粒子模式数据1024*8byte,前6字节:时间,后2字节:能量
+                                //粒子模式数据PARTICLE_NUM_ONE_PAKAGE*8byte, 6字节:时间,后2字节:能量
                                 int ref = 1;
-                                ptrOffset += 8;
+                                ptrOffset += 4;
 
-                                vector<long long> dataT;
-                                vector<unsigned int> dataE;
-                                while (ref++<=1024){
-                                    long long t = static_cast<quint64>(ptrOffset[0]) << 40 |
+                                while (ref++ <= PARTICLE_NUM_ONE_PAKAGE){
+                                    //6字节空置
+                                    ptrOffset += 6;
+                                    //时间 6字节
+                                    quint64 t = static_cast<quint64>(ptrOffset[0]) << 40 |
                                             static_cast<quint64>(ptrOffset[1]) << 32 |
                                             static_cast<quint64>(ptrOffset[2]) << 24 |
                                             static_cast<quint64>(ptrOffset[3]) << 16 |
                                             static_cast<quint64>(ptrOffset[4]) << 8 |
                                             static_cast<quint64>(ptrOffset[5]);
-                                    unsigned int e = static_cast<quint16>(ptrOffset[6]) << 8 | static_cast<quint16>(ptrOffset[7]);
-
-                                    aStream << channel << t << e << "\n";
+                                    //死时间 2字节
+                                    quint16 deathTime = static_cast<quint16>(ptrOffset[6]) << 8 | static_cast<quint16>(ptrOffset[7]);
+                                    //幅度 2字节
+                                    quint16 amplitude = static_cast<quint16>(ptrOffset[8]) << 8 | static_cast<quint16>(ptrOffset[9]);
+                                    aStream << channel << " "<< t <<" "<<" "<<deathTime<<" "<< amplitude << "\n";
                                 }
                             } else {
                                 // 重新寻找帧头
@@ -1877,12 +1882,8 @@ bool CommandHelper::checkAndClearQByteArray(QByteArray &data) {
     if (data.capacity() > MAX_BYTEARRAY_SIZE) {
         qCritical() << "探测器计数率超出当前仪器计数率设计的上限，数据会发生丢失，导致计数率失真。\n"
                    <<"可能原因: 1)、放射性活度过高; 2)波形触发阈值过低导致。";
-                //  <<"容量超过100MB，当前容量:" 
-                //  << data.capacity() / (1024 * 1024) << "MB";
         data.clear();
         data.squeeze(); // 释放内存
-        // qCritical() << "已清空并回收内存，当前容量:"
-        //          << data.capacity() / (1024 * 1024) << "MB";
         return true;
     }
     return false;

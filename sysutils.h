@@ -1,3 +1,10 @@
+/*
+ * @Author: MaoXiaoqing
+ * @Date: 2025-04-06 20:15:30
+ * @LastEditors: 
+ * @LastEditTime: 2025-04-24 17:16:58
+ * @Description: 请填写简介
+ */
 #ifndef SYSUTILS_H
 #define SYSUTILS_H
 
@@ -6,6 +13,7 @@
 
 using namespace std;
 #define MAX_SPECTUM (MULTI_CHANNEL + 100)
+#define PARTICLE_NUM_ONE_PAKAGE 64 //符合模式下，单个数据包的粒子数据个数
 enum Measure_status{
     msNone = 0x00,
     msEnd = 0x00, // 停止
@@ -57,6 +65,9 @@ typedef struct tagDetectorParameter{
 
     // 测量模式
     int8_t measureModel;//01-手动测量 02-自动测量 03-标定测量
+
+    //运行的量程
+    int measureRange; // 量程1，量程2，量程3，量程4。。。
 
     //梯形成形
     bool isTrapShaping;

@@ -45,7 +45,7 @@ public:
     void initCustomPlot();
     void initMultiCustomPlot();
 
-    void switchToCountMode(bool isCountMode);
+    void switchToCountMode(bool isCountModel);
     void switchToLogarithmicMode(bool isLogarithmic);
 
     void resetAxisCoords();

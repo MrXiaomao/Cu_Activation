@@ -255,6 +255,7 @@ void WaveformModel::on_pushButton_start_clicked()
         detectorParameter.waveformPolarity = 0x00;
         detectorParameter.deadTime = 0x05 * 10;
         detectorParameter.gain = 0x00;
+        detectorParameter.measureRange = 999;
         detectorParameter.waveLength = 0x01;
         detectorParameter.transferModel = 0x03;// 0x00-能谱 0x03-波形 0x05-符合模式
         detectorParameter.triggerModel = 0x00;

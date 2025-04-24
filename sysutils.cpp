@@ -178,7 +178,7 @@ std::vector<DetTimeEnergy> SysUtils::getDetTimeEnergy(const char* filename)
     if (ferror(input_file))
         return result;
 
-    uint32_t full_buffer_size = 2050 * 8;
+    uint32_t full_buffer_size = (PARTICLE_NUM_ONE_PAKAGE +1) * 16;
     std::vector<uint8_t> read_buffer(full_buffer_size, 0);
     std::vector<uint8_t> cache_buffer;
 
@@ -198,31 +198,33 @@ std::vector<DetTimeEnergy> SysUtils::getDetTimeEnergy(const char* filename)
                     // 分拣数据
                     ptrOffset = cache_buffer.data();
 
-                    //通道号(8字节)
-                    ptrOffset += 4;
-                    uint64_t channel = static_cast<uint64_t>(ptrOffset[0]) << 56 |
-                                      static_cast<uint64_t>(ptrOffset[1]) << 48 |
-                                      static_cast<uint64_t>(ptrOffset[2]) << 40 |
-                                      static_cast<uint64_t>(ptrOffset[3]) << 32 |
-                                      static_cast<uint64_t>(ptrOffset[4]) << 24 |
-                                      static_cast<uint64_t>(ptrOffset[5]) << 16 |
-                                      static_cast<uint64_t>(ptrOffset[6]) << 8 |
-                                      static_cast<uint64_t>(ptrOffset[7]);
-
+                    //通道号(4字节)
+                    ptrOffset += 4;                    
+                    uint32_t channel = static_cast<uint32_t>(ptrOffset[0]) << 24 |
+                                      static_cast<uint32_t>(ptrOffset[1]) << 16 |
+                                      static_cast<uint32_t>(ptrOffset[2]) << 8 |
+                                      static_cast<uint32_t>(ptrOffset[3]);
                     //通道值转换
-                    channel = (channel == 0xFFF1) ? 0 : 1;
+                    channel = (channel == 0xFFF1) ? 1 : 2;
+                                
+                    //数据包序号，4字节。两个探测器分别从1开始编号
+                    ptrOffset += 4; //包头4字节
+                    uint32_t dataNum = static_cast<uint32_t>(ptrOffset[0]) << 24 |
+                                    static_cast<uint32_t>(ptrOffset[1]) << 16 |
+                                    static_cast<uint32_t>(ptrOffset[2]) << 8 |
+                                    static_cast<uint32_t>(ptrOffset[3]);
 
-                    //粒子模式数据1024*8byte,前6字节:时间,后2字节:能量
+                    //粒子模式数据PARTICLE_NUM_ONE_PAKAGE*16byte, 6字节:空置；6字节：时间(单位:*10ns), 2字节：死时间（单位:*10ns）2字节：幅度
                     int ref = 1;
-                    ptrOffset += 8;
+                    ptrOffset += 4;
 
                     std::vector<TimeEnergy> temp;
-                    while (ref++<=1024){
-                        //空置48biy
+                    while (ref++<=PARTICLE_NUM_ONE_PAKAGE){
+                        //空置48bit
                         ptrOffset += 6;
 
                         //时间:48bit
-                        long long t = static_cast<uint64_t>(ptrOffset[0]) << 40 |
+                        uint64_t t = static_cast<uint64_t>(ptrOffset[0]) << 40 |
                                       static_cast<uint64_t>(ptrOffset[1]) << 32 |
                                       static_cast<uint64_t>(ptrOffset[2]) << 24 |
                                       static_cast<uint64_t>(ptrOffset[3]) << 16 |
@@ -273,7 +275,7 @@ void SysUtils::realQuickAnalyzeTimeEnergy(const char* filename, std::function<vo
     if (ferror(input_file))
         return ;
 
-    uint32_t full_buffer_size = 2050 * 8;
+    uint32_t full_buffer_size = (PARTICLE_NUM_ONE_PAKAGE + 1)* 16;
     std::vector<uint8_t> read_buffer(full_buffer_size, 0);
     std::vector<uint8_t> cache_buffer;
     bool interrupted = false;
@@ -292,32 +294,34 @@ void SysUtils::realQuickAnalyzeTimeEnergy(const char* filename, std::function<vo
                 if ((uint8_t)ptrOffset[0] == 0x00 && (uint8_t)ptrOffset[1] == 0x00 && (uint8_t)ptrOffset[2] == 0xcc && (uint8_t)ptrOffset[3] == 0xd3){
                     // 分拣数据
                     ptrOffset = cache_buffer.data();
-
-                    //通道号(8字节)
-                    ptrOffset += 4;
-                    uint64_t channel = static_cast<uint64_t>(ptrOffset[0]) << 56 |
-                                       static_cast<uint64_t>(ptrOffset[1]) << 48 |
-                                       static_cast<uint64_t>(ptrOffset[2]) << 40 |
-                                       static_cast<uint64_t>(ptrOffset[3]) << 32 |
-                                       static_cast<uint64_t>(ptrOffset[4]) << 24 |
-                                       static_cast<uint64_t>(ptrOffset[5]) << 16 |
-                                       static_cast<uint64_t>(ptrOffset[6]) << 8 |
-                                       static_cast<uint64_t>(ptrOffset[7]);
+                    
+                    ptrOffset += 4; //包头
+                    //通道号(4字节)
+                    uint64_t channel = static_cast<uint64_t>(ptrOffset[0]) << 24 |
+                                       static_cast<uint64_t>(ptrOffset[1]) << 16 |
+                                       static_cast<uint64_t>(ptrOffset[2]) << 8 |
+                                       static_cast<uint64_t>(ptrOffset[3]);
 
                     //通道值转换
                     channel = (channel == 0xFFF1) ? 0 : 1;
+                
+                    //序号（4字节）
+                    uint64_t number =  static_cast<uint64_t>(ptrOffset[4]) << 24 |
+                                    static_cast<uint64_t>(ptrOffset[5]) << 16 |
+                                    static_cast<uint64_t>(ptrOffset[6]) << 8 |
+                                    static_cast<uint64_t>(ptrOffset[7]);
 
-                    //粒子模式数据1024*16byte,前6字节:时间,后2字节:能量
-                    int ref = 1;
                     ptrOffset += 8;
 
+                    //粒子模式数据PARTICLE_NUM_ONE_PAKAGE*16byte,前6字节:时间,后2字节:能量
+                    int ref = 1;
                     std::vector<TimeEnergy> temp;
-                    while (ref++<=1024){
-                        //空置48biy
+                    while (ref++ <= PARTICLE_NUM_ONE_PAKAGE){
+                        //空置48bit
                         ptrOffset += 6;
 
                         //时间:48bit
-                        long long t = static_cast<uint64_t>(ptrOffset[0]) << 40 |
+                        uint64_t t = static_cast<uint64_t>(ptrOffset[0]) << 40 |
                                       static_cast<uint64_t>(ptrOffset[1]) << 32 |
                                       static_cast<uint64_t>(ptrOffset[2]) << 24 |
                                       static_cast<uint64_t>(ptrOffset[3]) << 16 |
@@ -328,14 +332,15 @@ void SysUtils::realQuickAnalyzeTimeEnergy(const char* filename, std::function<vo
 
                         //死时间:16bit
                         ptrOffset += 2;
-                        unsigned short dietime = static_cast<uint16_t>(ptrOffset[0]) << 8 | static_cast<uint16_t>(ptrOffset[1]);
+                        unsigned short deathtime = static_cast<uint16_t>(ptrOffset[0]) << 8 | static_cast<uint16_t>(ptrOffset[1]);
+                        deathtime *= 10;
 
                         //幅度:16bit
-                        unsigned short e = static_cast<uint16_t>(ptrOffset[0]) << 8 | static_cast<uint16_t>(ptrOffset[1]);
+                        unsigned short amplitude = static_cast<uint16_t>(ptrOffset[0]) << 8 | static_cast<uint16_t>(ptrOffset[1]);
                         ptrOffset += 2;
 
-                        if (t != 0x00 && e != 0x00)
-                            temp.push_back(TimeEnergy(t, dietime, e));
+                        if (t != 0x00 && amplitude != 0x00)
+                            temp.push_back(TimeEnergy(t, deathtime, amplitude));
                     }
 
                     //数据分拣完毕
@@ -376,7 +381,7 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
         return;
     }
 
-    uint32_t full_buffer_size = 2050 * 8;
+    uint32_t full_buffer_size = (PARTICLE_NUM_ONE_PAKAGE +1) * 16;
     std::vector<uint8_t> read_buffer(full_buffer_size, 0);
     std::vector<uint8_t> cache_buffer;
     bool interrupted = false;
@@ -396,30 +401,32 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
                     ptrOffset = cache_buffer.data();
 
                     //通道号(8字节)
-                    ptrOffset += 4;
-                    uint64_t channel = static_cast<uint64_t>(ptrOffset[0]) << 56 |
-                                       static_cast<uint64_t>(ptrOffset[1]) << 48 |
-                                       static_cast<uint64_t>(ptrOffset[2]) << 40 |
-                                       static_cast<uint64_t>(ptrOffset[3]) << 32 |
-                                       static_cast<uint64_t>(ptrOffset[4]) << 24 |
-                                       static_cast<uint64_t>(ptrOffset[5]) << 16 |
-                                       static_cast<uint64_t>(ptrOffset[6]) << 8 |
-                                       static_cast<uint64_t>(ptrOffset[7]);
+                    ptrOffset += 4; //包头
+                    uint32_t channel = static_cast<uint32_t>(ptrOffset[0]) << 24 |
+                                       static_cast<uint32_t>(ptrOffset[1]) << 16 |
+                                       static_cast<uint32_t>(ptrOffset[2]) << 8 |
+                                       static_cast<uint32_t>(ptrOffset[3]);
 
                     //通道值转换
                     channel = (channel == 0xFFF1) ? 0 : 1;
+                    //序号（4字节）
+                    uint32_t number =   static_cast<uint32_t>(ptrOffset[4]) << 24 |
+                                        static_cast<uint32_t>(ptrOffset[5]) << 16 |
+                                        static_cast<uint32_t>(ptrOffset[6]) << 8 |
+                                        static_cast<uint32_t>(ptrOffset[7]);
 
-                    //粒子模式数据1024*16byte,前6字节:时间,后2字节:能量
-                    int ref = 1;
                     ptrOffset += 8;
 
+                    //粒子模式数据PARTICLE_NUM_ONE_PAKAGE*16byte,前6字节:时间,后2字节:能量
+                    int ref = 1;
+
                     std::vector<TimeEnergy> temp;
-                    while (ref++<=1024){
-                        //空置48biy
+                    while (ref++ <= PARTICLE_NUM_ONE_PAKAGE){
+                        //空置48bit
                         ptrOffset += 6;
 
                         //时间:48bit
-                        long long t = static_cast<uint64_t>(ptrOffset[0]) << 40 |
+                        uint64_t t =  static_cast<uint64_t>(ptrOffset[0]) << 40 |
                                       static_cast<uint64_t>(ptrOffset[1]) << 32 |
                                       static_cast<uint64_t>(ptrOffset[2]) << 24 |
                                       static_cast<uint64_t>(ptrOffset[3]) << 16 |
@@ -430,14 +437,15 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
 
                         //死时间:16bit
                         ptrOffset += 2;
-                        unsigned short dietime = static_cast<uint16_t>(ptrOffset[0]) << 8 | static_cast<uint16_t>(ptrOffset[1]);
+                        unsigned short deathtime = static_cast<uint16_t>(ptrOffset[0]) << 8 | static_cast<uint16_t>(ptrOffset[1]);
+                        deathtime *= 10;
 
                         //幅度:16bit
-                        unsigned short e = static_cast<uint16_t>(ptrOffset[0]) << 8 | static_cast<uint16_t>(ptrOffset[1]);
+                        unsigned short amplitude = static_cast<uint16_t>(ptrOffset[0]) << 8 | static_cast<uint16_t>(ptrOffset[1]);
                         ptrOffset += 2;
 
-                        if (t != 0x00 && e != 0x00)
-                            temp.push_back(TimeEnergy(t, dietime, e));
+                        if (t != 0x00 && amplitude != 0x00)
+                            temp.push_back(TimeEnergy(t, deathtime, amplitude));
                     }
 
                     //数据分拣完毕

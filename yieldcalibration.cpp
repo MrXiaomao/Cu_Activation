@@ -29,7 +29,29 @@ YieldCalibration::YieldCalibration(QWidget *parent)
     ui->tableWidget_calibration->item(3, 1)->setText(QString::number(mapCalibration[3].active_t0, 'E', 5));
 
     // 连接单元格变化信号
-    // connect(tableWidget_calibration, &QTableWidget::cellChanged, this, &YieldCalibration::onCellChanged);
+    // 连接cellChanged信号
+    connect(ui->tableWidget_calibration, &QTableWidget::cellChanged, [this](int row, int col) {
+        QTableWidgetItem *item = ui->tableWidget_calibration->item(row, col);
+        if (!item) return;
+        
+        QString text = item->text();
+        bool ok;
+        double value = text.toDouble(&ok);
+        
+        if (!ok) {
+            // 标记无效输入
+            item->setBackground(Qt::red);
+            item->setToolTip(tr("无效的数值输入。\n请输入浮点数类型，如：1000, 1000.0, 1E3, 1E+3, 1.0E3, 1.0E+03"));
+            
+            // 可以恢复之前的值或保持标记
+            // item->setText(m_lastValidValue);
+        } else {
+            // 有效输入
+            item->setBackground(Qt::white);
+            item->setToolTip("");
+            // m_lastValidValue = text; // 保存有效值
+        }
+    });
 
     // 设置水平表头文本换行
     // ui->tableWidget->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
@@ -53,7 +75,7 @@ bool YieldCalibration::isTableModified(QTableWidget *table)
         }
 
         QTableWidgetItem *item2 = table->item(row, 1);
-        if (item->text().toDouble() != mapCalibration[row].active_t0) {
+        if (item2->text().toDouble() != mapCalibration[row].active_t0) {
             changed = true;
         }
     }
@@ -62,11 +84,11 @@ bool YieldCalibration::isTableModified(QTableWidget *table)
 
 void YieldCalibration::on_pushButton_OK_clicked()
 {
-    if (QMessageBox::question(this, tr("提示"), tr("您确定用更新标定数据吗？\r\n\r\n请仔细检查后保存"),
+    if (QMessageBox::question(this, tr("提示"), tr("您确定要更新标定数据吗？"),
             QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) != QMessageBox::Yes)
         return ;
 
-    this->save();
+    if(!this->save()) return;
     this->close();
 }
 
@@ -112,7 +134,7 @@ void YieldCalibration::load()
     }
 }
 
-void YieldCalibration::save()
+bool YieldCalibration::save()
 {
     // 保存参数
     QString path = QApplication::applicationDirPath() + "/config";
@@ -135,8 +157,18 @@ void YieldCalibration::save()
             QJsonArray items;
             QJsonObject item;
             QString key = QString("Range%1").arg(i);
-            double yield = ui->tableWidget_calibration->item(i, 0)->text().toDouble();
-            double active = ui->tableWidget_calibration->item(i, 1)->text().toDouble();
+
+            bool ok;
+            double yield = ui->tableWidget_calibration->item(i, 0)->text().toDouble(&ok);
+            if(!ok) {
+                QMessageBox::information(nullptr, tr("提示"), tr("保存失败：存在非法输入！请检查后保存"));
+                return false;
+            }
+            double active = ui->tableWidget_calibration->item(i, 1)->text().toDouble(&ok);
+            if(!ok) {
+                QMessageBox::information(nullptr, tr("提示"), tr("保存失败：存在非法输入！请检查后保存"));
+                return false;
+            }
             item["Yield"] = yield;
             item["active0"] = active;
             // 同步成员变量的数值，方便下次检查table是否变化
@@ -175,6 +207,8 @@ void YieldCalibration::save()
         file.write(jsonDoc.toJson());
         file.close();
     }
+    QMessageBox::information(nullptr, tr("提示"), tr("产额标定数据保存成功！"));
+    return true;
 }
 
 void YieldCalibration::closeEvent(QCloseEvent */*event*/)

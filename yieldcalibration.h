@@ -32,7 +32,7 @@ public:
     ~YieldCalibration();
 
     void load();
-    void save();
+    bool save();
 
 protected:
     virtual void closeEvent(QCloseEvent *event) override;

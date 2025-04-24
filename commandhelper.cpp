@@ -140,7 +140,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
 
     connect(this, &CommandHelper::sigMeasureStop, this, [=](){
         //测量停止保存符合运算测量参数
-        QString configResultFile = netDataFileName + ".配置";
+        QString configResultFile = validDataFileName + ".配置";
         {
             QFile file(configResultFile);
             if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
@@ -186,7 +186,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
         }
         
         //符合测量模式保存测量能谱文件
-        QString SpecFile = netDataFileName + ".累积能谱";
+        QString SpecFile = validDataFileName + ".累积能谱";
         {
             QFile file(SpecFile);
             if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
@@ -278,7 +278,7 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
     //保存信息
     if (r1.time != currentFPGATime){
         //有新的能谱数据产生
-        QString coincidenceResultFile = netDataFileName + ".计数";
+        QString coincidenceResultFile = validDataFileName + ".计数";
         {
             QFile::OpenMode ioFlags = QIODevice::Truncate;
             if (QFileInfo::exists(coincidenceResultFile))

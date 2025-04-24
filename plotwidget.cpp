@@ -18,8 +18,8 @@ PlotWidget::PlotWidget(QWidget *parent) : QStackedWidget(parent)
     //计数模式下，坐标轴默认范围值
     COUNT_X_AXIS_LOWER[0] = 0; //计数率
     COUNT_X_AXIS_LOWER[1] = 0;//符合计数率
-    COUNT_X_AXIS_UPPER[0] = 60;
-    COUNT_X_AXIS_UPPER[1] = 60;//60秒
+    COUNT_X_AXIS_UPPER[0] = 600;
+    COUNT_X_AXIS_UPPER[1] = 600;//600秒
 
     COUNT_Y_AXIS_LOWER[0] = 0;
     COUNT_Y_AXIS_LOWER[1] = 0;
@@ -61,23 +61,20 @@ void PlotWidget::resetAxisCoords()
             customPlotDet12->yAxis->setRange(SPECTRUM_Y_AXIS_LOWER, SPECTRUM_Y_AXIS_UPPER);
         }
     } else {
-        QCustomPlot* customPlotDet1 = getCustomPlot(amCountDet1);
-        QCustomPlot* customPlotDet2 = getCustomPlot(amCountDet2);
-        QCustomPlot* customPlotCoincidenceResult = getCustomPlot(amCoResult);
-
-        if (this->property("isCountModel").toBool()){
-            customPlotDet1->xAxis->setRange(COUNT_X_AXIS_LOWER[0], COUNT_X_AXIS_UPPER[0]); // 设置x轴的显示范围
-            customPlotDet2->xAxis->setRange(COUNT_X_AXIS_LOWER[0], COUNT_X_AXIS_UPPER[0]); // 设置x轴的显示范围
-            customPlotCoincidenceResult->xAxis->setRange(COUNT_X_AXIS_LOWER[1], COUNT_X_AXIS_UPPER[1]); // 设置x轴的显示范围
-
-            customPlotDet1->yAxis->setRange(COUNT_Y_AXIS_LOWER[0], COUNT_Y_AXIS_UPPER[0]);
-            customPlotDet2->yAxis->setRange(COUNT_Y_AXIS_LOWER[0], COUNT_Y_AXIS_UPPER[0]);
-            customPlotCoincidenceResult->yAxis->setRange(COUNT_Y_AXIS_LOWER[1], COUNT_Y_AXIS_UPPER[1]);
-        } else {
-            customPlotDet1->xAxis->setRange(SPECTRUM_X_AXIS_LOWER, SPECTRUM_X_AXIS_UPPER); // 设置x轴的显示范围
-            customPlotDet2->xAxis->setRange(SPECTRUM_X_AXIS_LOWER, SPECTRUM_X_AXIS_UPPER); // 设置x轴的显示范围
-            customPlotDet1->yAxis->setRange(SPECTRUM_Y_AXIS_LOWER, SPECTRUM_Y_AXIS_UPPER);
-            customPlotDet2->yAxis->setRange(SPECTRUM_Y_AXIS_LOWER, SPECTRUM_Y_AXIS_UPPER);
+        QList<QCustomPlot*> customPlots = getAllCustomPlot();
+        for (auto customPlot : customPlots){
+            if(customPlot->property("isCountModel").toBool())
+            {
+                customPlot->xAxis->setRange(COUNT_X_AXIS_LOWER[0], COUNT_X_AXIS_UPPER[0]);
+                customPlot->yAxis->setRange(COUNT_X_AXIS_LOWER[0], COUNT_X_AXIS_UPPER[0]);
+                customPlot->yAxis2->setRange(COUNT_X_AXIS_LOWER[0], COUNT_X_AXIS_UPPER[0]);
+            }
+            else
+            {
+                customPlot->xAxis->setRange(SPECTRUM_X_AXIS_LOWER, SPECTRUM_X_AXIS_UPPER);
+                customPlot->yAxis->setRange(SPECTRUM_Y_AXIS_LOWER, SPECTRUM_Y_AXIS_UPPER);
+                customPlot->yAxis2->setRange(SPECTRUM_Y_AXIS_LOWER, SPECTRUM_Y_AXIS_UPPER);
+            }
         }
     }
 }
@@ -778,12 +775,12 @@ QCustomPlot *PlotWidget::allocCustomPlot(QString objName, bool needGauss, QWidge
             if (range.upper > MAX_SPECTUM)
                 //customPlot->xAxis->setRangeUpper(MAX_SPECTUM);
                 customPlot->xAxis->setRange(MAX_SPECTUM - oldRange.size(), MAX_SPECTUM);
-            if (range.size() < 60)
+            if (range.size() < 60)//最少显示60个点
                 customPlot->xAxis->setRange(range.lower, range.lower + 60);//0.01~1000
         } else {
             if (range.lower < 0)
                 customPlot->xAxis->setRange(0, oldRange.size());
-            if (range.size() < 60)
+            if (range.size() < 60)//最少显示60个点
                 customPlot->xAxis->setRange(range.lower, range.lower + 60);//0.01~1000
         }
     });
@@ -868,6 +865,7 @@ void PlotWidget::slotRestorePlot(QMouseEvent* e)
     timerAutoRestore->start(10000);//10秒后恢复自动刷新
 }
 
+//该功能放弃使用了 2025年4月24日22:15:58
 void PlotWidget::resetPlotDatas(QCustomPlot* customPlot)
 {
     //右键重设数据初始状态
@@ -1627,20 +1625,6 @@ void PlotWidget::slotStart()
         for (int i=0; i<customPlot->graphCount(); ++i)
             customPlot->graph(i)->data()->clear();
 
-        //重设坐标轴范围
-        if(customPlot->property("isCountModel").toBool())
-        {
-            customPlot->xAxis->setRange(0, 600);
-            customPlot->yAxis->setRange(0, 1000);
-            customPlot->yAxis2->setRange(0, 1000);
-        }
-        else{
-            customPlot->xAxis->setRange(0, 8192);
-            customPlot->yAxis->setRange(0, 100);
-            customPlot->yAxis2->setRange(0, 100);
-        }
-
-        customPlot->rescaleAxes(true);
         customPlot->replot(refreshPriority);
     }
 
@@ -1648,6 +1632,7 @@ void PlotWidget::slotStart()
     QVector<double>(MULTI_CHANNEL, 0).swap(energyValues[0]);
     QVector<double>(MULTI_CHANNEL, 0).swap(energyValues[1]);
 
+    //重设坐标轴范围
     resetAxisCoords();
     emit sigPausePlot(false);
 }

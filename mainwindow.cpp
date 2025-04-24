@@ -5,6 +5,7 @@
 #include "spectrumModel.h"
 #include "offlinedataanalysiswidget.h"
 #include "plotwidget.h"
+#include "yieldcalibration.h"
 #include "FPGASetting.h"
 #include "splashwidget.h"
 
@@ -1301,6 +1302,15 @@ void MainWindow::on_action_cachepath_triggered()
     w->showNormal();
 }
 
+void MainWindow::on_action_yieldcalibration_triggered()
+{
+    YieldCalibration *w = new YieldCalibration(this);
+    w->setAttribute(Qt::WA_DeleteOnClose, true);
+    w->setWindowFlags(Qt::WindowCloseButtonHint|Qt::Dialog);
+    w->setWindowModality(Qt::ApplicationModal);
+    w->showNormal();
+}
+
 void MainWindow::on_action_log_triggered()
 {
     ui->widget_log->show();
@@ -1704,13 +1714,13 @@ void MainWindow::on_action_line_log_triggered()
 //打开位移平台界面
 void MainWindow::on_action_Moving_triggered()
 {
-    /*
+    
     ControlWidget *w = new ControlWidget(this);
     w->setAttribute(Qt::WA_DeleteOnClose, true);
     w->setWindowFlags(Qt::WindowCloseButtonHint|Qt::Dialog);
     w->setWindowModality(Qt::ApplicationModal);
     w->showNormal();
-    */
+    
 }
 
 #include <QRegExp>

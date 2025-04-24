@@ -52,5 +52,6 @@
         <file>resource/circle-green.png</file>
         <file>resource/circle-red.png</file>
         <file>resource/warn.png</file>
+        <file>resource/刻度尺.png</file>
     </qresource>
 </RCC>

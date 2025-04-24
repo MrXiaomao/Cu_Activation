@@ -82,6 +82,8 @@ private slots:
 
     void on_action_cachepath_triggered();
 
+    void on_action_yieldcalibration_triggered();
+
     void on_action_log_triggered();
 
     void on_pushButton_refresh_2_clicked();

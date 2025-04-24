@@ -40,7 +40,8 @@ SOURCES += \
     splashwidget.cpp \
     sysutils.cpp \
     waveformmodel.cpp \
-    FPGASetting.cpp
+    FPGASetting.cpp \
+    yieldcalibration.cpp
 
 HEADERS += \
     cachedirconfigwidget.h \
@@ -67,7 +68,8 @@ HEADERS += \
     splashwidget.h \
     sysutils.h \
     waveformmodel.h \
-    FPGASetting.h
+    FPGASetting.h \
+    yieldcalibration.h
 
 FORMS += \
     FPGASetting.ui \
@@ -81,7 +83,8 @@ FORMS += \
     splashwidget.ui \
     waveformmodel.ui \
     equipmentmanagementform.ui \
-    mainwindow.ui
+    mainwindow.ui \
+    yieldcalibration.ui
 
 TRANSLATIONS += \
     Cu_Activation_zh_CN.ts

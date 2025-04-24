@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1576</width>
-    <height>691</height>
+    <height>700</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -1871,6 +1871,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     </property>
     <addaction name="action_devices"/>
     <addaction name="action_cachepath"/>
+    <addaction name="action_yieldcalibration"/>
    </widget>
    <widget class="QMenu" name="menu_3">
     <property name="title">
@@ -2197,6 +2198,15 @@ li.checked::marker { content: &quot;\2612&quot;; }
    </property>
    <property name="menuRole">
     <enum>QAction::NoRole</enum>
+   </property>
+  </action>
+  <action name="action_yieldcalibration">
+   <property name="icon">
+    <iconset resource="resource.qrc">
+     <normaloff>:/resource/刻度尺.png</normaloff>:/resource/刻度尺.png</iconset>
+   </property>
+   <property name="text">
+    <string>产额标定系数</string>
    </property>
   </action>
  </widget>

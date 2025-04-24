@@ -1277,7 +1277,7 @@ void CommandHelper::netFrameWorkThead()
             }
         } else if (detectorParameter.transferModel == 0x05)
         {
-            const quint32 minPkgSize = 1025 * 16;
+            const quint32 minPkgSize = 65 * 16;
             bool isNual = false;
             bool foundStop = false;
 
@@ -1415,13 +1415,15 @@ void CommandHelper::netFrameWorkThead()
                 //处理数据
                 const unsigned char *ptrOffset = (const unsigned char *)validFrame.constData();
 
-                //通道号(8字节)
-                ptrOffset += 4;
-                quint64 channel = static_cast<quint64>(ptrOffset[0]) << 56 |
-                                  static_cast<quint64>(ptrOffset[1]) << 48 |
-                                  static_cast<quint64>(ptrOffset[2]) << 40 |
-                                  static_cast<quint64>(ptrOffset[3]) << 32 |
-                                  static_cast<quint64>(ptrOffset[4]) << 24 |
+                //通道号(4字节)
+                ptrOffset += 4; //包头4字节
+                quint64 channel = static_cast<quint64>(ptrOffset[0]) << 24 |
+                                  static_cast<quint64>(ptrOffset[1]) << 16 |
+                                  static_cast<quint64>(ptrOffset[2]) << 8 |
+                                  static_cast<quint64>(ptrOffset[3]);
+                
+                //序号（4字节）
+                quint64 number =  static_cast<quint64>(ptrOffset[4]) << 24 |
                                   static_cast<quint64>(ptrOffset[5]) << 16 |
                                   static_cast<quint64>(ptrOffset[6]) << 8 |
                                   static_cast<quint64>(ptrOffset[7]);
@@ -1429,7 +1431,7 @@ void CommandHelper::netFrameWorkThead()
                 //通道值转换
                 channel = (channel == 0xFFF1) ? 0 : 1;
 
-                //粒子模式数据1024*8byte,前6字节:时间,后2字节:能量
+                //粒子模式数据64*8byte,前6字节:时间,后2字节:能量
                 int ref = 1;
                 ptrOffset += 8;
 

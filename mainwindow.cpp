@@ -371,6 +371,8 @@ void MainWindow::InitMainWindowUi()
 #ifdef QT_NO_DEBUG
     // ui->action_start_measure->hide();
     ui->toolBar_online->removeAction(ui->action_start_measure);
+    ui->menu_4->removeAction(ui->action_Moving); // 屏蔽掉位移平台子界面
+    ui->menu_view->removeAction(ui->action_SpectrumModel); //屏蔽掉能谱界面
 #endif
 
     ui->toolBar_offline->hide();
@@ -1714,13 +1716,13 @@ void MainWindow::on_action_line_log_triggered()
 //打开位移平台界面
 void MainWindow::on_action_Moving_triggered()
 {
-    
+    /*
     ControlWidget *w = new ControlWidget(this);
     w->setAttribute(Qt::WA_DeleteOnClose, true);
     w->setWindowFlags(Qt::WindowCloseButtonHint|Qt::Dialog);
     w->setWindowModality(Qt::ApplicationModal);
     w->showNormal();
-    
+    */
 }
 
 #include <QRegExp>

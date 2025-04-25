@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Please set LastEditors
- * @LastEditTime: 2025-04-22 21:09:53
+ * @LastEditTime: 2025-04-24 22:49:09
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -266,8 +266,9 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
     data_temp1.reserve(length1);
     data_temp2.reserve(length2);
 
-    //统计探测器1在能窗内的计数
+    //统计探测器1在能窗内的计数以及死时间
     int count1 = 0;
+    int deathTime1 = 0;
     for (int i=0; i<length1; i++)
     {
         if(data1[i].energy>EnWindowWidth[0] && data1[i].energy <=EnWindowWidth[1]) {
@@ -275,19 +276,25 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
             data1[i].time += delayTime;
             data_temp1.push_back(data1[i]);
         }
+        deathTime1 += data1[i].dietime;
     }
     tmpCoinResult.CountRate1 = count1;
+    tmpCoinResult.DeathRatio1 = deathTime1*100.0/1E9; // 给出1s内的死时间率。转化为100%的单位
 
-    //统计探测器2在能窗内的计数
+    //统计探测器2在能窗内的计数以及死时间
     int count2 = 0;
+    int deathTime2 = 0;
     for (int i=0; i<length2; i++)
     {
         if(data2[i].energy>EnWindowWidth[2] && data2[i].energy <=EnWindowWidth[3]) {
             count2++;
             data_temp2.push_back(data2[i]);
         }
+        deathTime2 += data2[i].dietime;
     }
     tmpCoinResult.CountRate2 = count2;
+    tmpCoinResult.DeathRatio2 = deathTime2*100.0/1E9; // 给出1s内的死时间率。转化为100%的单位
+
 
     //这里是适用于什么情况，没看懂 ???
     // 好像是当某一秒其中一个探测器没有数据，另一个探测器有数据。

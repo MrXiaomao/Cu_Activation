@@ -297,6 +297,8 @@ MainWindow::MainWindow(QWidget *parent)
             ui->lcdNumber_CountRate1->display(r3.back().CountRate1);
             ui->lcdNumber_CountRate2->display(r3.back().CountRate2);
             ui->lcdNumber_ConCount_single->display(r3.back().ConCount_single);
+            ui->lcdNumber_DeathRatio1->display(r3.back().DeathRatio1);
+            ui->lcdNumber_DeathRatio2->display(r3.back().DeathRatio2);
         }
     }, Qt::DirectConnection/*防止堵塞*/);
     //DirectConnection replot 子线程操作，不会堵塞，但是会崩溃
@@ -981,10 +983,11 @@ void MainWindow::on_pushButton_measure_clicked()
             plotWidget->slotStart();
             plotWidget->slotUpdateEnTimeWidth(EnWin);
 
-            ui->lcdNumber_2->display("0");
             ui->lcdNumber_CountRate1->display("0");
             ui->lcdNumber_CountRate2->display("0");
             ui->lcdNumber_ConCount_single->display("0");
+            ui->lcdNumber_DeathRatio1->display("0.0");
+            ui->lcdNumber_DeathRatio2->display("0.0");
 
             commandHelper->updateParamter(stepT, EnWin, timewidth, delayTime, false);
             commandHelper->slotStartManualMeasure(detectorParameter);
@@ -1069,10 +1072,11 @@ void MainWindow::on_pushButton_measure_2_clicked()
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
         plotWidget->slotStart();
 
-        ui->lcdNumber_2->display("0");
         ui->lcdNumber_CountRate1->display("0");
         ui->lcdNumber_CountRate2->display("0");
         ui->lcdNumber_ConCount_single->display("0");
+        ui->lcdNumber_DeathRatio1->display("0.0");
+        ui->lcdNumber_DeathRatio2->display("0.0");
 
         int stepT = ui->spinBox_step_2->value();
         unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE_2->value(), (unsigned short)ui->spinBox_1_rightE_2->value(),
@@ -1086,7 +1090,8 @@ void MainWindow::on_pushButton_measure_2_clicked()
         commandHelper->updateParamter(stepT, EnWin, timewidth, delayTime, false);
         commandHelper->slotStartAutoMeasure(detectorParameter);
 
-        ui->pushButton_measure_2_tip->setText(tr("等待触发..."));
+        // ui->pushButton_measure_2_tip->setText(tr("等待触发..."));
+        qInfo()<<"等待触发...";
         QTimer::singleShot(30000, this, [=](){
             //指定时间未收到开始测量指令，则按钮恢复初始状态
             if (this->property("measure-status").toUInt() == msPrepare){
@@ -1396,7 +1401,7 @@ void MainWindow::slotRefreshUi()
     //测量
     if (this->property("measure-status").toUInt() == msStart){
         ui->action_refresh->setEnabled(true);        
-        ui->pushButton_measure_2_tip->setText("");
+        // ui->pushButton_measure_2_tip->setText("");
 
         ui->comboBox_range->setEnabled(false);
         ui->comboBox_range_2->setEnabled(false);

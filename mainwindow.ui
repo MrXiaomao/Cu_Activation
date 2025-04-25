@@ -194,54 +194,13 @@
                     </size>
                    </property>
                    <property name="digitCount">
-                    <number>9</number>
+                    <number>10</number>
                    </property>
                    <property name="segmentStyle">
                     <enum>QLCDNumber::Flat</enum>
                    </property>
                    <property name="intValue" stdset="0">
                     <number>0</number>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLabel" name="label_18">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="text">
-                    <string>总符合计数：</string>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLCDNumber" name="lcdNumber_2">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>0</width>
-                     <height>30</height>
-                    </size>
-                   </property>
-                   <property name="frameShape">
-                    <enum>QFrame::Box</enum>
-                   </property>
-                   <property name="digitCount">
-                    <number>9</number>
-                   </property>
-                   <property name="segmentStyle">
-                    <enum>QLCDNumber::Flat</enum>
                    </property>
                   </widget>
                  </item>
@@ -254,7 +213,7 @@
                     </sizepolicy>
                    </property>
                    <property name="text">
-                    <string>Det1计数率/cps：</string>
+                    <string>计数率1/cps：</string>
                    </property>
                    <property name="alignment">
                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -275,8 +234,14 @@
                      <height>30</height>
                     </size>
                    </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>70</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
                    <property name="digitCount">
-                    <number>9</number>
+                    <number>7</number>
                    </property>
                    <property name="segmentStyle">
                     <enum>QLCDNumber::Flat</enum>
@@ -292,7 +257,7 @@
                     </sizepolicy>
                    </property>
                    <property name="text">
-                    <string>Det2计数率/cps：</string>
+                    <string>计数率2/cps：</string>
                    </property>
                    <property name="alignment">
                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -313,8 +278,14 @@
                      <height>30</height>
                     </size>
                    </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>70</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
                    <property name="digitCount">
-                    <number>9</number>
+                    <number>7</number>
                    </property>
                    <property name="segmentStyle">
                     <enum>QLCDNumber::Flat</enum>
@@ -351,8 +322,96 @@
                      <height>30</height>
                     </size>
                    </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>70</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
                    <property name="digitCount">
-                    <number>9</number>
+                    <number>7</number>
+                   </property>
+                   <property name="segmentStyle">
+                    <enum>QLCDNumber::Flat</enum>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="label_18">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="text">
+                    <string>死时间率1/%：</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLCDNumber" name="lcdNumber_DeathRatio1">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>30</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>70</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
+                   <property name="frameShape">
+                    <enum>QFrame::Box</enum>
+                   </property>
+                   <property name="digitCount">
+                    <number>7</number>
+                   </property>
+                   <property name="segmentStyle">
+                    <enum>QLCDNumber::Flat</enum>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="label_2">
+                   <property name="text">
+                    <string>死时间率2/%：</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLCDNumber" name="lcdNumber_DeathRatio2">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>30</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>70</width>
+                     <height>30</height>
+                    </size>
+                   </property>
+                   <property name="digitCount">
+                    <number>7</number>
                    </property>
                    <property name="segmentStyle">
                     <enum>QLCDNumber::Flat</enum>
@@ -912,6 +971,58 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       <number>0</number>
                      </property>
                      <item>
+                      <widget class="QLabel" name="label_3">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                         <horstretch>0</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <property name="minimumSize">
+                        <size>
+                         <width>74</width>
+                         <height>0</height>
+                        </size>
+                       </property>
+                       <property name="text">
+                        <string>多道道数：</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QComboBox" name="comboBox_channel">
+                       <property name="minimumSize">
+                        <size>
+                         <width>70</width>
+                         <height>0</height>
+                        </size>
+                       </property>
+                       <item>
+                        <property name="text">
+                         <string>8192</string>
+                        </property>
+                       </item>
+                       <item>
+                        <property name="text">
+                         <string>1024</string>
+                        </property>
+                       </item>
+                       <item>
+                        <property name="text">
+                         <string>2048</string>
+                        </property>
+                       </item>
+                       <item>
+                        <property name="text">
+                         <string>4096</string>
+                        </property>
+                       </item>
+                      </widget>
+                     </item>
+                     <item>
                       <spacer name="horizontalSpacer_2">
                        <property name="orientation">
                         <enum>Qt::Horizontal</enum>
@@ -951,6 +1062,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   </item>
                   <item row="0" column="4">
                    <widget class="QComboBox" name="comboBox_range">
+                    <property name="minimumSize">
+                     <size>
+                      <width>90</width>
+                      <height>0</height>
+                     </size>
+                    </property>
                     <item>
                      <property name="text">
                       <string>0~1E4</string>
@@ -975,6 +1092,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   </item>
                   <item row="0" column="1" colspan="2">
                    <widget class="QSpinBox" name="spinBox_timelength">
+                    <property name="minimumSize">
+                     <size>
+                      <width>70</width>
+                      <height>0</height>
+                     </size>
+                    </property>
                     <property name="minimum">
                      <number>1</number>
                     </property>
@@ -1004,6 +1127,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   </item>
                   <item row="1" column="1" colspan="2">
                    <widget class="QSpinBox" name="spinBox_cool_timelength">
+                    <property name="minimumSize">
+                     <size>
+                      <width>70</width>
+                      <height>0</height>
+                     </size>
+                    </property>
                     <property name="minimum">
                      <number>1</number>
                     </property>
@@ -1055,89 +1184,43 @@ li.checked::marker { content: &quot;\2612&quot;; }
                   <property name="bottomMargin">
                    <number>9</number>
                   </property>
-                  <item row="0" column="1" colspan="4">
-                   <widget class="QLineEdit" name="start_time_text">
-                    <property name="readOnly">
-                     <bool>true</bool>
+                  <item row="3" column="2">
+                   <spacer name="horizontalSpacer_3">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
                     </property>
-                   </widget>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>40</width>
+                      <height>20</height>
+                     </size>
+                    </property>
+                   </spacer>
                   </item>
-                  <item row="3" column="0" colspan="5">
-                   <widget class="QWidget" name="widget_16" native="true">
-                    <layout class="QHBoxLayout" name="horizontalLayout_14">
-                     <property name="leftMargin">
-                      <number>9</number>
-                     </property>
-                     <property name="topMargin">
-                      <number>0</number>
-                     </property>
-                     <property name="rightMargin">
-                      <number>0</number>
-                     </property>
-                     <property name="bottomMargin">
-                      <number>0</number>
-                     </property>
-                     <item>
-                      <widget class="QLabel" name="pushButton_measure_2_tip">
-                       <property name="sizePolicy">
-                        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                         <horstretch>0</horstretch>
-                         <verstretch>0</verstretch>
-                        </sizepolicy>
-                       </property>
-                       <property name="styleSheet">
-                        <string notr="true">color: rgb(0, 0, 255);</string>
-                       </property>
-                       <property name="text">
-                        <string/>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QPushButton" name="pushButton_measure_2">
-                       <property name="enabled">
-                        <bool>false</bool>
-                       </property>
-                       <property name="minimumSize">
-                        <size>
-                         <width>105</width>
-                         <height>0</height>
-                        </size>
-                       </property>
-                       <property name="text">
-                        <string>开始测量</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </widget>
-                  </item>
-                  <item row="2" column="3" colspan="2">
-                   <widget class="QComboBox" name="comboBox_range_2">
-                    <item>
-                     <property name="text">
-                      <string>0~1E4</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>1E4~1E7</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>1E7~1E10</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>1E10~1E13</string>
-                     </property>
-                    </item>
+                  <item row="3" column="3">
+                   <widget class="QPushButton" name="pushButton_measure_2">
+                    <property name="enabled">
+                     <bool>false</bool>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>105</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <property name="text">
+                     <string>开始测量</string>
+                    </property>
                    </widget>
                   </item>
                   <item row="2" column="1">
                    <widget class="QSpinBox" name="spinBox_timelength_2">
+                    <property name="minimumSize">
+                     <size>
+                      <width>70</width>
+                      <height>0</height>
+                     </size>
+                    </property>
                     <property name="minimum">
                      <number>1</number>
                     </property>
@@ -1153,22 +1236,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <widget class="QLabel" name="label_46">
                     <property name="text">
                      <string>量程选取：</string>
-                    </property>
-                    <property name="alignment">
-                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="label_43">
-                    <property name="sizePolicy">
-                     <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                      <horstretch>0</horstretch>
-                      <verstretch>0</verstretch>
-                     </sizepolicy>
-                    </property>
-                    <property name="text">
-                     <string>触发时刻：</string>
                     </property>
                     <property name="alignment">
                      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -1191,10 +1258,109 @@ li.checked::marker { content: &quot;\2612&quot;; }
                     </property>
                    </widget>
                   </item>
+                  <item row="3" column="1">
+                   <widget class="QComboBox" name="comboBox_channel2">
+                    <property name="minimumSize">
+                     <size>
+                      <width>70</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <item>
+                     <property name="text">
+                      <string>8192</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>1024</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>2048</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>4096</string>
+                     </property>
+                    </item>
+                   </widget>
+                  </item>
+                  <item row="0" column="1" colspan="4">
+                   <widget class="QLineEdit" name="start_time_text">
+                    <property name="readOnly">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label_43">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>触发时刻：</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="0">
+                   <widget class="QLabel" name="label_4">
+                    <property name="minimumSize">
+                     <size>
+                      <width>74</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <property name="text">
+                     <string>多道道数：</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="3" colspan="2">
+                   <widget class="QComboBox" name="comboBox_range_2">
+                    <property name="minimumSize">
+                     <size>
+                      <width>90</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <item>
+                     <property name="text">
+                      <string>0~1E4</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>1E4~1E7</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>1E7~1E10</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>1E10~1E13</string>
+                     </property>
+                    </item>
+                   </widget>
+                  </item>
                  </layout>
                 </widget>
                </item>
-               <item row="1" column="0">
+               <item row="2" column="0">
                 <widget class="QGroupBox" name="groupBox_4">
                  <property name="enabled">
                   <bool>true</bool>
@@ -1465,6 +1631,24 @@ li.checked::marker { content: &quot;\2612&quot;; }
                     </property>
                    </widget>
                   </item>
+                 </layout>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QWidget" name="widget_16" native="true">
+                 <layout class="QHBoxLayout" name="horizontalLayout_14">
+                  <property name="leftMargin">
+                   <number>9</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
                  </layout>
                 </widget>
                </item>

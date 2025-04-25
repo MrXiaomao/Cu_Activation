@@ -68,6 +68,8 @@ struct CoincidenceResult{
     int ConCount_multiple = 0;//一秒内的多符合的个数
     int CountRate1 = 0; //探测器1的计数率，是指在能窗内的计数率
     int CountRate2 = 0; //探测器2的计数率，是指在能窗内的计数率
+    double DeathRatio1 = 0.0; //死时间率，单位：百分比
+    double DeathRatio2 = 0.0; //死时间率，单位：百分比
 };
 
 struct CurrentPoint{

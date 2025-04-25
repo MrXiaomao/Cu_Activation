@@ -992,9 +992,9 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     }
     
     //网口数据缓存文件，波形模式、能谱模式直接存网口数据缓存文件
-    pfSaveNet = new QFile(validDataFileName);
+    pfSaveNet = new QFile(netDataFileName);
     if (pfSaveNet->open(QIODevice::WriteOnly)) {
-        qDebug() << tr("创建网口数据缓存文件成功，文件名：%1").arg(netDataFileName);
+        qInfo() << tr("创建网口数据缓存文件成功，文件名：%1").arg(netDataFileName);
     } else {
         qWarning() << tr("创建网口数据缓存文件失败，文件名：%1").arg(netDataFileName);
     }
@@ -1002,7 +1002,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     //有效数据缓存文件。符合模式（也称粒子模式）只存有效数据
     pfSaveVaildData = new QFile(validDataFileName);
     if (pfSaveVaildData->open(QIODevice::WriteOnly)) {
-        qDebug() << tr("创建缓存文件成功，文件名：%1").arg(validDataFileName);
+        qInfo() << tr("创建缓存文件成功，文件名：%1").arg(validDataFileName);
     } else {
         qWarning() << tr("创建缓存文件失败，文件名：%1").arg(validDataFileName);
     }

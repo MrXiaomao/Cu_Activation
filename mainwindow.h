@@ -58,8 +58,6 @@ private slots:
 
     void on_pushButton_measure_2_clicked();
 
-    void on_pushButton_measure_3_clicked();
-
     void on_action_displacement_triggered();
 
     void on_action_detector_connect_triggered();
@@ -116,6 +114,7 @@ private:
     ControlHelper *controlHelper = nullptr;//网络指令
 
     qint32 currentDetectorIndex = 0;
+    unsigned int multi_CHANNEL; //多道道数
     QDateTime lastRecvDataTime;//探测器上一次接收数据时间
     QDateTime measureStartTime;//探测器测量开始时间
 };

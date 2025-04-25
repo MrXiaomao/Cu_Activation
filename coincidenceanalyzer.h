@@ -8,7 +8,7 @@
 #include <functional>// std::function
 #include <mutex>
 
-// #define MULTI_CHANNEL 8192 //能谱多道的道数
+//能谱多道的道数
 constexpr unsigned short MULTI_CHANNEL = 8192;
 #define MAX_ENERGY 8192 //最大能量
 // long long nanoseconds = 1000000000LL; //1s = 1E9ns
@@ -50,17 +50,17 @@ struct StepTimeCount{
         this->count = count;
     }
 };
-//步长+能量
-struct StepTimeEnergy{
-    unsigned long long time; // 单位s
-    vector<unsigned short> energy; // 单位暂无,两个字节无符号数
-};
+// //步长+能量
+// struct StepTimeEnergy{
+//     unsigned long long time; // 单位s
+//     vector<unsigned short> energy; // 单位暂无,两个字节无符号数
+// };
 
-//通道+(步长+能量/计数...序列)
-struct DetStepTimeEnergy{
-    unsigned char channel;
-    std::vector<StepTimeEnergy> timeEnergy;
-};
+// //通道+(步长+能量/计数...序列)
+// struct DetStepTimeEnergy{
+//     unsigned char channel;
+//     std::vector<StepTimeEnergy> timeEnergy;
+// };
 
 // 符合计数的结果
 struct CoincidenceResult{

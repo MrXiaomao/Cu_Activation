@@ -1169,7 +1169,7 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
     }
 
     //网口数据缓存文件，波形模式、能谱模式直接存网口数据缓存文件
-    pfSaveNet = new QFile(validDataFileName);
+    pfSaveNet = new QFile(netDataFileName);
     if (pfSaveNet->open(QIODevice::WriteOnly)) {
         qDebug() << tr("创建网口数据缓存文件成功，文件名：%1").arg(netDataFileName);
     } else {
@@ -1638,7 +1638,8 @@ void CommandHelper::updateStepTime(int _stepT, int _timewidth)
     currentSpectrumFrames.clear();
 }
 
-void CommandHelper::updateParamter(int _stepT, unsigned short _EnWin[4], int _timewidth/* = 50*/, int _delayTime, bool reset/* = false*/)
+void CommandHelper::updateParamter(int _stepT, unsigned short _EnWin[4], int _timewidth/* = 50*/, 
+    int _delayTime, bool reset/* = false*/)
 {
     QMutexLocker locker(&mutexReset);
     // if (reset){

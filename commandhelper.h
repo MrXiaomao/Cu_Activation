@@ -33,7 +33,8 @@ public:
     void startWork();
     void switchToCountMode(bool refModel);
     void updateStepTime(int stepT, int timewidth = 50);
-    void updateParamter(int stepT, unsigned short EnWin[4], int timewidth = 50, int delayTime = 0, bool reset = false);
+    void updateParamter(int stepT, unsigned short EnWin[4], int timewidth = 50, 
+        int delayTime = 0, bool reset = false);
     void exportFile(QString);
     void setDefaultCacheDir(QString dir);
     bool isConnected();//探测器是否连接
@@ -72,8 +73,8 @@ signals:
     void sigDetectorFault();//故障，一般指网络不通
 
     void sigRefreshCountData(quint8, StepTimeCount);// 计数
-    void sigRefreshSpectrum(quint8, StepTimeEnergy);// 能谱
-    void sigRefreshConformData(StepTimeEnergy);// 能谱
+    // void sigRefreshSpectrum(quint8, StepTimeEnergy);// 能谱
+    // void sigRefreshConformData(StepTimeEnergy);// 能谱
 
     void sigCoincidenceResult(quint32, CoincidenceResult);
     void sigSingleSpectrum(SingleSpectrum);

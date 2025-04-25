@@ -31,6 +31,8 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    
+    multi_CHANNEL = 8192;
 
     emit sigRefreshBoostMsg(tr("更新ui..."));
     // 电源
@@ -518,7 +520,7 @@ void MainWindow::InitMainWindowUi()
     ui->statusbar->addPermanentWidget(label_systemtime);
 
     //日志窗口重置位置
-    int horizontalDPI = logicalDpiX();
+    // int horizontalDPI = logicalDpiX();
     int verticalDPI  = logicalDpiY();
     int screenValidHeight = QGuiApplication::primaryScreen()->size().height();
     screenValidHeight = screenValidHeight *  96 / verticalDPI;
@@ -978,9 +980,14 @@ void MainWindow::on_pushButton_measure_clicked()
             int timewidth = ui->spinBox_timeWidth->value();
             QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
             measureTimer->setInterval(ui->spinBox_timelength->value() * 1000);
+            
+            // 获取多道道数
+            bool ok;
+            int value = ui->comboBox_channel->currentText().toInt(&ok);
+            multi_CHANNEL = static_cast<unsigned int>(value);
 
             PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
-            plotWidget->slotStart();
+            plotWidget->slotStart(multi_CHANNEL);
             plotWidget->slotUpdateEnTimeWidth(EnWin);
 
             ui->lcdNumber_CountRate1->display("0");
@@ -1070,7 +1077,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         ui->start_time_text->setText("0000-00-00 00:00:00");
 
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
-        plotWidget->slotStart();
+        plotWidget->slotStart(multi_CHANNEL);
 
         ui->lcdNumber_CountRate1->display("0");
         ui->lcdNumber_CountRate2->display("0");
@@ -1086,6 +1093,10 @@ void MainWindow::on_pushButton_measure_2_clicked()
         int timewidth = ui->spinBox_timeWidth_2->value();
         QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
         measureTimer->setInterval(ui->spinBox_timelength_2->value() * 1000);
+        // 获取多道道数
+        bool ok;
+        int value = ui->comboBox_channel2->currentText().toInt(&ok);
+        multi_CHANNEL = static_cast<unsigned int>(value);
 
         commandHelper->updateParamter(stepT, EnWin, timewidth, delayTime, false);
         commandHelper->slotStartAutoMeasure(detectorParameter);
@@ -1110,12 +1121,6 @@ void MainWindow::on_pushButton_measure_2_clicked()
             }
         });
     }
-}
-
-void MainWindow::on_pushButton_measure_3_clicked()
-{
-    //标定测量
-    this->saveConfigJson();
 }
 
 void MainWindow::on_pushButton_save_clicked()
@@ -1412,6 +1417,7 @@ void MainWindow::slotRefreshUi()
             ui->pushButton_confirm->setEnabled(true);
 
             ui->spinBox_timelength->setEnabled(false);
+            ui->comboBox_channel->setEnabled(false);
             ui->spinBox_cool_timelength->setEnabled(false);
 
             ui->action_power->setEnabled(false);
@@ -1453,6 +1459,8 @@ void MainWindow::slotRefreshUi()
             ui->pushButton_measure_2->setEnabled(true);
             
             ui->spinBox_timelength_2->setEnabled(false);
+            ui->comboBox_channel2->setEnabled(false);
+
             //公共
             ui->pushButton_save->setEnabled(false);
             ui->pushButton_gauss->setEnabled(true);
@@ -1468,6 +1476,7 @@ void MainWindow::slotRefreshUi()
 
         // 手动测量
         ui->spinBox_timelength->setEnabled(true);
+        ui->comboBox_channel->setEnabled(true);
         ui->comboBox_range->setEnabled(true);
         ui->spinBox_cool_timelength->setEnabled(true);
         ui->spinBox_1_leftE->setEnabled(true);
@@ -1477,7 +1486,8 @@ void MainWindow::slotRefreshUi()
         ui->spinBox_timeWidth->setEnabled(true);
 
         // 自动测量
-        ui->spinBox_timelength_2->setEnabled(false);
+        ui->spinBox_timelength_2->setEnabled(true);
+        ui->comboBox_channel2->setEnabled(true);
         ui->comboBox_range_2->setEnabled(true);
         ui->spinBox_1_leftE_2->setEnabled(true);
         ui->spinBox_1_rightE_2->setEnabled(true);
@@ -1537,6 +1547,8 @@ void MainWindow::load()
             jsonObjM1 = jsonObj["M1"].toObject();
             //测量时长
             ui->spinBox_timelength->setValue(jsonObjM1["timelength"].toInt());
+            //多道道数
+            ui->comboBox_channel->setCurrentIndex(jsonObjM1["multiChannel"].toInt());
             //量程选取
             ui->comboBox_range->setCurrentIndex(jsonObjM1["range"].toInt());
             //冷却时长
@@ -1562,6 +1574,8 @@ void MainWindow::load()
             jsonObjM2 = jsonObj["M2"].toObject();
             //测量时长
             ui->spinBox_timelength_2->setValue(jsonObjM2["timelength"].toInt());
+            //多道道数
+            ui->comboBox_channel2->setCurrentIndex(jsonObjM2["multiChannel"].toInt());
             //量程选取
             ui->comboBox_range_2->setCurrentIndex(jsonObjM2["range"].toInt());
             //时间步长
@@ -1617,6 +1631,8 @@ void MainWindow::saveConfigJson(bool bSafeExitFlag)
         QJsonObject jsonObjM1;
         //测量时长
         jsonObjM1["timelength"] = ui->spinBox_timelength->value();
+        //多道道数
+        jsonObjM1["multiChannel"] = ui->comboBox_channel->currentIndex();
         //量程选取
         jsonObjM1["range"] = ui->comboBox_range->currentIndex();
         //冷却时长
@@ -1639,6 +1655,8 @@ void MainWindow::saveConfigJson(bool bSafeExitFlag)
         QJsonObject jsonObjM2;
         //测量时长
         jsonObjM2["timelength"] = ui->spinBox_timelength_2->value();
+        //多道道数
+        jsonObjM2["multiChannel"] = ui->comboBox_channel2->currentIndex();
         //量程选取
         jsonObjM2["range"] = ui->comboBox_range_2->currentIndex();
         //时间步长

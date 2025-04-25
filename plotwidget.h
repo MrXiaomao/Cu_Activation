@@ -3,7 +3,6 @@
 
 #include <QStackedWidget>
 #include <QMutex>
-#include "sysutils.h"
 #include "coincidenceanalyzer.h"
 
 class QCustomPlot;
@@ -72,7 +71,7 @@ public slots:
     //更新空数据
     void slotUpdatePlotNullData(int refreshTime);
 
-    void slotStart();
+    void slotStart(unsigned int channel = 8192);
     void slotResetPlot();
     void slotGauss(int leftE, int rightE);
     void slotShowGaussInfor(bool visible);
@@ -92,6 +91,8 @@ signals:
     void sigAreaSelected();//拟合区域选择完成
 
 private:
+    unsigned int multiChannel; //多道道数
+    unsigned int max_UIChannel; //图像上最大道址，比多道道址略多一点，采用取整得到。
     bool showAxis = false;//是否显示轴线
     bool isDragging = false;
     bool allowAreaSelected = false;//是否允许鼠标拖选择区域

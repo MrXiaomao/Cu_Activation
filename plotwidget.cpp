@@ -3,8 +3,9 @@
 #include <QGridLayout>
 #include <QtMath>
 #include <cmath>
-#include "linearfit.h"
+// #include "linearfit.h"
 #include "gaussFit.h"
+#include "sysutils.h"
 
 #define RANGE_SCARRE_UPPER 1.0
 #define RANGE_SCARRE_LOWER 0.5
@@ -14,7 +15,9 @@
 PlotWidget::PlotWidget(QWidget *parent) : QStackedWidget(parent)
 {
     this->setContentsMargins(0, 0, 0, 0);
-
+    multiChannel = MULTI_CHANNEL;
+    max_UIChannel = (multiChannel/100 + 1)*100;
+    
     //计数模式下，坐标轴默认范围值
     COUNT_X_AXIS_LOWER[0] = 0; //计数率
     COUNT_X_AXIS_LOWER[1] = 0;//符合计数率
@@ -28,7 +31,7 @@ PlotWidget::PlotWidget(QWidget *parent) : QStackedWidget(parent)
 
     //能谱模式下
     SPECTRUM_X_AXIS_LOWER = 0;
-    SPECTRUM_X_AXIS_UPPER = MAX_SPECTUM;
+    SPECTRUM_X_AXIS_UPPER = max_UIChannel;
     SPECTRUM_Y_AXIS_LOWER = 0;
     SPECTRUM_Y_AXIS_UPPER = 1e2;
 
@@ -206,7 +209,7 @@ void PlotWidget::initCustomPlot(){
             else
                 customPlot->xAxis->setLabel(tr("道址"));
             customPlot->yAxis->setLabel(tr("Det-%1 计数").arg(i));
-            customPlot->xAxis->setRange(0, MAX_SPECTUM);
+            customPlot->xAxis->setRange(0, SPECTRUM_X_AXIS_UPPER);
             customPlot->yAxis->setRange(0, SPECTRUM_Y_AXIS_UPPER);
 
             dispatchAdditionalTipFunction(customPlot);
@@ -1022,7 +1025,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                 this->setProperty("area-to-key", key);
                             }
 
-                            int fcount = 0;
+                            // int fcount = 0;
                             std::vector<double> sx;
                             std::vector<double> sy;
                             //框选完毕，将选中的点颜色更新
@@ -1035,15 +1038,15 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
 
                                 QVector<double> keys, values, curveKeys;
                                 QVector<QColor> colors;
-                                bool inArea = false;
+                                // bool inArea = false;
                                 for (int i=0; i<graph->data()->size(); ++i){
                                     if (graph->data()->at(i)->key>=key_from && graph->data()->at(i)->key<=key_to){// && graph->data()->at(i)->value>=value_to) {
-                                        inArea = true;
+                                        // inArea = true;
                                         keys << (double)graph->data()->at(i)->key;
                                         values << (double)graph->data()->at(i)->value;
                                         colors << clrRang;
 
-                                        fcount++;
+                                        // fcount++;
                                         sx.push_back((double)graph->data()->at(i)->key);
                                         sy.push_back((double)graph->data()->at(i)->value);
 
@@ -1096,10 +1099,10 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
 
                                 QVector<double> keys, values, curveKeys;
                                 QVector<QColor> colors;
-                                bool inArea = false;
+                                // bool inArea = false;
                                 for (int i=0; i<graph->data()->size(); ++i){
                                     if (graph->data()->at(i)->key>=key_from && graph->data()->at(i)->key<=key_to){// && graph->data()->at(i)->value>=value_to) {
-                                        inArea = true;
+                                        // inArea = true;
                                         keys << (double)graph->data()->at(i)->key;
                                         values << (double)graph->data()->at(i)->value;
                                         colors << clrRang;
@@ -1133,13 +1136,13 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                         double mean = result[1];
                                         double FWHM = 2*sqrt(2*log(2))*result[2];
                                         //计算符合能窗
-                                        int leftWindow = (int)(mean - FWHM*0.5);
+                                        unsigned int leftWindow = (int)(mean - FWHM*0.5);
                                         if (leftWindow < 0) leftWindow = 0;
 
-                                        int rightWindow = (int)(mean + FWHM*0.5);
-                                        if (rightWindow < 0 || rightWindow > MULTI_CHANNEL)
+                                        unsigned int rightWindow = (int)(mean + FWHM*0.5);
+                                        if (rightWindow < 0 || rightWindow > multiChannel)
                                         {
-                                            rightWindow = MULTI_CHANNEL;
+                                            rightWindow = multiChannel;
                                         }
                                         emit sigUpdateEnWindow(customPlot->objectName(), leftWindow, rightWindow);
 
@@ -1196,7 +1199,7 @@ void PlotWidget::slotPlotClick(QCPAbstractPlottable *plottable, int dataIndex, Q
     QCustomPlot* customPlot = qobject_cast<QCustomPlot*>(sender());
     QCPItemText* coordsTipItemText = customPlot->findChild<QCPItemText*>("coordsTipItemText");
     QCPItemLine* coordsTipItemXLine = customPlot->findChild<QCPItemLine*>("coordsTipItemXLine");
-    QCPItemLine* coordsTipItemYLine = customPlot->findChild<QCPItemLine*>("coordsTipItemYLine");
+    // QCPItemLine* coordsTipItemYLine = customPlot->findChild<QCPItemLine*>("coordsTipItemYLine");
     if (coordsTipItemText){
         QCPGraph *graph = qobject_cast<QCPGraph*>(plottable);
         QSharedPointer<QCPGraphDataContainer> data = graph->data();
@@ -1209,7 +1212,7 @@ void PlotWidget::slotPlotClick(QCPAbstractPlottable *plottable, int dataIndex, Q
         coordsTipItemText->setVisible(true);
 
         //显示标记点
-        QCPItemLine* flagItemXLine = customPlot->findChild<QCPItemLine*>("flagItemLine");
+        // QCPItemLine* flagItemXLine = customPlot->findChild<QCPItemLine*>("flagItemLine");
         if (coordsTipItemXLine){
             coordsTipItemXLine->setProperty("key", ghd->key);
             coordsTipItemXLine->setProperty("value", ghd->value);
@@ -1232,7 +1235,7 @@ void PlotWidget::slotBeforeReplot()
 {
     QCustomPlot* customPlot = qobject_cast<QCustomPlot*>(sender());
     QCPItemLine* coordsTipItemXLine = customPlot->findChild<QCPItemLine*>("coordsTipItemXLine");
-    QCPItemLine* coordsTipItemYLine = customPlot->findChild<QCPItemLine*>("coordsTipItemYLine");
+    // QCPItemLine* coordsTipItemYLine = customPlot->findChild<QCPItemLine*>("coordsTipItemYLine");
     if (coordsTipItemXLine && coordsTipItemXLine->visible()){
         QCPGraph *graph = getGraph(this->property("PlotIndex").toUInt());
         double key = coordsTipItemXLine->property("key").toUInt();
@@ -1268,13 +1271,13 @@ void PlotWidget::slotBeforeReplot()
     }
 }
 
-void PlotWidget::slotUpdatePlotNullData(int refreshTime)
+void PlotWidget::slotUpdatePlotNullData(int /*refreshTime*/)
 {
     QMutexLocker locker(&mutexRefreshPlot);
     QCustomPlot::RefreshPriority refreshPriority = QCustomPlot::rpQueuedReplot;
     if (this->property("isMergeMode").toBool()){
-        QCustomPlot* customPlotDet12 = this->findChild<QCustomPlot*>("Det12");
-        QCustomPlot* customPlotCoincidenceResult = this->findChild<QCustomPlot*>("CoResult");
+        // QCustomPlot* customPlotDet12 = this->findChild<QCustomPlot*>("Det12");
+        // QCustomPlot* customPlotCoincidenceResult = this->findChild<QCustomPlot*>("CoResult");
 
         if (this->property("isCountModel").toBool()){//计数模式
         } else {//能谱
@@ -1282,14 +1285,14 @@ void PlotWidget::slotUpdatePlotNullData(int refreshTime)
             //     double maxEnergy = 0;
             //     QVector<double> keys, values;
             //     QVector<QColor> colors;
-            //     for (int i=0; i<MULTI_CHANNEL; ++i){
+            //     for (int i=0; i<multiChannel; ++i){
             //         if (customPlotDet12->graph(0)->data()->size() > 0)
             //             colors << customPlotDet12->graph(0)->data()->at(i)->color;
             //         else
             //             colors << clrLine;
             //     }
 
-            //     for (int i=0; i<MULTI_CHANNEL; ++i){
+            //     for (int i=0; i<multiChannel; ++i){
             //         keys << i+1;
             //         values << r1.spectrum[0][i];
             //         energyValues[0][i] = r1.spectrum[0][i];
@@ -1306,14 +1309,14 @@ void PlotWidget::slotUpdatePlotNullData(int refreshTime)
             //     double maxEnergy = 0;
             //     QVector<double> keys, values;
             //     QVector<QColor> colors;
-            //     for (int i=0; i<MULTI_CHANNEL; ++i){
+            //     for (int i=0; i<multiChannel; ++i){
             //         if (customPlotDet12->graph(1)->data()->size() > 0)
             //             colors << customPlotDet12->graph(1)->data()->at(i)->color;
             //         else
             //             colors << clrLine;
             //     }
 
-            //     for (int i=0; i<MULTI_CHANNEL; ++i){
+            //     for (int i=0; i<multiChannel; ++i){
             //         keys << i+1;
             //         values << r1.spectrum[1][i];
             //         energyValues[1][i] = r1.spectrum[1][i];
@@ -1330,9 +1333,9 @@ void PlotWidget::slotUpdatePlotNullData(int refreshTime)
         }
     } else {
         if (this->property("isCountModel").toBool()){//计数模式
-            QCustomPlot* customPlotDet1 = getCustomPlot(amCountDet1);
-            QCustomPlot* customPlotDet2 = getCustomPlot(amCountDet2);
-            QCustomPlot* customPlotCoResult = getCustomPlot(amCoResult);
+            // QCustomPlot* customPlotDet1 = getCustomPlot(amCountDet1);
+            // QCustomPlot* customPlotDet2 = getCustomPlot(amCountDet2);
+            // QCustomPlot* customPlotCoResult = getCustomPlot(amCoResult);
         } else {//能谱
             QCustomPlot* customPlotDet1 = getCustomPlot(amEnDet1);
             QCustomPlot* customPlotDet2 = getCustomPlot(amEnDet2);
@@ -1341,17 +1344,18 @@ void PlotWidget::slotUpdatePlotNullData(int refreshTime)
                 double maxEnergy = 0;
                 QVector<double> keys, values;
                 QVector<QColor> colors;
-                for (int i=0; i<MULTI_CHANNEL; ++i){
-                    // if (customPlotDet1->graph(0)->data()->size() > 0)
-                    //     colors << customPlotDet1->graph(0)->data()->at(i)->color;
-                    // else
-                    colors << clrLine;
-                }
 
-                for (int i=0; i<MULTI_CHANNEL; ++i){
+                for (unsigned int i=0; i<multiChannel; ++i){
                     keys << i+1;
-                    values << energyValues[0][i];
-                    maxEnergy = qMax(maxEnergy, values[i]);
+                    
+                    //合并道址
+                    int mergechannel = 0;
+                    int mersize = MULTI_CHANNEL / multiChannel;
+                    for(int j=0; j<mersize; j++) mergechannel += energyValues[0][i*mersize + j];
+
+                    values << mergechannel;
+                    colors << clrLine;
+                    maxEnergy = qMax(maxEnergy, mergechannel*1.0);
                 }
 
                 customPlotDet1->graph(0)->setData(keys, values, colors);
@@ -1367,18 +1371,19 @@ void PlotWidget::slotUpdatePlotNullData(int refreshTime)
                 double maxEnergy = 0;
                 QVector<double> keys, values;
                 QVector<QColor> colors;
-                for (int i=0; i<MULTI_CHANNEL; ++i){
-                    // if (customPlotDet2->graph(0)->data()->size() > 0)
-                    //     colors << customPlotDet2->graph(0)->data()->at(i)->color;
-                    // else
-                    colors << clrLine;
-                }
 
-                for (int i=0; i<MULTI_CHANNEL; ++i){
+                for (unsigned int i=0; i<multiChannel; ++i){
                     keys << i+1;
-                    values << energyValues[1][i];
-                    maxEnergy = qMax(maxEnergy, values[i]);
-                }
+                    
+                    //合并道址
+                    int mergechannel = 0;
+                    int mersize = MULTI_CHANNEL / multiChannel;
+                    for(int j=0; j<mersize; j++) mergechannel += energyValues[1][i*mersize + j];
+
+                    values << mergechannel;
+                    colors << clrLine;
+                    maxEnergy = qMax(maxEnergy, mergechannel*1.0);
+                }                
 
                 customPlotDet2->graph(0)->setData(keys, values, colors);
                 if (maxEnergy > customPlotDet2->yAxis->range().upper * RANGE_SCARRE_UPPER){
@@ -1547,15 +1552,25 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
             double maxEnergy = 0;
             QVector<double> keys, values;
             QVector<QColor> colors;
-            for (int i=0; i<MULTI_CHANNEL; ++i){
-                colors << clrLine;
-            }
 
-            for (int i=0; i<MULTI_CHANNEL; ++i){
+            int ch = 0;
+            int mersize = MULTI_CHANNEL / multiChannel;
+            for (unsigned int i=0; i<multiChannel; ++i){
                 keys << i+1;
-                values << r1.spectrum[0][i];
-                energyValues[0][i] = r1.spectrum[0][i];
-                maxEnergy = qMax(maxEnergy, values[i]);
+                
+                //合并道址
+                int mergechannel = 0;
+                for(int j=0; j<mersize; j++)
+                {
+                    mergechannel += r1.spectrum[0][ch];
+                    energyValues[0][ch] = r1.spectrum[0][ch];
+                    ch++; // ch = i * mersize + j
+                }
+
+                values << mergechannel;
+                colors << clrLine;
+                
+                maxEnergy = qMax(maxEnergy, mergechannel*1.0);
             }
 
             customPlotDet1->graph(0)->setData(keys, values, colors);
@@ -1572,15 +1587,24 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
             double maxEnergy = 0;
             QVector<double> keys, values;
             QVector<QColor> colors;
-            for (int i=0; i<MULTI_CHANNEL; ++i){
-                colors << clrLine;
-            }
-
-            for (int i=0; i<MULTI_CHANNEL; ++i){
+            
+            int ch = 0;
+            int mersize = MULTI_CHANNEL / multiChannel;
+            for (unsigned int i=0; i<multiChannel; ++i){
                 keys << i+1;
-                values << r1.spectrum[1][i];
-                energyValues[1][i] = r1.spectrum[1][i];
-                maxEnergy = qMax(maxEnergy, values[i]);
+                
+                //合并道址
+                int mergechannel = 0;
+                for(int j=0; j<mersize; j++)
+                {
+                    mergechannel += r1.spectrum[1][ch];
+                    energyValues[1][i] = r1.spectrum[1][ch];
+                    ch++;// ch = i*mersize + j;
+                }
+
+                values << mergechannel;
+                colors << clrLine;
+                maxEnergy = qMax(maxEnergy, mergechannel*1.0);
             }
 
             customPlotDet2->graph(0)->setData(keys, values, colors);
@@ -1595,8 +1619,12 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
     }
 }
 
-void PlotWidget::slotStart()
+void PlotWidget::slotStart(unsigned int channel)
 {
+    this->multiChannel = channel;
+    max_UIChannel = (channel/100 + 1)*100;
+    SPECTRUM_X_AXIS_UPPER = max_UIChannel;
+
     //当第一次数据过来，将区域选择按钮设为可用
     this->setProperty("autoRefreshModel", true);
     this->setProperty("disableAreaSelect", false);

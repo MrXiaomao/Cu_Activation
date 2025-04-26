@@ -193,7 +193,11 @@ void OfflineDataAnalysisWidget::slotStart()
         QDateTime tmStart = QDateTime::currentDateTime();
         QByteArray aDatas = validDataFileName.toLocal8Bit();
         vector<TimeEnergy> data1_2, data2_2;
+#ifdef QT_NO_DEBUG        
+        SysUtils::realQuickAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, bool eof, bool *interrupted){
+#else
         SysUtils::realAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, bool eof, bool *interrupted){
+#endif
             if (eof){
                 if (interrupted)
                     emit sigEnd(true);

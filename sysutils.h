@@ -1,8 +1,8 @@
 /*
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
- * @LastEditors: 
- * @LastEditTime: 2025-04-24 17:16:58
+ * @LastEditors: Please set LastEditors
+ * @LastEditTime: 2025-04-26 20:01:11
  * @Description: 请填写简介
  */
 #ifndef SYSUTILS_H
@@ -101,6 +101,6 @@ public:
      * 快速解析：要求文件除了裸数据，没有其他脏数据
     */
     static void realQuickAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy, bool/*结束标识*/, bool */*是否被终止*/)> callback);
-};
+    };
 
 #endif // SYSUTILS_H

@@ -269,110 +269,6 @@ std::vector<DetTimeEnergy> SysUtils::getDetTimeEnergy(const char* filename)
     return result;
 }
 
-void SysUtils::realQuickAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy, bool, bool*)> callback)
-{
-    FILE* input_file = fopen(filename, "rb");
-    if (ferror(input_file))
-        return ;
-
-    uint32_t full_buffer_size = (PARTICLE_NUM_ONE_PAKAGE + 1)* 16;
-    std::vector<uint8_t> read_buffer(full_buffer_size, 0);
-    std::vector<uint8_t> cache_buffer;
-    bool interrupted = false;
-    while (!feof(input_file)){
-        //std::vector<uint8_t>().swap(read_buffer);
-        size_t read_size = fread(reinterpret_cast<char*>(read_buffer.data()), 1, full_buffer_size, input_file);
-        cache_buffer.insert(cache_buffer.end(), read_buffer.begin(), read_buffer.begin() + read_size);
-
-        uint8_t *ptrOffset = cache_buffer.data();
-        uint32_t buffer_size = cache_buffer.size();
-        while (buffer_size >= full_buffer_size){
-            //判断头部
-            if ((uint8_t)ptrOffset[0] == 0x00 && (uint8_t)ptrOffset[1] == 0x00 && (uint8_t)ptrOffset[2] == 0xaa && (uint8_t)ptrOffset[3] == 0xb3){
-                ptrOffset = read_buffer.data() + full_buffer_size - 4;
-                //判断尾部
-                if ((uint8_t)ptrOffset[0] == 0x00 && (uint8_t)ptrOffset[1] == 0x00 && (uint8_t)ptrOffset[2] == 0xcc && (uint8_t)ptrOffset[3] == 0xd3){
-                    // 分拣数据
-                    ptrOffset = cache_buffer.data();
-                    
-                    ptrOffset += 4; //包头
-                    //通道号(4字节)
-                    uint64_t channel = static_cast<uint64_t>(ptrOffset[0]) << 24 |
-                                       static_cast<uint64_t>(ptrOffset[1]) << 16 |
-                                       static_cast<uint64_t>(ptrOffset[2]) << 8 |
-                                       static_cast<uint64_t>(ptrOffset[3]);
-
-                    //通道值转换
-                    channel = (channel == 0xFFF1) ? 0 : 1;
-                
-                    //序号（4字节）
-                    uint64_t number =  static_cast<uint64_t>(ptrOffset[4]) << 24 |
-                                    static_cast<uint64_t>(ptrOffset[5]) << 16 |
-                                    static_cast<uint64_t>(ptrOffset[6]) << 8 |
-                                    static_cast<uint64_t>(ptrOffset[7]);
-
-                    ptrOffset += 8;
-
-                    //粒子模式数据PARTICLE_NUM_ONE_PAKAGE*16byte,前6字节:时间,后2字节:能量
-                    int ref = 1;
-                    std::vector<TimeEnergy> temp;
-                    while (ref++ <= PARTICLE_NUM_ONE_PAKAGE){
-                        //空置48bit
-                        ptrOffset += 6;
-
-                        //时间:48bit
-                        uint64_t t = static_cast<uint64_t>(ptrOffset[0]) << 40 |
-                                      static_cast<uint64_t>(ptrOffset[1]) << 32 |
-                                      static_cast<uint64_t>(ptrOffset[2]) << 24 |
-                                      static_cast<uint64_t>(ptrOffset[3]) << 16 |
-                                      static_cast<uint64_t>(ptrOffset[4]) << 8 |
-                                      static_cast<uint64_t>(ptrOffset[5]);
-                        t *= 10;
-                        ptrOffset += 6;
-
-                        //死时间:16bit
-                        ptrOffset += 2;
-                        unsigned short deathtime = static_cast<uint16_t>(ptrOffset[0]) << 8 | static_cast<uint16_t>(ptrOffset[1]);
-                        deathtime *= 10;
-
-                        //幅度:16bit
-                        unsigned short amplitude = static_cast<uint16_t>(ptrOffset[0]) << 8 | static_cast<uint16_t>(ptrOffset[1]);
-                        ptrOffset += 2;
-
-                        if (t != 0x00 && amplitude != 0x00)
-                            temp.push_back(TimeEnergy(t, deathtime, amplitude));
-                    }
-
-                    //数据分拣完毕
-                    {
-                        DetTimeEnergy detTimeEnergy;
-                        detTimeEnergy.channel = channel;
-                        detTimeEnergy.timeEnergy.swap(temp);
-                        callback(detTimeEnergy, false, &interrupted);
-
-                        if (interrupted){
-                            fclose(input_file);
-                            input_file = nullptr;
-                            callback(DetTimeEnergy(), true, &interrupted);
-                            return;
-                        }
-                    }
-
-                    cache_buffer.erase(cache_buffer.begin(), cache_buffer.begin() + full_buffer_size);
-                }
-            } else {
-                cache_buffer.erase(cache_buffer.begin());
-            }
-
-            buffer_size = cache_buffer.size();
-        }
-    }
-
-    fclose(input_file);
-    input_file = nullptr;
-    callback(DetTimeEnergy(), true, nullptr);
-}
-
 void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy, bool/*结束标识*/, bool */*是否被终止*/)> callback)
 {
     FILE* input_file = fopen(filename, "rb");
@@ -470,6 +366,39 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
             }
 
             buffer_size = cache_buffer.size();
+        }
+    }
+
+    fclose(input_file);
+    input_file = nullptr;
+    callback(DetTimeEnergy(), true, nullptr);
+}
+
+void SysUtils::realQuickAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy, bool, bool*)> callback)
+{
+    FILE* input_file = fopen(filename, "rb");
+    if (ferror(input_file))
+        return ;
+
+    bool interrupted = false;
+    while (!feof(input_file)){
+        // 先获取时间能量对个数
+        uint32_t size = 0;
+        fread(reinterpret_cast<uint32_t*>(&size), 1, sizeof(size), input_file);
+
+        // 再获取时间能量对数据信息
+        DetTimeEnergy detTimeEnergy;
+        detTimeEnergy.channel = 0;
+        detTimeEnergy.timeEnergy.resize(size);
+        fread(reinterpret_cast<uint32_t*>(&detTimeEnergy.channel), 1, sizeof(&detTimeEnergy.channel), input_file);
+        fread(reinterpret_cast<uint32_t*>(detTimeEnergy.timeEnergy.data()), 1, sizeof(TimeEnergy)*size, input_file);
+
+        callback(detTimeEnergy, false, &interrupted);
+        if (interrupted){
+            fclose(input_file);
+            input_file = nullptr;
+            callback(DetTimeEnergy(), true, &interrupted);
+            return;
         }
     }
 

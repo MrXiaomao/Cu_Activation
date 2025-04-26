@@ -213,7 +213,9 @@ MainWindow::MainWindow(QWidget *parent)
         exceptionCheckTimer->start(1000);
 
         if (mmode == mmAuto)
-            ui->start_time_text->setText(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));        
+            ui->lineEdit_autoStatus->setText("冷却状态");
+            // ui->start_time_text->setText(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
+            // qInfo()<<"接收到触发信号，仪器内部时钟开始计时";//注意，在sigMeasureStart信号之前已经打印了qInfo()日志
 
         //开启测量时钟
         if (mmode == mmManual || mmode == mmAuto){//手动/自动测量
@@ -915,15 +917,17 @@ void MainWindow::on_pushButton_measure_clicked()
             || this->property("measure-status").toUInt() == msEnd){
         this->saveConfigJson();
 
-        CoolingTimeWidget *w = new CoolingTimeWidget(this);
+        /*CoolingTimeWidget *w = new CoolingTimeWidget(this);
         w->setAttribute(Qt::WA_DeleteOnClose, true);
         w->setWindowFlags(Qt::WindowCloseButtonHint|Qt::Dialog);
         w->setWindowModality(Qt::ApplicationModal);
         w->showNormal();
-        emit w->sigUpdateTimeLength(ui->spinBox_cool_timelength->value());
+        emit w->sigUpdateTimeLength(ui->spinBox_coolingTime->value());
         connect(w, &CoolingTimeWidget::sigAskTimeLength, this, [=](int new_timelength){
-            ui->spinBox_cool_timelength->setValue(new_timelength);
-
+            
+            ui->spinBox_coolingTime->setValue(new_timelength);
+        */
+       {
             this->setProperty("measure-status", msPrepare);
 
             //手动测量
@@ -946,7 +950,7 @@ void MainWindow::on_pushButton_measure_clicked()
 
             detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
             detectorParameter.measureModel = mmManual;
-            detectorParameter.cool_timelength = ui->spinBox_cool_timelength->value();
+            detectorParameter.coolingTime = ui->spinBox_coolingTime->value();
             this->setProperty("measur-model", detectorParameter.measureModel);
 
             // 打开 JSON 文件
@@ -1006,7 +1010,8 @@ void MainWindow::on_pushButton_measure_clicked()
                     ui->pushButton_measure->setEnabled(true);
                 }
             });
-        });
+        }
+        // });
 
     } else {
         ui->pushButton_measure->setEnabled(false);
@@ -1038,6 +1043,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         detectorParameter.deadTime = 0x05*10;
         detectorParameter.gain = 0x00;
         detectorParameter.measureRange = ui->comboBox_range_2->currentIndex()+1; //注意：从1开始计数
+        detectorParameter.coolingTime = ui->spinBox_coolingTime_2->value(); //对于自动测量，这个前面的冷却时长FPGA工作，并上传数据，但是软件不对数据处理，直接丢弃。
 
         // 默认打开梯形成形
         detectorParameter.isTrapShaping = true;
@@ -1074,7 +1080,9 @@ void MainWindow::on_pushButton_measure_2_clicked()
         ui->action_refresh->setEnabled(true);
         ui->pushButton_measure->setEnabled(false);
         ui->pushButton_measure_2->setText(tr("停止测量"));
-        ui->start_time_text->setText("0000-00-00 00:00:00");
+        // ui->start_time_text->setText("0000-00-00 00:00:00");
+        ui->lineEdit_autoStatus->setText("等待触发");
+        qInfo()<<"等待触发";
 
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
         plotWidget->slotStart(multi_CHANNEL);
@@ -1418,7 +1426,7 @@ void MainWindow::slotRefreshUi()
 
             ui->spinBox_timelength->setEnabled(false);
             ui->comboBox_channel->setEnabled(false);
-            ui->spinBox_cool_timelength->setEnabled(false);
+            ui->spinBox_coolingTime->setEnabled(false);
 
             ui->action_power->setEnabled(false);
             ui->action_detector_connect->setEnabled(false);
@@ -1478,7 +1486,7 @@ void MainWindow::slotRefreshUi()
         ui->spinBox_timelength->setEnabled(true);
         ui->comboBox_channel->setEnabled(true);
         ui->comboBox_range->setEnabled(true);
-        ui->spinBox_cool_timelength->setEnabled(true);
+        ui->spinBox_coolingTime->setEnabled(true);
         ui->spinBox_1_leftE->setEnabled(true);
         ui->spinBox_1_rightE->setEnabled(true);
         ui->spinBox_2_leftE->setEnabled(true);
@@ -1552,7 +1560,7 @@ void MainWindow::load()
             //量程选取
             ui->comboBox_range->setCurrentIndex(jsonObjM1["range"].toInt());
             //冷却时长
-            ui->spinBox_cool_timelength->setValue(jsonObjM1["cool_timelength"].toInt());
+            ui->spinBox_coolingTime->setValue(jsonObjM1["coolingTime"].toInt());
             //时间步长
             ui->spinBox_step->setValue(jsonObjM1["step"].toInt());
             //符合分辨时间
@@ -1636,7 +1644,7 @@ void MainWindow::saveConfigJson(bool bSafeExitFlag)
         //量程选取
         jsonObjM1["range"] = ui->comboBox_range->currentIndex();
         //冷却时长
-        jsonObjM1["cool_timelength"] = ui->spinBox_cool_timelength->value();
+        jsonObjM1["coolingTime"] = ui->spinBox_coolingTime->value();
         //时间步长
         jsonObjM1["step"] = ui->spinBox_step->value();
         //符合分辨时间

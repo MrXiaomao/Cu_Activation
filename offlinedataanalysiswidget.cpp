@@ -157,7 +157,7 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
 
             ui->spinBox_step->setValue(configMap.value("时间步长").toInt());
             ui->spinBox_timeWidth->setValue(configMap.value("符合分辨时间").toInt());
-            ui->spinBox_cool_timelength->setValue(configMap.value("冷却时长").toInt());
+            ui->spinBox_coolingTime->setValue(configMap.value("冷却时长").toInt());
 
             ui->spinBox_1_leftE->setValue(configMap.value("Det1符合能窗左").toInt());
             ui->spinBox_1_rightE->setValue(configMap.value("Det1符合能窗右").toInt());

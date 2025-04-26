@@ -84,7 +84,7 @@ typedef struct tagDetectorParameter{
     //梯形成形时间常数t2 （乘以65536后取整）   默认为t1= 0.9558*65536；t2= 0.9556*65536；
     uint16_t TrapShape_constTime2;
 
-    int32_t cool_timelength;//冷却时长
+    int32_t coolingTime;//冷却时长
 } DetectorParameter;
 
 class SysUtils

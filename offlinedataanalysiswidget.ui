@@ -391,7 +391,7 @@
                 </widget>
                </item>
                <item row="2" column="1">
-                <widget class="QSpinBox" name="spinBox_cool_timelength">
+                <widget class="QSpinBox" name="spinBox_coolingTime">
                  <property name="enabled">
                   <bool>false</bool>
                  </property>

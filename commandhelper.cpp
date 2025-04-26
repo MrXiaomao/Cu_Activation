@@ -160,7 +160,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                         //手动
                         out << tr("测量模式=手动") << Qt::endl;
                         out << tr("测量时长=") <<currentFPGATime<< Qt::endl;
-                        out << tr("冷却时长=") << detectorParameter.cool_timelength << Qt::endl;
+                        out << tr("冷却时长=") << detectorParameter.coolingTime << Qt::endl;
                         out << tr("时间步长=") << this->stepT << Qt::endl;
                         out << tr("符合分辨时间=") << this->timeWidth << Qt::endl;
                         out << tr("Det1符合能窗左=") << this->EnWindow[0] << Qt::endl;
@@ -184,6 +184,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                 file.close();
             }
         }
+        qInfo() << tr("本次测量参数配置已存放在：%1").arg(configResultFile);
         
         //符合测量模式保存测量能谱文件
         QString SpecFile = validDataFileName + ".累积能谱";
@@ -203,6 +204,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                 file.close();
             }
         }
+        qInfo() << tr("本次测量累积能谱已存放在：%1").arg(SpecFile);
     });
 
 
@@ -278,7 +280,7 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
     //保存信息
     if (r1.time != currentFPGATime){
         //有新的能谱数据产生
-        QString coincidenceResultFile = validDataFileName + ".计数";
+        QString coincidenceResultFile = validDataFileName + ".符合计数";
         {
             QFile::OpenMode ioFlags = QIODevice::Truncate;
             if (QFileInfo::exists(coincidenceResultFile))
@@ -289,7 +291,10 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
                 if (ioFlags == QIODevice::Truncate)
                     out << "time,CountRate1,CountRate2,ConCount_single,ConCount_multiple" << Qt::endl;
                 CoincidenceResult coincidenceResult = r3.back();
-                out << r1.time << "," << coincidenceResult.CountRate1 << "," << coincidenceResult.CountRate2 << "," << coincidenceResult.ConCount_single << "," << coincidenceResult.ConCount_multiple << Qt::endl;
+                out << r1.time << "," << coincidenceResult.CountRate1 << "," << coincidenceResult.CountRate2 \
+                    << "," << coincidenceResult.ConCount_single << "," << coincidenceResult.ConCount_multiple 
+                    << "," << coincidenceResult.DeathRatio1 << "," << coincidenceResult.DeathRatio2 
+                    << Qt::endl;
 
                 file.flush();
                 file.close();
@@ -520,7 +525,7 @@ void CommandHelper::handleAutoMeasureNetData()
     if (workStatus == Waiting && binaryData.size() > 0){
         if (binaryData.compare(cmdExternalTrigger) == 0){
             qDebug()<<"Recv HEX: "<<binaryData.toHex(' ');
-            qInfo()<<"接收到硬触发信号";
+            qInfo()<<"接收到硬触发信号，探测器内部时钟开始计时";
             // 自动测量正式开始
             binaryData.remove(0, cmdExternalTrigger.size());
 
@@ -1682,7 +1687,7 @@ void CommandHelper::exportFile(QString dstPath)
         //进行文件copy
         QFile::copy(validDataFileName + ".配置", dstPath + ".配置");
         if (this->detectorParameter.transferModel == 0x05){
-            QFile::copy(validDataFileName + ".计数", dstPath + ".计数");
+            QFile::copy(validDataFileName + ".符合计数", dstPath + ".符合计数");
         }
 
         if (QFile::copy(validDataFileName, dstPath))        
@@ -1825,7 +1830,7 @@ void CommandHelper::analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult>
     //保存信息
     if (r1.time != currentFPGATime){
         //有新的能谱数据产生
-        QString coincidenceResultFile = validDataFileName + ".计数.csv";
+        QString coincidenceResultFile = validDataFileName + ".符合计数";
         {
             QFile file(coincidenceResultFile);
             if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
@@ -1833,7 +1838,9 @@ void CommandHelper::analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult>
                 out << "time,CountRate1,CountRate2,ConCount_single,ConCount_multiple";
                 CoincidenceResult coincidenceResult = r3.back();
                 for (size_t i=0; i<r3.size(); ++i){
-                    out << r1.time << "," << coincidenceResult.CountRate1 << "," << coincidenceResult.CountRate2 << "," << coincidenceResult.ConCount_single << "," << coincidenceResult.ConCount_multiple;
+                    out << r1.time << "," << coincidenceResult.CountRate1 << "," << coincidenceResult.CountRate2 \
+                        << "," << coincidenceResult.ConCount_single << "," << coincidenceResult.ConCount_multiple
+                        << "," << coincidenceResult.DeathRatio1 << "," << coincidenceResult.DeathRatio2;
                 }
 
                 file.flush();

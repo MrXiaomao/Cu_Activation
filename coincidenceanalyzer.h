@@ -64,6 +64,7 @@ struct StepTimeCount{
 
 // 符合计数的结果
 struct CoincidenceResult{
+    unsigned time = 0; //时刻，单位:s。
     int ConCount_single = 0;//一秒内的单符合的个数
     int ConCount_multiple = 0;//一秒内的多符合的个数
     int CountRate1 = 0; //探测器1的计数率，是指在能窗内的计数率
@@ -73,6 +74,7 @@ struct CoincidenceResult{
 };
 
 struct CurrentPoint{
+    unsigned int time; //时刻(单位s)，以FPGA时钟进行计时，给出当前的能谱对应的时刻，第1个谱对应time=1。
     int dataPoint1 = 0; //这次处理的探测器1数据点数
     int dataPoint2 = 0; //这次处理的探测器2数据点数
 };
@@ -99,6 +101,8 @@ public:
     //重新初始化，每次从零时刻开始处理数据时，需要初始化
     inline void initialize(){
         countCoin = 0;
+        coolingTime_Auto = 0;
+
         // 清除向量中的所有元素并释放内存空间
         vector<CoincidenceResult>().swap(coinResult);
 
@@ -156,6 +160,11 @@ public:
         EnWindow.push_back(EnergyWindow[3]);
     }
 
+    //设置自动测量的冷却时间，冷却时间之前的数据不处理。
+    inline void setCoolingTime_Auto(int time){
+        coolingTime_Auto = time;
+    }
+
     /// @brief 计算给出能谱曲线、计数曲线，计算的结果放在类成员中
     /// @param vector<TimeEnergy> data1 探测器1[时间(ns),能量]数据
     /// @param vector<TimeEnergy> data2 探测器2[时间(ns),能量]数据
@@ -206,6 +215,8 @@ private:
 
 private:
     int countCoin; //符合计数曲线的数据点个数,一个数据点对应1s.
+    // int currentTime;
+    int coolingTime_Auto; //自动测量的冷却时间，这段时间的数据并没有处理。因此图像数据的时间起点应该是以coolingTime_Auto为起点。
     vector<CoincidenceResult> coinResult; //将所有处理的数据都存放在这个容器中，FPGA时钟每一秒钟产生一个点
     vector<SingleSpectrum> AllSpectrum;  //将处理的能谱数据都存放在这个容器中，FPGA时钟每一秒钟产生一个能谱，只存放最近一个小时的能谱。单端队列
     SingleSpectrum AccumulateSpectrum; //累积能谱,将每秒的能谱进行累积后的能谱

@@ -337,21 +337,25 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
         if (count>1 && (count % _stepT == 0)){
             vector<CoincidenceResult> rr3;
 
+            size_t posI = 0;
             for (size_t i=0; i < count/_stepT; i++){
                 CoincidenceResult v;
                 for (int j=0; j<_stepT; ++j){
-                    size_t posI = i*_stepT + j;
+                    // size_t posI = i*_stepT + j;
                     v.CountRate1 += r3[posI].CountRate1;
                     v.CountRate2 += r3[posI].CountRate2;
                     v.ConCount_single += r3[posI].ConCount_single;
                     v.ConCount_multiple += r3[posI].ConCount_multiple;
+                    posI++;
                 }
 
                 //给出平均计数率cps,注意，这里是整除，当计数率小于1cps时会变成零。
+                v.time = r3[posI].time;
                 v.CountRate1 /= _stepT;
                 v.CountRate2 /= _stepT;
                 v.ConCount_single /= _stepT;
                 v.ConCount_multiple /= _stepT;
+                
                 rr3.push_back(v);
             }
 
@@ -1148,6 +1152,8 @@ void CommandHelper::slotStopManualMeasure()
 void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
 {
     coincidenceAnalyzer->initialize();
+    coincidenceAnalyzer->setCoolingTime_Auto(coolingTime_Auto);
+
     workStatus = Preparing;
     detectorParameter = p;
     sendStopCmd = false;
@@ -1475,19 +1481,19 @@ void CommandHelper::netFrameWorkThead()
                     detTimeEnergy.timeEnergy.swap(temp);
                     currentSpectrumFrames.push_back(detTimeEnergy);
 
-                    //有效数据写入文件
-                    if (detectorParameter.transferModel == 0x05){
-                        if (nullptr != pfSaveVaildData){
-                            //有效数据对4字节
-                            quint32 size = detTimeEnergy.timeEnergy.size();
-                            pfSaveVaildData->write((char*)&size, sizeof(quint32));
-                            //探测器编号0/1:1字节
-                            pfSaveVaildData->write((char*)&detTimeEnergy.channel, sizeof(detTimeEnergy.channel));
-                            //数据对:12字节对
-                            pfSaveVaildData->write((char*)detTimeEnergy.timeEnergy.data(), sizeof(TimeEnergy)*size);
-                            pfSaveVaildData->flush();
-                        }
-                    }
+                    // //将一个粒子的有效数据写入文件
+                    // if (detectorParameter.transferModel == 0x05){
+                    //     if (nullptr != pfSaveVaildData){
+                    //         //有效数据对4字节
+                    //         quint32 size = detTimeEnergy.timeEnergy.size();
+                    //         pfSaveVaildData->write((char*)&size, sizeof(quint32));
+                    //         //探测器编号0/1:1字节
+                    //         pfSaveVaildData->write((char*)&detTimeEnergy.channel, sizeof(detTimeEnergy.channel));
+                    //         //数据对:12字节对
+                    //         pfSaveVaildData->write((char*)detTimeEnergy.timeEnergy.data(), sizeof(TimeEnergy)*size);
+                    //         pfSaveVaildData->flush();
+                    //     }
+                    // }
                 }
 
                 QDateTime tmStop = QDateTime::currentDateTime();
@@ -1579,6 +1585,20 @@ void CommandHelper::detTimeEnergyWorkThread()
                 if (swapFrames.size() > 0){
                     for (size_t i=0; i<swapFrames.size(); ++i){
                         DetTimeEnergy detTimeEnergy = swapFrames[i];
+                            
+                        //有效数据写入文件，注意，对于自动测量，冷却时间之前的数据都保存了，但是不能做符合计算处理。
+                        if (detectorParameter.transferModel == 0x05){
+                            if (nullptr != pfSaveVaildData){
+                                //有效数据对数目（也就是一个包里面有多少个粒子），4字节
+                                quint32 size = detTimeEnergy.timeEnergy.size();
+                                pfSaveVaildData->write((char*)&size, sizeof(quint32));
+                                //探测器编号0/1:1字节
+                                pfSaveVaildData->write((char*)&detTimeEnergy.channel, sizeof(detTimeEnergy.channel));
+                                //数据对:12字节对
+                                pfSaveVaildData->write((char*)detTimeEnergy.timeEnergy.data(), sizeof(TimeEnergy)*size);
+                                pfSaveVaildData->flush();
+                            }
+                        }
 
                         // 根据步长，将数据添加到当前处理缓存
                         quint8 channel = detTimeEnergy.channel;
@@ -1599,23 +1619,26 @@ void CommandHelper::detTimeEnergyWorkThread()
 
                     if (data1_2.size() > 0 || data2_2.size() > 0 ){
                         QDateTime now = QDateTime::currentDateTime();
-                        if (1){
-                            if (detectorParameter.measureModel == mmAuto){//自动测量，需要获取能宽
-                                if (this->time_SetEnWindow == 0x00){
-                                    if (data1_2.size() > 0)
-                                        this->time_SetEnWindow = data1_2[0].time / 1e6;
-                                    else
-                                        this->time_SetEnWindow = data2_2[0].time / 1e6;
-                                }
+                        
+                        if (detectorParameter.measureModel == mmAuto){//自动测量，需要获取能宽
+                            //在冷却时长之后的数据才进行处理
+                            if(data1_2.begin()->time/1e9 >= coolingTime_Auto || data2_2.begin()->time/1e9 >= coolingTime_Auto)
+                            {
                                 coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, delayTime, true, true);
                             }
-                            else if(detectorParameter.measureModel == mmManual)
+                        }
+                        else if(detectorParameter.measureModel == mmManual)
+                        {
+                            if (this->reChangeEnWindow)
                             {
-                                if (this->reChangeEnWindow)
-                                    coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, delayTime, true, true);
+                                coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, delayTime, true, true);
+                                if (data1_2.size() > 0)
+                                    this->time_SetEnWindow = data1_2[0].time / 1e6;
                                 else
-                                    coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, delayTime, true, false);
+                                    this->time_SetEnWindow = data2_2[0].time / 1e6;
                             }
+                            else
+                                coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, delayTime, true, false);
                         }
 #ifdef QT_NO_DEBUG
 
@@ -1644,7 +1667,7 @@ void CommandHelper::updateStepTime(int _stepT, int _timewidth)
 }
 
 void CommandHelper::updateParamter(int _stepT, unsigned short _EnWin[4], int _timewidth/* = 50*/, 
-    int _delayTime, bool reset/* = false*/)
+    int _delayTime, int _coolingtime_auto, bool reset/* = false*/)
 {
     QMutexLocker locker(&mutexReset);
     // if (reset){
@@ -1658,6 +1681,7 @@ void CommandHelper::updateParamter(int _stepT, unsigned short _EnWin[4], int _ti
     this->EnWindow[1] = _EnWin[1];
     this->EnWindow[2] = _EnWin[2];
     this->EnWindow[3] = _EnWin[3];
+    this->coolingTime_Auto = _coolingtime_auto;
     this->timeWidth = _timewidth;
     this->delayTime = _delayTime;
     currentSpectrumFrames.clear();

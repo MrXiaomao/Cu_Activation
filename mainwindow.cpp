@@ -213,7 +213,13 @@ MainWindow::MainWindow(QWidget *parent)
         exceptionCheckTimer->start(1000);
 
         if (mmode == mmAuto)
+        {
             ui->lineEdit_autoStatus->setText("冷却状态");
+                         
+            //自动测量的冷却时间倒计时
+            QTimer* coolingTimer_auto = this->findChild<QTimer*>("coolingTimer_auto");
+            coolingTimer_auto->start(ui->spinBox_coolingTime_2->value());   
+        }
             // ui->start_time_text->setText(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
             // qInfo()<<"接收到触发信号，仪器内部时钟开始计时";//注意，在sigMeasureStart信号之前已经打印了qInfo()日志
 
@@ -604,6 +610,13 @@ void MainWindow::InitMainWindowUi()
         } else{
             ui->lcdNumber->display(QTime(0,0,0).addSecs(measureStartTime.secsTo(currentDateTime)).toString("hh:mm:ss"));
         }
+    });
+
+    //注意这一条仅仅是当前应付技术规格书中，并没有实际用处。第9条：预设程宇可进行上下电，开关机等硬件操作。
+    QTimer* coolingTimer_auto = new QTimer(this); //用于自动测量的冷却时间
+    coolingTimer_auto->setObjectName("coolingTimer_auto");
+    connect(coolingTimer_auto, &QTimer::timeout, this, [=](){
+        qInfo()<<"探测器已经电开机";
     });
 
     QTimer* exceptionCheckTimer = new QTimer(this);
@@ -1056,6 +1069,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
 
         detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
         detectorParameter.measureModel = mmAuto;
+        detectorParameter.coolingTime = ui->spinBox_coolingTime_2->value();
         this->setProperty("measur-model", detectorParameter.measureModel);
 
         // 打开 JSON 文件
@@ -1468,6 +1482,10 @@ void MainWindow::slotRefreshUi()
             
             ui->spinBox_timelength_2->setEnabled(false);
             ui->comboBox_channel2->setEnabled(false);
+            ui->spinBox_coolingTime_2->setEnabled(false);
+
+            ui->action_power->setEnabled(false);
+            ui->action_detector_connect->setEnabled(false);
 
             //公共
             ui->pushButton_save->setEnabled(false);
@@ -1481,6 +1499,16 @@ void MainWindow::slotRefreshUi()
     } else {
         ui->pushButton_measure->setText(tr("开始测量"));
         ui->pushButton_measure_2->setText(tr("开始测量"));
+        
+        ui->lineEdit_autoStatus->setText(tr("已停止测量"));
+        
+        if(this->property("measur-model").toInt() == mmAuto) //自动测量
+        {
+            //如果提前点击停止测量，则直接停止冷却时长的定时器
+            QTimer* coolingTimer_auto = this->findChild<QTimer*>("coolingTimer_auto");
+            coolingTimer_auto->stop();
+            qInfo()<<"探测器已断电，并关机";
+        }
 
         // 手动测量
         ui->spinBox_timelength->setEnabled(true);
@@ -1497,6 +1525,7 @@ void MainWindow::slotRefreshUi()
         ui->spinBox_timelength_2->setEnabled(true);
         ui->comboBox_channel2->setEnabled(true);
         ui->comboBox_range_2->setEnabled(true);
+        ui->spinBox_coolingTime_2->setEnabled(true);
         ui->spinBox_1_leftE_2->setEnabled(true);
         ui->spinBox_1_rightE_2->setEnabled(true);
         ui->spinBox_2_leftE_2->setEnabled(true);
@@ -1586,6 +1615,8 @@ void MainWindow::load()
             ui->comboBox_channel2->setCurrentIndex(jsonObjM2["multiChannel"].toInt());
             //量程选取
             ui->comboBox_range_2->setCurrentIndex(jsonObjM2["range"].toInt());
+            //冷却时长
+            ui->spinBox_coolingTime_2->setValue(jsonObjM2["coolingTime"].toInt());            
             //时间步长
             ui->spinBox_step_2->setValue(jsonObjM2["step"].toInt());
             //符合分辨时间
@@ -1667,6 +1698,8 @@ void MainWindow::saveConfigJson(bool bSafeExitFlag)
         jsonObjM2["multiChannel"] = ui->comboBox_channel2->currentIndex();
         //量程选取
         jsonObjM2["range"] = ui->comboBox_range_2->currentIndex();
+        //冷却时长
+        jsonObjM2["coolingTime"] = ui->spinBox_coolingTime_2->value();
         //时间步长
         jsonObjM2["step"] = ui->spinBox_step_2->value();
         //符合分辨时间
@@ -1749,13 +1782,11 @@ void MainWindow::on_action_line_log_triggered()
 //打开位移平台界面
 void MainWindow::on_action_Moving_triggered()
 {
-    /*
     ControlWidget *w = new ControlWidget(this);
     w->setAttribute(Qt::WA_DeleteOnClose, true);
     w->setWindowFlags(Qt::WindowCloseButtonHint|Qt::Dialog);
     w->setWindowModality(Qt::ApplicationModal);
     w->showNormal();
-    */
 }
 
 #include <QRegExp>

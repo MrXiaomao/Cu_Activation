@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Please set LastEditors
- * @LastEditTime: 2025-04-24 22:49:09
+ * @LastEditTime: 2025-04-27 16:24:15
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -28,7 +28,7 @@ struct particle_data
 //priority_queue<particle_data> q;//此时创建的优先队列是按x大小升序排列的
 
 CoincidenceAnalyzer::CoincidenceAnalyzer():
-countCoin(0),autoFirst(true),
+countCoin(0), coolingTime_Auto(0), autoFirst(true),
 GaussCountMin(100000),
 #ifdef Q_NO_DEBUG
 GaussMinGapTime(180)
@@ -96,9 +96,9 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
     int time1_elapseFPGA = 0;//计算FPGA当前最大时间与上一时刻的时间差,单位：秒
     int time2_elapseFPGA = 0;//计算FPGA当前最大时间与上一时刻的时间差,单位：秒
     if(unusedData1.size()>0) 
-        time1_elapseFPGA = unusedData1.back().time/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
+        time1_elapseFPGA = unusedData1.back().time/NANOSECONDS - (countCoin + coolingTime_Auto);//计算FPGA当前最大时间与上一时刻的时间差
     if(unusedData2.size()>0) 
-        time2_elapseFPGA = unusedData2.back().time/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
+        time2_elapseFPGA = unusedData2.back().time/NANOSECONDS - (countCoin + coolingTime_Auto);//计算FPGA当前最大时间与上一时刻的时间差
 
     int deltaT = 1; //单位秒
     //都存够1秒的数据才进行处理，或者其中某一个存满2s数据。
@@ -145,12 +145,12 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
         time1_elapseFPGA = 0;//计算FPGA当前最大时间与上一时刻的时间差,单位：秒
         time2_elapseFPGA = 0;//计算FPGA当前最大时间与上一时刻的时间差,单位：秒
         if(unusedData1.size()>0)
-            time1_elapseFPGA = unusedData1.back().time/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
+            time1_elapseFPGA = unusedData1.back().time/NANOSECONDS - (countCoin + coolingTime_Auto);//计算FPGA当前最大时间与上一时刻的时间差
         else
             time1_elapseFPGA = 0;
 
         if(unusedData2.size()>0)
-            time2_elapseFPGA = unusedData2.back().time/NANOSECONDS - countCoin;//计算FPGA当前最大时间与上一时刻的时间差
+            time2_elapseFPGA = unusedData2.back().time/NANOSECONDS - (countCoin + coolingTime_Auto);//计算FPGA当前最大时间与上一时刻的时间差
         else
             time2_elapseFPGA = 0;
 
@@ -258,6 +258,7 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
         int windowWidthT, int delayTime)
 {
     CoincidenceResult tmpCoinResult;
+    tmpCoinResult.time = AllPoint.back().time;
     int length1 = AllPoint.back().dataPoint1;
     int length2 = AllPoint.back().dataPoint2;
 
@@ -467,8 +468,8 @@ bool CoincidenceAnalyzer::GetDataPoint(vector<TimeEnergy> data1, vector<TimeEner
     countCoin++;
     CurrentPoint onePoint;
 
-    long long current_nanosconds = (long long)countCoin * NANOSECONDS;
-
+    long long current_nanosconds = (long long)(countCoin + coolingTime_Auto)  * NANOSECONDS;
+    onePoint.time = current_nanosconds;
     int ilocation1_below = 0;
     int ilocation2_below = 0;
     int ilocation1_above = 0; 

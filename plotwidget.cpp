@@ -1416,7 +1416,7 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
             QVector<QColor> colors;
 
             for (size_t i=0; i<r3.size(); ++i){
-                uint32_t key = (i+1)*refreshTime;
+                uint32_t key = r3[i].time;
                 keys << key;
                 values << r3[i].CountRate1;
                 colors << clrLine;
@@ -1460,7 +1460,7 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
             QVector<QColor> colors;
 
             for (size_t i=0; i<r3.size(); ++i){
-                uint32_t key = (i+1)*refreshTime;
+                uint32_t key = r3[i].time;
                 keys << key;
                 values << r3[i].CountRate2;
                 colors << clrLine;
@@ -1506,7 +1506,7 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
             double maxValue = 0;
 
             for (size_t i=0; i<r3.size(); ++i){
-                uint32_t key = (i+1)*refreshTime;
+                uint32_t key = r3[i].time;
                 keys << key;
                 values << r3[i].ConCount_single;
                 colors << clrLine;

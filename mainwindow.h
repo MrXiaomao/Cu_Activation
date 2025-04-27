@@ -62,7 +62,7 @@ private slots:
 
     void on_action_detector_connect_triggered();
 
-    void on_pushButton_save_clicked();
+    // void on_pushButton_save_clicked(); //测量结果另存为
 
     void on_pushButton_refresh_clicked();
 

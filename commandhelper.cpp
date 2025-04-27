@@ -986,8 +986,14 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
 
     //连接探测器
     prepareStep = 0;
-    netDataFileName = QString("%1").arg(defaultCacheDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + "_Net.dat");
-    validDataFileName = QString("%1").arg(defaultCacheDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + "_valid.dat");    
+    //文件夹准备
+    QString ShotDir = defaultCacheDir + "/" + shotNum;
+    QDir dir(ShotDir);
+    if (!dir.exists())
+        dir.mkdir(ShotDir);
+    //创建缓存文件
+    netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + "_Net.dat");
+    validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + "_valid.dat");    
     if (nullptr != pfSaveNet){
         pfSaveNet->close();
         delete pfSaveNet;
@@ -1166,8 +1172,14 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
 
     //连接探测器
     prepareStep = 0;
-    netDataFileName = QString("%1").arg(defaultCacheDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + "_Net.dat");
-    validDataFileName = QString("%1").arg(defaultCacheDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + "_valid.dat");
+    //文件夹准备
+    QString ShotDir = defaultCacheDir + "/" + shotNum;
+    QDir dir(ShotDir);
+    if (!dir.exists())
+        dir.mkdir(ShotDir);
+    //创建缓存文件
+    netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + "_Net.dat");
+    validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + "_valid.dat");
     if (nullptr != pfSaveNet){
         pfSaveNet->close();
         delete pfSaveNet;

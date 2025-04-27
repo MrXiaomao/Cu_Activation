@@ -426,17 +426,16 @@ void MainWindow::InitMainWindowUi()
         QString cacheDir = QCoreApplication::applicationDirPath() + "/cache";
         if(jsonObj.contains("defaultCache")) cacheDir = jsonObj["defaultCache"].toString();
         commandHelper->setDefaultCacheDir(cacheDir);
-
-        ui->lineEdit_path->setText(jsonObj["path"].toString());
-        ui->lineEdit_filename->setText(jsonObj["filename"].toString());
+        // ui->lineEdit_path->setText(jsonObj["path"].toString());
+        // ui->lineEdit_filename->setText(jsonObj["filename"].toString());
     } else {
-        ui->lineEdit_path->setText("./");
-        ui->lineEdit_filename->setText("test.dat");
+        // ui->lineEdit_path->setText("./");
+        // ui->lineEdit_filename->setText("test.dat");
         commandHelper->setDefaultCacheDir("./cache");
     }
 
-    // 测量结果-存储路径
-    {
+    // 测量结果另存为-存储路径
+    /*{
         QAction *action = ui->lineEdit_path->addAction(QIcon(":/resource/open.png"), QLineEdit::TrailingPosition);
         QToolButton* button = qobject_cast<QToolButton*>(action->associatedWidgets().last());
         button->setCursor(QCursor(Qt::PointingHandCursor));
@@ -444,7 +443,7 @@ void MainWindow::InitMainWindowUi()
             QString dir = QFileDialog::getExistingDirectory(this);
             ui->lineEdit_path->setText(dir);
         });
-    }
+    }*/
 
     ui->tabWidget_measure->setCurrentIndex(0);
 
@@ -923,7 +922,6 @@ void MainWindow::on_action_energycalibration_triggered()
     w->showNormal();
 }
 
-#include "coolingtimewidget.h"
 void MainWindow::on_pushButton_measure_clicked()
 {
     if (this->property("measure-status").toUInt() == msNone
@@ -983,7 +981,7 @@ void MainWindow::on_pushButton_measure_clicked()
                 detectorParameter.gain = jsonObj["DetectorGain"].toInt();
             }
 
-            ui->pushButton_save->setEnabled(false);
+            // ui->pushButton_save->setEnabled(false);
             ui->pushButton_gauss->setEnabled(true);
             ui->action_refresh->setEnabled(true);
             ui->pushButton_measure->setEnabled(false);
@@ -1013,6 +1011,7 @@ void MainWindow::on_pushButton_measure_clicked()
             ui->lcdNumber_DeathRatio1->display("0.0");
             ui->lcdNumber_DeathRatio2->display("0.0");
 
+            commandHelper->setShotNumber(ui->lineEdit_ShotNum->text()); //设置测量发次，QString类型
             commandHelper->updateParamter(stepT, EnWin, timewidth, delayTime, false);
             commandHelper->slotStartManualMeasure(detectorParameter);
 
@@ -1089,7 +1088,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
             detectorParameter.gain = jsonObj["DetectorGain"].toInt();
         }
 
-        ui->pushButton_save->setEnabled(false);
+        // ui->pushButton_save->setEnabled(false);
         ui->pushButton_gauss->setEnabled(true);
         ui->action_refresh->setEnabled(true);
         ui->pushButton_measure->setEnabled(false);
@@ -1119,7 +1118,8 @@ void MainWindow::on_pushButton_measure_2_clicked()
         bool ok;
         int value = ui->comboBox_channel2->currentText().toInt(&ok);
         multi_CHANNEL = static_cast<unsigned int>(value);
-
+        
+        commandHelper->setShotNumber(ui->lineEdit_ShotNum_2->text()); //设置测量序号，QString类型
         commandHelper->updateParamter(stepT, EnWin, timewidth, delayTime, false);
         commandHelper->slotStartAutoMeasure(detectorParameter);
 
@@ -1144,7 +1144,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         });
     }
 }
-
+/*
 void MainWindow::on_pushButton_save_clicked()
 {
     this->saveConfigJson();
@@ -1178,8 +1178,8 @@ void MainWindow::on_pushButton_save_clicked()
         file.close();
 
         commandHelper->exportFile(path + "/" + filename);
-    }       
-}
+    }
+}*/
 
 void MainWindow::on_pushButton_refresh_clicked()
 {
@@ -1441,6 +1441,7 @@ void MainWindow::slotRefreshUi()
             ui->spinBox_timelength->setEnabled(false);
             ui->comboBox_channel->setEnabled(false);
             ui->spinBox_coolingTime->setEnabled(false);
+            ui->lineEdit_ShotNum->setEnabled(false);
 
             ui->action_power->setEnabled(false);
             ui->action_detector_connect->setEnabled(false);
@@ -1459,7 +1460,7 @@ void MainWindow::slotRefreshUi()
             ui->spinBox_timeWidth->setEnabled(false);
 
             //公共
-            ui->pushButton_save->setEnabled(false);
+            // ui->pushButton_save->setEnabled(false);
             ui->pushButton_gauss->setEnabled(true);
 
             //自动测量
@@ -1483,12 +1484,13 @@ void MainWindow::slotRefreshUi()
             ui->spinBox_timelength_2->setEnabled(false);
             ui->comboBox_channel2->setEnabled(false);
             ui->spinBox_coolingTime_2->setEnabled(false);
+            ui->lineEdit_ShotNum_2->setEnabled(false);
 
             ui->action_power->setEnabled(false);
             ui->action_detector_connect->setEnabled(false);
 
             //公共
-            ui->pushButton_save->setEnabled(false);
+            // ui->pushButton_save->setEnabled(false);
             ui->pushButton_gauss->setEnabled(true);
 
             //手动测量
@@ -1515,6 +1517,7 @@ void MainWindow::slotRefreshUi()
         ui->comboBox_channel->setEnabled(true);
         ui->comboBox_range->setEnabled(true);
         ui->spinBox_coolingTime->setEnabled(true);
+        ui->lineEdit_ShotNum->setEnabled(true);
         ui->spinBox_1_leftE->setEnabled(true);
         ui->spinBox_1_rightE->setEnabled(true);
         ui->spinBox_2_leftE->setEnabled(true);
@@ -1526,6 +1529,7 @@ void MainWindow::slotRefreshUi()
         ui->comboBox_channel2->setEnabled(true);
         ui->comboBox_range_2->setEnabled(true);
         ui->spinBox_coolingTime_2->setEnabled(true);
+        ui->lineEdit_ShotNum_2->setEnabled(true);
         ui->spinBox_1_leftE_2->setEnabled(true);
         ui->spinBox_1_rightE_2->setEnabled(true);
         ui->spinBox_2_leftE_2->setEnabled(true);
@@ -1539,7 +1543,7 @@ void MainWindow::slotRefreshUi()
 //            ui->action_refresh->setEnabled(false);
 
             //公共
-            ui->pushButton_save->setEnabled(true);            
+            // ui->pushButton_save->setEnabled(true);            
 
             ui->pushButton_measure->setEnabled(true);
             ui->pushButton_measure_2->setEnabled(true);
@@ -1549,7 +1553,7 @@ void MainWindow::slotRefreshUi()
 //            ui->action_refresh->setEnabled(false);
 
             //公共
-            ui->pushButton_save->setEnabled(false);
+            // ui->pushButton_save->setEnabled(false);
             ui->pushButton_measure->setEnabled(false);
             ui->pushButton_measure_2->setEnabled(false);
         }
@@ -1639,8 +1643,8 @@ void MainWindow::load()
             ui->spinBox_leftE->setValue(jsonObjPub["Gauss_leftE"].toInt());
             ui->spinBox_rightE->setValue(jsonObjPub["Gauss_rightE"].toInt());
             //保存数据
-            ui->lineEdit_path->setText(jsonObjPub["path"].toString());
-            ui->lineEdit_filename->setText(jsonObjPub["filename"].toString());
+            // ui->lineEdit_path->setText(jsonObjPub["path"].toString());
+            // ui->lineEdit_filename->setText(jsonObjPub["filename"].toString());
             ui->comboBox_range->setCurrentIndex(jsonObjPub["select-range"].toInt());  //量程索引值
 
             bool bSafeExitFlag = jsonObjPub["safe_exit"].toBool();
@@ -1721,8 +1725,8 @@ void MainWindow::saveConfigJson(bool bSafeExitFlag)
         jsonObjPub["Gauss_rightE"] = ui->spinBox_rightE->value();
         //保存数据
         jsonObjPub["safe_exit"] = bSafeExitFlag;
-        jsonObjPub["path"] = ui->lineEdit_path->text();
-        jsonObjPub["filename"] = ui->lineEdit_filename->text();
+        // jsonObjPub["path"] = ui->lineEdit_path->text();
+        // jsonObjPub["filename"] = ui->lineEdit_filename->text();
         jsonObjPub["select-range"] = ui->comboBox_range->currentIndex();  //量程索引值
         jsonObj["Public"] = jsonObjPub;
 

@@ -37,6 +37,13 @@ public:
         int delayTime = 0, int coolingtime_auto = 0, bool reset = false);
     void exportFile(QString);
     void setDefaultCacheDir(QString dir);
+    
+    //设置测量发次号，用于文件夹分类
+    inline void setShotNumber(QString _shotNum)
+    {
+        shotNum = _shotNum;
+    }
+
     bool isConnected();//探测器是否连接
     unsigned int readTimeStep(){
         return this->stepT;
@@ -195,6 +202,7 @@ private:
 
 private:
     QString defaultCacheDir;
+    QString shotNum; //测量发次，用来作为文件前缀。
     QString netDataFileName; //存储网口接收全部原始数据的文件名
     QString validDataFileName; // 存储有效数据的文件名
 

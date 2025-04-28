@@ -989,6 +989,8 @@ void MainWindow::on_pushButton_measure_clicked()
             detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
             detectorParameter.measureModel = mmManual;
             detectorParameter.coolingTime = ui->spinBox_coolingTime->value();
+            detectorParameter.delayTime = ui->spinBox_delayTime->value();
+            detectorParameter.timeWidth = ui->spinBox_timeWidth->value();
             this->setProperty("measur-model", detectorParameter.measureModel);
 
             // 打开 JSON 文件
@@ -1017,9 +1019,7 @@ void MainWindow::on_pushButton_measure_clicked()
             int stepT = ui->spinBox_step->value();
             unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
                                        (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
-            
-            int delayTime = ui->spinBox_delayTime->value();
-            int timewidth = ui->spinBox_timeWidth->value();
+
             QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
             measureTimer->setInterval(ui->spinBox_timelength->value() * 1000);
             
@@ -1039,7 +1039,7 @@ void MainWindow::on_pushButton_measure_clicked()
             ui->lcdNumber_DeathRatio2->display("0.0");
 
             commandHelper->setShotNumber(ui->lineEdit_ShotNum->text()); //设置测量发次，QString类型
-            commandHelper->updateParamter(stepT, EnWin, timewidth, delayTime, false);
+            commandHelper->updateParamter(stepT, EnWin, false);
             commandHelper->slotStartManualMeasure(detectorParameter);
 
             QTimer::singleShot(30000, this, [=](){
@@ -1082,7 +1082,11 @@ void MainWindow::on_pushButton_measure_2_clicked()
         detectorParameter.deadTime = 0x05*10;
         detectorParameter.gain = 0x00;
         detectorParameter.measureRange = ui->comboBox_range_2->currentIndex()+1; //注意：从1开始计数
-        detectorParameter.coolingTime = ui->spinBox_coolingTime_2->value(); //对于自动测量，这个前面的冷却时长FPGA工作，并上传数据，但是软件不对数据处理，直接丢弃。
+        // 冷却时间，单位s。
+        // 对于自动测量，这个前面的冷却时长内FPGA在工作，并上传数据，但是软件不对数据处理，直接丢弃。
+        detectorParameter.coolingTime = ui->spinBox_coolingTime_2->value(); 
+        detectorParameter.delayTime = ui->spinBox_delayTime_2->value(); //延迟时间,单位ns
+        detectorParameter.timeWidth = ui->spinBox_timeWidth_2->value(); //时间窗宽度,单位ns
 
         // 默认打开梯形成形
         detectorParameter.isTrapShaping = true;
@@ -1095,7 +1099,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
 
         detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
         detectorParameter.measureModel = mmAuto;
-        detectorParameter.coolingTime = ui->spinBox_coolingTime_2->value();
+
         this->setProperty("measur-model", detectorParameter.measureModel);
 
         // 打开 JSON 文件
@@ -1115,12 +1119,10 @@ void MainWindow::on_pushButton_measure_2_clicked()
             detectorParameter.gain = jsonObj["DetectorGain"].toInt();
         }
 
-        // ui->pushButton_save->setEnabled(false);
         ui->pushButton_gauss->setEnabled(true);
         ui->action_refresh->setEnabled(true);
         ui->pushButton_measure->setEnabled(false);
         ui->pushButton_measure_2->setText(tr("停止测量"));
-        // ui->start_time_text->setText("0000-00-00 00:00:00");
         ui->lineEdit_autoStatus->setText("等待触发");
         qInfo()<<"等待触发";
 
@@ -1137,9 +1139,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         int stepT = ui->spinBox_step_2->value();
         unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE_2->value(), (unsigned short)ui->spinBox_1_rightE_2->value(),
                                    (unsigned short)ui->spinBox_2_leftE_2->value(), (unsigned short)ui->spinBox_2_rightE_2->value()};
-        
-        int delayTime = ui->spinBox_delayTime_2->value();
-        int timewidth = ui->spinBox_timeWidth_2->value();
+
         QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
         measureTimer->setInterval(ui->spinBox_timelength_2->value() * 1000);
         // 获取多道道数
@@ -1148,7 +1148,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         multi_CHANNEL = static_cast<unsigned int>(value);
         
         commandHelper->setShotNumber(ui->lineEdit_ShotNum_2->text()); //设置测量序号，QString类型
-        commandHelper->updateParamter(stepT, EnWin, timewidth, delayTime, false);
+        commandHelper->updateParamter(stepT, EnWin, true);
         commandHelper->slotStartAutoMeasure(detectorParameter);
 
         // ui->pushButton_measure_2_tip->setText(tr("等待触发..."));
@@ -1214,15 +1214,12 @@ void MainWindow::on_pushButton_refresh_clicked()
     this->saveConfigJson();
 
     int stepT = ui->spinBox_step->value();
-    int timewidth = ui->spinBox_timeWidth->value();
-    if (ui->radioButton_ref->isChecked()){
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
-        plotWidget->slotResetPlot();
-    }
+    // if (ui->radioButton_ref->isChecked()){
+    //     PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
+    //     plotWidget->slotResetPlot();
+    // }
 
-    //SplashWidget::instance()->setInfo(tr("能量信息正在重新进行计算，请等待..."), false);
-    //SplashWidget::instance()->exec();
-    commandHelper->updateStepTime(stepT, timewidth);
+    commandHelper->updateStepTime(stepT);
 }
 
 void MainWindow::on_action_close_triggered()
@@ -1779,17 +1776,15 @@ void MainWindow::on_pushButton_refresh_2_clicked()
     this->saveConfigJson();
 
     int stepT = ui->spinBox_step_2->value();
-    unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE_2->value(), (unsigned short)ui->spinBox_1_rightE_2->value(),
-                               (unsigned short)ui->spinBox_2_leftE_2->value(), (unsigned short)ui->spinBox_2_rightE_2->value()};
+    // unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE_2->value(), (unsigned short)ui->spinBox_1_rightE_2->value(),
+    //                            (unsigned short)ui->spinBox_2_leftE_2->value(), (unsigned short)ui->spinBox_2_rightE_2->value()};
 
-    if (ui->radioButton_ref->isChecked()){
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
-        plotWidget->slotResetPlot();
-    }
+    // if (ui->radioButton_ref->isChecked()){
+    //     PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
+    //     plotWidget->slotResetPlot();
+    // }
 
-    int delayTime = ui->spinBox_delayTime_2->value();
-    int timewidth = ui->spinBox_timeWidth_2->value();
-    commandHelper->updateParamter(stepT, EnWin, timewidth, delayTime, false);
+    commandHelper->updateStepTime(stepT);
 }
 
 void MainWindow::on_pushButton_refresh_3_clicked()
@@ -1886,12 +1881,7 @@ void MainWindow::on_pushButton_confirm_clicked()
         plotWidget->slotResetPlot();
     }
 
-    //SplashWidget::instance()->setInfo(tr("能量信息正在重新进行计算，请等待..."), false);
-    //SplashWidget::instance()->exec();
-
-    int delayTime = ui->spinBox_delayTime->value();
-    int timewidth = ui->spinBox_timeWidth->value();
-    commandHelper->updateParamter(stepT, EnWin, timewidth, delayTime, true);
+    commandHelper->updateParamter(stepT, EnWin, true);
 
     //取消画面暂停刷新
     this->setProperty("pause-plot", false);

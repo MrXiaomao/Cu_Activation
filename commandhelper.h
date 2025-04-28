@@ -1,3 +1,10 @@
+/*
+ * @Author: MrPan
+ * @Date: 2025-04-06 20:15:30
+ * @LastEditors: Maoxiaoqing
+ * @LastEditTime: 2025-04-28 22:47:51
+ * @Description: 用来管理网口的数据发送与接受，管理网口数据的处理相关业务。
+ */
 #ifndef COMMANDHELPER_H
 #define COMMANDHELPER_H
 
@@ -32,9 +39,16 @@ public:
     void initCommand();//初始化常用指令
     void startWork();
     void switchToCountMode(bool refModel);
-    void updateStepTime(int stepT, int timewidth = 50);
-    void updateParamter(int stepT, unsigned short EnWin[4], int timewidth = 50, 
-        int delayTime = 0, bool reset = false);
+    void updateStepTime(int stepT); //用于响应主界面点击刷新按钮
+    /**
+     * @description: 更新能窗和步长，适用于点击开始测量后，将参数传递给命令管理类
+     * @param {int} stepT 时间步长，单位s
+     * @param {unsigned short} EnWin 能窗。无单位
+     * @param {bool} autoEnWindow 是否自动更新能窗，用于修正峰位漂移，比如常见的温漂。自动采用上一次的能窗进行高斯拟合，拟合后给出新的能创。
+     * @return {*}
+     */    
+    void updateParamter(int stepT, unsigned short EnWin[4], bool _autoEnWindow);
+    
     void exportFile(QString);
     void setDefaultCacheDir(QString dir);
     
@@ -114,10 +128,11 @@ private:
     QLiteThread* analyzeNetDataThread;//处理网络数据线程，将数据进行解析成时间能量队
     QLiteThread* plotUpdateThread;//能谱信息处理线程
     quint32 currentFPGATime = 0;// FPGA当前时刻，单位：s
-    bool reChangeEnWindow = false;
-    quint64 time_SetEnWindow = 0;// 记录下手动测量下，用户设置能窗的时间戳，单位：毫秒
+    bool autoChangeEnWindow = false; //是否自动适应能窗，用以修正温漂
+    quint64 time_SetEnWindow = 0;// 记录下手动测量下，用户设置能窗的时间戳，单位：s
 
     CoincidenceAnalyzer* coincidenceAnalyzer;
+    // 暂时弃用该函数
     void analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult> r3);
 
     void doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> r3);
@@ -206,13 +221,10 @@ private:
     QString netDataFileName; //存储网口接收全部原始数据的文件名
     QString validDataFileName; // 存储有效数据的文件名
 
-    int stepT = 1; //界面图像刷新时间
+    int stepT = 1; //界面图像刷新时间，单位s
     unsigned short EnWindow[4]; // 探测器1左能窗、右能窗；探测器2左能窗、右能窗
     std::vector<unsigned short> autoEnWindow; // 自动测量反馈给界面的值：探测器1左能窗、右能窗；探测器2左能窗、右能窗
 
-    int coolingTime_Auto; //自动测量的冷却时间，单位：s。注意它和手动测量的冷却时间不一样.
-    int delayTime; //符合分辨延迟时间，探测器2相对探测器1的延迟时间。单位：ns。
-    int timeWidth = 50;//时间窗宽度，单位ns(符合分辨时间)
     qint64 lastClockT = 0;
     bool refModel = false;
     unsigned int maxEnergy = 8192;

@@ -133,12 +133,10 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
 
     coincidenceAnalyzer->set_callback(analyzerRealCalback, this);
 
-    //coincidenceAnalyzer->set_callback(std::bind(&CommandHelper::analyzerCalback, this, placeholders::_1, placeholders::_2));
-    // coincidenceAnalyzer->set_callback([=](SingleSpectrum r1, vector<CoincidenceResult> r3) {
-    //     this->doEnWindowData(r1, r3);
-    // });
-
     connect(this, &CommandHelper::sigMeasureStop, this, [=](){
+        //测量停止，进行符合计算，给出产额结果
+
+
         //测量停止保存符合运算测量参数
         QString configResultFile = validDataFileName + ".配置";
         {
@@ -156,27 +154,21 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                     if (gainValue.contains(detectorParameter.gain))
                         out << tr("探测器增益=") << gainValue[detectorParameter.gain] << Qt::endl;
                     out << tr("量程选取=")<<detectorParameter.measureRange<< Qt::endl;
+                    out << tr("冷却时长=") << detectorParameter.coolingTime << Qt::endl; //单位s
+                    out << tr("符合延迟时间=") << detectorParameter.delayTime << Qt::endl; //单位ns
+                    out << tr("符合分辨时间=") << detectorParameter.timeWidth << Qt::endl; //单位ns
+                    out << tr("时间步长=") << 1 << Qt::endl; //注意，存储的数据时间步长恒为1s
+                    out << tr("测量时长=") <<currentFPGATime<< Qt::endl;
+                    out << tr("Det1符合能窗左=") << this->EnWindow[0] << Qt::endl;
+                    out << tr("Det1符合能窗右=") << this->EnWindow[1] << Qt::endl;
+                    out << tr("Det2符合能窗左=") << this->EnWindow[2] << Qt::endl;
+                    out << tr("Det2符合能窗右=") << this->EnWindow[3] << Qt::endl;
                     if (detectorParameter.measureModel == mmManual){
                         //手动
                         out << tr("测量模式=手动") << Qt::endl;
-                        out << tr("测量时长=") <<currentFPGATime<< Qt::endl;
-                        out << tr("冷却时长=") << detectorParameter.coolingTime << Qt::endl;
-                        out << tr("时间步长=") << this->stepT << Qt::endl;
-                        out << tr("符合分辨时间=") << this->timeWidth << Qt::endl;
-                        out << tr("Det1符合能窗左=") << this->EnWindow[0] << Qt::endl;
-                        out << tr("Det1符合能窗右=") << this->EnWindow[1] << Qt::endl;
-                        out << tr("Det2符合能窗左=") << this->EnWindow[2] << Qt::endl;
-                        out << tr("Det2符合能窗右=") << this->EnWindow[3] << Qt::endl;
                     } else if (detectorParameter.measureModel == mmAuto){
                         //自动
                         out << tr("测量模式=自动") << Qt::endl;
-                        out << tr("测量时长=") <<currentFPGATime<< Qt::endl;
-                        out << tr("时间步长=") << this->stepT << Qt::endl;
-                        out << tr("符合分辨时间=") << this->timeWidth << Qt::endl;
-                        out << tr("Det1符合能窗左=") << this->EnWindow[0] << Qt::endl;
-                        out << tr("Det1符合能窗右=") << this->EnWindow[1] << Qt::endl;
-                        out << tr("Det2符合能窗左=") << this->EnWindow[2] << Qt::endl;
-                        out << tr("Det2符合能窗右=") << this->EnWindow[3] << Qt::endl;
                     }
                 }
 
@@ -301,34 +293,6 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
             }
         }
 
-        /*QString singleSpectrumResultFile = netDataFileName + ".能谱";
-        {
-            QFile::OpenMode ioFlags = QIODevice::Truncate;
-            if (QFileInfo::exists(singleSpectrumResultFile))
-                ioFlags = QIODevice::Append;
-            QFile file(singleSpectrumResultFile);
-            if (file.open(QIODevice::ReadWrite | QIODevice::Text | QIODevice::Append)) {
-                QTextStream out(&file);
-                if (ioFlags == QIODevice::Truncate)
-                    out << "time,Det1-Energy,Det2-Energy" << Qt::endl;
-
-                out << r1.time;
-                for (size_t j=0; j<MULTI_CHANNEL; ++j){
-                        out << "," << r1.spectrum[0][j];
-                }
-
-                out << Qt::endl;
-                out << r1.time;
-                for (size_t j=0; j<MULTI_CHANNEL; ++j){
-                    out << "," << r1.spectrum[1][j];
-                }
-
-                out << Qt::endl;
-                file.flush();
-                file.close();
-            }
-        }*/
-
         currentFPGATime = r1.time;
     }
 
@@ -341,7 +305,6 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
             for (size_t i=0; i < count/_stepT; i++){
                 CoincidenceResult v;
                 for (int j=0; j<_stepT; ++j){
-                    // size_t posI = i*_stepT + j;
                     v.CountRate1 += r3[posI].CountRate1;
                     v.CountRate2 += r3[posI].CountRate2;
                     v.ConCount_single += r3[posI].ConCount_single;
@@ -378,7 +341,6 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
         {
             autoEnWindow.clear();
             coincidenceAnalyzer->GetEnWidth(autoEnWindow);
-            std::cout << "autoEnWindow: [" << autoEnWindow[0] << ", " << autoEnWindow[1] << "] [" <<  autoEnWindow[2] << ", " << autoEnWindow[3] << "]" << std::endl;
             emit sigUpdateAutoEnWidth(autoEnWindow);
         }
 
@@ -975,7 +937,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     coincidenceAnalyzer->initialize();
     workStatus = Preparing;
     detectorParameter = p;
-    this->reChangeEnWindow = false;
+    this->autoChangeEnWindow = false;
     this->detectorException = false;
     sendStopCmd = false;
 
@@ -1139,7 +1101,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
         cmdPool.push_back(cmdSoftTrigger);
     }
 
-    this->time_SetEnWindow = 0x00;
+    this->time_SetEnWindow = 0.0;
     socketDetector->write(cmdPool.first());
     qDebug()<<"Send HEX: "<<cmdPool.first().toHex(' ');
 }
@@ -1325,11 +1287,13 @@ void CommandHelper::netFrameWorkThead()
                     {
                         foundStop = true;
                         qDebug()<<"Recv HEX: "<<cmdStopTrigger.toHex(' ');
+#ifdef QT_DEBUG
                         if (nullptr != pfSaveNet){
                             pfSaveNet->close();
                             delete pfSaveNet;
                             pfSaveNet = nullptr;
                         }
+#endif
                         if (nullptr != pfSaveVaildData){
                             pfSaveVaildData->close();
                             delete pfSaveVaildData;
@@ -1551,13 +1515,13 @@ void CommandHelper::netFrameWorkThead()
                     } else if (handlerPool.size() == 12){
                         if (handlerPool.compare(cmdStopTrigger) == 0){                            
                             qDebug()<<"Recv HEX: "<<cmdStopTrigger.toHex(' ');
-
+#ifdef QT_DEBUG
                             if (nullptr != pfSaveNet){
                                 pfSaveNet->close();
                                 delete pfSaveNet;
                                 pfSaveNet = nullptr;
                             }
-
+#endif
                             //测量停止是否需要清空所有数据
                             handlerPool.clear();
                             workStatus = WorkEnd;
@@ -1643,21 +1607,20 @@ void CommandHelper::detTimeEnergyWorkThread()
                             //在冷却时长之后的数据才进行处理
                             if(data1_2.begin()->time/1e9 >= detectorParameter.coolingTime || data2_2.begin()->time/1e9 >= detectorParameter.coolingTime)
                             {
-                                coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, delayTime, true, true);
+                                coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, \
+                                    detectorParameter.timeWidth, detectorParameter.delayTime, true, true);
                             }
                         }
                         else if(detectorParameter.measureModel == mmManual)
                         {
-                            if (this->reChangeEnWindow)
+                            if (this->autoChangeEnWindow)
                             {
-                                coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, delayTime, true, true);
-                                if (data1_2.size() > 0)
-                                    this->time_SetEnWindow = data1_2[0].time / 1e6;
-                                else
-                                    this->time_SetEnWindow = data2_2[0].time / 1e6;
+                                coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, \
+                                    detectorParameter.timeWidth, detectorParameter.delayTime, true, true);
                             }
                             else
-                                coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, delayTime, true, false);
+                                coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, \
+                                    detectorParameter.timeWidth, detectorParameter.delayTime, true, false);
                         }
 #ifdef QT_DEBUG
                     qDebug()<< "coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime()) \
@@ -1675,39 +1638,26 @@ void CommandHelper::detTimeEnergyWorkThread()
     }
 }
 
-void CommandHelper::updateStepTime(int _stepT, int _timewidth)
+void CommandHelper::updateStepTime(int _stepT)
 {
     QMutexLocker locker(&mutexReset);
     this->stepT = _stepT;
-    this->timeWidth = _timewidth;
-    currentSpectrumFrames.clear();
 }
 
-void CommandHelper::updateParamter(int _stepT, unsigned short _EnWin[4], int _timewidth/* = 50*/, 
-    int _delayTime, bool reset/* = false*/)
+void CommandHelper::updateParamter(int _stepT, unsigned short _EnWin[4], bool _autoEnWindow)
 {
     QMutexLocker locker(&mutexReset);
-    // if (reset){
-    //     reset = (this->EnWindow[0] != _EnWin[0]) ||
-    //             (this->EnWindow[1] != _EnWin[1]) ||
-    //             (this->EnWindow[2] != _EnWin[2]) ||
-    //             (this->EnWindow[3] != _EnWin[3]);
-    // }
+
     this->stepT = _stepT;
     this->EnWindow[0] = _EnWin[0];
     this->EnWindow[1] = _EnWin[1];
     this->EnWindow[2] = _EnWin[2];
     this->EnWindow[3] = _EnWin[3];
-    this->timeWidth = _timewidth;
-    this->delayTime = _delayTime;
-    currentSpectrumFrames.clear();
-    this->reChangeEnWindow = reset;
-    return;
-
-    if (reset){
-        //读取历史数据重新进行运算
-        this->reChangeEnWindow = true;
-    };
+    
+    this->autoChangeEnWindow = _autoEnWindow;
+    int count = coincidenceAnalyzer->GetCountCoin();
+    // 如果已经处理了一段数据，或者是当前时刻大于0，则记录下此时的时刻
+    if(count>0) this->time_SetEnWindow = coincidenceAnalyzer->GetPointPerSeconds().back().time;
 }
 
 void CommandHelper::switchToCountMode(bool _refModel)

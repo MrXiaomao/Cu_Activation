@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Please set LastEditors
- * @LastEditTime: 2025-04-26 20:01:11
+ * @LastEditTime: 2025-04-28 21:10:00
  * @Description: 请填写简介
  */
 #ifndef SYSUTILS_H
@@ -84,7 +84,9 @@ typedef struct tagDetectorParameter{
     //梯形成形时间常数t2 （乘以65536后取整）   默认为t1= 0.9558*65536；t2= 0.9556*65536；
     uint16_t TrapShape_constTime2;
 
-    int32_t coolingTime;//冷却时长
+    int32_t coolingTime;//冷却时长,单位s
+    int32_t delayTime;//延迟时间,单位ns
+    int32_t timeWidth;//时间窗宽度，单位ns(符合分辨时间)
 } DetectorParameter;
 
 class SysUtils

@@ -189,7 +189,6 @@ void OfflineDataAnalysisWidget::slotStart()
     calThread->setObjectName("calThread");
     calThread->setWorkThreadProc([=](){
         coincidenceAnalyzer->initialize();
-        //coincidenceAnalyzer->set_callback(std::bind(&CommandHelper::analyzerCalback, this, placeholders::_1, placeholders::_2));
 
         QDateTime tmStart = QDateTime::currentDateTime();
         QByteArray aDatas = validDataFileName.toLocal8Bit();

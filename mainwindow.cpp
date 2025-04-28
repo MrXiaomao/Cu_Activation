@@ -74,6 +74,30 @@ MainWindow::MainWindow(QWidget *parent)
         }
     });
 
+    // 日志窗口增加清空日志功能
+    // 1. 启用自定义上下文菜单
+    ui->textEdit_log->setContextMenuPolicy(Qt::CustomContextMenu);
+    // 2. 连接信号到槽函数
+    connect(ui->textEdit_log, &QTextEdit::customContextMenuRequested,
+        this, [=](const QPoint &pos){
+        QMenu *menu = ui->textEdit_log->createStandardContextMenu();
+    
+        // 添加分隔线
+        menu->addSeparator();
+
+        // 添加"清空"动作
+        QAction *clearAction = menu->addAction(tr("清空内容"));
+        connect(clearAction, &QAction::triggered, this, [this]() {
+            ui->textEdit_log->clear();
+        });
+
+        // 显示菜单
+        menu->exec(ui->textEdit_log->viewport()->mapToGlobal(pos));
+
+        // 删除菜单对象
+        delete menu;
+    });
+
     connect(this, SIGNAL(sigRefreshUi()), this, SLOT(slotRefreshUi()));
     connect(this, SIGNAL(sigAppengMsg(const QString &, QtMsgType)), this, SLOT(slotAppendMsg(const QString &, QtMsgType)));
 
@@ -391,6 +415,7 @@ void MainWindow::InitMainWindowUi()
 
     // 获取当前时间
     ui->textEdit_log->clear();
+
     ui->spinBox_1_leftE->setMaximum(MULTI_CHANNEL);
     ui->spinBox_1_rightE->setMaximum(MULTI_CHANNEL);
     ui->spinBox_2_leftE->setMaximum(MULTI_CHANNEL);

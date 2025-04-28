@@ -118,24 +118,14 @@ bool SpectrumModel::save()
         07	10
         */
         quint8 ch1 = 0x00;
-        if (ui->comboBox_4->currentText() == "0.08"){
-            ch1 = 0x00;
-        } else if (ui->comboBox_4->currentText() == "0.16"){
-            ch1 = 0x01;
-        } else if (ui->comboBox_4->currentText() == "0.32"){
-            ch1 = 0x02;
-        } else if (ui->comboBox_4->currentText() == "0.63"){
-            ch1 = 0x03;
-        } else if (ui->comboBox_4->currentText() == "1.26"){
+        if (ui->comboBox_4->currentText() == "1.26"){
             ch1 = 0x04;
         } else if (ui->comboBox_4->currentText() == "2.52"){
             ch1 = 0x05;
         } else if (ui->comboBox_4->currentText() == "5.01"){
             ch1 = 0x06;
-        } else if (ui->comboBox_4->currentText() == "10"){
-            ch1 = 0x07;
         } else {
-            ch1 = 0x00;
+            ch1 = 0x04;
         }
         jsonObj["DetectorGain"] = ch1;
     }

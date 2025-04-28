@@ -2,6 +2,7 @@
 #include "ui_offlinedataanalysiswidget.h"
 #include "plotwidget.h"
 #include <QButtonGroup>
+#include <iostream>
 
 OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
     : QWidget(parent)
@@ -222,9 +223,9 @@ void OfflineDataAnalysisWidget::slotStart()
                 QDateTime now = QDateTime::currentDateTime();
                 coincidenceAnalyzer->calculate(data1_2, data2_2, (unsigned short*)EnWindow, timeWidth, delayTime, true, false);
 #ifdef QT_DEBUG
-                std::cout << "[" << now.toString("hh:mm:ss.zzz").toStdString() \ \
-                          << "] coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime()) \ \
-                          << ", data1.count=" << data1_2.size() \ \
+                std::cout << "[" << now.toString("hh:mm:ss.zzz").toStdString() 
+                          << "] coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime()) 
+                          << ", data1.count=" << data1_2.size() 
                           << ", data2.count=" << data2_2.size() << std::endl;
 #endif
                 data1_2.clear();

@@ -171,7 +171,7 @@ bool WaveformModel::save()
         } else if (ui->comboBox_4->currentText() == "10"){
             ch1 = 0x07;
         } else {
-            ch1 = 0x00;
+            ch1 = 0x04;
         }
         jsonObj["DetectorGain"] = ch1;
     }

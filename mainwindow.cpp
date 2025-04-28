@@ -1029,7 +1029,7 @@ void MainWindow::on_pushButton_measure_clicked()
             multi_CHANNEL = static_cast<unsigned int>(value);
 
             PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
-            plotWidget->slotStart(multi_CHANNEL);
+            plotWidget->slotStart(multi_CHANNEL);            
             plotWidget->slotUpdateEnTimeWidth(EnWin);
 
             ui->lcdNumber_CountRate1->display("0");
@@ -1126,7 +1126,8 @@ void MainWindow::on_pushButton_measure_2_clicked()
 
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
         plotWidget->slotStart(multi_CHANNEL);
-
+        plotWidget->areaSelectFinished();//直接禁用自动测量的高斯拟合功能
+        
         ui->lcdNumber_CountRate1->display("0");
         ui->lcdNumber_CountRate2->display("0");
         ui->lcdNumber_ConCount_single->display("0");

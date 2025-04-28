@@ -1132,7 +1132,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                 bool status = GaussFit(sx, sy, fcount, result);
                                 if(status)
                                 {
-                                    if (!std::isnan(result[0]) && !std::isnan(result[1]) && !std::isnan(result[2])){
+                                    if (!std::isnan(result[1]) && result[2]>0){
                                         double mean = result[1];
                                         double FWHM = 2*sqrt(2*log(2))*result[2];
                                         //计算符合能窗
@@ -1160,13 +1160,25 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                             //graph->pixelsToCoords(e->pos().x(), e->pos().y(), key, value);
                                             //gaussResultItemText->position->setCoords(key, value);//以鼠标所在位置坐标为显示位置
                                             gaussResultItemText->position->setCoords(result[1], result[2]);//以峰值坐标为显示位置
-                                            //gaussResultItemText->setVisible(true);
+                                            gaussResultItemText->setVisible(true);
                                             customPlot->replot();
                                         }
+                                    }
+                                    else
+                                    {
+                                        QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
+                                        if (gaussResultItemText){
+                                            gaussResultItemText->setVisible(false);
+                                        }
+                                        qCritical()<<"高斯拟合发生错误,可能原因：选取的峰位不具有高斯形状，无法进行高斯拟合，\n建议：请重新选取高斯曲线区域或等统计涨落变小后再选取";
                                     }
                                 }
                                 else
                                 {
+                                    QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
+                                    if (gaussResultItemText){
+                                        gaussResultItemText->setVisible(false);
+                                    }
                                     qCritical()<<"高斯拟合发生错误,可能原因：选取的初始峰位不具有高斯形状，无法进行高斯拟合，\n建议：请重新选取高斯曲线区域或等统计涨落变小后再选取";
                                 }
                             }

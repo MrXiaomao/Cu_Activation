@@ -30,10 +30,10 @@ struct particle_data
 CoincidenceAnalyzer::CoincidenceAnalyzer():
 countCoin(0), coolingTime_Auto(0), autoFirst(true),
 GaussCountMin(100000),
-#ifdef Q_NO_DEBUG
-GaussMinGapTime(180)
+#ifdef QT_DEBUG
+GaussMinGapTime(300)
 #else
-GaussMinGapTime(180)
+GaussMinGapTime(300)
 #endif
 {
     for(unsigned short i=0; i<MULTI_CHANNEL; i++)
@@ -469,7 +469,7 @@ bool CoincidenceAnalyzer::GetDataPoint(vector<TimeEnergy> data1, vector<TimeEner
     CurrentPoint onePoint;
 
     long long current_nanosconds = (long long)(countCoin + coolingTime_Auto)  * NANOSECONDS;
-    onePoint.time = current_nanosconds;
+    onePoint.time = countCoin + coolingTime_Auto;
     int ilocation1_below = 0;
     int ilocation2_below = 0;
     int ilocation1_above = 0; 

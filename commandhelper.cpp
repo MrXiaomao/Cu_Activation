@@ -440,8 +440,7 @@ void CommandHelper::handleManualMeasureNetData()
 {
     QByteArray binaryData = socketDetector->readAll();
 
-#ifdef Q_NO_DEBUG
-#else
+#ifdef QT_DEBUG
     //粒子模式，DEBUG模式下保存原始数据查找问题
     if (nullptr != pfSaveNet && binaryData.size() > 0){
         pfSaveNet->write(binaryData);
@@ -493,8 +492,7 @@ void CommandHelper::handleAutoMeasureNetData()
 {
     QByteArray binaryData = socketDetector->readAll();
 
-#ifdef Q_NO_DEBUG
-#else
+#ifdef QT_DEBUG
     //粒子模式，DEBUG模式下保存原始数据查找问题
     if (nullptr != pfSaveNet && binaryData.size() > 0){
         pfSaveNet->write(binaryData);
@@ -992,26 +990,28 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     if (!dir.exists())
         dir.mkdir(ShotDir);
     //创建缓存文件
+    validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + "_valid.dat");   
+
+#ifdef QT_DEBUG
     netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + "_Net.dat");
-    validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + "_valid.dat");    
     if (nullptr != pfSaveNet){
         pfSaveNet->close();
         delete pfSaveNet;
         pfSaveNet = nullptr;
     }
-
-    if (nullptr != pfSaveVaildData){
-        pfSaveVaildData->close();
-        delete pfSaveVaildData;
-        pfSaveVaildData = nullptr;
-    }
-    
     //网口数据缓存文件，波形模式、能谱模式直接存网口数据缓存文件
     pfSaveNet = new QFile(netDataFileName);
     if (pfSaveNet->open(QIODevice::WriteOnly)) {
         qInfo() << tr("创建网口数据缓存文件成功，文件名：%1").arg(netDataFileName);
     } else {
         qWarning() << tr("创建网口数据缓存文件失败，文件名：%1").arg(netDataFileName);
+    }
+#endif
+
+    if (nullptr != pfSaveVaildData){
+        pfSaveVaildData->close();
+        delete pfSaveVaildData;
+        pfSaveVaildData = nullptr;
     }
     
     //有效数据缓存文件。符合模式（也称粒子模式）只存有效数据
@@ -1158,7 +1158,7 @@ void CommandHelper::slotStopManualMeasure()
 void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
 {
     coincidenceAnalyzer->initialize();
-    coincidenceAnalyzer->setCoolingTime_Auto(coolingTime_Auto);
+    coincidenceAnalyzer->setCoolingTime_Auto(p.coolingTime);
 
     workStatus = Preparing;
     detectorParameter = p;
@@ -1178,8 +1178,9 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
     if (!dir.exists())
         dir.mkdir(ShotDir);
     //创建缓存文件
-    netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + "_Net.dat");
     validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + "_valid.dat");
+#ifdef QT_DEBUG
+    netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + "_Net.dat"); 
     if (nullptr != pfSaveNet){
         pfSaveNet->close();
         delete pfSaveNet;
@@ -1198,7 +1199,8 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
     } else {
         qWarning() << tr("创建网口数据缓存文件失败，文件名：%1").arg(netDataFileName);
     }
-    
+#endif
+
     //有效数据缓存文件。符合模式（也称粒子模式）只存有效数据
     pfSaveVaildData = new QFile(validDataFileName);
     if (pfSaveVaildData->open(QIODevice::WriteOnly)) {
@@ -1634,7 +1636,7 @@ void CommandHelper::detTimeEnergyWorkThread()
                         
                         if (detectorParameter.measureModel == mmAuto){//自动测量，需要获取能宽
                             //在冷却时长之后的数据才进行处理
-                            if(data1_2.begin()->time/1e9 >= coolingTime_Auto || data2_2.begin()->time/1e9 >= coolingTime_Auto)
+                            if(data1_2.begin()->time/1e9 >= detectorParameter.coolingTime || data2_2.begin()->time/1e9 >= detectorParameter.coolingTime)
                             {
                                 coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, delayTime, true, true);
                             }
@@ -1652,9 +1654,7 @@ void CommandHelper::detTimeEnergyWorkThread()
                             else
                                 coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, delayTime, true, false);
                         }
-#ifdef QT_NO_DEBUG
-
-#else
+#ifdef QT_DEBUG
                     qDebug()<< "coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime()) \
                         << "ms, data1.count=" << data1_2.size() \
                         << ", data2.count=" << data2_2.size();
@@ -1679,7 +1679,7 @@ void CommandHelper::updateStepTime(int _stepT, int _timewidth)
 }
 
 void CommandHelper::updateParamter(int _stepT, unsigned short _EnWin[4], int _timewidth/* = 50*/, 
-    int _delayTime, int _coolingtime_auto, bool reset/* = false*/)
+    int _delayTime, bool reset/* = false*/)
 {
     QMutexLocker locker(&mutexReset);
     // if (reset){
@@ -1693,7 +1693,6 @@ void CommandHelper::updateParamter(int _stepT, unsigned short _EnWin[4], int _ti
     this->EnWindow[1] = _EnWin[1];
     this->EnWindow[2] = _EnWin[2];
     this->EnWindow[3] = _EnWin[3];
-    this->coolingTime_Auto = _coolingtime_auto;
     this->timeWidth = _timewidth;
     this->delayTime = _delayTime;
     currentSpectrumFrames.clear();

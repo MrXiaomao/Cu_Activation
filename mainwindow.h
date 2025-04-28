@@ -109,7 +109,7 @@ private slots:
 private:
     Ui::MainWindow *ui = nullptr;
     SpectrumModel *spectrummodel = nullptr;//能谱模型
-    OfflineDataAnalysisWidget *offlineDataAnalysisWidget = nullptr;//数据解析
+    OfflineDataAnalysisWidget *offlineDataAnalysisWidget = nullptr;//数据查看和分析
     CommandHelper *commandHelper = nullptr;//网络指令
     ControlHelper *controlHelper = nullptr;//网络指令
 

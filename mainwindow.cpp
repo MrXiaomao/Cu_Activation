@@ -218,7 +218,7 @@ MainWindow::MainWindow(QWidget *parent)
                          
             //自动测量的冷却时间倒计时
             QTimer* coolingTimer_auto = this->findChild<QTimer*>("coolingTimer_auto");
-            coolingTimer_auto->start(ui->spinBox_coolingTime_2->value());   
+            coolingTimer_auto->start(ui->spinBox_coolingTime_2->value()*1000);
         }
             // ui->start_time_text->setText(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
             // qInfo()<<"接收到触发信号，仪器内部时钟开始计时";//注意，在sigMeasureStart信号之前已经打印了qInfo()日志
@@ -615,7 +615,9 @@ void MainWindow::InitMainWindowUi()
     QTimer* coolingTimer_auto = new QTimer(this); //用于自动测量的冷却时间
     coolingTimer_auto->setObjectName("coolingTimer_auto");
     connect(coolingTimer_auto, &QTimer::timeout, this, [=](){
-        qInfo()<<"探测器已经电开机";
+        coolingTimer_auto->stop();
+        qInfo()<<"探测器已经上电开机";
+        ui->lineEdit_autoStatus->setText("测量中...");
     });
 
     QTimer* exceptionCheckTimer = new QTimer(this);
@@ -770,7 +772,7 @@ void MainWindow::on_action_SpectrumModel_triggered()
 
 void MainWindow::on_action_DataAnalysis_triggered()
 {
-    //数据解析
+    //数据查看和分析
     if (nullptr == offlineDataAnalysisWidget){
         offlineDataAnalysisWidget = new OfflineDataAnalysisWidget(this);
         connect(offlineDataAnalysisWidget, &OfflineDataAnalysisWidget::sigPausePlot, this, [=](bool pause){
@@ -789,7 +791,7 @@ void MainWindow::on_action_DataAnalysis_triggered()
             }
         });
 
-        int index = ui->tabWidget_client->addTab(offlineDataAnalysisWidget, tr("数据解析"));
+        int index = ui->tabWidget_client->addTab(offlineDataAnalysisWidget, tr("数据查看和分析"));
         ui->tabWidget_client->setCurrentIndex(index);
     }
 
@@ -1124,7 +1126,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         commandHelper->slotStartAutoMeasure(detectorParameter);
 
         // ui->pushButton_measure_2_tip->setText(tr("等待触发..."));
-        qInfo()<<"等待触发...";
+        // qInfo()<<"等待触发...";
         QTimer::singleShot(30000, this, [=](){
             //指定时间未收到开始测量指令，则按钮恢复初始状态
             if (this->property("measure-status").toUInt() == msPrepare){
@@ -1438,6 +1440,10 @@ void MainWindow::slotRefreshUi()
             ui->pushButton_refresh->setEnabled(true);
             ui->pushButton_confirm->setEnabled(true);
 
+            ui->spinBox_leftE->setEnabled(true);
+            ui->spinBox_rightE->setEnabled(true);
+            ui->pushButton_gauss->setEnabled(true);
+
             ui->spinBox_timelength->setEnabled(false);
             ui->comboBox_channel->setEnabled(false);
             ui->spinBox_coolingTime->setEnabled(false);
@@ -1458,6 +1464,7 @@ void MainWindow::slotRefreshUi()
 
             // 测量中禁用符合分辨时间
             ui->spinBox_timeWidth->setEnabled(false);
+            ui->spinBox_delayTime->setEnabled(false);
 
             //公共
             // ui->pushButton_save->setEnabled(false);
@@ -1482,6 +1489,8 @@ void MainWindow::slotRefreshUi()
             ui->pushButton_measure_2->setEnabled(true);
             
             ui->spinBox_timelength_2->setEnabled(false);
+            ui->spinBox_timeWidth_2->setEnabled(false);
+            ui->spinBox_delayTime_2->setEnabled(false);
             ui->comboBox_channel2->setEnabled(false);
             ui->spinBox_coolingTime_2->setEnabled(false);
             ui->lineEdit_ShotNum_2->setEnabled(false);
@@ -1523,6 +1532,7 @@ void MainWindow::slotRefreshUi()
         ui->spinBox_2_leftE->setEnabled(true);
         ui->spinBox_2_rightE->setEnabled(true);        
         ui->spinBox_timeWidth->setEnabled(true);
+        ui->spinBox_delayTime->setEnabled(true);
 
         // 自动测量
         ui->spinBox_timelength_2->setEnabled(true);
@@ -1535,6 +1545,7 @@ void MainWindow::slotRefreshUi()
         ui->spinBox_2_leftE_2->setEnabled(true);
         ui->spinBox_2_rightE_2->setEnabled(true);
         ui->spinBox_timeWidth_2->setEnabled(true);
+        ui->spinBox_delayTime_2->setEnabled(true);
 
         //位移平台到位才允许开始测量
         if (this->property("detector_on").toBool() && this->property("axis-prepared").toBool()){
@@ -1865,6 +1876,10 @@ void MainWindow::on_pushButton_confirm_clicked()
     ui->spinBox_2_leftE->setEnabled(false);
     ui->spinBox_2_rightE->setEnabled(false);
     ui->pushButton_confirm->setEnabled(false);
+
+    ui->spinBox_leftE->setEnabled(false);
+    ui->spinBox_rightE->setEnabled(false);
+    ui->pushButton_gauss->setEnabled(false);
 
     //自动切换到计数模式
     commandHelper->switchToCountMode(true);

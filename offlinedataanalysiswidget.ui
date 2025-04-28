@@ -23,7 +23,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>数据解析</string>
+   <string>数据查看和分析</string>
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout_8">
    <property name="spacing">

@@ -2669,7 +2669,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
      <normaloff>:/resource/analyze.png</normaloff>:/resource/analyze.png</iconset>
    </property>
    <property name="text">
-    <string>数据解析</string>
+    <string>数据查看和分析</string>
    </property>
   </action>
   <action name="action_detector_connect">

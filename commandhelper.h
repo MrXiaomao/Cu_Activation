@@ -34,7 +34,7 @@ public:
     void switchToCountMode(bool refModel);
     void updateStepTime(int stepT, int timewidth = 50);
     void updateParamter(int stepT, unsigned short EnWin[4], int timewidth = 50, 
-        int delayTime = 0, int coolingtime_auto = 0, bool reset = false);
+        int delayTime = 0, bool reset = false);
     void exportFile(QString);
     void setDefaultCacheDir(QString dir);
     

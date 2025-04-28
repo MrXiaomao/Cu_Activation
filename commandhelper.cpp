@@ -289,7 +289,7 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
             if (file.open(QIODevice::ReadWrite | QIODevice::Text | ioFlags)) {
                 QTextStream out(&file);
                 if (ioFlags == QIODevice::Truncate)
-                    out << "time,CountRate1,CountRate2,ConCount_single,ConCount_multiple" << Qt::endl;
+                    out << "time,CountRate1,CountRate2,ConCount_single,ConCount_multiple,deathRatio1,deathRatio2" << Qt::endl;
                 CoincidenceResult coincidenceResult = r3.back();
                 out << r1.time << "," << coincidenceResult.CountRate1 << "," << coincidenceResult.CountRate2 \
                     << "," << coincidenceResult.ConCount_single << "," << coincidenceResult.ConCount_multiple 
@@ -525,6 +525,7 @@ void CommandHelper::handleAutoMeasureNetData()
     }
 
     if (workStatus == Waiting && binaryData.size() > 0){
+        //等待硬件触发指令
         if (binaryData.compare(cmdExternalTrigger) == 0){
             qDebug()<<"Recv HEX: "<<binaryData.toHex(' ');
             qInfo()<<"接收到硬触发信号，探测器内部时钟开始计时";
@@ -533,6 +534,10 @@ void CommandHelper::handleAutoMeasureNetData()
 
             workStatus = Measuring;
             emit sigMeasureStart(detectorParameter.measureModel, detectorParameter.transferModel);
+        }
+        // 还没等到触发但是直接停止了
+        if (binaryData.compare(cmdStopTrigger) == 0){
+            sigMeasureStop();
         }
     }
 
@@ -1870,7 +1875,7 @@ void CommandHelper::analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult>
             QFile file(coincidenceResultFile);
             if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
                 QTextStream out(&file);
-                out << "time,CountRate1,CountRate2,ConCount_single,ConCount_multiple";
+                out << "time,CountRate1,CountRate2,ConCount_single,ConCount_multiple,deathRatio1,deathRatio2";
                 CoincidenceResult coincidenceResult = r3.back();
                 for (size_t i=0; i<r3.size(); ++i){
                     out << r1.time << "," << coincidenceResult.CountRate1 << "," << coincidenceResult.CountRate2 \

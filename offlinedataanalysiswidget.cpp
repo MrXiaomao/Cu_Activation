@@ -1,3 +1,10 @@
+/*
+ * @Author: MrPan
+ * @Date: 2025-04-20 09:21:28
+ * @LastEditors: Maoxiaoqing
+ * @LastEditTime: 2025-04-29 09:32:07
+ * @Description: 请填写简介
+ */
 #include "offlinedataanalysiswidget.h"
 #include "ui_offlinedataanalysiswidget.h"
 #include "plotwidget.h"
@@ -28,11 +35,11 @@ OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
     //ui->tableWidget->resizeColumnsToContents();
     ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
-    connect(this, &OfflineDataAnalysisWidget::sigPlot, this, [=](SingleSpectrum r1, vector<CoincidenceResult> r3, int refreshUI_time){
+    connect(this, &OfflineDataAnalysisWidget::sigPlot, this, [=](SingleSpectrum r1, vector<CoincidenceResult> r3){
         bool pause_plot = this->property("pause_plot").toBool();
         if (!pause_plot){
             PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
-            plotWidget->slotUpdatePlotDatas(r1, r3, refreshUI_time);
+            plotWidget->slotUpdatePlotDatas(r1, r3);
 
             // ui->lcdNumber_CountRate1->display(r3.back().CountRate1);
             // ui->lcdNumber_CountRate2->display(r3.back().CountRate2);
@@ -315,7 +322,7 @@ void OfflineDataAnalysisWidget::doEnWindowData(SingleSpectrum r1, vector<Coincid
                 rr3.push_back(v);
             }
 
-            emit sigPlot(r1, rr3, _stepT);
+            emit sigPlot(r1, rr3);
         }
     } else{
         vector<CoincidenceResult> rr3;
@@ -323,7 +330,7 @@ void OfflineDataAnalysisWidget::doEnWindowData(SingleSpectrum r1, vector<Coincid
             rr3.push_back(r3[i]);
         }
 
-        emit sigPlot(r1, rr3, _stepT);
+        emit sigPlot(r1, rr3);
     }
 }
 

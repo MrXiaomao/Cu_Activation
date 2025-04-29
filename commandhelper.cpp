@@ -329,7 +329,7 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
                 emit sigUpdateAutoEnWidth(autoEnWindow);
             }
 
-            emit sigPlot(r1, rr3, _stepT);
+            emit sigPlot(r1, rr3);
         }
     } else{
         vector<CoincidenceResult> rr3;
@@ -344,7 +344,7 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
             emit sigUpdateAutoEnWidth(autoEnWindow);
         }
 
-        emit sigPlot(r1, rr3, _stepT);
+        emit sigPlot(r1, rr3);
     }
 }
 
@@ -1864,7 +1864,7 @@ void CommandHelper::analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult>
                 rr3.push_back(v);
             }
 
-            sigPlot(r1, rr3, _stepT);
+            sigPlot(r1, rr3);
         }
     } else{
         vector<CoincidenceResult> rr3;
@@ -1872,7 +1872,7 @@ void CommandHelper::analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult>
             rr3.push_back(r3[i]);
         }
 
-        sigPlot(r1, rr3, _stepT);
+        sigPlot(r1, rr3);
     }
 }
 

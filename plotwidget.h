@@ -67,7 +67,7 @@ public slots:
     void slotUpdateEnTimeWidth(unsigned short* timeWidth);
 
     //批量刷新
-    void slotUpdatePlotDatas(SingleSpectrum, vector<CoincidenceResult>, int refreshTime);
+    void slotUpdatePlotDatas(SingleSpectrum, vector<CoincidenceResult>);
     //更新空数据
     void slotUpdatePlotNullData(int refreshTime);
 

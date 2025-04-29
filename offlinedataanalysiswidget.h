@@ -22,7 +22,7 @@ public:
     void openEnergyFile(QString filePath);
 
 signals:
-    void sigPlot(SingleSpectrum, vector<CoincidenceResult>, int refreshT);
+    void sigPlot(SingleSpectrum, vector<CoincidenceResult>);
     void sigStart();
     void sigPausePlot(bool); //是否暂停图像刷新
     void sigEnd(bool);

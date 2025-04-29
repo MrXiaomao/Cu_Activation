@@ -326,7 +326,7 @@ MainWindow::MainWindow(QWidget *parent)
         bool pause_plot = this->property("pause_plot").toBool();
         if (!pause_plot){
             PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
-            plotWidget->slotUpdatePlotDatas(r1, r3, refreshUI_time);
+            plotWidget->slotUpdatePlotDatas(r1, r3);
 
             ui->lcdNumber_CountRate1->display(r3.back().CountRate1);
             ui->lcdNumber_CountRate2->display(r3.back().CountRate2);

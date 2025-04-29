@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-04-28 22:47:51
+ * @LastEditTime: 2025-04-29 09:31:46
  * @Description: 用来管理网口的数据发送与接受，管理网口数据的处理相关业务。
  */
 #ifndef COMMANDHELPER_H
@@ -100,7 +100,7 @@ signals:
     void sigCoincidenceResult(quint32, CoincidenceResult);
     void sigSingleSpectrum(SingleSpectrum);
     void sigCurrentPoint(quint32, CurrentPoint);
-    void sigPlot(SingleSpectrum, vector<CoincidenceResult>, int refreshT);
+    void sigPlot(SingleSpectrum, vector<CoincidenceResult>);
 
     void sigDoTasks();
     void sigAnalyzeFrame();

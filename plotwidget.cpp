@@ -1411,7 +1411,7 @@ void PlotWidget::slotUpdatePlotNullData(int /*refreshTime*/)
 
 #include <QtMath>
 #include <math.h>
-void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult> r3, int refreshTime)
+void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult> r3)
 {
     QMutexLocker locker(&mutexRefreshPlot);
     QCustomPlot::RefreshPriority refreshPriority = QCustomPlot::rpQueuedReplot;

@@ -321,7 +321,7 @@ MainWindow::MainWindow(QWidget *parent)
     qRegisterMetaType<SingleSpectrum>("SingleSpectrum");
     qRegisterMetaType<vector<CoincidenceResult>>("vector<CoincidenceResult>");
     std::cout << "main thread id:" << QThread::currentThreadId() << std::endl;
-    connect(commandHelper, &CommandHelper::sigPlot, this, [=](SingleSpectrum r1, vector<CoincidenceResult> r3, int refreshUI_time){
+    connect(commandHelper, &CommandHelper::sigPlot, this, [=](SingleSpectrum r1, vector<CoincidenceResult> r3){
         this->lastRecvDataTime = QDateTime::currentDateTime();
         bool pause_plot = this->property("pause_plot").toBool();
         if (!pause_plot){

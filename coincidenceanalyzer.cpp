@@ -1,14 +1,15 @@
 /*
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
- * @LastEditors: Please set LastEditors
- * @LastEditTime: 2025-04-27 16:24:15
+ * @LastEditors: Maoxiaoqing
+ * @LastEditTime: 2025-04-28 22:45:24
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
 #include <queue>
-#include "linearfit.h"
+// #include "linearfit.h"
 #include "gaussFit.h"
+#include "sysutils.h"
 
 using namespace std;
 
@@ -567,4 +568,51 @@ bool CoincidenceAnalyzer::find_index_below(vector<TimeEnergy> data, unsigned lon
         // 所有元素都 >= value，没有小于value的元素
         return false;
     }
+}
+
+double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int time_SetEnWindow)
+{
+    vector<CoincidenceResult> coinResult = GetCoinResult();
+    //如果没有前面的calculate的计算，那么后续计算不能进行
+    if(coinResult.size() == 0) return 0.0;
+    
+    size_t num = coinResult.size(); //计数点个数。
+    //延迟时间,单位ns
+    int delaytime_tmp = detPara.delayTime;
+    //符合时间窗,单位ns
+    int timeWidth_tmp = detPara.timeWidth;
+
+    //冷却时长(或者称有效数据的起始时刻)，需要注意的是，对于手动测量，冷却时间是在FPGA内部时钟之前，因此需要加上这一段。
+    int coolingTime_tmp = 0;
+    if(detPara.measureModel == mmManual) coolingTime_tmp = detPara.coolingTime + time_SetEnWindow;//对于手动拟合，选取能窗前的一段数据要舍弃
+    if(detPara.measureModel == mmAuto) coolingTime_tmp = detPara.coolingTime;
+    //测量时间终点时刻（相对于活化0时刻）。
+    int time_end = 0;
+    if(detPara.measureModel == mmManual) time_end = detPara.coolingTime + coinResult.back().time;
+    if(detPara.measureModel == mmAuto) time_end = coinResult.back().time;
+
+    int n1 = 0;
+    int n2 = 0;
+    int nc = 0;
+    for(auto coin:coinResult)
+    {
+        // 手动测量，在改变能窗之前的数据不处理，注意剔除。
+        if(coin.time <= time_SetEnWindow) continue;
+
+        n1 += coin.CountRate1;
+        n2 += coin.CountRate2;
+        nc = nc + coin.ConCount_single + coin.ConCount_multiple;
+        // int current_time_tmp = coin.time + coolingTime_tmp; //给出当前时刻离活化结束时刻的时间长度            
+    }
+    
+    //对符合测量的结果进行真偶符合修正
+    //注意timeWidth_tmp单位为ns，要换为时间s。
+    double At_omiga = n1*n2*1.0*(1 - timeWidth_tmp/1e9*(n1+n2))/(nc - 2*timeWidth_tmp/1e9*n1*n2); //计算出t时刻的活度乘以探测器几何效率的值。本项目中称之为相对活度
+
+    //反推出0时刻的计数。这里不考虑Cu62的衰变分支，也就是测量必须时采用冷却时长远大于Cu62半衰期(9.67min = 580s)的数据。
+    double T_halftime = 12.7*60*60; // 单位s
+    double lamda = log(2) / T_halftime; 
+    double A0_omiga = At_omiga * lamda *(exp(-lamda*coolingTime_tmp) - exp(-lamda*time_end));
+
+    return A0_omiga;
 }

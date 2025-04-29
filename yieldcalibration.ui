@@ -130,7 +130,7 @@
    </property>
    <property name="text">
     <string>注：
- 相对初始化度，为活化后零时刻的活度乘以远端探测器的几何探测效率。
+ 相对初始化度，为活化后零时刻的活度乘以近端探测器的几何探测效率。
  相对初始活度是由本符合仪器计算给出。</string>
    </property>
    <property name="wordWrap">

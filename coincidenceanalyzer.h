@@ -5,11 +5,13 @@
 #define COINCIDENCEANALYZER_H
 #include <vector>
 #include <algorithm> // 包含 std::find_if
-#include <functional>// std::function
+// #include <functional>// std::function
 #include <mutex>
 
-//能谱多道的道数
-constexpr unsigned short MULTI_CHANNEL = 8192;
+#include "sysutils.h"
+//使用前向声明，避免与文件sysutils.h相互包含
+
+
 #define MAX_ENERGY 8192 //最大能量
 // long long nanoseconds = 1000000000LL; //1s = 1E9ns
 #define NANOSECONDS 1e9
@@ -17,86 +19,18 @@ constexpr unsigned short MULTI_CHANNEL = 8192;
 
 using namespace std;
 
-//fpga时间+能量
-struct TimeEnergy{
-    unsigned long long time; // 单位ns，八个字节int
-    unsigned short dietime;// 死时间
-    unsigned short energy; // 单位暂无,两个字节无符号数
-    TimeEnergy(){
-        this->time = 0;
-        this->dietime = 0;
-        this->energy = 0;
-    }
-    TimeEnergy(unsigned long long time, unsigned short dietime, unsigned short energy){
-        this->time = time;
-        this->dietime = dietime;
-        this->energy = energy;
-    };
-};
-
-//通道+(fpga时间+能量...序列)
-struct DetTimeEnergy{
-    unsigned char channel;
-    std::vector<TimeEnergy> timeEnergy;
-};
-
-//步长+计数
-struct StepTimeCount{
-    unsigned long long time; // 单位s
-    unsigned short count; // 计数
-    StepTimeCount(){}
-    StepTimeCount(unsigned long long time, unsigned short count){
-        this->time = time;
-        this->count = count;
-    }
-};
-// //步长+能量
-// struct StepTimeEnergy{
-//     unsigned long long time; // 单位s
-//     vector<unsigned short> energy; // 单位暂无,两个字节无符号数
-// };
-
-// //通道+(步长+能量/计数...序列)
-// struct DetStepTimeEnergy{
-//     unsigned char channel;
-//     std::vector<StepTimeEnergy> timeEnergy;
-// };
-
-// 符合计数的结果
-struct CoincidenceResult{
-    unsigned time = 0; //时刻，单位:s。
-    int ConCount_single = 0;//一秒内的单符合的个数
-    int ConCount_multiple = 0;//一秒内的多符合的个数
-    int CountRate1 = 0; //探测器1的计数率，是指在能窗内的计数率
-    int CountRate2 = 0; //探测器2的计数率，是指在能窗内的计数率
-    double DeathRatio1 = 0.0; //死时间率，单位：百分比
-    double DeathRatio2 = 0.0; //死时间率，单位：百分比
-};
-
-struct CurrentPoint{
-    unsigned int time; //时刻(单位s)，以FPGA时钟进行计时，给出当前的能谱对应的时刻，第1个谱对应time=1。
-    int dataPoint1 = 0; //这次处理的探测器1数据点数
-    int dataPoint2 = 0; //这次处理的探测器2数据点数
-};
-
-// 包大小65536 Byte
-struct SingleSpectrum{ //存放每秒钟的能谱数据。1s产生一个能谱
-    unsigned int time; //时刻(单位s)，以FPGA时钟进行计时，给出当前的能谱对应的时刻，第1个谱对应time=1。
-    unsigned int spectrum[2][MULTI_CHANNEL] = {0, 0}; //探测器1能谱
-};
-
-struct AutoGaussFit{
-    int time; //修改时间，单位s
-    unsigned short EnLeft1;  // 探测器1符合能窗左边界
-    unsigned short EnRight1; // 探测器1符合能窗右边界
-    unsigned short EnLeft2;  // 探测器2符合能窗左边界
-    unsigned short EnRight2; // 探测器2符合能窗右边界
-};
-
 class CoincidenceAnalyzer
 {
 public:
     CoincidenceAnalyzer();
+
+    /**
+     * @description: 计算出初始相对活度 A_relative = A0*近端探测器几何效率，以及中子产额Y
+     * @param {DetectorParameter} detPara 测量参数
+     * @param {int} time_SetEnWindow 手动测量时选择能窗对应的时间。FPGA内部时钟，单位s。自动测量不需要改参数，默认值：0
+     * @return {*}返回相对活度 A_relative = A0*近端探测器几何效率
+     */    
+    double getInintialActive(DetectorParameter detPara, int time_SetEnWindow = 0);
 
     //重新初始化，每次从零时刻开始处理数据时，需要初始化
     inline void initialize(){
@@ -215,7 +149,7 @@ private:
 
 private:
     int countCoin; //符合计数曲线的数据点个数,一个数据点对应1s.
-    // int currentTime;
+    
     int coolingTime_Auto; //自动测量的冷却时间，这段时间的数据并没有处理。因此图像数据的时间起点应该是以coolingTime_Auto为起点。
     vector<CoincidenceResult> coinResult; //将所有处理的数据都存放在这个容器中，FPGA时钟每一秒钟产生一个点
     vector<SingleSpectrum> AllSpectrum;  //将处理的能谱数据都存放在这个容器中，FPGA时钟每一秒钟产生一个能谱，只存放最近一个小时的能谱。单端队列

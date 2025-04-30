@@ -2,14 +2,17 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-04-29 09:32:07
- * @Description: 请填写简介
+ * @LastEditTime: 2025-04-30 14:35:58
+ * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
 #include "ui_offlinedataanalysiswidget.h"
 #include "plotwidget.h"
 #include <QButtonGroup>
 #include <iostream>
+#include <QFileDialog>
+#include <QAction>
+#include <QToolButton>
 
 OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
     : QWidget(parent)
@@ -19,18 +22,22 @@ OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
     initCustomPlot();
 
     ui->label_tag->installEventFilter(this);
-    ui->label_tag_2->installEventFilter(this);
     ui->label_tag_3->installEventFilter(this);
-    //ui->label_tag_->installEventFilter(this);
-    //ui->label_tag_2_->installEventFilter(this);
-    //ui->label_tag_3_->installEventFilter(this);
-
+    ui->label_measure_tag->installEventFilter(this);
+    
+    ui->label_measure_tag->setBuddy(ui->widget_measure_tag);
     ui->label_tag->setBuddy(ui->widget_tag);
-    ui->label_tag_->setBuddy(ui->widget_tag);
-    ui->label_tag_2->setBuddy(ui->widget_tag_2);
-    ui->label_tag_2_->setBuddy(ui->widget_tag_2);
     ui->label_tag_3->setBuddy(ui->widget_tag_3);
-    ui->label_tag_3_->setBuddy(ui->widget_tag_3);
+
+    QAction *action = ui->lineEdit_savepath->addAction(QIcon(":/resource/open.png"), QLineEdit::TrailingPosition);
+    QToolButton* button = qobject_cast<QToolButton*>(action->associatedWidgets().last());
+    button->setCursor(QCursor(Qt::PointingHandCursor));
+    connect(button, &QToolButton::pressed, this, [=](){
+        QString cacheDir = QFileDialog::getExistingDirectory(this);
+        if (!cacheDir.isEmpty()){
+            ui->lineEdit_savepath->setText(cacheDir);
+        }
+    });
 
     //ui->tableWidget->resizeColumnsToContents();
     ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
@@ -197,7 +204,6 @@ void OfflineDataAnalysisWidget::slotStart()
     calThread->setWorkThreadProc([=](){
         coincidenceAnalyzer->initialize();
 
-        QDateTime tmStart = QDateTime::currentDateTime();
         QByteArray aDatas = validDataFileName.toLocal8Bit();
         vector<TimeEnergy> data1_2, data2_2;
 #ifdef QT_NO_DEBUG        
@@ -226,65 +232,13 @@ void OfflineDataAnalysisWidget::slotStart()
             }
 
             if (data1_2.size() > 0 || data2_2.size() > 0 ){
-                QDateTime now = QDateTime::currentDateTime();
                 coincidenceAnalyzer->calculate(data1_2, data2_2, (unsigned short*)EnWindow, timeWidth, delayTime, true, false);
-#ifdef QT_DEBUG
-                std::cout << "[" << now.toString("hh:mm:ss.zzz").toStdString() 
-                          << "] coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime()) 
-                          << ", data1.count=" << data1_2.size() 
-                          << ", data2.count=" << data2_2.size() << std::endl;
-#endif
                 data1_2.clear();
                 data2_2.clear();
             }
 
             *interrupted = reAnalyzer;
         });
-
-        //             std::vector<DetTimeEnergy> hisTimeEnergy = SysUtils::getDetTimeEnergy((const char*)aDatas.data());
-        //             vector<TimeEnergy> data1_2, data2_2;
-        //             while (!hisTimeEnergy.empty()){
-        //                 DetTimeEnergy detTimeEnergy = hisTimeEnergy.front();
-        //                 hisTimeEnergy.erase(hisTimeEnergy.begin());
-
-        //                 // 根据步长，将数据添加到当前处理缓存
-        //                 quint8 channel = detTimeEnergy.channel;
-        //                 if (channel != 0x00 && channel != 0x01){
-        //                     qDebug() << "error";
-        //                 }
-        //                 while (!detTimeEnergy.timeEnergy.empty()){
-        //                     TimeEnergy timeEnergy = detTimeEnergy.timeEnergy.front();
-        //                     detTimeEnergy.timeEnergy.erase(detTimeEnergy.timeEnergy.begin());
-        //                     if (channel == 0x00){
-        //                         data1_2.push_back(timeEnergy);
-        //                     } else {
-        //                         data2_2.push_back(timeEnergy);
-        //                     }
-        //                 }
-        //             }
-
-        //             QDateTime tmStop = QDateTime::currentDateTime();
-        //             int passTime = tmStart.secsTo(tmStop);
-        //             std::cout << "analyze file time : " << passTime << "s" << std::endl;
-        //             tmStart = tmStop;
-        //             if (data1_2.size() > 0 && data2_2.size() > 0 ){
-        //                 QDateTime now = QDateTime::currentDateTime();
-        //                 coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, timeWidth, true, false);
-        // #ifdef QT_NO_DEBUG
-
-        // #else
-        //                 // std::cout << "[" << now.toString("hh:mm:ss.zzz").toStdString() \
-        //                 //           << "] coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime()) \
-        //                 //           << ", data1.count=" << data1_2.size() \
-        //                 //           << ", data2.count=" << data2_2.size() << std::endl;
-        // #endif
-        //                 data1_2.clear();
-        //                 data2_2.clear();
-        //             }
-
-        // tmStop = QDateTime::currentDateTime();
-        // passTime = tmStart.secsTo(tmStop);
-        // std::cout << "calculate time : " << passTime << "s" << std::endl;
     });
     calThread->start();
 }

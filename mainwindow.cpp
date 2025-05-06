@@ -328,6 +328,7 @@ MainWindow::MainWindow(QWidget *parent)
             PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
             plotWidget->slotUpdatePlotDatas(r1, r3);
 
+            if(r3.size()==0) return;
             ui->lcdNumber_CountRate1->display(r3.back().CountRate1);
             ui->lcdNumber_CountRate2->display(r3.back().CountRate2);
             ui->lcdNumber_ConCount_single->display(r3.back().ConCount_single);

@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-04-28 22:45:24
+ * @LastEditTime: 2025-05-06 19:58:35
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -29,7 +29,7 @@ struct particle_data
 //priority_queue<particle_data> q;//此时创建的优先队列是按x大小升序排列的
 
 CoincidenceAnalyzer::CoincidenceAnalyzer():
-countCoin(0), coolingTime_Auto(0), autoFirst(true),
+countCoin(0), coolingTime_Manual(0), coolingTime_Auto(0), autoFirst(true),
 GaussCountMin(100000),
 #ifdef QT_DEBUG
 GaussMinGapTime(300)
@@ -155,10 +155,10 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
         else
             time2_elapseFPGA = 0;
 
-        //当只计算能谱时，则不调用回调函数，外部通过GetAccumulateSpectrum获取累积能谱
-        if (countFlag && m_pfunc)
+        //当只计算能谱时，则不调用回调函数，外部通过GetAccumulateSpectrum获取累积能谱？？？
+        if (m_pfunc)
             m_pfunc(AccumulateSpectrum, coinResult);
-        if (countFlag && m_pfuncEx)
+        if (m_pfuncEx)
             m_pfuncEx(AccumulateSpectrum, coinResult, m_pfuncUser);
     }
 }
@@ -470,7 +470,7 @@ bool CoincidenceAnalyzer::GetDataPoint(vector<TimeEnergy> data1, vector<TimeEner
     CurrentPoint onePoint;
 
     long long current_nanosconds = (long long)(countCoin + coolingTime_Auto)  * NANOSECONDS;
-    onePoint.time = countCoin + coolingTime_Auto;
+    onePoint.time = countCoin + coolingTime_Auto + coolingTime_Manual; //对于自动测量时，coolingTime_Manual为0。对于手动测量时，coolingTime_Auto为零
     int ilocation1_below = 0;
     int ilocation2_below = 0;
     int ilocation1_above = 0; 

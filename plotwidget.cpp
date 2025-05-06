@@ -1416,6 +1416,7 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
     QMutexLocker locker(&mutexRefreshPlot);
     QCustomPlot::RefreshPriority refreshPriority = QCustomPlot::rpQueuedReplot;
 
+    if(r3.size()>0)
     {
         //计数模式
         QCustomPlot* customPlotDet1 = getCustomPlot(amCountDet1);

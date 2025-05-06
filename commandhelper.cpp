@@ -264,13 +264,13 @@ void CommandHelper::analyzerRealCalback(SingleSpectrum r1, vector<CoincidenceRes
 
 void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> r3)
 {
-    size_t count = r3.size();
+    size_t countCoin = r3.size();
     int _stepT = this->stepT;
-    if (count <= 0)
-        return;
+    // if (countCoin <= 0) //对于手动测量，在选定能窗区域之前，只有能谱，没有符合计数曲线，这时countCoin=0
+    //     return;
 
     //保存信息
-    if (r1.time != currentFPGATime){
+    if (r1.time != currentFPGATime && r3.size()>0){
         //有新的能谱数据产生
         QString coincidenceResultFile = validDataFileName + ".符合计数";
         {
@@ -296,13 +296,12 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
         currentFPGATime = r1.time;
     }
 
+    vector<CoincidenceResult> rr3;
     //时间步长，求均值
     if (_stepT > 1){
-        if (count>1 && (count % _stepT == 0)){
-            vector<CoincidenceResult> rr3;
-
+        if (countCoin>1 && (countCoin % _stepT == 0)){
             size_t posI = 0;
-            for (size_t i=0; i < count/_stepT; i++){
+            for (size_t i=0; i < countCoin/_stepT; i++){
                 CoincidenceResult v;
                 for (int j=0; j<_stepT; ++j){
                     v.CountRate1 += r3[posI].CountRate1;
@@ -328,12 +327,9 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
                 coincidenceAnalyzer->GetEnWidth(autoEnWindow);
                 emit sigUpdateAutoEnWidth(autoEnWindow);
             }
-
-            emit sigPlot(r1, rr3);
         }
     } else{
-        vector<CoincidenceResult> rr3;
-        for (size_t i=0; i < count; i++){
+        for (size_t i=0; i < countCoin; i++){
             rr3.push_back(r3[i]);
         }
 
@@ -343,9 +339,8 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
             coincidenceAnalyzer->GetEnWidth(autoEnWindow);
             emit sigUpdateAutoEnWidth(autoEnWindow);
         }
-
-        emit sigPlot(r1, rr3);
     }
+    emit sigPlot(r1, rr3);
 }
 
 void CommandHelper::initCommand()
@@ -935,6 +930,7 @@ QByteArray CommandHelper::getCmdTransferModel(quint8 mode)
 void CommandHelper::slotStartManualMeasure(DetectorParameter p)
 {
     coincidenceAnalyzer->initialize();
+    coincidenceAnalyzer->setCoolingTime_Manual(p.coolingTime);
     workStatus = Preparing;
     detectorParameter = p;
     this->autoChangeEnWindow = false;
@@ -1568,20 +1564,6 @@ void CommandHelper::detTimeEnergyWorkThread()
                 if (swapFrames.size() > 0){
                     for (size_t i=0; i<swapFrames.size(); ++i){
                         DetTimeEnergy detTimeEnergy = swapFrames[i];
-                            
-                        //有效数据写入文件，注意，对于自动测量，冷却时间之前的数据都保存了，但是不能做符合计算处理。
-                        if (detectorParameter.transferModel == 0x05){
-                            if (nullptr != pfSaveVaildData){
-                                //有效数据对数目（也就是一个包里面有多少个粒子），4字节
-                                quint32 size = detTimeEnergy.timeEnergy.size();
-                                pfSaveVaildData->write((char*)&size, sizeof(quint32));
-                                //探测器编号0/1:1字节
-                                pfSaveVaildData->write((char*)&detTimeEnergy.channel, sizeof(detTimeEnergy.channel));
-                                //数据对:12字节对
-                                pfSaveVaildData->write((char*)detTimeEnergy.timeEnergy.data(), sizeof(TimeEnergy)*size);
-                                pfSaveVaildData->flush();
-                            }
-                        }
 
                         // 根据步长，将数据添加到当前处理缓存
                         quint8 channel = detTimeEnergy.channel;
@@ -1607,20 +1589,29 @@ void CommandHelper::detTimeEnergyWorkThread()
                             //在冷却时长之后的数据才进行处理
                             if(data1_2.begin()->time/1e9 >= detectorParameter.coolingTime || data2_2.begin()->time/1e9 >= detectorParameter.coolingTime)
                             {
+                                saveParticleInfo(data1_2, data2_2);
                                 coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, \
                                     detectorParameter.timeWidth, detectorParameter.delayTime, true, true);
                             }
                         }
                         else if(detectorParameter.measureModel == mmManual)
                         {
+                            // saveParticleInfo(data1_2, data2_2);
+                            //在选定能窗前不进行符合数据处理，也就是不给出计数曲线，只有能谱数据。
                             if (this->autoChangeEnWindow)
                             {
+                                // saveParticleInfo(data1_2, data2_2);
                                 coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, \
                                     detectorParameter.timeWidth, detectorParameter.delayTime, true, true);
                             }
                             else
+                            {
+                                //只计算能谱数据，不进行符合计数
                                 coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, \
-                                    detectorParameter.timeWidth, detectorParameter.delayTime, true, false);
+                                    detectorParameter.timeWidth, detectorParameter.delayTime, false, false);
+                                // coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, \
+                                //     detectorParameter.timeWidth, detectorParameter.delayTime, true, false);
+                            }
                         }
 #ifdef QT_DEBUG
                     qDebug()<< "coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime()) \
@@ -1635,6 +1626,51 @@ void CommandHelper::detTimeEnergyWorkThread()
         }
 
         QThread::msleep(5);
+    }
+}
+
+/**
+ * @description: 保存符合测量的粒子信息，触发时刻、死时间、能量。
+ * @return {*}
+ */
+void CommandHelper::saveParticleInfo(const vector<TimeEnergy>& data1_2, const vector<TimeEnergy>& data2_2)
+{
+    //需要注意的是，对于手动测量和自动测量，计数曲线的时间轴处理有差异。
+    //(1)手动测量
+    //在冷却时间之前，放射源已经冷却了一段时间，这个冷却时间是界面的输入值，
+    //然后用户在测量一定时间之后选取能窗进行高斯拟合，给出计数曲线的能窗，此后开始产生计数曲线。这段时间称为能窗选取时间。
+    //因此用户在计数曲线上看到的起始时间应该是两个轴加起来的总时间。
+    //计数起始时刻 = 冷却时间 + 能窗选取时刻FPGA内部时钟）
+    //(2)自动测量
+    //在硬件触发之后，FPGA开始计数并且采集数据上传，界面在冷却时间之前都不保存这段数据，直接解包之后丢弃。
+    //判断时间在冷却时间之后的数据，则开始保存。
+    //计数起始时刻 = 冷却时间
+    if (pfSaveVaildData != nullptr){
+        //探测器1
+        quint32 size1 = data1_2.size();
+        unsigned char channel = 0;
+        if(size1>0)
+        {
+            pfSaveVaildData->write((char*)&size1, sizeof(quint32));
+            //探测器编号0/1:1字节
+            pfSaveVaildData->write((char*)&channel, sizeof(unsigned char));
+            //数据对:12字节对
+            pfSaveVaildData->write((char*)data1_2.data(), sizeof(TimeEnergy)*size1);
+            pfSaveVaildData->flush();
+        }
+
+        //探测器2
+        quint32 size2 = data2_2.size();
+        channel = 1;
+        if(size2>0)
+        {
+            pfSaveVaildData->write((char*)&size2, sizeof(quint32));
+            //探测器编号0/1:1字节
+            pfSaveVaildData->write((char*)&channel, sizeof(unsigned char));
+            //数据对:12字节对
+            pfSaveVaildData->write((char*)data2_2.data(), sizeof(TimeEnergy)*size2);
+            pfSaveVaildData->flush();
+        }
     }
 }
 

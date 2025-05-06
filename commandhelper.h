@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-04-29 09:31:46
+ * @LastEditTime: 2025-05-06 17:42:36
  * @Description: 用来管理网口的数据发送与接受，管理网口数据的处理相关业务。
  */
 #ifndef COMMANDHELPER_H
@@ -132,11 +132,14 @@ private:
     quint64 time_SetEnWindow = 0;// 记录下手动测量下，用户设置能窗的时间戳，单位：s
 
     CoincidenceAnalyzer* coincidenceAnalyzer;
-    // 暂时弃用该函数
-    void analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult> r3);
+
+    void saveParticleInfo(const vector<TimeEnergy>& data1_2, const vector<TimeEnergy>& data2_2);
 
     void doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> r3);
+ 
     static void analyzerRealCalback(SingleSpectrum r1, vector<CoincidenceResult> r3, void *callbackUser);
+    // 暂时弃用该函数
+    void analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult> r3);       
 public slots:
     void openRelay(bool first = false);
     void closeRelay();

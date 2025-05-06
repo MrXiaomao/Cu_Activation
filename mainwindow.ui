@@ -2401,10 +2401,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
               <item row="1" column="1">
                <widget class="QLineEdit" name="lineEdit">
                 <property name="enabled">
-                 <bool>false</bool>
+                 <bool>true</bool>
                 </property>
                 <property name="text">
                  <string>1e7</string>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>

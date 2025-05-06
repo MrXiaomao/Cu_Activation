@@ -1,8 +1,8 @@
 /*
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
- * @LastEditors: Please set LastEditors
- * @LastEditTime: 2025-04-28 21:10:00
+ * @LastEditors: Maoxiaoqing
+ * @LastEditTime: 2025-05-06 20:02:46
  * @Description: 请填写简介
  */
 #ifndef SYSUTILS_H
@@ -153,7 +153,8 @@ typedef struct tagDetectorParameter{
     //梯形成形时间常数t2 （乘以65536后取整）   默认为t1= 0.9558*65536；t2= 0.9556*65536；
     uint16_t TrapShape_constTime2;
 
-    int32_t coolingTime;//冷却时长,单位s
+    int32_t coolingTime;//冷却时长,单位s,需要注意的是，对于自动测量与手动测量，这个冷却时间不一样
+                        //手动测量与界面上冷却时间输入按钮不一致，自动测量与界面输入时间一致。
     int32_t delayTime;//延迟时间,单位ns
     int32_t timeWidth;//时间窗宽度，单位ns(符合分辨时间)
 } DetectorParameter;

@@ -1596,11 +1596,11 @@ void CommandHelper::detTimeEnergyWorkThread()
                         }
                         else if(detectorParameter.measureModel == mmManual)
                         {
-                            // saveParticleInfo(data1_2, data2_2);
+                            saveParticleInfo(data1_2, data2_2);
                             //在选定能窗前不进行符合数据处理，也就是不给出计数曲线，只有能谱数据。
                             if (this->autoChangeEnWindow)
                             {
-                                // saveParticleInfo(data1_2, data2_2);
+                                saveParticleInfo(data1_2, data2_2);
                                 coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, \
                                     detectorParameter.timeWidth, detectorParameter.delayTime, true, true);
                             }

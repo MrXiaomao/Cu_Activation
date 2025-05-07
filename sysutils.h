@@ -34,6 +34,8 @@ enum Measure_model{
     mmDefine = 0x03, // 标定
 };
 
+#pragma pack(push, 1) // 设置1字节对齐
+
 //fpga时间+能量
 struct TimeEnergy{
     unsigned long long time; // 单位ns，八个字节int
@@ -158,6 +160,7 @@ typedef struct tagDetectorParameter{
     int32_t delayTime;//延迟时间,单位ns
     int32_t timeWidth;//时间窗宽度，单位ns(符合分辨时间)
 } DetectorParameter;
+#pragma pack(pop) // 恢复默认对齐
 
 using namespace std;
 #define MAX_SPECTUM (MULTI_CHANNEL + 100)

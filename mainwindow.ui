@@ -2536,7 +2536,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
    </attribute>
    <addaction name="action_openfile"/>
    <addaction name="action_analyze"/>
-   <addaction name="action_refresh"/>
    <addaction name="action_line_log"/>
    <addaction name="action_close"/>
   </widget>

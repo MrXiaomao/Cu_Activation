@@ -1388,6 +1388,9 @@ void CommandHelper::netFrameWorkThead()
                 //清空所有数据
                 handlerPool.clear();
                 workStatus = WorkEnd;
+                //计算出初始活度乘以几何效率，这里几何效率是近端探测器几何效率
+                double At_omiga = coincidenceAnalyzer->getInintialActive(detectorParameter, time_SetEnWindow);
+                emit sigActiveOmiga(At_omiga);
                 emit sigMeasureStop();
             }
 

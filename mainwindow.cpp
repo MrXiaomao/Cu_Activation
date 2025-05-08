@@ -272,6 +272,45 @@ MainWindow::MainWindow(QWidget *parent)
         this->setProperty("measure-status", msWaiting);
     });
 
+    // 给出测量结果
+    connect(commandHelper, &CommandHelper::sigActiveOmiga, this, [=](double a){
+        //本次测量量程
+        int measureRange = ui->comboBox_range->currentIndex();
+        //读取配置文件，给出该量程下的刻度系数
+        double cali_factor = 0.0;
+        QFile file(QApplication::applicationDirPath() + "/config/user.json");
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            // 读取文件内容
+            QByteArray jsonData = file.readAll();
+            file.close(); //释放资源
+    
+            QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+            QJsonObject jsonObj = jsonDoc.object();
+            
+            QJsonObject jsonCalibration, jsonYield;
+            if (jsonObj.contains("YieldCalibration")){
+                jsonCalibration = jsonObj["YieldCalibration"].toObject();
+                
+                QString key = QString("Range%1").arg(measureRange);
+                QJsonArray rangeArray;
+                if (jsonCalibration.contains(key)){
+                    rangeArray = jsonCalibration[key].toArray();
+                    QJsonObject rangeData = rangeArray[0].toObject();
+
+                    double yield = rangeData["Yield"].toDouble();
+                    double active0 = rangeData["active0"].toDouble();
+                    cali_factor = yield / active0;
+                }
+            }
+        }
+        else{
+            qCritical()<<"未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
+        }
+
+        double result = a * cali_factor;
+        ui->lineEdit_Yield->setText(QString::number(result, 'E', 3));
+    });
+
     // 测量停止
     connect(commandHelper, &CommandHelper::sigMeasureStop, this, [=](){
         QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
@@ -1038,6 +1077,7 @@ void MainWindow::on_pushButton_measure_clicked()
             ui->lcdNumber_ConCount_single->display("0");
             ui->lcdNumber_DeathRatio1->display("0.0");
             ui->lcdNumber_DeathRatio2->display("0.0");
+            ui->lineEdit_Yield->setText("0");
 
             commandHelper->setShotNumber(ui->lineEdit_ShotNum->text()); //设置测量发次，QString类型
             commandHelper->updateParamter(stepT, EnWin, false);
@@ -1136,7 +1176,8 @@ void MainWindow::on_pushButton_measure_2_clicked()
         ui->lcdNumber_ConCount_single->display("0");
         ui->lcdNumber_DeathRatio1->display("0.0");
         ui->lcdNumber_DeathRatio2->display("0.0");
-
+        ui->lineEdit_Yield->setText("0");
+        
         int stepT = ui->spinBox_step_2->value();
         unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE_2->value(), (unsigned short)ui->spinBox_1_rightE_2->value(),
                                    (unsigned short)ui->spinBox_2_leftE_2->value(), (unsigned short)ui->spinBox_2_rightE_2->value()};
@@ -1624,7 +1665,7 @@ void MainWindow::load()
             //测量时长
             ui->spinBox_timelength->setValue(jsonObjM1["timelength"].toInt());
             //多道道数
-            ui->comboBox_channel->setCurrentIndex(jsonObjM1["multiChannel"].toInt());
+            ui->comboBox_channel->setCurrentIndex(jsonObjM1["multiChannel_index"].toInt());
             //量程选取
             ui->comboBox_range->setCurrentIndex(jsonObjM1["range"].toInt());
             //冷却时长
@@ -1651,7 +1692,7 @@ void MainWindow::load()
             //测量时长
             ui->spinBox_timelength_2->setValue(jsonObjM2["timelength"].toInt());
             //多道道数
-            ui->comboBox_channel2->setCurrentIndex(jsonObjM2["multiChannel"].toInt());
+            ui->comboBox_channel2->setCurrentIndex(jsonObjM2["multiChannel_index"].toInt());
             //量程选取
             ui->comboBox_range_2->setCurrentIndex(jsonObjM2["range"].toInt());
             //冷却时长
@@ -1710,7 +1751,7 @@ void MainWindow::saveConfigJson(bool bSafeExitFlag)
         //测量时长
         jsonObjM1["timelength"] = ui->spinBox_timelength->value();
         //多道道数
-        jsonObjM1["multiChannel"] = ui->comboBox_channel->currentIndex();
+        jsonObjM1["multiChannel_index"] = ui->comboBox_channel->currentIndex();
         //量程选取
         jsonObjM1["range"] = ui->comboBox_range->currentIndex();
         //冷却时长
@@ -1734,7 +1775,7 @@ void MainWindow::saveConfigJson(bool bSafeExitFlag)
         //测量时长
         jsonObjM2["timelength"] = ui->spinBox_timelength_2->value();
         //多道道数
-        jsonObjM2["multiChannel"] = ui->comboBox_channel2->currentIndex();
+        jsonObjM2["multiChannel_index"] = ui->comboBox_channel2->currentIndex();
         //量程选取
         jsonObjM2["range"] = ui->comboBox_range_2->currentIndex();
         //冷却时长
@@ -1831,12 +1872,13 @@ bool isFloat(const QString &str) {
     QRegExp re("^[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"); // 正则表达式匹配浮点数格式
     return re.exactMatch(str);
 }
+
 void MainWindow::on_lineEdit_editingFinished()
 {
-    QString arg1 = ui->lineEdit->text();
+    QString arg1 = ui->lineEdit_Yield->text();
     if (!isFloat(arg1)){
-        ui->lineEdit->clear();
-        ui->lineEdit->setPlaceholderText(tr("输入数字无效"));
+        ui->lineEdit_Yield->clear();
+        ui->lineEdit_Yield->setPlaceholderText(tr("输入数字无效"));
     }
 }
 

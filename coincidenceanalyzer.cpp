@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-06 19:58:35
+ * @LastEditTime: 2025-05-07 15:14:53
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -578,41 +578,62 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int tim
     
     size_t num = coinResult.size(); //计数点个数。
     //延迟时间,单位ns
-    int delaytime_tmp = detPara.delayTime;
+    // int delaytime_tmp = detPara.delayTime;
+
     //符合时间窗,单位ns
     int timeWidth_tmp = detPara.timeWidth;
-
-    //冷却时长(或者称有效数据的起始时刻)，需要注意的是，对于手动测量，冷却时间是在FPGA内部时钟之前，因此需要加上这一段。
-    int coolingTime_tmp = 0;
-    if(detPara.measureModel == mmManual) coolingTime_tmp = detPara.coolingTime + time_SetEnWindow;//对于手动拟合，选取能窗前的一段数据要舍弃
-    if(detPara.measureModel == mmAuto) coolingTime_tmp = detPara.coolingTime;
+   
+    //测量的起点时刻（这个时刻以活化物活化后开始计时）
+    int start_time = 0;
+    if(detPara.measureModel == mmManual) start_time = detPara.coolingTime + time_SetEnWindow; //对于手动拟合，选取能窗前的一段数据要舍弃
+    if(detPara.measureModel == mmAuto) start_time = detPara.coolingTime;
+    
     //测量时间终点时刻（相对于活化0时刻）。
     int time_end = 0;
     if(detPara.measureModel == mmManual) time_end = detPara.coolingTime + coinResult.back().time;
     if(detPara.measureModel == mmAuto) time_end = coinResult.back().time;
 
-    int n1 = 0;
-    int n2 = 0;
-    int nc = 0;
+    if(time_end < start_time) return 0.0; //不允许起始时间小于停止时间
+
+    int N1 = 0;
+    int N2 = 0;
+    int Nc = 0;
+    double deathTime_Ratio1 = 0.0;
+    double deathTime_Ratio2 = 0.0;
     for(auto coin:coinResult)
     {
-        // 手动测量，在改变能窗之前的数据不处理，注意剔除。
-        if(coin.time <= time_SetEnWindow) continue;
+        // 手动测量，在改变能窗之前的数据不处理，注意剔除。现在数据没有保存这一段数据
+        // if(coin.time <= time_SetEnWindow) continue;
 
-        n1 += coin.CountRate1;
-        n2 += coin.CountRate2;
-        nc = nc + coin.ConCount_single + coin.ConCount_multiple;
-        // int current_time_tmp = coin.time + coolingTime_tmp; //给出当前时刻离活化结束时刻的时间长度            
+        N1 += coin.CountRate1;
+        N2 += coin.CountRate2;
+        Nc = Nc + coin.ConCount_single + coin.ConCount_multiple;
+        deathTime_Ratio1 += coin.DeathRatio1;
+        deathTime_Ratio2 += coin.DeathRatio2;
     }
     
-    //对符合测量的结果进行真偶符合修正
-    //注意timeWidth_tmp单位为ns，要换为时间s。
-    double At_omiga = n1*n2*1.0*(1 - timeWidth_tmp/1e9*(n1+n2))/(nc - 2*timeWidth_tmp/1e9*n1*n2); //计算出t时刻的活度乘以探测器几何效率的值。本项目中称之为相对活度
+    deathTime_Ratio1 = deathTime_Ratio1 / num;
+    deathTime_Ratio2 = deathTime_Ratio2 / num;
+    
+    //f因子。暂且称为积分因子
+    //这里不考虑Cu62的衰变分支，也就是测量必须时采用冷却时长远大于Cu62半衰期(9.67min = 580s)的数据。
+    double T_halflife = 9.67*60; //单位s，Cu62的半衰期
+    // double T_halflife = 12.7*60*60; // 单位s,Cu64的半衰期
+    double lamda = log(2) / T_halflife;
+    double f = 1/lamda*(exp(-lamda*start_time) - exp(-lamda*time_end));
 
-    //反推出0时刻的计数。这里不考虑Cu62的衰变分支，也就是测量必须时采用冷却时长远大于Cu62半衰期(9.67min = 580s)的数据。
-    double T_halftime = 12.7*60*60; // 单位s
-    double lamda = log(2) / T_halftime; 
-    double A0_omiga = At_omiga * lamda *(exp(-lamda*coolingTime_tmp) - exp(-lamda*time_end));
+    //对符合计数进行真偶符合修正
+    //注意timeWidth_tmp单位为ns，要换为时间s。
+    double Nco = (Nc - 2*timeWidth_tmp*N1*N2)/((time_end - start_time) - timeWidth_tmp*(N1+N2));
+
+    //死时间修正
+    double N10 = N1 / (1 - deathTime_Ratio1);
+    double N20 = N2 / (1 - deathTime_Ratio2);
+    double Nco0 = Nco / (1 - deathTime_Ratio1) / (1 - deathTime_Ratio2);
+    //计算出活度乘以探测器几何效率的值。本项目中称之为相对活度
+    //反推出0时刻的计数。
+
+    double A0_omiga = N10 * N20 * lamda / Nco0 / f;
 
     return A0_omiga;
 }

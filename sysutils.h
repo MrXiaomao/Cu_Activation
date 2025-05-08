@@ -157,7 +157,7 @@ typedef struct tagDetectorParameter{
 
     int32_t coolingTime;//冷却时长,单位s,需要注意的是，对于自动测量与手动测量，这个冷却时间不一样
                         //手动测量与界面上冷却时间输入按钮不一致，自动测量与界面输入时间一致。
-    int32_t delayTime;//延迟时间,单位ns
+    int32_t delayTime;//两个通道电路的相对延迟时间,单位ns
     int32_t timeWidth;//时间窗宽度，单位ns(符合分辨时间)
 } DetectorParameter;
 #pragma pack(pop) // 恢复默认对齐

@@ -7,8 +7,9 @@
 #include "gaussFit.h"
 #include "sysutils.h"
 
-#define RANGE_SCARRE_UPPER 1.0
-#define RANGE_SCARRE_LOWER 0.5
+#define RANGE_SCARRE_UPPER 1.0 
+#define RANGE_SCARRE_LOWER 0.5 //用于能谱
+#define RANGE_COUNT_RATIO 0.8 //控制坐标轴图像内，Y轴方向，计数点在Y轴方向画面的占比
 #define X_AXIS_LOWER    0
 #define Y_AXIS_LOWER    0
 
@@ -1424,7 +1425,8 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
         QCustomPlot* customPlotCoResult = getCustomPlot(amCoResult);
 
         {//Det1
-            double maxValue = 0.;
+            double minValue = 0.0;
+            double maxValue = 0.0;
             QVector<double> keys, values;
             QVector<QColor> colors;
 
@@ -1433,17 +1435,30 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
                 keys << key;
                 values << r3[i].CountRate1;
                 colors << clrLine;
+                minValue = qMin(minValue, (double)r3[i].CountRate1);
                 maxValue = qMax(maxValue, (double)r3[i].CountRate1);
             }
 
             customPlotDet1->graph(0)->setData(keys, values, colors);
-            if (maxValue > customPlotDet1->yAxis->range().upper * RANGE_SCARRE_UPPER){
-                customPlotDet1->yAxis->setRange(customPlotDet1->yAxis->range().lower, maxValue / RANGE_SCARRE_LOWER);
-                customPlotDet1->yAxis2->setRange(customPlotDet1->yAxis->range().lower, maxValue / RANGE_SCARRE_LOWER);//因为这里是子线程调用的，所以联动的槽函数（722行）不会自动触发，需要手动设置
-            } else if (maxValue < 10){
-                customPlotDet1->yAxis->setRange(0, 10);
-                customPlotDet1->yAxis2->setRange(0, 10);
+            //考虑到曲线是一直下降，因此只调节下限
+            double upper = customPlotDet1->yAxis->range().upper;
+            double lower = customPlotDet1->yAxis->range().lower;
+
+            // 考虑到屏幕画面下半部分留白，必须先算上限
+            if(maxValue > upper){
+                upper = maxValue /RANGE_SCARRE_UPPER;
             }
+            if (maxValue < 10)
+            { 
+                upper = 10;
+            }
+
+            if (minValue < lower){
+                lower = upper - (upper - minValue) / RANGE_COUNT_RATIO;
+                if(lower < 0.0) lower = 0.0; //因为计数恒为正
+            }
+            customPlotDet1->yAxis->setRange(lower, upper);
+            customPlotDet1->yAxis2->setRange(lower, upper);
 
             if (this->property("autoRefreshModel").toBool()){
                 qint32 timeRange = this->property("refresh-time-range").toInt();
@@ -1468,7 +1483,8 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
         }
 
         {//Det2
-            double maxValue = 0.;
+            double minValue = 0.0;
+            double maxValue = 0.0;
             QVector<double> keys, values;
             QVector<QColor> colors;
 
@@ -1477,19 +1493,30 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
                 keys << key;
                 values << r3[i].CountRate2;
                 colors << clrLine;
+                minValue = qMin(minValue, (double)r3[i].CountRate2);
                 maxValue = qMax(maxValue, (double)r3[i].CountRate2);
             }
 
             customPlotDet2->graph(0)->setData(keys, values, colors);
-            if (maxValue > customPlotDet2->yAxis->range().upper * RANGE_SCARRE_UPPER){
-                customPlotDet2->yAxis->setRange(customPlotDet2->yAxis->range().lower, maxValue / RANGE_SCARRE_LOWER);
-                customPlotDet2->yAxis2->setRange(customPlotDet2->yAxis->range().lower, maxValue / RANGE_SCARRE_LOWER);
+            //考虑到曲线是一直下降，因此只调节下限
+            double upper = customPlotDet2->yAxis->range().upper;
+            double lower = customPlotDet2->yAxis->range().lower;
+            // 考虑到屏幕画面下半部分留白，必须先算上限
+            if(maxValue > upper){
+                upper = maxValue /RANGE_SCARRE_UPPER;
             }
-            else if (maxValue < 10){
-                customPlotDet2->yAxis->setRange(0, 10);
-                customPlotDet2->yAxis2->setRange(0, 10);
+            if (maxValue < 10)
+            { 
+                upper = 10;
             }
 
+            if (minValue < lower){
+                lower = upper - (upper - minValue) / RANGE_COUNT_RATIO;
+                if(lower < 0.0) lower = 0.0; //因为计数恒为正
+                
+            }
+            customPlotDet2->yAxis->setRange(lower, upper);
+            customPlotDet2->yAxis2->setRange(lower, upper);
 
             if (this->property("autoRefreshModel").toBool()){
                 qint32 timeRange = this->property("refresh-time-range").toInt();
@@ -1516,24 +1543,38 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
         {//符合结果
             QVector<double> keys, values;
             QVector<QColor> colors;
-            double maxValue = 0;
+            double minValue = 0.0;
+            double maxValue = 0.0;
 
             for (size_t i=0; i<r3.size(); ++i){
                 uint32_t key = r3[i].time;
                 keys << key;
                 values << r3[i].ConCount_single;
                 colors << clrLine;
+                minValue = qMin(minValue, (double)r3[i].ConCount_single);
                 maxValue = qMax(maxValue, (double)r3[i].ConCount_single);
             }
 
-            if (maxValue > customPlotCoResult->yAxis->range().upper * RANGE_SCARRE_UPPER){
-                customPlotCoResult->yAxis->setRange(customPlotCoResult->yAxis->range().lower, maxValue / RANGE_SCARRE_LOWER);
-                customPlotCoResult->yAxis2->setRange(customPlotCoResult->yAxis->range().lower, maxValue / RANGE_SCARRE_LOWER);
-            } else if (maxValue < 10){
-                customPlotCoResult->yAxis->setRange(0, 10);
-                customPlotCoResult->yAxis2->setRange(0, 10);
-            }
             customPlotCoResult->graph(0)->setData(keys, values, colors);
+            double upper = customPlotCoResult->yAxis->range().upper;
+            double lower = customPlotCoResult->yAxis->range().lower;
+
+            // 考虑到屏幕画面下半部分留白，必须先算上限
+            if(maxValue > upper){
+                upper = maxValue /RANGE_SCARRE_UPPER;
+            }
+            if (maxValue < 10)
+            { 
+                upper = 10;
+            }
+
+            if (minValue < lower){
+                lower = upper - (upper - minValue) / RANGE_COUNT_RATIO;
+                if(lower < 0.0) lower = 0.0; //因为计数恒为正
+            }
+            customPlotCoResult->yAxis->setRange(lower, upper);
+            customPlotCoResult->yAxis2->setRange(lower, upper);
+
 
             if (this->property("autoRefreshModel").toBool()){
                 qint32 timeRange = this->property("refresh-time-range").toInt();

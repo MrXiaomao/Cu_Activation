@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-04-30 14:35:58
+ * @LastEditTime: 2025-05-08 12:27:21
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -130,9 +130,9 @@ void OfflineDataAnalysisWidget::initCustomPlot()
 
         });
 
-        connect(customPlotWidget, &PlotWidget::sigPausePlot, this, [=](bool pause){
-            emit sigPausePlot(pause);
-        });
+        // connect(customPlotWidget, &PlotWidget::sigPausePlot, this, [=](bool pause){
+        //     emit sigPausePlot(pause);
+        // });
 
         connect(customPlotWidget, &PlotWidget::sigAreaSelected, this, [=](){
             // QWhatsThis::showText(ui->pushButton_confirm->mapToGlobal(ui->pushButton_confirm->geometry().bottomRight()), tr("需点击确认按钮，拟合区域才会设置生效"), ui->pushButton_confirm);
@@ -149,6 +149,7 @@ void OfflineDataAnalysisWidget::initCustomPlot()
 #include <QTextStream>
 void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
 {
+    ui->textBrowser_filepath->setText(filePath);
     validDataFileName = filePath;
 
     QString configFile = validDataFileName + tr(".配置");
@@ -206,11 +207,11 @@ void OfflineDataAnalysisWidget::slotStart()
 
         QByteArray aDatas = validDataFileName.toLocal8Bit();
         vector<TimeEnergy> data1_2, data2_2;
-#ifdef QT_NO_DEBUG        
+// #ifdef QT_NO_DEBUG
         SysUtils::realQuickAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, bool eof, bool *interrupted){
-#else
-        SysUtils::realAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, bool eof, bool *interrupted){
-#endif
+// #else
+//         SysUtils::realAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, bool eof, bool *interrupted){
+// #endif
             if (eof){
                 if (interrupted)
                     emit sigEnd(true);

@@ -517,6 +517,11 @@ void MainWindow::InitMainWindowUi()
     ui->tabWidget_client->tabBar()->setTabButton(0, QTabBar::RightSide, nullptr);//第一个tab取消关闭按钮
     connect(ui->tabWidget_client, &QTabWidget::tabCloseRequested, this, [=](int index){
         ui->tabWidget_client->removeTab(index);
+        if (index == 1){
+            this->setProperty("offline-filename", "");
+            delete offlineDataAnalysisWidget;
+            offlineDataAnalysisWidget = nullptr;
+        }
     });
 
     connect(ui->comboBox_range, QOverload<int>::of(&QComboBox::currentIndexChanged), ui->comboBox_range_2, &QComboBox::setCurrentIndex);
@@ -835,32 +840,37 @@ void MainWindow::on_action_SpectrumModel_triggered()
     w->showNormal();
 }
 
+/**
+ * @description: 数据查看和分析
+ * @return {*}
+ */
 void MainWindow::on_action_DataAnalysis_triggered()
 {
-    //数据查看和分析
+    //防止多次创建
     if (nullptr == offlineDataAnalysisWidget){
         offlineDataAnalysisWidget = new OfflineDataAnalysisWidget(this);
-        connect(offlineDataAnalysisWidget, &OfflineDataAnalysisWidget::sigPausePlot, this, [=](bool pause){
-            this->setProperty("pause_plot", pause);
-            if (this->property("pause_plot").toBool()){
-                ui->action_refresh->setIcon(QIcon(":/resource/work.png"));
-                ui->action_refresh->setText(tr("恢复刷新"));
-                ui->action_refresh->setIconText(tr("恢复刷新"));
-            } else {
-                this->setProperty("pause_plot", false);
-                ui->action_refresh->setIcon(QIcon(":/resource/pause.png"));
-                ui->action_refresh->setText(tr("暂停刷新"));
-                ui->action_refresh->setIconText(tr("暂停刷新"));
+        // connect(offlineDataAnalysisWidget, &OfflineDataAnalysisWidget::sigPausePlot, this, [=](bool pause){
+        //     this->setProperty("pause_plot", pause);
+        //     if (this->property("pause_plot").toBool()){
+        //         ui->action_refresh->setIcon(QIcon(":/resource/work.png"));
+        //         ui->action_refresh->setText(tr("恢复刷新"));
+        //         ui->action_refresh->setIconText(tr("恢复刷新"));
+        //     } else {
+        //         // this->setProperty("pause_plot", false);
+        //         // ui->action_refresh->setIcon(QIcon(":/resource/pause.png"));
+        //         // ui->action_refresh->setText(tr("暂停刷新"));
+        //         // ui->action_refresh->setIconText(tr("暂停刷新"));
 
-                ui->pushButton_confirm->setIcon(QIcon());
-            }
-        });
+        //         // ui->pushButton_confirm->setIcon(QIcon());
+        //     }
+        // });
 
         int index = ui->tabWidget_client->addTab(offlineDataAnalysisWidget, tr("数据查看和分析"));
         ui->tabWidget_client->setCurrentIndex(index);
     }
 
-    if (!this->property("offline-filename").isValid()){
+    //防止重复打开文件，只允许打开一个窗口。
+    /*if (!this->property("offline-filename").isValid() || this->property("offline-filename").toString().isEmpty()){
         QString filePath = QFileDialog::getOpenFileName(this, tr("打开文件"),"",tr("能谱文件 (*.dat)"));
         if (filePath.isEmpty() || !QFileInfo::exists(filePath))
             return;
@@ -874,7 +884,7 @@ void MainWindow::on_action_DataAnalysis_triggered()
     } else {
         ui->tabWidget_client->setCurrentWidget(offlineDataAnalysisWidget);
     }
-
+*/
     this->setWindowTitle(this->property("offline-filename").toString() + " - Cu_Activation");
 }
 
@@ -1976,7 +1986,7 @@ void MainWindow::on_tabWidget_client_currentChanged(int /*index*/)
 
 }
 
-
+//工具栏打开文件按钮
 void MainWindow::on_action_openfile_triggered()
 {
     QString filePath = QFileDialog::getOpenFileName(this, tr("打开文件"),";",tr("能谱文件 (*.dat)"));
@@ -1986,5 +1996,6 @@ void MainWindow::on_action_openfile_triggered()
     this->setProperty("offline-filename", filePath);
     offlineDataAnalysisWidget->openEnergyFile(filePath);
     this->setWindowTitle(this->property("offline-filename").toString() + " - Cu_Activation");
+    emit offlineDataAnalysisWidget->sigStart();
 }
 

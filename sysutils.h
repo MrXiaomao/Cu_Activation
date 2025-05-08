@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-06 20:02:46
+ * @LastEditTime: 2025-05-08 15:43:44
  * @Description: 请填写简介
  */
 #ifndef SYSUTILS_H
@@ -173,11 +173,16 @@ public:
 
     static std::vector<DetTimeEnergy> getDetTimeEnergy(const char* filename);
 
-
+    /**
+     * @description: 解析网口接收的原始数据
+     * @param {char*} filename 文件名，包含路径
+     * @param
+     * @return {*}
+    */
     static void realAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy, bool/*结束标识*/, bool */*是否被终止*/)> callback);
 
     /*
-     * 快速解析：要求文件除了裸数据，没有其他脏数据
+     * 快速解析：文件是存放有效数据
     */
     static void realQuickAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy, bool/*结束标识*/, bool */*是否被终止*/)> callback);
 };

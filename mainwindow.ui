@@ -2758,8 +2758,8 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="action_analyze">
    <property name="icon">
-    <iconset>
-     <normaloff>:/resource/analyzer.png</normaloff>:/resource/analyzer.png</iconset>
+    <iconset resource="resource.qrc">
+     <normaloff>:/resource/analyze.png</normaloff>:/resource/analyze.png</iconset>
    </property>
    <property name="text">
     <string>开始解析</string>

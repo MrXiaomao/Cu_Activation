@@ -390,8 +390,8 @@ void SysUtils::realQuickAnalyzeTimeEnergy(const char* filename, std::function<vo
         DetTimeEnergy detTimeEnergy;
         detTimeEnergy.channel = 0;
         detTimeEnergy.timeEnergy.resize(size);
-        fread(reinterpret_cast<uint32_t*>(&detTimeEnergy.channel), 1, sizeof(&detTimeEnergy.channel), input_file);
-        fread(reinterpret_cast<uint32_t*>(detTimeEnergy.timeEnergy.data()), 1, sizeof(TimeEnergy)*size, input_file);
+        fread(reinterpret_cast<unsigned char*>(&detTimeEnergy.channel), 1, sizeof(detTimeEnergy.channel), input_file);
+        fread(reinterpret_cast<unsigned char*>(detTimeEnergy.timeEnergy.data()), 1, sizeof(TimeEnergy)*size, input_file);
 
         callback(detTimeEnergy, false, &interrupted);
         if (interrupted){

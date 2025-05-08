@@ -953,10 +953,10 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     if (!dir.exists())
         dir.mkdir(ShotDir);
     //创建缓存文件
-    validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + "_valid.dat");   
+    validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_valid.dat");   
 
 #ifdef QT_DEBUG
-    netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + "_Net.dat");
+    netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_Net.dat");
     if (nullptr != pfSaveNet){
         pfSaveNet->close();
         delete pfSaveNet;
@@ -1141,9 +1141,9 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
     if (!dir.exists())
         dir.mkdir(ShotDir);
     //创建缓存文件
-    validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + "_valid.dat");
+    validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_valid.dat");
 #ifdef QT_DEBUG
-    netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd HHmmss") + "_Net.dat"); 
+    netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_Net.dat"); 
     if (nullptr != pfSaveNet){
         pfSaveNet->close();
         delete pfSaveNet;
@@ -1599,7 +1599,7 @@ void CommandHelper::detTimeEnergyWorkThread()
                         }
                         else if(detectorParameter.measureModel == mmManual)
                         {
-                            saveParticleInfo(data1_2, data2_2);
+                            // saveParticleInfo(data1_2, data2_2);
                             //在选定能窗前不进行符合数据处理，也就是不给出计数曲线，只有能谱数据。
                             if (this->autoChangeEnWindow)
                             {

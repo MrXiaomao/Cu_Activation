@@ -26,11 +26,13 @@ public:
 
     /**
      * @description: 计算出初始相对活度 A_relative = A0*近端探测器几何效率，以及中子产额Y
+     * 主要用于在线测量结束时的中子产额计算
      * @param {DetectorParameter} detPara 测量参数
      * @param {int} time_SetEnWindow 手动测量时选择能窗对应的时间。FPGA内部时钟，单位s。自动测量不需要改参数，默认值：0
      * @return {*}返回相对活度 A_relative = A0*近端探测器几何效率
      */    
-    double getInintialActive(DetectorParameter detPara, int time_SetEnWindow = 0);
+    double getInintialActive(DetectorParameter detPara, int time_SetEnWindow = 0); 
+    double getInintialActive(DetectorParameter detPara, int start_time, int time_end);
 
     //重新初始化，每次从零时刻开始处理数据时，需要初始化
     inline void initialize(){

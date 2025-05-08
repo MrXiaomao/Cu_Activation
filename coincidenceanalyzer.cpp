@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-07 15:14:53
+ * @LastEditTime: 2025-05-08 23:16:23
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -572,16 +572,8 @@ bool CoincidenceAnalyzer::find_index_below(vector<TimeEnergy> data, unsigned lon
 
 double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int time_SetEnWindow)
 {
-    vector<CoincidenceResult> coinResult = GetCoinResult();
     //如果没有前面的calculate的计算，那么后续计算不能进行
     if(coinResult.size() == 0) return 0.0;
-    
-    size_t num = coinResult.size(); //计数点个数。
-    //延迟时间,单位ns
-    // int delaytime_tmp = detPara.delayTime;
-
-    //符合时间窗,单位ns
-    int timeWidth_tmp = detPara.timeWidth;
    
     //测量的起点时刻（这个时刻以活化物活化后开始计时）
     int start_time = 0;
@@ -594,12 +586,38 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int tim
     if(detPara.measureModel == mmAuto) time_end = coinResult.back().time;
 
     if(time_end < start_time) return 0.0; //不允许起始时间小于停止时间
+    double A0_omiga = getInintialActive(detPara, start_time, time_end);
+
+    return A0_omiga;
+}
+
+/**
+ * @description: 根据计数曲线，选取合适的时间区间，对这个区间的数据进行积分处理，给出其初始的相对活度
+ * 注意：这里的时间以铜活化结束开始计时。
+ * @param {DetectorParameter} detPara 测量参数
+ * @param {int} startT 起始时间，单位s
+ * @param {int} endT 结束时间，单位s
+ * @return {*} 相对活度 铜片β+衰变强度乘以近端探测器立体角效率
+ */
+double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int start_time, int time_end)
+{
+    // vector<CoincidenceResult> coinResult = GetCoinResult();
+    //如果没有前面的calculate的计算，那么后续计算不能进行
+    if(coinResult.size() == 0) return 0.0;
+    
+    size_t num = coinResult.size(); //计数点个数。
+
+    //符合时间窗,单位ns
+    int timeWidth_tmp = detPara.timeWidth;
+    timeWidth_tmp = timeWidth_tmp/1e9;
+
+    if(time_end < start_time) return 0.0; //不允许起始时间小于停止时间
 
     int N1 = 0;
     int N2 = 0;
     int Nc = 0;
-    double deathTime_Ratio1 = 0.0;
-    double deathTime_Ratio2 = 0.0;
+    double deathTime_ratio_total[2] = {0.0, 0.0};
+    double deathTime_ratio_ave[2] = {0.0, 0.0};
     for(auto coin:coinResult)
     {
         // 手动测量，在改变能窗之前的数据不处理，注意剔除。现在数据没有保存这一段数据
@@ -608,12 +626,12 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int tim
         N1 += coin.CountRate1;
         N2 += coin.CountRate2;
         Nc = Nc + coin.ConCount_single + coin.ConCount_multiple;
-        deathTime_Ratio1 += coin.DeathRatio1;
-        deathTime_Ratio2 += coin.DeathRatio2;
+        deathTime_ratio_total[0] += coin.DeathRatio1 * 0.01; //注意将百分比但我转化为小数
+        deathTime_ratio_total[1] += coin.DeathRatio2 * 0.01;
     }
     
-    deathTime_Ratio1 = deathTime_Ratio1 / num;
-    deathTime_Ratio2 = deathTime_Ratio2 / num;
+    deathTime_ratio_ave[0] = deathTime_ratio_total[0] / num;
+    deathTime_ratio_ave[1] = deathTime_ratio_total[1] / num;
     
     //f因子。暂且称为积分因子
     //这里不考虑Cu62的衰变分支，也就是测量必须时采用冷却时长远大于Cu62半衰期(9.67min = 580s)的数据。
@@ -624,16 +642,17 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int tim
 
     //对符合计数进行真偶符合修正
     //注意timeWidth_tmp单位为ns，要换为时间s。
-    double Nco = (Nc - 2*timeWidth_tmp*N1*N2)/((time_end - start_time) - timeWidth_tmp*(N1+N2));
+    double measureTime = (time_end - start_time)*1.0;
+    double Nco = (Nc*measureTime - 2*timeWidth_tmp*N1*N2)/(measureTime - timeWidth_tmp*(N1+N2));
 
     //死时间修正
-    double N10 = N1 / (1 - deathTime_Ratio1);
-    double N20 = N2 / (1 - deathTime_Ratio2);
-    double Nco0 = Nco / (1 - deathTime_Ratio1) / (1 - deathTime_Ratio2);
+    double N10 = N1 / (1 - deathTime_ratio_ave[0]);
+    double N20 = N2 / (1 - deathTime_ratio_ave[1]);
+    double Nco0 = Nco / (1 - deathTime_ratio_ave[0]) / (1 - deathTime_ratio_ave[1]);
     //计算出活度乘以探测器几何效率的值。本项目中称之为相对活度
     //反推出0时刻的计数。
 
-    double A0_omiga = N10 * N20 * lamda / Nco0 / f;
+    double A0_omiga = N10 * N20 / Nco0 / f;
 
     return A0_omiga;
 }

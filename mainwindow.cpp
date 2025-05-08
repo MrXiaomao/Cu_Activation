@@ -308,7 +308,7 @@ MainWindow::MainWindow(QWidget *parent)
         }
 
         double result = a * cali_factor;
-        ui->lineEdit_Yield->setText(QString::number(result, 'E', 3));
+        ui->lineEdit_Yield->setText(QString::number(result, 'E', 5));
     });
 
     // 测量停止

@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-08 12:27:21
+ * @LastEditTime: 2025-05-08 23:06:19
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -13,6 +13,11 @@
 #include <QFileDialog>
 #include <QAction>
 #include <QToolButton>
+
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <math.h>
 
 OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
     : QWidget(parent)
@@ -39,8 +44,13 @@ OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
         }
     });
 
-    //ui->tableWidget->resizeColumnsToContents();
-    ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    //ui->tableWidget1->resizeColumnsToContents();
+    ui->tableWidget1->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    for(int i=0; i<3; i++){
+        for(int j=3; j<6; j++){
+            ui->tableWidget1->item(j, i)->setText(QString::number(0));
+        }
+    }
 
     connect(this, &OfflineDataAnalysisWidget::sigPlot, this, [=](SingleSpectrum r1, vector<CoincidenceResult> r3){
         bool pause_plot = this->property("pause_plot").toBool();
@@ -70,6 +80,45 @@ OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
 
     connect(this, SIGNAL(sigStart()), this, SLOT(slotStart()));
     connect(this, SIGNAL(sigEnd(bool)), this, SLOT(slotEnd(bool)), Qt::QueuedConnection);
+
+    // 给出测量结果
+    connect(this, &OfflineDataAnalysisWidget::sigActiveOmiga, this, [=](double active){
+        //本次测量量程
+        int measureRange = detParameter.measureRange-1; //这里涉及到界面下拉框从0开始计数，而detParameter中从1开始计数。
+        //读取配置文件，给出该量程下的刻度系数
+        double cali_factor = 0.0;
+        QFile file(QApplication::applicationDirPath() + "/config/user.json");
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            // 读取文件内容
+            QByteArray jsonData = file.readAll();
+            file.close(); //释放资源
+    
+            QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+            QJsonObject jsonObj = jsonDoc.object();
+            
+            QJsonObject jsonCalibration, jsonYield;
+            if (jsonObj.contains("YieldCalibration")){
+                jsonCalibration = jsonObj["YieldCalibration"].toObject();
+                
+                QString key = QString("Range%1").arg(measureRange);
+                QJsonArray rangeArray;
+                if (jsonCalibration.contains(key)){
+                    rangeArray = jsonCalibration[key].toArray();
+                    QJsonObject rangeData = rangeArray[0].toObject();
+
+                    double yield = rangeData["Yield"].toDouble();
+                    double active0 = rangeData["active0"].toDouble();
+                    cali_factor = yield / active0;
+                }
+            }
+        }
+        else{
+            qCritical()<<"未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
+        }
+
+        double result = active * cali_factor;
+        ui->lineEdit_neutronYield->setText(QString::number(result, 'E', 5));
+    });
 }
 
 OfflineDataAnalysisWidget::~OfflineDataAnalysisWidget()
@@ -149,6 +198,13 @@ void OfflineDataAnalysisWidget::initCustomPlot()
 #include <QTextStream>
 void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
 {
+    //重新初始化
+    for(int i=0; i<3; i++){
+        for(int j=3; j<6; j++){
+            ui->tableWidget1->item(j, i)->setText(QString::number(0));
+        }
+    }
+
     ui->textBrowser_filepath->setText(filePath);
     validDataFileName = filePath;
 
@@ -171,10 +227,19 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
             }
             file.close();
 
+            if(configMap.value("测量模式") == "手动") detParameter.measureModel = mmManual;
+            else if(configMap.value("测量模式") == "自动") detParameter.measureModel = mmAuto;
+            detParameter.coolingTime = configMap.value("冷却时长").toInt();
+            detParameter.timeWidth = configMap.value("符合分辨时间").toInt();
+            detParameter.measureRange = configMap.value("量程选取").toInt();
+            this->startTime_FPGA = static_cast<unsigned int>(configMap.value("测量开始时间(FPGA时钟)").toInt());
+
+            ui->lineEdit_measuremodel->setText(configMap.value("测量模式"));
             ui->spinBox_step->setValue(configMap.value("时间步长").toInt());
             ui->spinBox_timeWidth->setValue(configMap.value("符合分辨时间").toInt());
             ui->spinBox_coolingTime->setValue(configMap.value("冷却时长").toInt());
-
+            ui->lineEdit_range->setText(configMap.value("量程选取"));
+            
             ui->spinBox_1_leftE->setValue(configMap.value("Det1符合能窗左").toInt());
             ui->spinBox_1_rightE->setValue(configMap.value("Det1符合能窗右").toInt());
             ui->spinBox_2_leftE->setValue(configMap.value("Det2符合能窗左").toInt());
@@ -200,10 +265,16 @@ void OfflineDataAnalysisWidget::slotStart()
                                (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
     int delayTime = ui->spinBox_delayTime->value();//符合延迟时间,ns
     int timeWidth = ui->spinBox_timeWidth->value();//时间窗宽度，单位ns(符合分辨时间)
+    detParameter.timeWidth = timeWidth;
+
     QLiteThread *calThread = new QLiteThread();
     calThread->setObjectName("calThread");
     calThread->setWorkThreadProc([=](){
         coincidenceAnalyzer->initialize();
+
+        if(detParameter.measureModel == mmManual){
+            coincidenceAnalyzer->setCoolingTime_Manual(detParameter.coolingTime);
+        }
 
         QByteArray aDatas = validDataFileName.toLocal8Bit();
         vector<TimeEnergy> data1_2, data2_2;
@@ -231,6 +302,14 @@ void OfflineDataAnalysisWidget::slotStart()
                     data2_2.push_back(timeEnergy);
                 }
             }
+            
+            //读取开始保存数据的FPGA时刻。也就是最小的FPGA时刻，作为符合测量的时间区间左端点。
+            // if (data1_2.size() > 0 && data2_2.size() > 0 )
+            // {
+
+            // }
+            
+            //记录FPGA内的最大时刻，作为符合测量的时间区间右端点。
 
             if (data1_2.size() > 0 || data2_2.size() > 0 ){
                 coincidenceAnalyzer->calculate(data1_2, data2_2, (unsigned short*)EnWindow, timeWidth, delayTime, true, false);
@@ -289,6 +368,10 @@ void OfflineDataAnalysisWidget::doEnWindowData(SingleSpectrum r1, vector<Coincid
     }
 }
 
+/**
+ * @description: 分析数据，更改数据分析参数后，重新读取文件，分析数据。
+ * @return {*}
+ */
 void OfflineDataAnalysisWidget::on_pushButton_start_clicked()
 {
     emit sigStart();
@@ -299,5 +382,199 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
     if (interrupted)
         QMessageBox::information(this, tr("提示"), tr("文件解析意外被终止！"));
     else
+    {
         QMessageBox::information(this, tr("提示"), tr("文件解析已顺利完成！"));
+        
+        // 读取活化测量的数据时刻区间[起始时间，结束时间]
+        vector<CoincidenceResult> result = coincidenceAnalyzer->GetCoinResult();
+        // int startTime = result.begin()->time;
+        unsigned int startTime = this->startTime_FPGA;
+        unsigned int endTime = result.back().time;
+
+        //检查界面的起始时刻和结束时刻不超范围，若超范围则调整到范围内。
+        unsigned int startTimeUI = static_cast<unsigned int>(ui->spinBox_start->value());
+        unsigned int endTimeUI = static_cast<unsigned int>(ui->spinBox_end->value());
+
+        if(startTimeUI < startTime || startTimeUI > endTime){
+            ui->spinBox_start->setValue(startTime);
+            startTimeUI = startTime;
+        }
+
+        if(endTimeUI < startTime || endTimeUI > endTime){
+            ui->spinBox_end->setValue(endTime);
+            endTimeUI = endTime;
+        }
+
+        //更新控件输入范围
+        ui->spinBox_start->setRange(startTime, endTime);  // 设置范围
+        ui->spinBox_end->setRange(startTime, endTime);  // 设置范围
+
+        analyse(detParameter, startTime, endTime);
+        // double activeOmiga = coincidenceAnalyzer->getInintialActive(detParameter, startTime, endTime);
+        
+        // emit sigActiveOmiga(activeOmiga);
+    }
+}
+
+/**
+ * @description: 在计算出符合计数曲线之后，进行进一步分析，对与选定的时间区间进行数据处理。给出探测器1计数、探测器2计数、符合计数的最小值、最大值、平均值。
+ * 以及死时间修正后的数值，探测器1总计数、探测器2总计数、总符合计数。
+ * 计算出初始相对活度、中子产额。
+ * 参考自CoincidenceAnalyzer::getInintialActive,注意离线处理产生的符合数据包含了冷却时间的零计数。与在线处理有一定区别
+ * @param {DetectorParameter} detPara
+ * @param {int} start_time
+ * @param {int} time_end
+ * @return {*}
+ */
+void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int start_time, unsigned int time_end)
+{
+    vector<CoincidenceResult> coinResult = coincidenceAnalyzer->GetCoinResult();
+    //如果没有前面的calculate的计算，那么后续计算不能进行
+    if(coinResult.size() == 0) return ;
+    
+    size_t num = coinResult.size(); //计数点个数。
+
+    //符合时间窗,单位ns
+    int timeWidth_tmp = detPara.timeWidth;
+    timeWidth_tmp = timeWidth_tmp/1e9;
+
+    if(time_end < start_time) return ; //不允许起始时间小于停止时间
+
+    int N1 = 0;
+    int N2 = 0;
+    int Nc = 0;
+    double deathTime_Ratio1 = 0.0;
+    double deathTime_Ratio2 = 0.0;
+    
+    //修正前的极值
+    int minCount[3] = {100000, 100000, 100000}; //这里初值不能是一个常规小的计数率。
+    int maxCount[3] = {0, 0, 0};
+    double minDeathRatio[3] = {1.0, 1.0, 1.0}; //注意这里初值不能为0.0
+    double maxDeathRatio[3] = {0.0, 0.0, 0.0};
+    
+    //修正后的极值
+    double minCount_correct[3] = {10000.0, 10000.0, 10000.0}; //初值不能是一个小的数值
+    double maxCount_correct[3] = {0.0, 0.0, 0.0};
+    for(auto coin:coinResult)
+    {
+        // 手动测量，在改变能窗之前的数据不处理，注意剔除。现在数据没有保存这一段数据
+        if(coin.time > start_time && coin.time<time_end) {
+            int n1 = coin.CountRate1;
+            int n2 = coin.CountRate2;
+            int nc = coin.ConCount_single + coin.ConCount_multiple;
+            double ratio1 = coin.DeathRatio1 * 0.01;
+            double ratio2 = coin.DeathRatio2 * 0.01;
+            double ratio3 = 1.0 - (1.0 - ratio1)*(1 - ratio2);
+
+            minCount[0] = qMin(minCount[0], n1);
+            minCount[1] = qMin(minCount[1], n2);
+            minCount[2] = qMin(minCount[2], nc);
+            
+            maxCount[0] = qMax(maxCount[0], n1);
+            maxCount[1] = qMax(maxCount[1], n2);
+            maxCount[2] = qMax(maxCount[2], nc);
+            
+            minDeathRatio[0] = qMin(minDeathRatio[0], ratio1);
+            minDeathRatio[1] = qMin(minDeathRatio[1], ratio2);
+            minDeathRatio[2] = qMin(minDeathRatio[2], ratio3);
+            
+            maxDeathRatio[0] = qMax(maxDeathRatio[0], ratio1);
+            maxDeathRatio[1] = qMax(maxDeathRatio[1], ratio2);
+            maxDeathRatio[2] = qMax(maxDeathRatio[2], ratio3);
+
+            // 死时间修正后各计数率
+            double n10 = n1 / (1-ratio1);
+            double n20 = n1 / (1-ratio2);
+            double nc0 = nc / (1-ratio3);
+            minCount_correct[0] = qMin(minCount_correct[0], n10);
+            minCount_correct[1] = qMin(minCount_correct[1], n20);
+            minCount_correct[2] = qMin(minCount_correct[2], nc0);
+
+            maxCount_correct[0] = qMax(maxCount_correct[0], n10);
+            maxCount_correct[1] = qMax(maxCount_correct[1], n20);
+            maxCount_correct[2] = qMax(maxCount_correct[2], nc0);
+
+            N1 += n1;
+            N2 += n2;
+            Nc += nc;
+            deathTime_Ratio1 += ratio1;
+            deathTime_Ratio2 += ratio2;
+        }
+    }
+    
+    //计算修正前平均值
+    double countAverage[3] = {0.0, 0.0, 0.0};
+    double deathRatioAverage[3] = {0.0, 0.0, 0.0};
+    countAverage[0] = N1*1.0 / num;
+    countAverage[1] = N2*1.0 / num;
+    countAverage[2] = Nc*1.0 / num;
+    deathRatioAverage[0] = deathTime_Ratio1 / num;
+    deathRatioAverage[1] = deathTime_Ratio2 / num;
+    deathRatioAverage[2] = 1.0 - (1.0 - deathRatioAverage[0])*(1 - deathRatioAverage[1]);
+    
+    // deathTime_Ratio1 = deathTime_Ratio1 / num;
+    // deathTime_Ratio2 = deathTime_Ratio2 / num;
+    
+    //计算修正后平均值
+    double countAverage_orrect[3] = {0.0, 0.0, 0.0};
+    countAverage_orrect[0] = N1*1.0 / (1 - deathRatioAverage[0]) / num;
+    countAverage_orrect[1] = N2*1.0 / (1 - deathRatioAverage[1]) / num;
+    countAverage_orrect[2] = Nc*1.0 / (1 - deathRatioAverage[2]) / num;
+
+    //f因子。暂且称为积分因子
+    //这里不考虑Cu62的衰变分支，也就是测量必须时采用冷却时长远大于Cu62半衰期(9.67min = 580s)的数据。
+    double T_halflife = 9.67*60; //单位s，Cu62的半衰期
+    // double T_halflife = 12.7*60*60; // 单位s,Cu64的半衰期
+    double lamda = log(2) / T_halflife;
+    double f = 1/lamda*(exp(-lamda*start_time) - exp(-lamda*time_end));
+
+    //对符合计数进行真偶符合修正
+    //注意timeWidth_tmp单位为ns，要换为时间s。
+    double measureTime = (time_end - start_time)*1.0;
+    double Nco = (Nc*measureTime - 2*timeWidth_tmp*N1*N2)/(measureTime - timeWidth_tmp*(N1+N2));
+
+    //死时间修正
+    double N10 = N1 / (1 - deathRatioAverage[0]);
+    double N20 = N2 / (1 - deathRatioAverage[1]);
+    double Nco0 = Nco / (1 - deathRatioAverage[0]) / (1 - deathRatioAverage[1]);
+    //计算出活度乘以探测器几何效率的值。本项目中称之为相对活度
+    //反推出0时刻的计数。
+
+    double A0_omiga = N10 * N20 / Nco0 / f;
+
+    //-------------------------------------更新界面
+    //修正前数据
+    for(int i=0; i<3; i++){
+        ui->tableWidget1->item(i, 0)->setText(QString::number(minCount[i]));
+        ui->tableWidget1->item(i, 1)->setText(QString::number(maxCount[i]));
+        ui->tableWidget1->item(i, 2)->setText(QString::number(countAverage[i]));
+    }
+    //死时间率，注意单位是%
+    for(int i=3; i<6; i++){
+        ui->tableWidget1->item(i, 0)->setText(QString::number(minDeathRatio[i-3]*100.0));
+        ui->tableWidget1->item(i, 1)->setText(QString::number(maxDeathRatio[i-3]*100.0));
+        ui->tableWidget1->item(i, 2)->setText(QString::number(deathRatioAverage[i-3]*100.0));
+    }
+    
+    //修正后数据
+    //Det1计数率
+    ui->countRateDet1_min->setText(QString::number(minCount_correct[0]));
+    ui->countRateDet1_max->setText(QString::number(maxCount_correct[0]));
+    ui->countRateDet1_ave->setText(QString::number(countAverage_orrect[0]));
+    //Det2计数率
+    ui->countRateDet2_min->setText(QString::number(minCount_correct[1]));
+    ui->countRateDet2_max->setText(QString::number(maxCount_correct[1]));
+    ui->countRateDet2_ave->setText(QString::number(countAverage_orrect[1]));
+    //符合计数率
+    ui->countRateCoin_min->setText(QString::number(minCount_correct[2]));
+    ui->countRateCoin_max->setText(QString::number(maxCount_correct[2]));
+    ui->countRateCoin_ave->setText(QString::number(countAverage_orrect[2]));
+
+    //总计数
+    ui->lineEdit_totalCount1->setText(QString::number(N10));
+    ui->lineEdit_totalCount2->setText(QString::number(N20));
+    ui->lineEdit_totalCount3->setText(QString::number(Nco0));
+    ui->lineEdit_realativeA0->setText(QString::number(A0_omiga));
+
+    emit sigActiveOmiga(A0_omiga);
 }

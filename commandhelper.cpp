@@ -155,6 +155,16 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                         out << tr("探测器增益=") << gainValue[detectorParameter.gain] << Qt::endl;
                     out << tr("量程选取=")<<detectorParameter.measureRange<< Qt::endl;
                     out << tr("冷却时长=") << detectorParameter.coolingTime << Qt::endl; //单位s
+                    
+                    //开始保存FPGA数据的时间，单位s，FPGA内部时钟。
+                    int savetime_FPGA = 0;
+                    if(detectorParameter.measureModel == mmManual){
+                        savetime_FPGA = this->time_SetEnWindow;
+                    }else if(detectorParameter.measureModel == mmAuto){
+                        savetime_FPGA = detectorParameter.coolingTime;
+                    }
+
+                    out << tr("测量开始时间(FPGA时钟)=")<< savetime_FPGA <<Qt::endl;
                     out << tr("符合延迟时间=") << detectorParameter.delayTime << Qt::endl; //单位ns
                     out << tr("符合分辨时间=") << detectorParameter.timeWidth << Qt::endl; //单位ns
                     out << tr("时间步长=") << 1 << Qt::endl; //注意，存储的数据时间步长恒为1s

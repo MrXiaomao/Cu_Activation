@@ -29,6 +29,7 @@ public:
 protected:
     virtual bool eventFilter(QObject *watched, QEvent *event) override;
     virtual void closeEvent(QCloseEvent *event) override;
+    virtual bool nativeEvent(const QByteArray &eventType, void *message, long *result) override;
 
 public slots:
     void slotAppendMsg(const QString &msg, QtMsgType msgType);
@@ -105,6 +106,10 @@ private slots:
     void on_tabWidget_client_currentChanged(int index);
 
     void on_action_openfile_triggered();
+
+    void on_action_help_triggered();
+
+    void on_action_viewlog_triggered();
 
 private:
     Ui::MainWindow *ui = nullptr;

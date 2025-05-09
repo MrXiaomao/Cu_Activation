@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-08 23:16:23
+ * @LastEditTime: 2025-05-08 23:24:00
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -635,8 +635,8 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int sta
     
     //f因子。暂且称为积分因子
     //这里不考虑Cu62的衰变分支，也就是测量必须时采用冷却时长远大于Cu62半衰期(9.67min = 580s)的数据。
-    double T_halflife = 9.67*60; //单位s，Cu62的半衰期
-    // double T_halflife = 12.7*60*60; // 单位s,Cu64的半衰期
+    // double T_halflife = 9.67*60; //单位s，Cu62的半衰期
+    double T_halflife = 12.7*60*60; // 单位s,Cu64的半衰期
     double lamda = log(2) / T_halflife;
     double f = 1/lamda*(exp(-lamda*start_time) - exp(-lamda*time_end));
 

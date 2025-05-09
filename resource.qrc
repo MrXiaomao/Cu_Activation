@@ -53,5 +53,7 @@
         <file>resource/circle-red.png</file>
         <file>resource/warn.png</file>
         <file>resource/刻度尺.png</file>
+        <file>resource/ProgressBar.png</file>
+        <file>resource/ProgressSlider.png</file>
     </qresource>
 </RCC>

@@ -14,6 +14,15 @@ SplashWidget::SplashWidget(QWidget *parent) :
     int y = (screenRect.height() - height()) / 2;
     this->move(x, y);
 
+    // progressBar = new QImageProgressBar(this);
+    // progressBar->setGeometry(680, 465, 300, 25);
+    ui->progressBar->setRange(0, 100);
+    ui->progressBar->setTextVisible(true);
+    ui->progressBar->setBackgroundImg(QString::fromLocal8Bit(":/resource/ProgressBar.png"));
+    ui->progressBar->setBarImg(QString::fromLocal8Bit(":/resource/ProgressSlider.png"));
+    ui->progressBar->setValue(50);
+    ui->progressBar->hide();
+
     //关闭倒计时定时器
     QTimer *timer = new QTimer(this);
     timer->setInterval(1000);
@@ -63,6 +72,21 @@ void SplashWidget::setInfo(const QString &info, bool allowClose, int fontSizeMai
     setInfo(info, fontSizeMain, timeout);
 }
 
+void SplashWidget::setInfo(const QString &info, bool allowClose, bool showProgress, int fontSizeMain, int timeout)
+{
+    if (showProgress)
+        ui->progressBar->show();
+    else
+        ui->progressBar->hide();
+
+    if (allowClose)
+        ui->pushButton_cancel->show();
+    else
+        ui->pushButton_cancel->hide();
+
+    setInfo(info, fontSizeMain, timeout);
+}
+
 #include "controlhelper.h"
 void SplashWidget::on_pushButton_cancel_clicked()
 {
@@ -71,4 +95,10 @@ void SplashWidget::on_pushButton_cancel_clicked()
 
     emit sigCancel();
     this->close();    
+}
+
+void SplashWidget::updataProgress(unsigned long long value, unsigned long long maximum)
+{
+    ui->progressBar->setRange(0, maximum);
+    ui->progressBar->setValue(value);
 }

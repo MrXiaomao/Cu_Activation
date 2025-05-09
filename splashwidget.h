@@ -2,6 +2,7 @@
 #define SPLASHWIDGET_H
 
 #include <QDialog>
+//#include "QImageProgressBar.h"
 
 namespace Ui {
 class SplashWidget;
@@ -23,6 +24,8 @@ public:
     //设置提示信息
     void setInfo(const QString &info, int fontSizeMain = 15, int timeout = 0);
     void setInfo(const QString &info, bool allowClose, int fontSizeMain = 15, int timeout = 0);
+    void setInfo(const QString &info, bool allowClose, bool showProgress, int fontSizeMain = 15, int timeout = 0);
+    void updataProgress(unsigned long long value, unsigned long long maximum);
 
     Q_SIGNAL void sigCancel();
 
@@ -35,6 +38,7 @@ private slots:
 
 private:
     Ui::SplashWidget *ui;
+    //QImageProgressBar *progressBar = nullptr;
     int timeout = 0;
     int currentSec = 0;
 };

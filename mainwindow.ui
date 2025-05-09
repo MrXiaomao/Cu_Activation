@@ -2474,6 +2474,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
      <string>帮助</string>
     </property>
     <addaction name="action_help"/>
+    <addaction name="action_viewlog"/>
     <addaction name="action_about"/>
    </widget>
    <widget class="QMenu" name="menu_view">
@@ -2609,6 +2610,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
    </property>
    <property name="text">
     <string>帮助</string>
+   </property>
+   <property name="shortcut">
+    <string>F1</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
   <action name="action_about">
@@ -2786,6 +2793,24 @@ li.checked::marker { content: &quot;\2612&quot;; }
    </property>
    <property name="text">
     <string>产额标定系数</string>
+   </property>
+  </action>
+  <action name="action_viewlog">
+   <property name="icon">
+    <iconset resource="resource.qrc">
+     <normaloff>:/resource/log.png</normaloff>:/resource/log.png</iconset>
+   </property>
+   <property name="text">
+    <string>查看日志</string>
+   </property>
+   <property name="shortcut">
+    <string>F2</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::NoRole</enum>
    </property>
   </action>
  </widget>

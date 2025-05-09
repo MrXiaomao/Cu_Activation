@@ -15,15 +15,24 @@
   </property>
   <property name="styleSheet">
    <string notr="true">QWidget#SplashWidget{
-background-color:qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                stop: 0 #cbdcf1, 
-                stop: 0.5 #cddff4, 
-                stop: 1.0 #cddff4);
-border:2px solid;
-border-color:#cdcdcd;
+	background-color: rgb(0, 85, 127);
+	border:2px solid #cdcdcd;
 }</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <item row="2" column="0">
+    <spacer name="horizontalSpacer">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>207</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
    <item row="0" column="0" colspan="3">
     <widget class="QLabel" name="label_Info">
      <property name="sizePolicy">
@@ -37,6 +46,9 @@ border-color:#cdcdcd;
        <pointsize>25</pointsize>
       </font>
      </property>
+     <property name="styleSheet">
+      <string notr="true">color: rgb(255, 255, 255);</string>
+     </property>
      <property name="text">
       <string>量程正在设置中，请等待...</string>
      </property>
@@ -45,27 +57,7 @@ border-color:#cdcdcd;
      </property>
     </widget>
    </item>
-   <item row="1" column="0">
-    <spacer name="horizontalSpacer">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>207</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="1" column="1">
-    <widget class="QPushButton" name="pushButton_cancel">
-     <property name="text">
-      <string>取消</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="2">
+   <item row="2" column="2">
     <spacer name="horizontalSpacer_2">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -78,8 +70,39 @@ border-color:#cdcdcd;
      </property>
     </spacer>
    </item>
+   <item row="2" column="1">
+    <widget class="QPushButton" name="pushButton_cancel">
+     <property name="text">
+      <string>取消</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0" colspan="3">
+    <widget class="QImageProgressBar" name="progressBar" native="true">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>20</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>20</height>
+      </size>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QImageProgressBar</class>
+   <extends>QWidget</extends>
+   <header>qimageprogressbar.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

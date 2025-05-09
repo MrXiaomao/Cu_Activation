@@ -184,7 +184,7 @@ public:
     /*
      * 快速解析：文件是存放有效数据
     */
-    static void realQuickAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy, bool/*结束标识*/, bool */*是否被终止*/)> callback);
+    static void realQuickAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy, unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/, bool/*结束标识*/, bool */*是否被终止*/)> callback);
 };
 
 #endif // SYSUTILS_H

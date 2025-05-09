@@ -25,6 +25,8 @@
 #include <QJsonDocument>
 #include <QWhatsThis>
 #include <iostream>
+#include <QShortcut>
+#include <windows.h>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -723,6 +725,10 @@ void MainWindow::InitMainWindowUi()
     connect(ui->spinBox_2_leftE_2, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
     connect(ui->spinBox_2_rightE_2, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
 
+    // 注册全局快捷键
+    RegisterHotKey(reinterpret_cast<HWND>(this->winId()), 1, 0x00, VK_F1);
+    RegisterHotKey(reinterpret_cast<HWND>(this->winId()), 2, 0x00, VK_F2);
+
     slotUpdateEnTimeWidth();
     this->slotAppendMsg(QObject::tr("系统启动"), QtInfoMsg);
 }
@@ -885,7 +891,10 @@ void MainWindow::on_action_DataAnalysis_triggered()
         ui->tabWidget_client->setCurrentWidget(offlineDataAnalysisWidget);
     }
 */
-    this->setWindowTitle(this->property("offline-filename").toString() + " - Cu_Activation");
+    if (!this->property("offline-filename").toString().isEmpty())
+        this->setWindowTitle(this->property("offline-filename").toString() + " - Cu_Activation");
+    else
+        this->setWindowTitle("Cu_Activation");
 }
 
 #include "waveformmodel.h"
@@ -1977,7 +1986,10 @@ void MainWindow::on_tabWidget_client_currentChanged(int /*index*/)
     if (ui->tabWidget_client->currentWidget()->objectName() == "OfflineDataAnalysisWidget"){
         ui->toolBar_offline->show();
         ui->toolBar_online->hide();
-        this->setWindowTitle(this->property("offline-filename").toString() + " - Cu_Activation");
+        if (!this->property("offline-filename").toString().isEmpty())
+            this->setWindowTitle(this->property("offline-filename").toString() + " - Cu_Activation");
+        else
+            this->setWindowTitle("Cu_Activation");
     } else if (ui->tabWidget_client->currentWidget()->objectName() == "onlineDataAnalysisWidget"){
         ui->toolBar_offline->hide();
         ui->toolBar_online->show();
@@ -1999,3 +2011,42 @@ void MainWindow::on_action_openfile_triggered()
     emit offlineDataAnalysisWidget->sigStart();
 }
 
+#include <QDesktopServices>
+void MainWindow::on_action_help_triggered()
+{
+    //帮助
+    QString helpFilePath = QApplication::applicationDirPath() + "/帮助文档.pdf";
+
+    QDesktopServices::openUrl(QUrl::fromLocalFile(helpFilePath));
+}
+
+
+void MainWindow::on_action_viewlog_triggered()
+{
+    //查看日志
+    // 获取当前日期，并格式化为YYYY-MM-DD
+    QString currentDate = QDateTime::currentDateTime().toString("yyyy-MM-dd");
+
+    // 创建日志文件路径，例如：logs/2023-10-23.log
+    QString logFilePath = QDir::currentPath() + "/logs/Cu_Activation_" + currentDate + ".log";
+
+    QDesktopServices::openUrl(QUrl::fromLocalFile(logFilePath));
+}
+
+bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, long *result)
+{
+    MSG* msg = reinterpret_cast<MSG*>(message);
+    if (msg->message == WM_HOTKEY) {
+        switch (msg->wParam) {
+        case 1: // F1
+            emit ui->action_help->triggered();
+            break;
+        case 2: // F2
+            emit ui->action_viewlog->triggered();
+            break;
+        }
+        return true;
+    }
+
+    return QWidget::nativeEvent(eventType, message, result); // 传递给基类处理
+}

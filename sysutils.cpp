@@ -374,12 +374,16 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
     callback(DetTimeEnergy(), true, nullptr);
 }
 
-void SysUtils::realQuickAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy, bool, bool*)> callback)
+void SysUtils::realQuickAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy, unsigned long long/*文件进度*/, unsigned long long/*文件大小*/, bool, bool*)> callback)
 {
     FILE* input_file = fopen(filename, "rb");
     if (ferror(input_file))
         return ;
 
+    unsigned long long progress = 0/*文件进度*/;
+    _fseeki64(input_file, 0, SEEK_END);
+    unsigned long long filesize = _ftelli64(input_file)/*文件大小*/;
+    _fseeki64(input_file, 0, SEEK_SET);
     bool interrupted = false;
     while (!feof(input_file)){
         // 先获取时间能量对个数
@@ -391,18 +395,31 @@ void SysUtils::realQuickAnalyzeTimeEnergy(const char* filename, std::function<vo
         detTimeEnergy.channel = 0;
         detTimeEnergy.timeEnergy.resize(size);
         fread(reinterpret_cast<unsigned char*>(&detTimeEnergy.channel), 1, sizeof(detTimeEnergy.channel), input_file);
-        fread(reinterpret_cast<unsigned char*>(detTimeEnergy.timeEnergy.data()), 1, sizeof(TimeEnergy)*size, input_file);
+        size_t readSize = fread(reinterpret_cast<unsigned char*>(detTimeEnergy.timeEnergy.data()), sizeof(TimeEnergy), size, input_file);
 
-        callback(detTimeEnergy, false, &interrupted);
+        progress += 5/*sizeof(size)+sizeof(detTimeEnergy.channel)*/ + sizeof(TimeEnergy) * readSize;
+        if (readSize != size){
+            fclose(input_file);
+            input_file = nullptr;
+            interrupted = true;
+            callback(DetTimeEnergy(), progress, filesize, true, &interrupted);
+            std::vector<TimeEnergy>().swap(detTimeEnergy.timeEnergy);
+            return;
+        }
+
+        callback(detTimeEnergy, progress, filesize, false, &interrupted);
         if (interrupted){
             fclose(input_file);
             input_file = nullptr;
-            callback(DetTimeEnergy(), true, &interrupted);
+            callback(DetTimeEnergy(), progress, filesize, true, &interrupted);
+            std::vector<TimeEnergy>().swap(detTimeEnergy.timeEnergy);
             return;
         }
+
+        std::vector<TimeEnergy>().swap(detTimeEnergy.timeEnergy);
     }
 
     fclose(input_file);
     input_file = nullptr;
-    callback(DetTimeEnergy(), true, nullptr);
+    callback(DetTimeEnergy(), progress, filesize, true, nullptr);
 }

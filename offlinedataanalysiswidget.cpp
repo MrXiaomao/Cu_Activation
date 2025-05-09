@@ -2,14 +2,15 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-08 23:06:19
+ * @LastEditTime: 2025-05-09 09:47:44
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
 #include "ui_offlinedataanalysiswidget.h"
 #include "plotwidget.h"
+#include "splashwidget.h"
+
 #include <QButtonGroup>
-#include <iostream>
 #include <QFileDialog>
 #include <QAction>
 #include <QToolButton>
@@ -119,6 +120,25 @@ OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
         double result = active * cali_factor;
         ui->lineEdit_neutronYield->setText(QString::number(result, 'E', 5));
     });
+
+    connect(SplashWidget::instance(), &SplashWidget::sigCancel, this, [=](){
+        reAnalyzer = true;
+    });
+
+    connect(ui->spinBox_1_leftE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
+    connect(ui->spinBox_1_rightE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
+    connect(ui->spinBox_2_leftE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
+    connect(ui->spinBox_2_rightE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
+    slotUpdateEnTimeWidth();
+}
+
+void OfflineDataAnalysisWidget::slotUpdateEnTimeWidth()
+{
+    unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
+                               (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
+
+    PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
+    plotWidget->slotUpdateEnTimeWidth(EnWin);
 }
 
 OfflineDataAnalysisWidget::~OfflineDataAnalysisWidget()
@@ -196,6 +216,7 @@ void OfflineDataAnalysisWidget::initCustomPlot()
 #include "qlitethread.h"
 #include <QFileInfo>
 #include <QTextStream>
+#include <QTimer>
 void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
 {
     //重新初始化
@@ -257,6 +278,10 @@ void OfflineDataAnalysisWidget::slotStart()
         return;
     }
 
+    QTimer::singleShot(500, this, [=](){
+        SplashWidget::instance()->setInfo(tr("文件正在解析中，请等待..."), true, true);
+        SplashWidget::instance()->exec();
+    });
     //读取历史数据重新进行运算
     PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
     plotWidget->slotStart();
@@ -279,11 +304,14 @@ void OfflineDataAnalysisWidget::slotStart()
         QByteArray aDatas = validDataFileName.toLocal8Bit();
         vector<TimeEnergy> data1_2, data2_2;
 // #ifdef QT_NO_DEBUG
-        SysUtils::realQuickAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, bool eof, bool *interrupted){
+        SysUtils::realQuickAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/, bool eof, bool *interrupted){
 // #else
 //         SysUtils::realAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, bool eof, bool *interrupted){
 // #endif
+            SplashWidget::instance()->updataProgress(progress, filesize);
             if (eof){
+                SplashWidget::instance()->hide();
+
                 if (interrupted)
                     emit sigEnd(true);
                 else
@@ -295,7 +323,11 @@ void OfflineDataAnalysisWidget::slotStart()
             quint8 channel = detTimeEnergy.channel;
             while (!detTimeEnergy.timeEnergy.empty()){
                 TimeEnergy timeEnergy = detTimeEnergy.timeEnergy.front();
-                detTimeEnergy.timeEnergy.erase(detTimeEnergy.timeEnergy.begin());
+                //detTimeEnergy.timeEnergy.erase(detTimeEnergy.timeEnergy.begin());
+                TimeEnergy* data = detTimeEnergy.timeEnergy.data();
+                memmove(data, data + 1, detTimeEnergy.timeEnergy.size() - 1);
+                detTimeEnergy.timeEnergy.resize(detTimeEnergy.timeEnergy.size() - 1);
+
                 if (channel == 0x00){
                     data1_2.push_back(timeEnergy);
                 } else {
@@ -383,8 +415,6 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
         QMessageBox::information(this, tr("提示"), tr("文件解析意外被终止！"));
     else
     {
-        QMessageBox::information(this, tr("提示"), tr("文件解析已顺利完成！"));
-        
         // 读取活化测量的数据时刻区间[起始时间，结束时间]
         vector<CoincidenceResult> result = coincidenceAnalyzer->GetCoinResult();
         // int startTime = result.begin()->time;
@@ -410,9 +440,8 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
         ui->spinBox_end->setRange(startTime, endTime);  // 设置范围
 
         analyse(detParameter, startTime, endTime);
-        // double activeOmiga = coincidenceAnalyzer->getInintialActive(detParameter, startTime, endTime);
         
-        // emit sigActiveOmiga(activeOmiga);
+        QMessageBox::information(this, tr("提示"), tr("文件解析已顺利完成！"));
     }
 }
 
@@ -458,6 +487,10 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
     for(auto coin:coinResult)
     {
         // 手动测量，在改变能窗之前的数据不处理，注意剔除。现在数据没有保存这一段数据
+        if(reAnalyzer){
+
+            return;
+        }
         if(coin.time > start_time && coin.time<time_end) {
             int n1 = coin.CountRate1;
             int n2 = coin.CountRate2;
@@ -523,8 +556,8 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
 
     //f因子。暂且称为积分因子
     //这里不考虑Cu62的衰变分支，也就是测量必须时采用冷却时长远大于Cu62半衰期(9.67min = 580s)的数据。
-    double T_halflife = 9.67*60; //单位s，Cu62的半衰期
-    // double T_halflife = 12.7*60*60; // 单位s,Cu64的半衰期
+    // double T_halflife = 9.67*60; //单位s，Cu62的半衰期
+    double T_halflife = 12.7*60*60; // 单位s,Cu64的半衰期
     double lamda = log(2) / T_halflife;
     double f = 1/lamda*(exp(-lamda*start_time) - exp(-lamda*time_end));
 

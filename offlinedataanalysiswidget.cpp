@@ -114,7 +114,7 @@ OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
             }
         }
         else{
-            qCritical()<<"未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
+            qCritical().noquote()<<"未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
         }
 
         double result = active * cali_factor;
@@ -278,10 +278,10 @@ void OfflineDataAnalysisWidget::slotStart()
         return;
     }
 
-    QTimer::singleShot(1, this, [=](){
-        SplashWidget::instance()->setInfo(tr("文件正在解析中，请等待..."), true, true);
-        SplashWidget::instance()->exec();
-    });
+    firstPopup = true;
+    reAnalyzer = false;
+    memset(&totalSingleSpectrum, 0, sizeof(totalSingleSpectrum));
+
     //读取历史数据重新进行运算
     PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
     plotWidget->slotStart();
@@ -308,12 +308,23 @@ void OfflineDataAnalysisWidget::slotStart()
 // #else
 //         SysUtils::realAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, bool eof, bool *interrupted){
 // #endif
-            SplashWidget::instance()->updataProgress(progress, filesize);
+            if (firstPopup && !eof){
+                QTimer::singleShot(1, this, [=](){
+                    SplashWidget::instance()->setInfo(tr("文件正在解析中，请等待..."), true, true);
+                    SplashWidget::instance()->exec();
+                });
+
+                firstPopup = false;
+            }
+
+            emit SplashWidget::instance()->sigUpdataProgress(progress, filesize);
+
             if (eof){
                 if (interrupted)
                     emit sigEnd(true);
-                else
+                else{
                     emit sigEnd(false);
+                }
 
                 return;
             }
@@ -321,7 +332,7 @@ void OfflineDataAnalysisWidget::slotStart()
             quint8 channel = detTimeEnergy.channel;
             while (!detTimeEnergy.timeEnergy.empty()){
                 TimeEnergy timeEnergy = detTimeEnergy.timeEnergy.front();
-                //detTimeEnergy.timeEnergy.erase(detTimeEnergy.timeEnergy.begin());
+                //detTimeEnergy.timeEnergy.erase(detTimeEnergy.timeEnergy.begin());//如果数组特别大，erase比较耗时
                 TimeEnergy* data = detTimeEnergy.timeEnergy.data();
                 memmove(data, data + 1, (detTimeEnergy.timeEnergy.size() - 1)*sizeof(TimeEnergy));
                 detTimeEnergy.timeEnergy.resize(detTimeEnergy.timeEnergy.size() - 1);
@@ -355,7 +366,15 @@ void OfflineDataAnalysisWidget::doEnWindowData(SingleSpectrum r1, vector<Coincid
         return;
 
     //保存信息
-    {}
+    {
+        for (int i=0; i<MULTI_CHANNEL; ++i){
+            totalSingleSpectrum.spectrum[0][i] += r1.spectrum[0][i];
+            totalSingleSpectrum.spectrum[1][i] += r1.spectrum[1][i];
+        }
+
+        // 先不着急刷新图像和更新计数率，等数据全部处理完了再一次性刷新，避免耗时太久
+        return;
+    }
 
     //时间步长，求均值
     if (_stepT > 1){
@@ -409,6 +428,8 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
     }
     else
     {
+        SplashWidget::instance()->setInfo(tr("开始数据分析，请等待..."));
+
         // 读取活化测量的数据时刻区间[起始时间，结束时间]
         vector<CoincidenceResult> result = coincidenceAnalyzer->GetCoinResult();
         // int startTime = result.begin()->time;
@@ -434,7 +455,47 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
         ui->spinBox_end->setRange(startTime, endTime);  // 设置范围
 
         analyse(detParameter, startTime, endTime);
-        
+
+        //在这里一次性更新图像和计数率，可以最大程度减小系统损耗时间
+        {
+            size_t count = result.size();
+            int _stepT = ui->spinBox_step->value();
+
+            //时间步长，求均值
+            if (_stepT > 1){
+                if (count>1 && (count % _stepT == 0)){
+                    vector<CoincidenceResult> rr3;
+
+                    for (size_t i=0; i < count/_stepT; i++){
+                        CoincidenceResult v;
+                        for (int j=0; j<_stepT; ++j){
+                            size_t posI = i*_stepT + j;
+                            v.CountRate1 += result[posI].CountRate1;
+                            v.CountRate2 += result[posI].CountRate2;
+                            v.ConCount_single += result[posI].ConCount_single;
+                            v.ConCount_multiple += result[posI].ConCount_multiple;
+                        }
+
+                        //给出平均计数率cps,注意，这里是整除，当计数率小于1cps时会变成零。
+                        v.CountRate1 /= _stepT;
+                        v.CountRate2 /= _stepT;
+                        v.ConCount_single /= _stepT;
+                        v.ConCount_multiple /= _stepT;
+                        rr3.push_back(v);
+                    }
+
+                    emit sigPlot(totalSingleSpectrum, rr3);
+                }
+            } else{
+                vector<CoincidenceResult> rr3;
+                for (size_t i=0; i < count; i++){
+                    rr3.push_back(result[i]);
+                }
+
+                emit sigPlot(totalSingleSpectrum, rr3);
+            }
+        }
+
         SplashWidget::instance()->hide();
         QMessageBox::information(this, tr("提示"), tr("文件解析已顺利完成！"));
     }
@@ -485,6 +546,7 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
         if(reAnalyzer){
             return;
         }
+
         if(coin.time > start_time && coin.time<time_end) {
             int n1 = coin.CountRate1;
             int n2 = coin.CountRate2;

@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-08 23:24:00
+ * @LastEditTime: 2025-05-09 18:39:18
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -419,11 +419,11 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
             }
             else
             {
-                // qCritical()<<"探测器1自动高斯拟合发生异常,可能原因，选取的初始峰位不具有高斯形状，无法进行高斯拟合";
+                // qCritical().noquote() <<"探测器1自动高斯拟合发生异常,可能原因，选取的初始峰位不具有高斯形状，无法进行高斯拟合";
             }
         }
         else{
-            // qCritical()<<"探测器1自动高斯拟合发生异常,待拟合的数据点数小于6个，无法拟合";
+            // qCritical().noquote() <<"探测器1自动高斯拟合发生异常,待拟合的数据点数小于6个，无法拟合";
         }
     }
 
@@ -457,7 +457,7 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
             else EnergyWindow[3] = MULTI_CHANNEL - 1u;
         }
         else{
-            // qCritical()<<"探测器2 自动高斯拟合发生异常,可能原因，选取的初始峰位不具有高斯形状，无法进行高斯拟合";
+            // qCritical().noquote()<<"探测器2 自动高斯拟合发生异常,可能原因，选取的初始峰位不具有高斯形状，无法进行高斯拟合";
         }
     }
     if(changed) GaussFitLog.push_back({countCoin, EnergyWindow[0], EnergyWindow[1], EnergyWindow[2], EnergyWindow[3]});

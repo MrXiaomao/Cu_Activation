@@ -186,7 +186,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                 file.close();
             }
         }
-        qInfo() << tr("本次测量参数配置已存放在：%1").arg(configResultFile);
+        qInfo().noquote() << tr("本次测量参数配置已存放在：%1").arg(configResultFile);
         
         //符合测量模式保存测量能谱文件
         QString SpecFile = validDataFileName + ".累积能谱";
@@ -206,7 +206,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                 file.close();
             }
         }
-        qInfo() << tr("本次测量累积能谱已存放在：%1").arg(SpecFile);
+        qInfo().noquote() << tr("本次测量累积能谱已存放在：%1").arg(SpecFile);
     });
 
 
@@ -495,7 +495,7 @@ void CommandHelper::handleAutoMeasureNetData()
         //等待硬件触发指令
         if (binaryData.compare(cmdExternalTrigger) == 0){
             qDebug()<<"Recv HEX: "<<binaryData.toHex(' ');
-            qInfo()<<"接收到硬触发信号，探测器内部时钟开始计时";
+            qInfo().noquote()<<"接收到硬触发信号，探测器内部时钟开始计时";
             // 自动测量正式开始
             binaryData.remove(0, cmdExternalTrigger.size());
 
@@ -975,9 +975,9 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     //网口数据缓存文件，波形模式、能谱模式直接存网口数据缓存文件
     pfSaveNet = new QFile(netDataFileName);
     if (pfSaveNet->open(QIODevice::WriteOnly)) {
-        qInfo() << tr("创建网口数据缓存文件成功，文件名：%1").arg(netDataFileName);
+        qInfo().noquote() << tr("创建网口数据缓存文件成功，文件名：%1").arg(netDataFileName);
     } else {
-        qWarning() << tr("创建网口数据缓存文件失败，文件名：%1").arg(netDataFileName);
+        qWarning().noquote() << tr("创建网口数据缓存文件失败，文件名：%1").arg(netDataFileName);
     }
 #endif
 
@@ -992,9 +992,9 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     if (pfSaveVaildData->open(QIODevice::WriteOnly)) {
         unsigned int FileHead = 0xFFFFFFFF; //文件包头，有效数据的识别码
         pfSaveVaildData->write((char*)&FileHead, sizeof(FileHead));
-        qInfo() << tr("创建缓存文件成功，文件名：%1").arg(validDataFileName);
+        qInfo().noquote() << tr("创建缓存文件成功，文件名：%1").arg(validDataFileName);
     } else {
-        qWarning() << tr("创建缓存文件失败，文件名：%1").arg(validDataFileName);
+        qWarning().noquote() << tr("创建缓存文件失败，文件名：%1").arg(validDataFileName);
     }
 
     cmdPool.clear();
@@ -1172,7 +1172,7 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
     if (pfSaveNet->open(QIODevice::WriteOnly)) {
         qDebug() << tr("创建网口数据缓存文件成功，文件名：%1").arg(netDataFileName);
     } else {
-        qWarning() << tr("创建网口数据缓存文件失败，文件名：%1").arg(netDataFileName);
+        qWarning().noquote() << tr("创建网口数据缓存文件失败，文件名：%1").arg(netDataFileName);
     }
 #endif
 
@@ -1181,7 +1181,7 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
     if (pfSaveVaildData->open(QIODevice::WriteOnly)) {
         qDebug() << tr("创建缓存文件成功，文件名：%1").arg(validDataFileName);
     } else {
-        qWarning() << tr("创建缓存文件失败，文件名：%1").arg(validDataFileName);
+        qWarning().noquote() << tr("创建缓存文件失败，文件名：%1").arg(validDataFileName);
     }
 
     cmdPool.clear();
@@ -1912,7 +1912,7 @@ void CommandHelper::analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult>
 
 bool CommandHelper::checkAndClearQByteArray(QByteArray &data) {
     if (data.capacity() > MAX_BYTEARRAY_SIZE) {
-        qCritical() << "探测器计数率超出当前仪器计数率设计的上限，数据会发生丢失，导致计数率失真。\n"
+        qCritical().noquote()<< "探测器计数率超出当前仪器计数率设计的上限，数据会发生丢失，导致计数率失真。\n"
                    <<"可能原因: 1)、放射性活度过高; 2)波形触发阈值过低导致。";
         data.clear();
         data.squeeze(); // 释放内存

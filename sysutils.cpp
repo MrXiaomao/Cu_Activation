@@ -404,6 +404,9 @@ void SysUtils::realQuickAnalyzeTimeEnergy(const char* filename, std::function<vo
         // 先获取时间能量对个数
         uint32_t size = 0;
         fread(reinterpret_cast<uint32_t*>(&size), 1, sizeof(size), input_file);
+        if (size == 0){
+            break;//文件数据读完了
+        }
 
         // 再获取时间能量对数据信息
         DetTimeEnergy detTimeEnergy;

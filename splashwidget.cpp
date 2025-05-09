@@ -20,8 +20,10 @@ SplashWidget::SplashWidget(QWidget *parent) :
     ui->progressBar->setTextVisible(true);
     ui->progressBar->setBackgroundImg(QString::fromLocal8Bit(":/resource/ProgressBar.png"));
     ui->progressBar->setBarImg(QString::fromLocal8Bit(":/resource/ProgressSlider.png"));
-    ui->progressBar->setValue(50);
+    ui->progressBar->setValue(0);
     ui->progressBar->hide();
+
+    connect(this, SIGNAL(sigUpdataProgress(unsigned long long,unsigned long long)), this, SLOT(slotUpdataProgress(unsigned long long,unsigned long long)), Qt::AutoConnection);
 
     //关闭倒计时定时器
     QTimer *timer = new QTimer(this);
@@ -101,4 +103,9 @@ void SplashWidget::updataProgress(unsigned long long value, unsigned long long m
 {
     ui->progressBar->setRange(0, maximum);
     ui->progressBar->setValue(value);
+}
+
+void SplashWidget::slotUpdataProgress(unsigned long long value, unsigned long long maximum)
+{
+    updataProgress(value, maximum);
 }

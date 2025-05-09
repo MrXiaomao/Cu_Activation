@@ -28,6 +28,8 @@ public:
     void updataProgress(unsigned long long value, unsigned long long maximum);
 
     Q_SIGNAL void sigCancel();
+    Q_SIGNAL void sigUpdataProgress(unsigned long long value, unsigned long long maximum);
+    Q_SLOT void slotUpdataProgress(unsigned long long value, unsigned long long maximum);
 
 protected:
     //void showEvent(QShowEvent *);

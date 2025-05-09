@@ -384,8 +384,25 @@ void PlotWidget::slotCountRefreshTimelength()
 
     this->setProperty("autoRefreshModel", true);
     this->setProperty("refresh-time-range", timeRange);
+
+    //////////////////
     QList<QCustomPlot*> customPlots = getAllCountCustomPlot();
-    for (auto customPlot : customPlots){
+    for (auto customPlot : customPlots){        
+        {
+            if (timeRange == -1){
+                customPlot->xAxis->setRange(0, customPlot->xAxis->range().upper);
+                customPlot->xAxis2->setRange(0, customPlot->xAxis->range().upper);
+            }
+            else if (customPlot->xAxis->range().upper > timeRange){
+                customPlot->xAxis->setRange(customPlot->xAxis->range().upper - timeRange, customPlot->xAxis->range().upper);
+                customPlot->xAxis2->setRange(customPlot->xAxis->range().upper - timeRange, customPlot->xAxis->range().upper);
+            }
+            else{
+                customPlot->xAxis->setRange(0, timeRange);
+                customPlot->xAxis2->setRange(0, timeRange);
+            }
+        }
+
         customPlot->rescaleAxes(true);
         customPlot->replot();
     }
@@ -467,7 +484,7 @@ void PlotWidget::dispatchAdditionalTipFunction(QCustomPlot *customPlot)
 
             coordsTipItemArrowLine->end->setParentAnchor(coordsTipItemTracer->position);
             coordsTipItemArrowLine->start->setParentAnchor(coordsTipItemArrowLine->end);
-            coordsTipItemArrowLine->start->setCoords(25, 0);
+            coordsTipItemArrowLine->start->setCoords(50, -50);
             break;
         }
     }
@@ -1171,7 +1188,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                         if (gaussResultItemText){
                                             gaussResultItemText->setVisible(false);
                                         }
-                                        qCritical()<<"高斯拟合发生错误,可能原因：选取的峰位不具有高斯形状，无法进行高斯拟合，\n建议：请重新选取高斯曲线区域或等统计涨落变小后再选取";
+                                        qCritical().noquote()<<"高斯拟合发生错误,可能原因：选取的峰位不具有高斯形状，无法进行高斯拟合，\n建议：请重新选取高斯曲线区域或等统计涨落变小后再选取";
                                     }
                                 }
                                 else
@@ -1180,12 +1197,12 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                     if (gaussResultItemText){
                                         gaussResultItemText->setVisible(false);
                                     }
-                                    qCritical()<<"高斯拟合发生错误,可能原因：选取的初始峰位不具有高斯形状，无法进行高斯拟合，\n建议：请重新选取高斯曲线区域或等统计涨落变小后再选取";
+                                    qCritical().noquote()<<"高斯拟合发生错误,可能原因：选取的初始峰位不具有高斯形状，无法进行高斯拟合，\n建议：请重新选取高斯曲线区域或等统计涨落变小后再选取";
                                 }
                             }
                             else
                             {
-                                qInfo()<<"框选数据点过少，请至少框选6个及以上数据点";
+                                qInfo().noquote()<<"框选数据点过少，请至少框选6个及以上数据点";
                             }
                         }
                     }
@@ -1472,8 +1489,8 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
                         customPlotDet1->xAxis2->setRange(keys.back() - timeRange, keys.back());
                     }
                     else{
-                        customPlotDet1->xAxis->setRange(0, keys.back());
-                        customPlotDet1->xAxis2->setRange(0, keys.back());
+                        customPlotDet1->xAxis->setRange(0, timeRange/*keys.back()*/);
+                        customPlotDet1->xAxis2->setRange(0, timeRange/*keys.back()*/);
                     }
                 }
             }
@@ -1530,8 +1547,8 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
                         customPlotDet2->xAxis2->setRange(keys.back() - timeRange, keys.back());
                     }
                     else{
-                        customPlotDet2->xAxis->setRange(0, keys.back());
-                        customPlotDet2->xAxis2->setRange(0, keys.back());
+                        customPlotDet2->xAxis->setRange(0, timeRange/*keys.back()*/);
+                        customPlotDet2->xAxis2->setRange(0, timeRange/*keys.back()*/);
                     }
                 }
             }
@@ -1588,8 +1605,8 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
                         customPlotCoResult->xAxis2->setRange(0, keys.back());
                     }
                     else{
-                        customPlotCoResult->xAxis->setRange(0, keys.back());
-                        customPlotCoResult->xAxis2->setRange(0, keys.back());
+                        customPlotCoResult->xAxis->setRange(0, timeRange/*keys.back()*/);
+                        customPlotCoResult->xAxis2->setRange(0, timeRange/*keys.back()*/);
                     }
                 }
             }

@@ -108,7 +108,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(controlHelper, &ControlHelper::sigError, this, [=](QString msg){
         // emit sigAppengMsg(msg, QtMsgType::QtWarningMsg);
-        qCritical()<<msg;
+        qCritical().noquote()<<msg;
     });
 
     //外设状态
@@ -127,7 +127,7 @@ MainWindow::MainWindow(QWidget *parent)
         QLabel* label_Connected = this->findChild<QLabel*>("label_Connected");
         label_Connected->setText(msg);
         // emit sigAppengMsg(msg, QtInfoMsg);
-        qInfo()<<msg;
+        qInfo().noquote()<<msg;
         emit sigRefreshUi();
 
         //外设连接成功，主动连接电源
@@ -165,8 +165,8 @@ MainWindow::MainWindow(QWidget *parent)
                 emit sigRefreshUi();
 
                 SplashWidget::instance()->hide();
-                // emit sigAppengMsg(tr("位移平台已到位"), QtInfoMsg);
-                qInfo()<<"位移平台已到位";
+                //emit sigAppengMsg(tr("位移平台已到位"), QtInfoMsg);
+                qInfo().noquote() << tr("位移平台已到位");
             }
 
             SplashWidget::instance()->hide();
@@ -183,7 +183,7 @@ MainWindow::MainWindow(QWidget *parent)
 
         QString msg = QString(tr("网络故障，电源连接失败！"));
         // emit sigAppengMsg(msg, QtCriticalMsg);
-        qCritical()<<msg;
+        qCritical().noquote()<<msg;
         emit sigRefreshUi();
     });
 
@@ -225,7 +225,7 @@ MainWindow::MainWindow(QWidget *parent)
 
             QString msg = QString(tr("电源状态：%1")).arg(on ? tr("开") : tr("关"));
             // emit sigAppengMsg(msg, QtInfoMsg);
-            qInfo()<<msg;
+            qInfo().noquote()<<msg;
             emit sigRefreshUi();
         }
     });
@@ -252,7 +252,7 @@ MainWindow::MainWindow(QWidget *parent)
             coolingTimer_auto->start(ui->spinBox_coolingTime_2->value()*1000);
         }
             // ui->start_time_text->setText(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
-            // qInfo()<<"接收到触发信号，仪器内部时钟开始计时";//注意，在sigMeasureStart信号之前已经打印了qInfo()日志
+            // qInfo().noquote()<<"接收到触发信号，仪器内部时钟开始计时";//注意，在sigMeasureStart信号之前已经打印了qInfo().noquote()日志
 
         //开启测量时钟
         if (mmode == mmManual || mmode == mmAuto){//手动/自动测量
@@ -272,7 +272,7 @@ MainWindow::MainWindow(QWidget *parent)
 
         QString msg = tr("测量正式开始");
         // emit sigAppengMsg(msg, QtInfoMsg);
-        qInfo()<<msg;
+        qInfo().noquote()<<msg;
         emit sigRefreshUi();
     });
 
@@ -312,7 +312,7 @@ MainWindow::MainWindow(QWidget *parent)
             }
         }
         else{
-            qCritical()<<"未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
+            qCritical().noquote()<<"未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
         }
 
         double result = a * cali_factor;
@@ -333,7 +333,7 @@ MainWindow::MainWindow(QWidget *parent)
         this->setProperty("measure-status", msEnd);
         QString msg = tr("测量已停止");
         // emit sigAppengMsg(msg, QtInfoMsg);
-        qInfo()<<msg;
+        qInfo().noquote()<<msg;
         emit sigRefreshUi();
     });
 
@@ -349,7 +349,7 @@ MainWindow::MainWindow(QWidget *parent)
 
         QString msg = QString(tr("网络故障，探测器连接失败！"));
         // emit sigAppengMsg(msg, QtCriticalMsg);
-        qCritical()<<msg;
+        qCritical().noquote()<<msg;
         emit sigRefreshUi();
     });
 
@@ -364,7 +364,7 @@ MainWindow::MainWindow(QWidget *parent)
 
         QString msg = QString(tr("探测器状态：%1")).arg(on ? tr("开") : tr("关"));
         // emit sigAppengMsg(msg, QtInfoMsg);
-        qInfo()<<msg;
+        qInfo().noquote()<<msg;
         emit sigRefreshUi();
     });
 
@@ -670,7 +670,7 @@ void MainWindow::InitMainWindowUi()
     connect(measureTimer, &QTimer::timeout, this, [=](){
         QString msg = tr("定时测量倒计时结束，自动停止测量！");
         // emit sigAppengMsg(msg, QtInfoMsg);
-        qInfo()<<msg;
+        qInfo().noquote()<<msg;
 
         //自动测量时间到，停止测量
         measureTimer->stop();
@@ -699,7 +699,7 @@ void MainWindow::InitMainWindowUi()
     coolingTimer_auto->setObjectName("coolingTimer_auto");
     connect(coolingTimer_auto, &QTimer::timeout, this, [=](){
         coolingTimer_auto->stop();
-        qInfo()<<"探测器已经上电开机";
+        qInfo().noquote()<<"探测器已经上电开机";
         ui->lineEdit_autoStatus->setText("测量中...");
     });
 
@@ -741,7 +741,8 @@ void MainWindow::InitMainWindowUi()
     RegisterHotKey(reinterpret_cast<HWND>(this->winId()), 2, 0x00, VK_F2);
 
     slotUpdateEnTimeWidth();
-    this->slotAppendMsg(QObject::tr("系统启动"), QtInfoMsg);
+    qInfo().noquote() << QObject::tr("系统启动");
+    //emit sigAppengMsg(QObject::tr("系统启动"), QtInfoMsg);
 }
 
 void MainWindow::slotUpdateEnTimeWidth()
@@ -1195,7 +1196,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         ui->pushButton_measure->setEnabled(false);
         ui->pushButton_measure_2->setText(tr("停止测量"));
         ui->lineEdit_autoStatus->setText("等待触发");
-        qInfo()<<"等待触发";
+        qInfo().noquote()<<"等待触发";
 
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
         plotWidget->slotStart(multi_CHANNEL);
@@ -1224,7 +1225,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         commandHelper->slotStartAutoMeasure(detectorParameter);
 
         // ui->pushButton_measure_2_tip->setText(tr("等待触发..."));
-        // qInfo()<<"等待触发...";
+        // qInfo().noquote()<<"等待触发...";
         QTimer::singleShot(30000, this, [=](){
             //指定时间未收到开始测量指令，则按钮恢复初始状态
             if (this->property("measure-status").toUInt() == msPrepare){
@@ -1397,7 +1398,7 @@ void MainWindow::on_action_restore_triggered()
 {
     if (QMessageBox::warning(this, tr("提示"), tr("是否恢复出厂设置？\n恢复出厂设置只影响软件界面的默认参数，不影响硬件的相关参数。"), QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) != QMessageBox::Yes)
 
-    qInfo() << tr("恢复出厂设置");
+    qInfo().noquote() << tr("恢复出厂设置");
     if (CopyDirectoryFiles("./config/default", "./config/"))
         this->load();
 }
@@ -1613,7 +1614,7 @@ void MainWindow::slotRefreshUi()
             //如果提前点击停止测量，则直接停止冷却时长的定时器
             QTimer* coolingTimer_auto = this->findChild<QTimer*>("coolingTimer_auto");
             coolingTimer_auto->stop();
-            qInfo()<<"探测器已断电，并关机";
+            qInfo().noquote()<<"探测器已断电，并关机";
         }
 
         // 手动测量
@@ -1866,9 +1867,15 @@ void MainWindow::on_pushButton_refresh_3_clicked()
 
 void MainWindow::on_action_line_log_triggered()
 {
+    if (ui->tabWidget_client->currentWidget()->objectName() == "tabWidget_workLog")
+        return ;
+
     if (this->property("ScaleLogarithmicType").toBool()){
         this->setProperty("ScaleLogarithmicType", false);
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
+        if (ui->tabWidget_client->currentWidget()->objectName() == "OfflineDataAnalysisWidget"){
+            plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
+        }
         // plotWidget->slotResetPlot();
         plotWidget->switchToLogarithmicMode(false);
 
@@ -1878,6 +1885,9 @@ void MainWindow::on_action_line_log_triggered()
     } else {
         this->setProperty("ScaleLogarithmicType", true);
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
+        if (ui->tabWidget_client->currentWidget()->objectName() == "OfflineDataAnalysisWidget"){
+            plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
+        }
         plotWidget->switchToLogarithmicMode(true);
 
         ui->action_line_log->setText(tr("线性"));
@@ -2012,7 +2022,7 @@ void MainWindow::on_tabWidget_client_currentChanged(int /*index*/)
 //工具栏打开文件按钮
 void MainWindow::on_action_openfile_triggered()
 {
-    QString filePath = QFileDialog::getOpenFileName(this, tr("打开文件"),";",tr("能谱文件 (*.dat)"));
+    QString filePath = QFileDialog::getOpenFileName(this, tr("打开文件"),";",tr("符合测量文件 (*.dat)"));
     if (filePath.isEmpty() || !QFileInfo::exists(filePath))
         return;
 

@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-09 10:23:58
+ * @LastEditTime: 2025-05-09 17:09:05
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -278,7 +278,7 @@ void OfflineDataAnalysisWidget::slotStart()
         return;
     }
 
-    QTimer::singleShot(500, this, [=](){
+    QTimer::singleShot(1, this, [=](){
         SplashWidget::instance()->setInfo(tr("文件正在解析中，请等待..."), true, true);
         SplashWidget::instance()->exec();
     });
@@ -309,7 +309,7 @@ void OfflineDataAnalysisWidget::slotStart()
 //         SysUtils::realAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, bool eof, bool *interrupted){
 // #endif
             SplashWidget::instance()->updataProgress(progress, filesize);
-            if (eof){                
+            if (eof){
                 if (interrupted)
                     emit sigEnd(true);
                 else
@@ -332,12 +332,6 @@ void OfflineDataAnalysisWidget::slotStart()
                     data2_2.push_back(timeEnergy);
                 }
             }
-            
-            //读取开始保存数据的FPGA时刻。也就是最小的FPGA时刻，作为符合测量的时间区间左端点。
-            // if (data1_2.size() > 0 && data2_2.size() > 0 )
-            // {
-
-            // }
             
             //记录FPGA内的最大时刻，作为符合测量的时间区间右端点。
 

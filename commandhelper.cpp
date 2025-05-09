@@ -990,6 +990,8 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     //有效数据缓存文件。符合模式（也称粒子模式）只存有效数据
     pfSaveVaildData = new QFile(validDataFileName);
     if (pfSaveVaildData->open(QIODevice::WriteOnly)) {
+        unsigned int FileHead = 0xFFFFFFFF; //文件包头，有效数据的识别码
+        pfSaveVaildData->write((char*)&FileHead, sizeof(FileHead));
         qInfo() << tr("创建缓存文件成功，文件名：%1").arg(validDataFileName);
     } else {
         qWarning() << tr("创建缓存文件失败，文件名：%1").arg(validDataFileName);
@@ -1472,20 +1474,6 @@ void CommandHelper::netFrameWorkThead()
                     detTimeEnergy.channel = channel;
                     detTimeEnergy.timeEnergy.swap(temp);
                     currentSpectrumFrames.push_back(detTimeEnergy);
-
-                    // //将一个粒子的有效数据写入文件
-                    // if (detectorParameter.transferModel == 0x05){
-                    //     if (nullptr != pfSaveVaildData){
-                    //         //有效数据对4字节
-                    //         quint32 size = detTimeEnergy.timeEnergy.size();
-                    //         pfSaveVaildData->write((char*)&size, sizeof(quint32));
-                    //         //探测器编号0/1:1字节
-                    //         pfSaveVaildData->write((char*)&detTimeEnergy.channel, sizeof(detTimeEnergy.channel));
-                    //         //数据对:12字节对
-                    //         pfSaveVaildData->write((char*)detTimeEnergy.timeEnergy.data(), sizeof(TimeEnergy)*size);
-                    //         pfSaveVaildData->flush();
-                    //     }
-                    // }
                 }
 
                 QDateTime tmStop = QDateTime::currentDateTime();
@@ -1609,7 +1597,6 @@ void CommandHelper::detTimeEnergyWorkThread()
                         }
                         else if(detectorParameter.measureModel == mmManual)
                         {
-                            // saveParticleInfo(data1_2, data2_2);
                             //在选定能窗前不进行符合数据处理，也就是不给出计数曲线，只有能谱数据。
                             if (this->autoChangeEnWindow)
                             {
@@ -1622,8 +1609,6 @@ void CommandHelper::detTimeEnergyWorkThread()
                                 //只计算能谱数据，不进行符合计数
                                 coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, \
                                     detectorParameter.timeWidth, detectorParameter.delayTime, false, false);
-                                // coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, \
-                                //     detectorParameter.timeWidth, detectorParameter.delayTime, true, false);
                             }
                         }
 #ifdef QT_DEBUG

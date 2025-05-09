@@ -380,11 +380,26 @@ void SysUtils::realQuickAnalyzeTimeEnergy(const char* filename, std::function<vo
     if (ferror(input_file))
         return ;
 
-    unsigned long long progress = 0/*文件进度*/;
+    unsigned long long progress = 0/*文件进度*/;//字节数
     _fseeki64(input_file, 0, SEEK_END);
     unsigned long long filesize = _ftelli64(input_file)/*文件大小*/;
     _fseeki64(input_file, 0, SEEK_SET);
     bool interrupted = false;
+    //识别是否为有效数据文件
+    unsigned int FileHead = 0xFFFFFFFF; //文件包头，有效数据的识别码
+    progress = 4;//字节数
+    if(!feof(input_file)){
+        fread(reinterpret_cast<unsigned char*>(&FileHead), 1, sizeof(FileHead), input_file);
+        if(FileHead != 0xFFFFFFFF) {
+            //不是合法文件，提醒用户
+            fclose(input_file);
+            input_file = nullptr;
+            interrupted = true;
+            callback(DetTimeEnergy(), 1, filesize, true, &interrupted);
+            return;
+        }
+    }
+
     while (!feof(input_file)){
         // 先获取时间能量对个数
         uint32_t size = 0;

@@ -107,7 +107,8 @@ MainWindow::MainWindow(QWidget *parent)
     controlHelper = ControlHelper::instance();
 
     connect(controlHelper, &ControlHelper::sigError, this, [=](QString msg){
-        emit sigAppengMsg(msg, QtMsgType::QtWarningMsg);
+        // emit sigAppengMsg(msg, QtMsgType::QtWarningMsg);
+        qCritical()<<msg;
     });
 
     //外设状态
@@ -125,7 +126,8 @@ MainWindow::MainWindow(QWidget *parent)
         QString msg = QString(tr("外设状态：%2")).arg(on ? tr("开") : tr("关"));
         QLabel* label_Connected = this->findChild<QLabel*>("label_Connected");
         label_Connected->setText(msg);
-        emit sigAppengMsg(msg, QtInfoMsg);
+        // emit sigAppengMsg(msg, QtInfoMsg);
+        qInfo()<<msg;
         emit sigRefreshUi();
 
         //外设连接成功，主动连接电源
@@ -163,7 +165,8 @@ MainWindow::MainWindow(QWidget *parent)
                 emit sigRefreshUi();
 
                 SplashWidget::instance()->hide();
-                emit sigAppengMsg(tr("位移平台已到位"), QtInfoMsg);
+                // emit sigAppengMsg(tr("位移平台已到位"), QtInfoMsg);
+                qInfo()<<"位移平台已到位";
             }
 
             SplashWidget::instance()->hide();
@@ -179,7 +182,8 @@ MainWindow::MainWindow(QWidget *parent)
         this->setProperty("relay_on", false);
 
         QString msg = QString(tr("网络故障，电源连接失败！"));
-        emit sigAppengMsg(msg, QtCriticalMsg);
+        // emit sigAppengMsg(msg, QtCriticalMsg);
+        qCritical()<<msg;
         emit sigRefreshUi();
     });
 
@@ -220,7 +224,8 @@ MainWindow::MainWindow(QWidget *parent)
             //异常退出先不要恢复继电器状态，等重启继电器之后再说吧
 
             QString msg = QString(tr("电源状态：%1")).arg(on ? tr("开") : tr("关"));
-            emit sigAppengMsg(msg, QtInfoMsg);
+            // emit sigAppengMsg(msg, QtInfoMsg);
+            qInfo()<<msg;
             emit sigRefreshUi();
         }
     });
@@ -266,7 +271,8 @@ MainWindow::MainWindow(QWidget *parent)
         }
 
         QString msg = tr("测量正式开始");
-        emit sigAppengMsg(msg, QtInfoMsg);
+        // emit sigAppengMsg(msg, QtInfoMsg);
+        qInfo()<<msg;
         emit sigRefreshUi();
     });
 
@@ -326,7 +332,8 @@ MainWindow::MainWindow(QWidget *parent)
 
         this->setProperty("measure-status", msEnd);
         QString msg = tr("测量已停止");
-        emit sigAppengMsg(msg, QtInfoMsg);
+        // emit sigAppengMsg(msg, QtInfoMsg);
+        qInfo()<<msg;
         emit sigRefreshUi();
     });
 
@@ -341,7 +348,8 @@ MainWindow::MainWindow(QWidget *parent)
         measureTimer->stop();
 
         QString msg = QString(tr("网络故障，探测器连接失败！"));
-        emit sigAppengMsg(msg, QtCriticalMsg);
+        // emit sigAppengMsg(msg, QtCriticalMsg);
+        qCritical()<<msg;
         emit sigRefreshUi();
     });
 
@@ -355,7 +363,8 @@ MainWindow::MainWindow(QWidget *parent)
         }
 
         QString msg = QString(tr("探测器状态：%1")).arg(on ? tr("开") : tr("关"));
-        emit sigAppengMsg(msg, QtInfoMsg);
+        // emit sigAppengMsg(msg, QtInfoMsg);
+        qInfo()<<msg;
         emit sigRefreshUi();
     });
 
@@ -659,7 +668,9 @@ void MainWindow::InitMainWindowUi()
     QTimer* measureTimer = new QTimer(this);
     measureTimer->setObjectName("measureTimer");
     connect(measureTimer, &QTimer::timeout, this, [=](){
-        emit sigAppengMsg(tr("定时测量倒计时结束，自动停止测量！"), QtInfoMsg);
+        QString msg = tr("定时测量倒计时结束，自动停止测量！");
+        // emit sigAppengMsg(msg, QtInfoMsg);
+        qInfo()<<msg;
 
         //自动测量时间到，停止测量
         measureTimer->stop();

@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-09 09:47:44
+ * @LastEditTime: 2025-05-09 10:23:58
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -309,9 +309,7 @@ void OfflineDataAnalysisWidget::slotStart()
 //         SysUtils::realAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, bool eof, bool *interrupted){
 // #endif
             SplashWidget::instance()->updataProgress(progress, filesize);
-            if (eof){
-                SplashWidget::instance()->hide();
-
+            if (eof){                
                 if (interrupted)
                     emit sigEnd(true);
                 else
@@ -325,7 +323,7 @@ void OfflineDataAnalysisWidget::slotStart()
                 TimeEnergy timeEnergy = detTimeEnergy.timeEnergy.front();
                 //detTimeEnergy.timeEnergy.erase(detTimeEnergy.timeEnergy.begin());
                 TimeEnergy* data = detTimeEnergy.timeEnergy.data();
-                memmove(data, data + 1, detTimeEnergy.timeEnergy.size() - 1);
+                memmove(data, data + 1, (detTimeEnergy.timeEnergy.size() - 1)*sizeof(TimeEnergy));
                 detTimeEnergy.timeEnergy.resize(detTimeEnergy.timeEnergy.size() - 1);
 
                 if (channel == 0x00){
@@ -411,8 +409,10 @@ void OfflineDataAnalysisWidget::on_pushButton_start_clicked()
 
 void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
 {
-    if (interrupted)
+    if (interrupted){
+        SplashWidget::instance()->hide();
         QMessageBox::information(this, tr("提示"), tr("文件解析意外被终止！"));
+    }
     else
     {
         // 读取活化测量的数据时刻区间[起始时间，结束时间]
@@ -441,6 +441,7 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
 
         analyse(detParameter, startTime, endTime);
         
+        SplashWidget::instance()->hide();
         QMessageBox::information(this, tr("提示"), tr("文件解析已顺利完成！"));
     }
 }
@@ -488,7 +489,6 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
     {
         // 手动测量，在改变能窗之前的数据不处理，注意剔除。现在数据没有保存这一段数据
         if(reAnalyzer){
-
             return;
         }
         if(coin.time > start_time && coin.time<time_end) {

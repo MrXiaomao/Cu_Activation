@@ -2485,7 +2485,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <addaction name="action_SpectrumModel"/>
     <addaction name="action_WaveformModel"/>
     <addaction name="separator"/>
-    <addaction name="action_log"/>
    </widget>
    <addaction name="menu_3"/>
    <addaction name="menu_view"/>

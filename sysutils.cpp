@@ -395,10 +395,10 @@ void SysUtils::realQuickAnalyzeTimeEnergy(const char* filename, std::function<vo
         detTimeEnergy.channel = 0;
         detTimeEnergy.timeEnergy.resize(size);
         fread(reinterpret_cast<unsigned char*>(&detTimeEnergy.channel), 1, sizeof(detTimeEnergy.channel), input_file);
-        size_t readSize = fread(reinterpret_cast<unsigned char*>(detTimeEnergy.timeEnergy.data()), sizeof(TimeEnergy), size, input_file);
+        size_t readSize = fread(reinterpret_cast<unsigned char*>(detTimeEnergy.timeEnergy.data()), 1, sizeof(TimeEnergy)*size, input_file);
 
-        progress += 5/*sizeof(size)+sizeof(detTimeEnergy.channel)*/ + sizeof(TimeEnergy) * readSize;
-        if (readSize != size){
+        progress += 5/*sizeof(size)+sizeof(detTimeEnergy.channel)*/ + readSize;
+        if (readSize != sizeof(TimeEnergy)*size){
             fclose(input_file);
             input_file = nullptr;
             interrupted = true;

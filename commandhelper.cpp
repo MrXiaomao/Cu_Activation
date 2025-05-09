@@ -291,7 +291,7 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
             if (file.open(QIODevice::ReadWrite | QIODevice::Text | ioFlags)) {
                 QTextStream out(&file);
                 if (ioFlags == QIODevice::Truncate)
-                    out << "time,CountRate1,CountRate2,ConCount_single,ConCount_multiple,deathRatio1,deathRatio2" << Qt::endl;
+                    out << "time,CountRate1,CountRate2,ConCount_single,ConCount_multiple,deathRatio1(%),deathRatio2(%)" << Qt::endl;
                 CoincidenceResult coincidenceResult = r3.back();
                 out << r1.time << "," << coincidenceResult.CountRate1 << "," << coincidenceResult.CountRate2 \
                     << "," << coincidenceResult.ConCount_single << "," << coincidenceResult.ConCount_multiple 

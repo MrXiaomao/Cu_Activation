@@ -328,26 +328,29 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
                 
                 rr3.push_back(v);
             }
-
-            if (detectorParameter.measureModel == mmAuto)//自动测量，需要获取能宽
-            {
-                autoEnWindow.clear();
-                coincidenceAnalyzer->GetEnWidth(autoEnWindow);
-                emit sigUpdateAutoEnWidth(autoEnWindow);
-            }
         }
     } else{
         for (size_t i=0; i < countCoin; i++){
             rr3.push_back(r3[i]);
         }
-
-        if (detectorParameter.measureModel == mmAuto)//自动测量，需要获取能宽
-        {
-            autoEnWindow.clear();
-            coincidenceAnalyzer->GetEnWidth(autoEnWindow);
-            emit sigUpdateAutoEnWidth(autoEnWindow);
-        }
     }
+
+    //更新能窗与能窗对应的竖线，目前默认都要更新，产生计数曲线后才会更新
+    if(countCoin>0){
+        autoEnWindow.clear();
+        std::vector<unsigned short> newEnWindow;
+        coincidenceAnalyzer->GetEnWidth(newEnWindow);
+        if(newEnWindow == autoEnWindow){
+
+        }
+        else{
+            autoEnWindow = newEnWindow;
+            qInfo().noquote()<<"自动更新能窗，探测器1:["<<autoEnWindow[0]<<","<<autoEnWindow[1]
+                <<"], 探测器2:["<<autoEnWindow[2]<<","<<autoEnWindow[3]<<"]";
+        }
+        emit sigUpdateAutoEnWidth(autoEnWindow);
+    }
+
     emit sigPlot(r1, rr3);
 }
 
@@ -405,13 +408,28 @@ void CommandHelper::handleManualMeasureNetData()
 {
     QByteArray binaryData = socketDetector->readAll();
 
-#ifdef QT_DEBUG
-    //粒子模式，DEBUG模式下保存原始数据查找问题
-    if (nullptr != pfSaveNet && binaryData.size() > 0){
-        pfSaveNet->write(binaryData);
-        pfSaveNet->flush();
+    if (detectorParameter.transferModel == 0x03)
+    {
+        //波形模式，直接保存原始数据
+        if (nullptr != pfSaveNet && binaryData.size() > 0){
+            pfSaveNet->write(binaryData);
+            pfSaveNet->flush();
+        }
+        if(binaryData.size() > 0)
+        {
+            emit sigRecvDataSize(binaryData.size());
+        }
     }
+    else if(detectorParameter.transferModel == 0x05)
+    {
+#ifdef QT_DEBUG
+        //粒子模式，DEBUG模式下保存原始数据查找问题
+        if (nullptr != pfSaveNet && binaryData.size() > 0){
+            pfSaveNet->write(binaryData);
+            pfSaveNet->flush();
+        }
 #endif
+    }
 
     //00:能谱 03:波形 05:粒子
     if (workStatus == Preparing){
@@ -437,15 +455,6 @@ void CommandHelper::handleManualMeasureNetData()
     }
 
     if (workStatus == Measuring && binaryData.size() > 0) {
-        //符合模式需要过滤掉空值再写入到文件
-        if (detectorParameter.transferModel != 0x05){
-            if (nullptr != pfSaveNet && binaryData.size() > 0){
-                pfSaveNet->write(binaryData);
-                pfSaveNet->flush();
-                emit sigRecvDataSize(binaryData.size());
-            }
-        }
-
         {
             QMutexLocker locker(&mutexCache);
             cachePool.push_back(binaryData);
@@ -981,27 +990,39 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
             qWarning().noquote() << tr("创建网口数据缓存文件失败，文件名：%1").arg(netDataFileName);
         }
 #endif
+
+        if (nullptr != pfSaveVaildData){
+            pfSaveVaildData->close();
+            delete pfSaveVaildData;
+            pfSaveVaildData = nullptr;
+        }
+
+        //有效数据缓存文件。符合模式（也称粒子模式）只存有效数据
+        pfSaveVaildData = new QFile(validDataFileName);
+        if (pfSaveVaildData->open(QIODevice::WriteOnly)) {
+            unsigned int FileHead = 0xFFFFFFFF; //文件包头，有效数据的识别码
+            pfSaveVaildData->write((char*)&FileHead, sizeof(FileHead));
+            qInfo().noquote() << tr("创建缓存文件成功，文件名：%1").arg(validDataFileName);
+        } else {
+            qWarning().noquote() << tr("创建缓存文件失败，文件名：%1").arg(validDataFileName);
+        }
     }
     else if(detectorParameter.transferModel == 0x03)
     {
         //创建缓存文件
-        validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_WaveNet.dat");
-    }
-
-    if (nullptr != pfSaveVaildData){
-        pfSaveVaildData->close();
-        delete pfSaveVaildData;
-        pfSaveVaildData = nullptr;
-    }
-    
-    //有效数据缓存文件。符合模式（也称粒子模式）只存有效数据
-    pfSaveVaildData = new QFile(validDataFileName);
-    if (pfSaveVaildData->open(QIODevice::WriteOnly)) {
-        unsigned int FileHead = 0xFFFFFFFF; //文件包头，有效数据的识别码
-        pfSaveVaildData->write((char*)&FileHead, sizeof(FileHead));
-        qInfo().noquote() << tr("创建缓存文件成功，文件名：%1").arg(validDataFileName);
-    } else {
-        qWarning().noquote() << tr("创建缓存文件失败，文件名：%1").arg(validDataFileName);
+        netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_WaveNet.dat");
+        if (nullptr != pfSaveNet){
+            pfSaveNet->close();
+            delete pfSaveNet;
+            pfSaveNet = nullptr;
+        }
+        //网口数据缓存文件，波形模式、能谱模式直接存网口数据缓存文件
+        pfSaveNet = new QFile(netDataFileName);
+        if (pfSaveNet->open(QIODevice::WriteOnly)) {
+            qInfo().noquote() << tr("创建网口数据缓存文件成功，文件名：%1").arg(netDataFileName);
+        } else {
+            qWarning().noquote() << tr("创建网口数据缓存文件失败，文件名：%1").arg(netDataFileName);
+        }
     }
 
     cmdPool.clear();
@@ -1168,11 +1189,6 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
         delete pfSaveNet;
         pfSaveNet = nullptr;
     }
-    if (nullptr != pfSaveVaildData){
-        pfSaveVaildData->close();
-        delete pfSaveVaildData;
-        pfSaveVaildData = nullptr;
-    }
 
     //网口数据缓存文件，波形模式、能谱模式直接存网口数据缓存文件
     pfSaveNet = new QFile(netDataFileName);
@@ -1182,6 +1198,12 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
         qWarning().noquote() << tr("创建网口数据缓存文件失败，文件名：%1").arg(netDataFileName);
     }
 #endif
+
+    if (nullptr != pfSaveVaildData){
+        pfSaveVaildData->close();
+        delete pfSaveVaildData;
+        pfSaveVaildData = nullptr;
+    }
 
     //有效数据缓存文件。符合模式（也称粒子模式）只存有效数据
     pfSaveVaildData = new QFile(validDataFileName);
@@ -1519,13 +1541,13 @@ void CommandHelper::netFrameWorkThead()
                     } else if (handlerPool.size() == 12){
                         if (handlerPool.compare(cmdStopTrigger) == 0){                            
                             qDebug()<<"Recv HEX: "<<cmdStopTrigger.toHex(' ');
-#ifdef QT_DEBUG
+
                             if (nullptr != pfSaveNet){
                                 pfSaveNet->close();
                                 delete pfSaveNet;
                                 pfSaveNet = nullptr;
                             }
-#endif
+
                             //测量停止是否需要清空所有数据
                             handlerPool.clear();
                             workStatus = WorkEnd;

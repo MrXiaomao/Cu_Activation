@@ -332,7 +332,7 @@
       <item row="3" column="0">
        <widget class="QLabel" name="label_15">
         <property name="text">
-         <string>波段计数：</string>
+         <string>波形计数：</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>

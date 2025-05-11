@@ -284,6 +284,7 @@ void WaveformModel::on_pushButton_start_clicked()
         total_filesize = 0;
         total_ref = 0;
         ui->label_size->setText("0 bytes");
+        ui->label_ref->setText("0");
         commandhelper->slotStartManualMeasure(detectorParameter);
 
         ui->pushButton_save->setEnabled(false);

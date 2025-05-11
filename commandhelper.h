@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-08 19:28:28
+ * @LastEditTime: 2025-05-11 20:53:25
  * @Description: 用来管理网口的数据发送与接受，管理网口数据的处理相关业务。
  */
 #ifndef COMMANDHELPER_H
@@ -227,7 +227,7 @@ private:
 
     int stepT = 1; //界面图像刷新时间，单位s
     unsigned short EnWindow[4]; // 探测器1左能窗、右能窗；探测器2左能窗、右能窗
-    std::vector<unsigned short> autoEnWindow; // 自动测量反馈给界面的值：探测器1左能窗、右能窗；探测器2左能窗、右能窗
+    std::vector<unsigned short> autoEnWindow; // 符合测量自动更新能窗反馈给界面的值：探测器1左能窗、右能窗；探测器2左能窗、右能窗
 
     qint64 lastClockT = 0;
     bool refModel = false;

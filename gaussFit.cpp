@@ -274,7 +274,7 @@ bool GaussFit(std::vector<double> sx, std::vector<double> sy, int n, double* res
 	}
     fit_data.n = n;
     
-	//先大致计算出[A, mu, sigma, base]
+    //先大致计算出[A, mu, sigma]
 	//A
     auto maxPosition = max_element(sy.begin(), sy.end());
 	float peak = *maxPosition; 

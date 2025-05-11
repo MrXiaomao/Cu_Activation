@@ -57,6 +57,8 @@ void SplashWidget::setInfo(const QString &info, int fontSizeMain, int timeout)
 {
     this->timeout = timeout;
     this->currentSec = 0;
+    //关闭进度条
+    ui->progressBar->hide();
 
     QFont font;
     font.setPixelSize(fontSizeMain);
@@ -66,6 +68,8 @@ void SplashWidget::setInfo(const QString &info, int fontSizeMain, int timeout)
 
 void SplashWidget::setInfo(const QString &info, bool allowClose, int fontSizeMain, int timeout)
 {
+    //关闭进度条
+    ui->progressBar->hide();
     if (allowClose)
         ui->pushButton_cancel->show();
     else

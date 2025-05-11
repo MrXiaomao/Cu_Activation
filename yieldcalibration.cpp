@@ -15,18 +15,15 @@ YieldCalibration::YieldCalibration(QWidget *parent)
     mapCalibration.insert(0, caliPair(1.0E4, 1111.0));//量程1
     mapCalibration.insert(1, caliPair(1.0E7, 2222.0));//量程2
     mapCalibration.insert(2, caliPair(1.0E11, 3333.0));//量程3
-    mapCalibration.insert(3, caliPair(1.0E15, 4444.0));//量程4
     this->load();
 
     ui->tableWidget_calibration->item(0, 0)->setText(QString::number(mapCalibration[0].yield, 'E', 3));
     ui->tableWidget_calibration->item(1, 0)->setText(QString::number(mapCalibration[1].yield, 'E', 3));
     ui->tableWidget_calibration->item(2, 0)->setText(QString::number(mapCalibration[2].yield, 'E', 3));
-    ui->tableWidget_calibration->item(3, 0)->setText(QString::number(mapCalibration[3].yield, 'E', 3));
 
     ui->tableWidget_calibration->item(0, 1)->setText(QString::number(mapCalibration[0].active_t0, 'E', 5));
     ui->tableWidget_calibration->item(1, 1)->setText(QString::number(mapCalibration[1].active_t0, 'E', 5));
     ui->tableWidget_calibration->item(2, 1)->setText(QString::number(mapCalibration[2].active_t0, 'E', 5));
-    ui->tableWidget_calibration->item(3, 1)->setText(QString::number(mapCalibration[3].active_t0, 'E', 5));
 
     // 连接单元格变化信号
     // 连接cellChanged信号
@@ -52,11 +49,6 @@ YieldCalibration::YieldCalibration(QWidget *parent)
             // m_lastValidValue = text; // 保存有效值
         }
     });
-
-    // 设置水平表头文本换行
-    // ui->tableWidget->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    // ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    // ui->tableWidget->setWordWrap(true);
 }
 
 YieldCalibration::~YieldCalibration()

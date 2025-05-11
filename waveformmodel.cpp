@@ -63,7 +63,6 @@ WaveformModel::WaveformModel(QWidget *parent)
     });
 
     connect(commandhelper, &CommandHelper::sigRecvPkgCount, this, [=](qint32 count){
-        static qint32 total_ref = 0;
         total_ref += count;
         ui->label_ref->setText(QString::number(total_ref));
     });
@@ -283,6 +282,7 @@ void WaveformModel::on_pushButton_start_clicked()
         }
 
         total_filesize = 0;
+        total_ref = 0;
         ui->label_size->setText("0 bytes");
         commandhelper->slotStartManualMeasure(detectorParameter);
 

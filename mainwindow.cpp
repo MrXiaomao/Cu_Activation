@@ -316,6 +316,7 @@ MainWindow::MainWindow(QWidget *parent)
         }
 
         double result = a * cali_factor;
+        ui->lineEdit_CuActive->setText(QString::number(a, 'E', 5));
         ui->lineEdit_Yield->setText(QString::number(result, 'E', 5));
     });
 
@@ -1108,6 +1109,7 @@ void MainWindow::on_pushButton_measure_clicked()
             ui->lcdNumber_ConCount_single->display("0");
             ui->lcdNumber_DeathRatio1->display("0.0");
             ui->lcdNumber_DeathRatio2->display("0.0");
+            ui->lineEdit_CuActive->setText("0");
             ui->lineEdit_Yield->setText("0");
 
             commandHelper->setShotNumber(ui->lineEdit_ShotNum->text()); //设置测量发次，QString类型
@@ -1207,6 +1209,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         ui->lcdNumber_ConCount_single->display("0");
         ui->lcdNumber_DeathRatio1->display("0.0");
         ui->lcdNumber_DeathRatio2->display("0.0");
+        ui->lineEdit_CuActive->setText("0");
         ui->lineEdit_Yield->setText("0");
         
         int stepT = ui->spinBox_step_2->value();

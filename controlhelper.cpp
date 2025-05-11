@@ -536,10 +536,9 @@ QPair<float, float> ControlHelper::gotoAbs(int index, float max_speed)
                 QJsonObject jsonDistance2 = jsonControl["Distances"].toObject()["02"].toObject();
                 {
                     switch (index){
-                        case 0x00: pos1 = jsonDistance1["0-1E4"].toString().toDouble(); break;
-                        case 0x01: pos1 = jsonDistance1["1E4-1E7"].toString().toDouble(); break;
-                        case 0x02: pos1 = jsonDistance1["1E7-1E10"].toString().toDouble(); break;
-                        case 0x03: pos1 = jsonDistance1["1E10-1E13"].toString().toDouble(); break;
+                        case 0x00: pos1 = jsonDistance1["smallRange"].toString().toDouble(); break;
+                        case 0x01: pos1 = jsonDistance1["mediumRange"].toString().toDouble(); break;
+                        case 0x02: pos1 = jsonDistance1["largeRange"].toString().toDouble(); break;
                     }
 
                     single_moveabs(0x01, pos1 * 1000);
@@ -547,10 +546,9 @@ QPair<float, float> ControlHelper::gotoAbs(int index, float max_speed)
 
                 {
                     switch (index){
-                        case 0x00: pos2 = jsonDistance2["0-1E4"].toString().toDouble(); break;
-                        case 0x01: pos2 = jsonDistance2["1E4-1E7"].toString().toDouble(); break;
-                        case 0x02: pos2 = jsonDistance2["1E7-1E10"].toString().toDouble(); break;
-                        case 0x03: pos2 = jsonDistance2["1E10-1E13"].toString().toDouble(); break;
+                        case 0x00: pos2 = jsonDistance2["smallRange"].toString().toDouble(); break;
+                        case 0x01: pos2 = jsonDistance2["mediumRange"].toString().toDouble(); break;
+                        case 0x02: pos2 = jsonDistance2["largeRange"].toString().toDouble(); break;
                     }
 
                     single_moveabs(0x02, pos2 * 1000);

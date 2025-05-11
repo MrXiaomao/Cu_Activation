@@ -135,16 +135,14 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
 
     connect(this, &CommandHelper::sigMeasureStop, this, [=](){
         //测量停止，进行符合计算，给出产额结果
+        if(detectorParameter.transferModel == 0x05){
+            //测量停止保存符合运算测量参数
+            QString configResultFile = validDataFileName + ".配置";
+            {
+                QFile file(configResultFile);
+                if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+                    QTextStream out(&file);
 
-
-        //测量停止保存符合运算测量参数
-        QString configResultFile = validDataFileName + ".配置";
-        {
-            QFile file(configResultFile);
-            if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
-                QTextStream out(&file);
-
-                if (detectorParameter.transferModel == 0x05){
                     // 保存粒子测量参数
                     out << tr("阈值1=") << detectorParameter.triggerThold1 << Qt::endl;
                     out << tr("阈值2=") << detectorParameter.triggerThold2 << Qt::endl;
@@ -180,33 +178,33 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                         //自动
                         out << tr("测量模式=自动") << Qt::endl;
                     }
+
+                    file.flush();
+                    file.close();
                 }
-
-                file.flush();
-                file.close();
             }
-        }
-        qInfo().noquote() << tr("本次测量参数配置已存放在：%1").arg(configResultFile);
-        
-        //符合测量模式保存测量能谱文件
-        QString SpecFile = validDataFileName + ".累积能谱";
-        {
-            QFile file(SpecFile);
-            if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
-                QTextStream out(&file);
+            qInfo().noquote() << tr("本次测量参数配置已存放在：%1").arg(configResultFile);
+            
+            //符合测量模式保存测量能谱文件
+            QString SpecFile = validDataFileName + ".累积能谱";
+            {
+                QFile file(SpecFile);
+                if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+                    QTextStream out(&file);
 
-                if (detectorParameter.transferModel == 0x05){
-                    SingleSpectrum spec = coincidenceAnalyzer->GetAccumulateSpectrum();
-                    out << "channel,"<< "SpectrumDet1,"<<"SpectrumDet2"<<Qt::endl;
-                    for (size_t j=0; j<MULTI_CHANNEL; ++j){
-                        out << j<<","<<spec.spectrum[0][j]<< ","<<spec.spectrum[1][j]<<Qt::endl;
+                    if (detectorParameter.transferModel == 0x05){
+                        SingleSpectrum spec = coincidenceAnalyzer->GetAccumulateSpectrum();
+                        out << "channel,"<< "SpectrumDet1,"<<"SpectrumDet2"<<Qt::endl;
+                        for (size_t j=0; j<MULTI_CHANNEL; ++j){
+                            out << j<<","<<spec.spectrum[0][j]<< ","<<spec.spectrum[1][j]<<Qt::endl;
+                        }
                     }
+                    file.flush();
+                    file.close();
                 }
-                file.flush();
-                file.close();
             }
+            qInfo().noquote() << tr("本次测量累积能谱已存放在：%1").arg(SpecFile);
         }
-        qInfo().noquote() << tr("本次测量累积能谱已存放在：%1").arg(SpecFile);
     });
 
 
@@ -962,24 +960,33 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     QDir dir(ShotDir);
     if (!dir.exists())
         dir.mkdir(ShotDir);
-    //创建缓存文件
-    validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_valid.dat");   
-
+    
+    if(detectorParameter.transferModel == 0x05)
+    {
+        //创建缓存文件
+        validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_valid.dat");   
+    
 #ifdef QT_DEBUG
-    netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_Net.dat");
-    if (nullptr != pfSaveNet){
-        pfSaveNet->close();
-        delete pfSaveNet;
-        pfSaveNet = nullptr;
-    }
-    //网口数据缓存文件，波形模式、能谱模式直接存网口数据缓存文件
-    pfSaveNet = new QFile(netDataFileName);
-    if (pfSaveNet->open(QIODevice::WriteOnly)) {
-        qInfo().noquote() << tr("创建网口数据缓存文件成功，文件名：%1").arg(netDataFileName);
-    } else {
-        qWarning().noquote() << tr("创建网口数据缓存文件失败，文件名：%1").arg(netDataFileName);
-    }
+        netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_Net.dat");
+        if (nullptr != pfSaveNet){
+            pfSaveNet->close();
+            delete pfSaveNet;
+            pfSaveNet = nullptr;
+        }
+        //网口数据缓存文件，波形模式、能谱模式直接存网口数据缓存文件
+        pfSaveNet = new QFile(netDataFileName);
+        if (pfSaveNet->open(QIODevice::WriteOnly)) {
+            qInfo().noquote() << tr("创建网口数据缓存文件成功，文件名：%1").arg(netDataFileName);
+        } else {
+            qWarning().noquote() << tr("创建网口数据缓存文件失败，文件名：%1").arg(netDataFileName);
+        }
 #endif
+    }
+    else if((detectorParameter.transferModel == 0x03)
+    {
+        //创建缓存文件
+        validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_WaveNet.dat");
+    }
 
     if (nullptr != pfSaveVaildData){
         pfSaveVaildData->close();

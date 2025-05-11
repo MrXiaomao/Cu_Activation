@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-09 18:39:18
+ * @LastEditTime: 2025-05-11 12:07:55
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -30,11 +30,11 @@ struct particle_data
 
 CoincidenceAnalyzer::CoincidenceAnalyzer():
 countCoin(0), coolingTime_Manual(0), coolingTime_Auto(0), autoFirst(true),
-GaussCountMin(100000),
+GaussCountMin(200000),
 #ifdef QT_DEBUG
 GaussMinGapTime(300)
 #else
-GaussMinGapTime(300)
+GaussMinGapTime(10)
 #endif
 {
     for(unsigned short i=0; i<MULTI_CHANNEL; i++)

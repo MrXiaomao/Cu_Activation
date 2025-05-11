@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-09 17:09:05
+ * @LastEditTime: 2025-05-11 18:55:21
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -280,6 +280,7 @@ void OfflineDataAnalysisWidget::slotStart()
 
     firstPopup = true;
     reAnalyzer = false;
+    detectNum = 0;
     memset(&totalSingleSpectrum, 0, sizeof(totalSingleSpectrum));
 
     //读取历史数据重新进行运算
@@ -330,19 +331,26 @@ void OfflineDataAnalysisWidget::slotStart()
             }
 
             quint8 channel = detTimeEnergy.channel;
-            while (!detTimeEnergy.timeEnergy.empty()){
-                TimeEnergy timeEnergy = detTimeEnergy.timeEnergy.front();
-                //detTimeEnergy.timeEnergy.erase(detTimeEnergy.timeEnergy.begin());//如果数组特别大，erase比较耗时
-                TimeEnergy* data = detTimeEnergy.timeEnergy.data();
-                memmove(data, data + 1, (detTimeEnergy.timeEnergy.size() - 1)*sizeof(TimeEnergy));
-                detTimeEnergy.timeEnergy.resize(detTimeEnergy.timeEnergy.size() - 1);
+            detectNum += detTimeEnergy.timeEnergy.size();
 
-                if (channel == 0x00){
-                    data1_2.push_back(timeEnergy);
-                } else {
-                    data2_2.push_back(timeEnergy);
-                }
+            if (channel == 0x00){
+                data1_2 = detTimeEnergy.timeEnergy;
+            } else {
+                data2_2 = detTimeEnergy.timeEnergy;
             }
+            // while (!detTimeEnergy.timeEnergy.empty()){
+            //     TimeEnergy timeEnergy = detTimeEnergy.timeEnergy.front();
+            //     //detTimeEnergy.timeEnergy.erase(detTimeEnergy.timeEnergy.begin());//如果数组特别大，erase比较耗时
+            //     TimeEnergy* data = detTimeEnergy.timeEnergy.data();
+            //     memmove(data, data + 1, (detTimeEnergy.timeEnergy.size() - 1)*sizeof(TimeEnergy));
+            //     detTimeEnergy.timeEnergy.resize(detTimeEnergy.timeEnergy.size() - 1);
+
+            //     if (channel == 0x00){
+            //         data1_2.push_back(timeEnergy);
+            //     } else {
+            //         data2_2.push_back(timeEnergy);
+            //     }
+            // }
             
             //记录FPGA内的最大时刻，作为符合测量的时间区间右端点。
 
@@ -632,6 +640,7 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
     double A0_omiga = N10 * N20 / Nco0 / f;
 
     //-------------------------------------更新界面
+    ui->lineEdit_particleNum->setText(QString::number(detectNum, 'E', 5));
     //修正前数据
     for(int i=0; i<3; i++){
         ui->tableWidget1->item(i, 0)->setText(QString::number(minCount[i]));

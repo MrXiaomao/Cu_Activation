@@ -50,6 +50,7 @@ private:
     unsigned int startTime_FPGA; //记录保存数据的FPGA起始时刻。单位s，FPGA内部时钟
     bool reAnalyzer = false; // 是否重新开始解析
     bool analyzerFinished = true;// 解析是否完成
+    quint64 detectNum = 0; //探测到的粒子数
 
     bool firstPopup = true;//控制弹窗是否首次出现
     SingleSpectrum totalSingleSpectrum;

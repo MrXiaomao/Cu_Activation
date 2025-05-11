@@ -584,7 +584,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </sizepolicy>
              </property>
              <property name="currentIndex">
-              <number>0</number>
+              <number>1</number>
              </property>
              <widget class="QWidget" name="tab_3">
               <property name="sizePolicy">
@@ -784,22 +784,17 @@ li.checked::marker { content: &quot;\2612&quot;; }
                     </property>
                     <item>
                      <property name="text">
-                      <string>0~1E4</string>
+                      <string>小量程</string>
                      </property>
                     </item>
                     <item>
                      <property name="text">
-                      <string>1E4~1E7</string>
+                      <string>中量程</string>
                      </property>
                     </item>
                     <item>
                      <property name="text">
-                      <string>1E7~1E10</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>1E10~1E13</string>
+                      <string>大量程</string>
                      </property>
                     </item>
                    </widget>
@@ -1838,22 +1833,17 @@ li.checked::marker { content: &quot;\2612&quot;; }
                     </property>
                     <item>
                      <property name="text">
-                      <string>0~1E4</string>
+                      <string>小量程</string>
                      </property>
                     </item>
                     <item>
                      <property name="text">
-                      <string>1E4~1E7</string>
+                      <string>中量程</string>
                      </property>
                     </item>
                     <item>
                      <property name="text">
-                      <string>1E7~1E10</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>1E10~1E13</string>
+                      <string>大量程</string>
                      </property>
                     </item>
                    </widget>
@@ -2385,7 +2375,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </sizepolicy>
              </property>
              <layout class="QGridLayout" name="gridLayout_7">
-              <item row="1" column="0">
+              <item row="0" column="2">
                <widget class="QLabel" name="label_22">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -2396,15 +2386,38 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 <property name="text">
                  <string>中子产额：</string>
                 </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
                </widget>
               </item>
-              <item row="1" column="1">
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_11">
+                <property name="text">
+                 <string>相对活度：</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="3">
                <widget class="QLineEdit" name="lineEdit_Yield">
                 <property name="enabled">
                  <bool>true</bool>
                 </property>
                 <property name="text">
                  <string>1e7</string>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QLineEdit" name="lineEdit_CuActive">
+                <property name="text">
+                 <string>0</string>
                 </property>
                 <property name="readOnly">
                  <bool>true</bool>

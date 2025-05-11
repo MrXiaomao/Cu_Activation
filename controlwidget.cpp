@@ -282,15 +282,13 @@ void ControlWidget::load()
                 QJsonObject jsonDistance1 = jsonControl["Distances"].toObject()["01"].toObject();
                 QJsonObject jsonDistance2 = jsonControl["Distances"].toObject()["02"].toObject();
                 if (mAxis_no == 0x01){
-                    ui->tableWidget_position->item(0, 1)->setText(jsonDistance1["0-1E4"].toString());
-                    ui->tableWidget_position->item(1, 1)->setText(jsonDistance1["1E4-1E7"].toString());
-                    ui->tableWidget_position->item(2, 1)->setText(jsonDistance1["1E7-1E10"].toString());
-                    ui->tableWidget_position->item(3, 1)->setText(jsonDistance1["1E10-1E13"].toString());
+                    ui->tableWidget_position->item(0, 1)->setText(jsonDistance1["smallRange"].toString());
+                    ui->tableWidget_position->item(1, 1)->setText(jsonDistance1["mediumRange"].toString());
+                    ui->tableWidget_position->item(2, 1)->setText(jsonDistance1["largeRange"].toString());
                 } else {
-                    ui->tableWidget_position->item(0, 1)->setText(jsonDistance2["0-1E4"].toString());
-                    ui->tableWidget_position->item(1, 1)->setText(jsonDistance2["1E4-1E7"].toString());
-                    ui->tableWidget_position->item(2, 1)->setText(jsonDistance2["1E7-1E10"].toString());
-                    ui->tableWidget_position->item(3, 1)->setText(jsonDistance2["1E10-1E13"].toString());
+                    ui->tableWidget_position->item(0, 1)->setText(jsonDistance2["smallRange"].toString());
+                    ui->tableWidget_position->item(1, 1)->setText(jsonDistance2["mediumRange"].toString());
+                    ui->tableWidget_position->item(2, 1)->setText(jsonDistance2["largeRange"].toString());
                 }
             }
         }
@@ -363,14 +361,14 @@ void ControlWidget::save()
         }
 
         if (mAxis_no == 0x01){
-            jsonDistance1["0-1E4"] = ui->tableWidget_position->item(0, 1)->text();
-            jsonDistance1["1E4-1E7"] = ui->tableWidget_position->item(1, 1)->text();
-            jsonDistance1["1E7-1E10"] = ui->tableWidget_position->item(2, 1)->text();
+            jsonDistance1["smallRange"] = ui->tableWidget_position->item(0, 1)->text();
+            jsonDistance1["mediumRange"] = ui->tableWidget_position->item(1, 1)->text();
+            jsonDistance1["largeRange"] = ui->tableWidget_position->item(2, 1)->text();
             jsonDistance1["1E10-1E13"] = ui->tableWidget_position->item(3, 1)->text();
         } else {
-            jsonDistance2["0-1E4"] = ui->tableWidget_position->item(0, 1)->text();
-            jsonDistance2["1E4-1E7"] = ui->tableWidget_position->item(1, 1)->text();
-            jsonDistance2["1E7-1E10"] = ui->tableWidget_position->item(2, 1)->text();
+            jsonDistance2["smallRange"] = ui->tableWidget_position->item(0, 1)->text();
+            jsonDistance2["mediumRange"] = ui->tableWidget_position->item(1, 1)->text();
+            jsonDistance2["largeRange"] = ui->tableWidget_position->item(2, 1)->text();
             jsonDistance2["1E10-1E13"] = ui->tableWidget_position->item(3, 1)->text();
         }
 

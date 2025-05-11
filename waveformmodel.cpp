@@ -78,7 +78,7 @@ WaveformModel::WaveformModel(QWidget *parent)
         ui->pushButton_save->setEnabled(false);
     });
 
-    connect(commandhelper, &CommandHelper::sigMeasureStop, this, [=](){
+    connect(commandhelper, &CommandHelper::sigMeasureStopWave, this, [=](){
         timer->stop();
         measuring = false;
         ui->pushButton_start->setText(tr("开始测量"));
@@ -239,7 +239,7 @@ bool WaveformModel::save()
 
 void WaveformModel::on_pushButton_start_clicked()
 {
-    QAbstractButton *btn = qobject_cast<QAbstractButton*>(sender());
+    // QAbstractButton *btn = qobject_cast<QAbstractButton*>(sender());
     if (!measuring){
         // 先保存参数
         if (!this->save()){

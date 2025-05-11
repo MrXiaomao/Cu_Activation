@@ -1551,7 +1551,7 @@ void CommandHelper::netFrameWorkThead()
                             //测量停止是否需要清空所有数据
                             handlerPool.clear();
                             workStatus = WorkEnd;
-                            emit sigMeasureStop();
+                            emit sigMeasureStopWave();
                             break;
                         } else {
                             handlerPool.remove(0, 1);

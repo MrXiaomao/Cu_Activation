@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-11 20:53:25
+ * @LastEditTime: 2025-05-11 21:53:21
  * @Description: 用来管理网口的数据发送与接受，管理网口数据的处理相关业务。
  */
 #ifndef COMMANDHELPER_H
@@ -109,6 +109,7 @@ signals:
     void sigMeasureStart(qint8 mmode, qint8 tmode); //测量模式（手动、自动、标定），传输模式（能谱、波形、符合测量）
     void sigMeasureWait();
     void sigMeasureStop();
+    void sigMeasureStopWave();
     void sigActiveOmiga(double a); //计算出初始活度乘以近端探测器几何效率
 
     //网络包数大小

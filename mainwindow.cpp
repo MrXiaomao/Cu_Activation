@@ -390,15 +390,25 @@ MainWindow::MainWindow(QWidget *parent)
     //DirectConnection replot 子线程操作，不会堵塞，但是会崩溃
     //QueuedConnection replot 主线程操作，刷新慢
 
-    connect(commandHelper, &CommandHelper::sigUpdateAutoEnWidth, this, [=](std::vector<unsigned short> EnWidth){
-        ui->spinBox_1_leftE_2->setValue(EnWidth[0]);
-        ui->spinBox_1_rightE_2->setValue(EnWidth[1]);
-
-        ui->spinBox_2_leftE_2->setValue(EnWidth[2]);
-        ui->spinBox_2_rightE_2->setValue(EnWidth[3]);
+    connect(commandHelper, &CommandHelper::sigUpdateAutoEnWidth, this, [=](std::vector<unsigned short> EnWidth, qint8 mmode){
+        if (mmode == mmManual )
+        {
+            ui->spinBox_1_leftE->setValue(EnWidth[0]);
+            ui->spinBox_1_rightE->setValue(EnWidth[1]);
+    
+            ui->spinBox_2_leftE->setValue(EnWidth[2]);
+            ui->spinBox_2_rightE->setValue(EnWidth[3]);
+        }else if(mmode == mmAuto)
+        {
+            ui->spinBox_1_leftE_2->setValue(EnWidth[0]);
+            ui->spinBox_1_rightE_2->setValue(EnWidth[1]);
+    
+            ui->spinBox_2_leftE_2->setValue(EnWidth[2]);
+            ui->spinBox_2_rightE_2->setValue(EnWidth[3]);
+        }
 
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
-        plotWidget->slotUpdateEnTimeWidth(EnWidth.data());
+        plotWidget->slotUpdateEnWindow(EnWidth.data());
     }, Qt::QueuedConnection/*防止堵塞*/);
 
     emit sigRefreshUi();
@@ -727,40 +737,43 @@ void MainWindow::InitMainWindowUi()
     this->setProperty("last_safe_exit", true);
     this->load();
 
-    connect(ui->spinBox_1_leftE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
-    connect(ui->spinBox_1_rightE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
-    connect(ui->spinBox_2_leftE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
-    connect(ui->spinBox_2_rightE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
+    connect(ui->spinBox_1_leftE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_1_rightE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_2_leftE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_2_rightE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
 
-    connect(ui->spinBox_1_leftE_2, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
-    connect(ui->spinBox_1_rightE_2, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
-    connect(ui->spinBox_2_leftE_2, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
-    connect(ui->spinBox_2_rightE_2, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
+    connect(ui->spinBox_1_leftE_2, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_1_rightE_2, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_2_leftE_2, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_2_rightE_2, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
 
     // 注册全局快捷键
     RegisterHotKey(reinterpret_cast<HWND>(this->winId()), 1, 0x00, VK_F1);
     RegisterHotKey(reinterpret_cast<HWND>(this->winId()), 2, 0x00, VK_F2);
 
-    slotUpdateEnTimeWidth();
+    slotUpdateEnWindow();
     qInfo().noquote() << QObject::tr("系统启动");
-    //emit sigAppengMsg(QObject::tr("系统启动"), QtInfoMsg);
+    // emit sigAppengMsg(QObject::tr("系统启动"), QtInfoMsg);
 }
 
-void MainWindow::slotUpdateEnTimeWidth()
+void MainWindow::slotUpdateEnWindow()
 {
     unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
                                (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
-    if (ui->tabWidget_measure->currentIndex() == 1){
+    if (ui->tabWidget_measure->currentIndex() == 0){
+        EnWin[0] = (unsigned short)ui->spinBox_1_leftE->value();
+        EnWin[1] = (unsigned short)ui->spinBox_1_rightE->value();
+        EnWin[2] = (unsigned short)ui->spinBox_2_leftE->value();
+        EnWin[3] = (unsigned short)ui->spinBox_2_rightE->value();
+    } else if (ui->tabWidget_measure->currentIndex() == 1){
         EnWin[0] = (unsigned short)ui->spinBox_1_leftE_2->value();
         EnWin[1] = (unsigned short)ui->spinBox_1_rightE_2->value();
         EnWin[2] = (unsigned short)ui->spinBox_2_leftE_2->value();
         EnWin[3] = (unsigned short)ui->spinBox_2_rightE_2->value();
-    } else if (ui->tabWidget_measure->currentIndex() == 2){
-
     }
 
     PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
-    plotWidget->slotUpdateEnTimeWidth(EnWin);
+    plotWidget->slotUpdateEnWindow(EnWin);
 }
 
 #include <QSplitter>
@@ -1102,7 +1115,7 @@ void MainWindow::on_pushButton_measure_clicked()
 
             PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
             plotWidget->slotStart(multi_CHANNEL);            
-            plotWidget->slotUpdateEnTimeWidth(EnWin);
+            plotWidget->slotUpdateEnWindow(EnWin);
 
             ui->lcdNumber_CountRate1->display("0");
             ui->lcdNumber_CountRate2->display("0");

@@ -162,6 +162,7 @@ private:
     vector<CoincidenceResult> coinResult; //将所有处理的数据都存放在这个容器中，FPGA时钟每一秒钟产生一个点
     vector<SingleSpectrum> AllSpectrum;  //将处理的能谱数据都存放在这个容器中，FPGA时钟每一秒钟产生一个能谱，只存放最近一个小时的能谱。单端队列
     SingleSpectrum AccumulateSpectrum; //累积能谱,将每秒的能谱进行累积后的能谱
+    SingleSpectrum recentlySpectrum; //最近的累积能谱,将上一次的自动拟合的能谱叠加上之后每秒的能谱，用于更新界面的能谱曲线
     vector<CurrentPoint> AllPoint; //每一秒内的各探测器的数据点个数
     vector<TimeEnergy> unusedData1, unusedData2;//用于存储未处理完的数据信息
     std::function<void(SingleSpectrum, vector<CoincidenceResult>)> m_pfunc = nullptr;
@@ -170,6 +171,7 @@ private:
     mutex mtx;
     
     // 用于高斯拟合，自动更新能窗
+    bool isChangeEnWindow; //记录当前1秒是否更新了能窗
     bool autoFirst; //自动调节符合计算能窗宽度，用于解决峰飘问题，每测量一定数据点之后，自动拟合出高斯曲线，以新的半高宽来作为符合计算能窗。
     SingleSpectrum GaussFitSpec; // 用于高斯拟合的能谱，每秒钟汇总一次，并且计算能窗内计数点是否到达指定的点数。满足点数后便进行拟合，更新能谱
     int GaussCountMin; //自动高斯拟合的最小探测器计数

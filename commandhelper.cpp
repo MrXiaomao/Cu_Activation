@@ -341,14 +341,13 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
         std::vector<unsigned short> newEnWindow;
         coincidenceAnalyzer->GetEnWidth(newEnWindow);
         if(newEnWindow == autoEnWindow){
-
         }
         else{
             autoEnWindow = newEnWindow;
             qInfo().noquote()<<"自动更新能窗，探测器1:["<<autoEnWindow[0]<<","<<autoEnWindow[1]
                 <<"], 探测器2:["<<autoEnWindow[2]<<","<<autoEnWindow[3]<<"]";
         }
-        emit sigUpdateAutoEnWidth(autoEnWindow);
+        emit sigUpdateAutoEnWidth(autoEnWindow, detectorParameter.measureModel);
     }
 
     emit sigPlot(r1, rr3);

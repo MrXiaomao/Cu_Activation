@@ -34,7 +34,7 @@ protected:
 public slots:
     void slotAppendMsg(const QString &msg, QtMsgType msgType);
     void slotRefreshUi();
-    void slotUpdateEnTimeWidth();
+    void slotUpdateEnWindow();
     void slotSafeExit();
 
 signals:

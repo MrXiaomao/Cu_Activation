@@ -1877,20 +1877,20 @@ void PlotWidget::slotGauss(int leftE, int rightE)
     }
 }
 
-void PlotWidget::slotUpdateEnTimeWidth(unsigned short* timeWidth)
+void PlotWidget::slotUpdateEnWindow(unsigned short* EnWindow)
 {
     if (this->property("isMergeMode").toBool()){
         QCustomPlot* customPlotDet12 = this->findChild<QCustomPlot*>("Det12");
         QCPItemStraightLine* itemStraightLineLeft = customPlotDet12->findChild<QCPItemStraightLine*>("itemStraightLineLeft");
         if (itemStraightLineLeft){
-            itemStraightLineLeft->point1->setCoords(timeWidth[0], customPlotDet12->yAxis->range().lower);
-            itemStraightLineLeft->point2->setCoords(timeWidth[0], customPlotDet12->yAxis->range().upper);
+            itemStraightLineLeft->point1->setCoords(EnWindow[0], customPlotDet12->yAxis->range().lower);
+            itemStraightLineLeft->point2->setCoords(EnWindow[0], customPlotDet12->yAxis->range().upper);
             itemStraightLineLeft->setVisible(true);
         }
         QCPItemStraightLine* itemStraightLineRight = customPlotDet12->findChild<QCPItemStraightLine*>("itemStraightLineRight");
         if (itemStraightLineRight){
-            itemStraightLineRight->point1->setCoords(timeWidth[1], customPlotDet12->yAxis->range().lower);
-            itemStraightLineRight->point2->setCoords(timeWidth[1], customPlotDet12->yAxis->range().upper);
+            itemStraightLineRight->point1->setCoords(EnWindow[1], customPlotDet12->yAxis->range().lower);
+            itemStraightLineRight->point2->setCoords(EnWindow[1], customPlotDet12->yAxis->range().upper);
             itemStraightLineRight->setVisible(true);
         }
 
@@ -1902,28 +1902,28 @@ void PlotWidget::slotUpdateEnTimeWidth(unsigned short* timeWidth)
         {
             QCPItemStraightLine* itemStraightLineLeft = customPlotDet1->findChild<QCPItemStraightLine*>("itemStraightLineLeft");
             if (itemStraightLineLeft){
-                itemStraightLineLeft->point1->setCoords(timeWidth[0], customPlotDet1->yAxis->range().lower);
-                itemStraightLineLeft->point2->setCoords(timeWidth[0], customPlotDet1->yAxis->range().upper);
+                itemStraightLineLeft->point1->setCoords(EnWindow[0], customPlotDet1->yAxis->range().lower);
+                itemStraightLineLeft->point2->setCoords(EnWindow[0], customPlotDet1->yAxis->range().upper);
                 itemStraightLineLeft->setVisible(true);
             }
             QCPItemStraightLine* itemStraightLineRight = customPlotDet1->findChild<QCPItemStraightLine*>("itemStraightLineRight");
             if (itemStraightLineRight){
-                itemStraightLineRight->point1->setCoords(timeWidth[1], customPlotDet2->yAxis->range().lower);
-                itemStraightLineRight->point2->setCoords(timeWidth[1], customPlotDet2->yAxis->range().upper);
+                itemStraightLineRight->point1->setCoords(EnWindow[1], customPlotDet2->yAxis->range().lower);
+                itemStraightLineRight->point2->setCoords(EnWindow[1], customPlotDet2->yAxis->range().upper);
                 itemStraightLineRight->setVisible(true);
             }
         }
         {
             QCPItemStraightLine* itemStraightLineLeft = customPlotDet2->findChild<QCPItemStraightLine*>("itemStraightLineLeft");
             if (itemStraightLineLeft){
-                itemStraightLineLeft->point1->setCoords(timeWidth[2], customPlotDet2->yAxis->range().lower);
-                itemStraightLineLeft->point2->setCoords(timeWidth[2], customPlotDet2->yAxis->range().upper);
+                itemStraightLineLeft->point1->setCoords(EnWindow[2], customPlotDet2->yAxis->range().lower);
+                itemStraightLineLeft->point2->setCoords(EnWindow[2], customPlotDet2->yAxis->range().upper);
                 itemStraightLineLeft->setVisible(true);
             }
             QCPItemStraightLine* itemStraightLineRight = customPlotDet2->findChild<QCPItemStraightLine*>("itemStraightLineRight");
             if (itemStraightLineRight){
-                itemStraightLineRight->point1->setCoords(timeWidth[3], customPlotDet2->yAxis->range().lower);
-                itemStraightLineRight->point2->setCoords(timeWidth[3], customPlotDet2->yAxis->range().upper);
+                itemStraightLineRight->point1->setCoords(EnWindow[3], customPlotDet2->yAxis->range().lower);
+                itemStraightLineRight->point2->setCoords(EnWindow[3], customPlotDet2->yAxis->range().upper);
                 itemStraightLineRight->setVisible(true);
             }
         }

@@ -125,20 +125,20 @@ OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
         reAnalyzer = true;
     });
 
-    connect(ui->spinBox_1_leftE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
-    connect(ui->spinBox_1_rightE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
-    connect(ui->spinBox_2_leftE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
-    connect(ui->spinBox_2_rightE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnTimeWidth()));
-    slotUpdateEnTimeWidth();
+    connect(ui->spinBox_1_leftE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_1_rightE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_2_leftE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_2_rightE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
+    slotUpdateEnWindow();
 }
 
-void OfflineDataAnalysisWidget::slotUpdateEnTimeWidth()
+void OfflineDataAnalysisWidget::slotUpdateEnWindow()
 {
     unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
                                (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
 
     PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
-    plotWidget->slotUpdateEnTimeWidth(EnWin);
+    plotWidget->slotUpdateEnWindow(EnWin);
 }
 
 OfflineDataAnalysisWidget::~OfflineDataAnalysisWidget()

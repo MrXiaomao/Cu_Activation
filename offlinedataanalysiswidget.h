@@ -38,7 +38,7 @@ public slots:
 
 private slots:
     void on_pushButton_start_clicked();
-    void slotUpdateEnTimeWidth();
+    void slotUpdateEnWindow();
 
 private:
     Ui::OfflineDataAnalysisWidget *ui;

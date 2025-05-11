@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-11 21:53:21
+ * @LastEditTime: 2025-05-11 22:23:41
  * @Description: 用来管理网口的数据发送与接受，管理网口数据的处理相关业务。
  */
 #ifndef COMMANDHELPER_H
@@ -116,8 +116,13 @@ signals:
     void sigRecvDataSize(qint32);
     void sigRecvPkgCount(qint32);
 
-    //更新自动能宽
-    void sigUpdateAutoEnWidth(std::vector<unsigned short>);
+    /**
+     * @description: 更新自动能宽
+     * @param {unsigned} short 能窗
+     * @param {qint8} mmodel 测量模式，自动、手动
+     * @return {*}
+     */    
+    void sigUpdateAutoEnWidth(std::vector<unsigned short>, qint8 mmodel);
 
 private:
     QByteArray frame;

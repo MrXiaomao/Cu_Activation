@@ -982,7 +982,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
         }
 #endif
     }
-    else if((detectorParameter.transferModel == 0x03)
+    else if(detectorParameter.transferModel == 0x03)
     {
         //创建缓存文件
         validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_WaveNet.dat");

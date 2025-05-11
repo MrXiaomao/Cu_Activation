@@ -280,16 +280,12 @@ bool GaussFit(std::vector<double> sx, std::vector<double> sy, int n, double* res
 	float peak = *maxPosition; 
 
 	//mu
-    double sum = std::accumulate(sx.begin(), sx.end(), 0.0); // 计算和
-    double mean = sum / sx.size(); // 计算均值
+    // 获取最大值的索引位置
+    size_t max_pos = std::distance(sy.begin(), maxPosition);
+    double mean = sx.at(max_pos);
 
-	//sigma
-	double accum  = 0.0;  
-	std::for_each (std::begin(sy), std::end(sy), [&](const double d) {  
-		accum  += (d-mean)*(d-mean);  
-	});  
-    double sigma = sqrt(accum/(sy.size()-1)); //方差
-
+    //sigma
+    double sigma = mean * 0.04;
 
 	const gsl_rng_type* T = gsl_rng_default;	
 	const size_t p = 3;    /* number of model parameters */

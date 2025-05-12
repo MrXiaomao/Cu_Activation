@@ -185,6 +185,22 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
             }
             qInfo().noquote() << tr("本次测量参数配置已存放在：%1").arg(configResultFile);
             
+            //记录FPGA丢包的数据，用以离线分析时的修正
+            QString lossDataFile = validDataFileName + ".FPGA_loss";
+            {
+                QFile file(lossDataFile);
+                if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+                    QTextStream out(&file);
+                    out << "time(FPGA,unit:s),losstime(s)"<<Qt::endl;
+                    for (const auto& pair : lossData) {
+                        out<<pair.first<<","<<pair.second<<Qt::endl;
+                    }
+                    file.flush();
+                    file.close();
+                }
+            }
+            qDebug().noquote() << tr("本次测量FPGA丢包时刻及丢失时长已存放在：%1").arg(lossDataFile);
+
             //符合测量模式保存测量能谱文件
             QString SpecFile = validDataFileName + ".累积能谱";
             {
@@ -192,12 +208,10 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                 if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
                     QTextStream out(&file);
 
-                    if (detectorParameter.transferModel == 0x05){
-                        SingleSpectrum spec = coincidenceAnalyzer->GetAccumulateSpectrum();
-                        out << "channel,"<< "SpectrumDet1,"<<"SpectrumDet2"<<Qt::endl;
-                        for (size_t j=0; j<MULTI_CHANNEL; ++j){
-                            out << j<<","<<spec.spectrum[0][j]<< ","<<spec.spectrum[1][j]<<Qt::endl;
-                        }
+                    SingleSpectrum spec = coincidenceAnalyzer->GetAccumulateSpectrum();
+                    out << "channel,"<< "SpectrumDet1,"<<"SpectrumDet2"<<Qt::endl;
+                    for (size_t j=0; j<MULTI_CHANNEL; ++j){
+                        out << j<<","<<spec.spectrum[0][j]<< ","<<spec.spectrum[1][j]<<Qt::endl;
                     }
                     file.flush();
                     file.close();
@@ -1020,6 +1034,9 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
 
     //连接探测器
     prepareStep = 0;
+    SequenceNumber = 0;
+    lossData.clear();
+
     //文件夹准备
     QString ShotDir = defaultCacheDir + "/" + shotNum;
     QDir dir(ShotDir);
@@ -1262,6 +1279,9 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
 
     //连接探测器
     prepareStep = 0;
+    SequenceNumber = 0;
+    lossData.clear();
+
     //文件夹准备
     QString ShotDir = defaultCacheDir + "/" + shotNum;
     QDir dir(ShotDir);
@@ -1557,8 +1577,10 @@ void CommandHelper::netFrameWorkThead()
                 ptrOffset += 8;
                 //粒子模式数据(PARTICLE_NUM_ONE_PAKAGE+1)*16byte,6字节:时间，2字节:死时间，2字节:幅度
                 int ref = 1;
+                quint64 firsttime_temp = 0;
+                quint64 lasttime_temp = 0;
                 std::vector<TimeEnergy> temp;
-                while (ref++ <= PARTICLE_NUM_ONE_PAKAGE){
+                while (ref <= PARTICLE_NUM_ONE_PAKAGE){
                     //空置48bit
                     ptrOffset += 6;
 
@@ -1581,8 +1603,42 @@ void CommandHelper::netFrameWorkThead()
                     unsigned short amplitude = static_cast<quint16>(ptrOffset[0]) << 8 | static_cast<quint16>(ptrOffset[1]);
                     ptrOffset += 2;
 
+                    if(ref == 1) firsttime_temp = t;
+                    if(t>0) lasttime_temp = t; //一直更新最后一个数值，单是要确保t不是空值
+
+                    ref++;
                     if (t != 0x00 && amplitude != 0x00)
                         temp.push_back(TimeEnergy(t, deathtime, amplitude));
+                }
+
+                //对丢包情况进行修正处理
+                //考虑到实际丢包总是在大计数率下，网口传输响应不过来，两个通道的不响应时间长度基本相同，这里直接以探测器1的丢包来修正。
+                if(channel == 0){
+                    quint32 losspackageNum = dataNum - SequenceNumber - 1; //注意要减一才是丢失的包个数
+                    if(losspackageNum > 0) {
+                        firstTime = firsttime_temp * 1.0 / 1e9;
+                        double delataT = firstTime - lastTime;//丢包的时间段长度
+                        
+                        //检测丢包跨度是否刚好跨过某一秒的前后，
+                        //经过初步测试，丢包的时候从来没有连续丢失超过1s的数据。
+                        int firstT = static_cast<int>(firstTime);
+                        int lastT = static_cast<int>(lastTime);
+                        if(lastT - firstT > 0){
+                            double ratio1 = (lastTime*1.0 - firstTime) / delataT; //计算出属于前一秒的比例
+                            lossData[firstT+1] = ratio1; //注意计时从1开始
+                            lossData[lastT+1] = 1 - ratio1; //注意计时从1开始
+                        }
+                        else {
+                            // 记录丢失的数据点个数，考虑到丢包总是发送在大计数率，因此直接认为每次丢一个包损失64个计数。
+                            lossData[firstT+1] = delataT;
+                        }
+                        coincidenceAnalyzer->AddLossMap(lossData);
+                    }
+
+                    //记录数据帧序号
+                    SequenceNumber = dataNum;
+                    //记录数据帧最后时间
+                    lastTime = lasttime_temp * 1.0 / 1e9;
                 }
 
                 //数据分拣完毕

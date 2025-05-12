@@ -1304,10 +1304,6 @@ void MainWindow::on_pushButton_refresh_clicked()
     this->saveConfigJson();
 
     int stepT = ui->spinBox_step->value();
-    // if (ui->radioButton_ref->isChecked()){
-    //     PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
-    //     plotWidget->slotResetPlot();
-    // }
 
     commandHelper->updateStepTime(stepT);
 }
@@ -1866,20 +1862,8 @@ void MainWindow::on_pushButton_refresh_2_clicked()
     this->saveConfigJson();
 
     int stepT = ui->spinBox_step_2->value();
-    // unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE_2->value(), (unsigned short)ui->spinBox_1_rightE_2->value(),
-    //                            (unsigned short)ui->spinBox_2_leftE_2->value(), (unsigned short)ui->spinBox_2_rightE_2->value()};
-
-    // if (ui->radioButton_ref->isChecked()){
-    //     PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
-    //     plotWidget->slotResetPlot();
-    // }
 
     commandHelper->updateStepTime(stepT);
-}
-
-void MainWindow::on_pushButton_refresh_3_clicked()
-{
-    this->saveConfigJson();
 }
 
 void MainWindow::on_action_line_log_triggered()

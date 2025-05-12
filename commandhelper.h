@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-11 22:23:41
+ * @LastEditTime: 2025-05-12 20:27:55
  * @Description: 用来管理网口的数据发送与接受，管理网口数据的处理相关业务。
  */
 #ifndef COMMANDHELPER_H
@@ -132,8 +132,13 @@ private:
     QMutex mutexCache;//缓冲池交换网络数据所用 cachePool
     QMutex mutexPlot;//缓冲池交换帧数据所用 spectrumFrameCachePool
     QMutex mutexReset;//更新数据所用，一般用于开始测量，需要重置数据项
-    QMutex mutexFile;//写文件锁
-    quint32 SequenceNumber;// 帧序列号
+    QMutex mutexFile;//写文件锁    
+    
+    quint32 SequenceNumber;// 数据帧序列号
+    double lastTime; //用来修正FPGA掉包问题,记录正常包的末尾时间,单位s 
+    double firstTime; //用来修正FPGA掉包问题，记录丢包之后的第一个有效时间，单位s
+    std::map<int, double> lossData; //记录丢包的时刻（FPGA时钟，单位:s）以及丢失的时间长度(单位：s)。
+
     QLiteThread* analyzeNetDataThread;//处理网络数据线程，将数据进行解析成时间能量队
     QLiteThread* plotUpdateThread;//能谱信息处理线程
     quint32 currentFPGATime = 0;// FPGA当前时刻，单位：s

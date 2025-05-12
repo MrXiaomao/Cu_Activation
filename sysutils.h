@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-08 15:43:44
+ * @LastEditTime: 2025-05-12 17:45:58
  * @Description: 请填写简介
  */
 #ifndef SYSUTILS_H
@@ -82,7 +82,8 @@ struct CoincidenceResult{
 };
 
 struct CurrentPoint{
-    unsigned int time; //时刻(单位s)，以FPGA时钟进行计时，给出当前的能谱对应的时刻，第1个谱对应time=1。
+    unsigned int time; //时刻(单位s)，以冷却时间+FPGA时钟进行计时，给出当前的计数点对应的时刻。从1开始计数。\
+        这里冷却时间指FPGA未开始计时前的冷却时长，不是界面的冷却时间
     int dataPoint1 = 0; //这次处理的探测器1数据点数
     int dataPoint2 = 0; //这次处理的探测器2数据点数
 };

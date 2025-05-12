@@ -87,8 +87,6 @@ private slots:
 
     void on_pushButton_refresh_2_clicked();
 
-    void on_pushButton_refresh_3_clicked();
-
     void on_action_line_log_triggered();
 
     void on_action_Moving_triggered();

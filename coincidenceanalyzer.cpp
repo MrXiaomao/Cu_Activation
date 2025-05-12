@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-11 23:04:35
+ * @LastEditTime: 2025-05-12 20:26:35
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -294,7 +294,21 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
     tmpCoinResult.time = AllPoint.back().time;
     int length1 = AllPoint.back().dataPoint1;
     int length2 = AllPoint.back().dataPoint2;
-
+    
+    //对FPGA丢包的时间占比进行计算。注意是以探测器1通道的丢包率来作为统一修正。
+    double correctRatio = 1.0;
+    int FPGA_time = 0;
+    FPGA_time = tmpCoinResult.time - coolingTime_Manual; //只有手动测量才需要扣除，对于自动测量，coolingTime_Manual=0；
+    {
+        QMutexLocker locker(&mutexlossDATA);
+        auto it = lossData_time_num.find(FPGA_time);
+        if (it != lossData_time_num.end()) {
+            double value = it->second;  // 获取值
+            if(value<1.0)  correctRatio = 1.0 / (1.0 - value); //确保异常情况导致
+            lossData_time_num.erase(it);
+        }
+    }
+    
     // 取出待处理数据，按照顺序排列
     vector<TimeEnergy> data_temp1,data_temp2;
     data_temp1.reserve(length1);
@@ -307,11 +321,12 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
     {
         if(data1[i].energy>EnWindowWidth[0] && data1[i].energy <=EnWindowWidth[1]) {
             count1++;
-            data1[i].time += delayTime;
+            data1[i].time += delayTime; //增加对电路延迟时间的处理
             data_temp1.push_back(data1[i]);
         }
         deathTime1 += data1[i].dietime;
     }
+    
     tmpCoinResult.CountRate1 = count1;
     tmpCoinResult.DeathRatio1 = deathTime1*100.0/1E9; // 给出1s内的死时间率。转化为100%的单位
 
@@ -394,6 +409,15 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
                 if(count > 2) tmpCoinResult.ConCount_multiple++; //多符合事件，单独记录
             }
        }
+    }
+    
+    //对FPGA丢包进行修正
+    if(correctRatio > 1.0) 
+    {
+        tmpCoinResult.CountRate1 = static_cast<int>(tmpCoinResult.CountRate1 * correctRatio);
+        tmpCoinResult.CountRate2 = static_cast<int>(tmpCoinResult.CountRate2 * correctRatio);
+        tmpCoinResult.ConCount_single = static_cast<int>(tmpCoinResult.ConCount_single * correctRatio);
+        tmpCoinResult.ConCount_multiple = static_cast<int>(tmpCoinResult.ConCount_multiple * correctRatio);
     }
     coinResult.push_back(tmpCoinResult);
 }
@@ -613,7 +637,7 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int tim
 }
 
 /**
- * @description: 根据计数曲线，选取合适的时间区间，对这个区间的数据进行积分处理，给出其初始的相对活度
+ * @description: 用于离线处理。根据计数曲线，选取合适的时间区间，对这个区间的数据进行积分处理，给出其初始的相对活度
  * 注意：这里的时间以铜活化结束开始计时。
  * @param {DetectorParameter} detPara 测量参数
  * @param {int} startT 起始时间，单位s

@@ -9,6 +9,8 @@
 #include <mutex>
 #include <string.h>//memset
 
+#include <QMutex>
+#include <map>
 #include "sysutils.h"
 //使用前向声明，避免与文件sysutils.h相互包含
 
@@ -26,7 +28,7 @@ public:
     CoincidenceAnalyzer();
 
     /**
-     * @description: 计算出初始相对活度 A_relative = A0*近端探测器几何效率，以及中子产额Y
+     * @description: 用于在线处理，计算出初始相对活度 A_relative = A0*近端探测器几何效率，以及中子产额Y
      * 主要用于在线测量结束时的中子产额计算
      * @param {DetectorParameter} detPara 测量参数
      * @param {int} time_SetEnWindow 手动测量时选择能窗对应的时间。FPGA内部时钟，单位s。自动测量不需要改参数，默认值：0
@@ -34,6 +36,20 @@ public:
      */    
     double getInintialActive(DetectorParameter detPara, int time_SetEnWindow = 0); 
     double getInintialActive(DetectorParameter detPara, int start_time, int time_end);
+
+    /**
+     * @description: 添加丢包的信息，给出丢失的[时间、粒子数]，
+     * 该函数需要注意多线程问题。commandhelper.cpp中调用该函数添加map，而Coincidence()函数使用该map
+     * @param {map<int, double>} lossData [丢失时刻、粒子数], 其中时间为FPGA时钟，单位s
+     * @return {*}
+     */
+    inline void AddLossMap(std::map<int, double> lossData)
+    {
+        QMutexLocker locker(&mutexlossDATA);
+        for (const auto& pair:lossData) {
+            lossData_time_num[pair.first] = pair.second;
+        }
+    }
 
     //重新初始化，每次从零时刻开始处理数据时，需要初始化
     inline void initialize(){
@@ -170,8 +186,9 @@ private:
     std::function<void(SingleSpectrum, vector<CoincidenceResult>)> m_pfunc = nullptr;
     pfRealCallbackFunction m_pfuncEx = nullptr;
     void* m_pfuncUser = nullptr;
-    mutex mtx;
+    QMutex mutexlossDATA;//丢包数据信息所用数据锁
     
+    std::map<int, double> lossData_time_num; //记录丢包的时刻（FPGA时钟，单位:s）以及丢失的时间长度(单位：s)。需要注意，计时从1开始。
     // 用于高斯拟合，自动更新能窗
     bool isChangeEnWindow; //记录当前1秒是否更新了能窗
     bool autoFirst; //自动调节符合计算能窗宽度，用于解决峰飘问题，每测量一定数据点之后，自动拟合出高斯曲线，以新的半高宽来作为符合计算能窗。

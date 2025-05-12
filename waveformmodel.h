@@ -31,6 +31,8 @@ private slots:
 
     void on_pushButton_save_clicked();
 
+    void on_pushButton_stop_clicked();
+
 private:
     Ui::WaveformModel *ui;
     QTimer *timer;

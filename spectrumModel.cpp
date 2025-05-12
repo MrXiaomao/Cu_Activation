@@ -55,10 +55,30 @@ SpectrumModel::SpectrumModel(QWidget *parent)
             ui->spinBox_3->blockSignals(false);
         }
     });
+
+    connect(commandhelper, &CommandHelper::sigMeasureStart, this, [=](qint8 mmode, qint8 tmode){
+        measuring = true;
+
+        timerStart = QDateTime::currentDateTime();
+        ui->label_2->setText(timerStart.toString("yyyy-MM-dd HH:mm:ss"));
+        timer->start(500);
+        ui->pushButton_start->setEnabled(false);
+        ui->pushButton_save->setEnabled(false);
+        ui->pushButton_stop->setEnabled(true);
+    });
+
+    connect(commandhelper, &CommandHelper::sigMeasureStopSpectrum, this, [=](){
+        timer->stop();
+        measuring = false;
+        ui->pushButton_stop->setEnabled(false);
+        ui->pushButton_save->setEnabled(true);
+        ui->pushButton_start->setEnabled(true);
+    });
 }
 
 SpectrumModel::~SpectrumModel()
 {
+    disconnect(commandhelper, nullptr, this, nullptr);
     if (measuring){
         commandhelper->slotStopManualMeasure();
     }
@@ -188,11 +208,9 @@ bool SpectrumModel::save()
 void SpectrumModel::on_pushButton_start_clicked()
 {
     QAbstractButton *btn = qobject_cast<QAbstractButton*>(sender());
-    measuring = !measuring;
-    if (measuring){
+    if (!measuring){
         // 先保存参数
         if (!this->save()){
-            measuring = !measuring;
             return;
         }
 
@@ -232,20 +250,18 @@ void SpectrumModel::on_pushButton_start_clicked()
             detectorParameter.gain = jsonObj["DetectorGain"].toInt();
         }
 
-        measuring = true;
-        btn->setText(tr("停止测量"));
         commandhelper->slotStartManualMeasure(detectorParameter);
 
-        timerStart = QDateTime::currentDateTime();
-        ui->label_2->setText(timerStart.toString("yyyy-MM-dd HH:mm:ss"));
-        timer->start(500);
         ui->pushButton_save->setEnabled(false);
-    } else {
-        commandhelper->slotStopManualMeasure();
-        btn->setText(tr("开始测量"));
+        ui->pushButton_start->setEnabled(false);
+        ui->pushButton_stop->setEnabled(true);
 
-        timer->stop();
-        ui->pushButton_save->setEnabled(true);
+        QTimer::singleShot(3000, this, [=](){
+            //指定时间未收到开始测量指令，则按钮恢复初始状态
+            if (!measuring){
+                ui->pushButton_start->setEnabled(true);
+            }
+        });
     }
 }
 
@@ -294,3 +310,9 @@ void SpectrumModel::closeEvent(QCloseEvent *event)
 
     event->accept();
 }
+
+void SpectrumModel::on_pushButton_stop_clicked()
+{
+    commandhelper->slotStopManualMeasure();
+}
+

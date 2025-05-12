@@ -111,21 +111,30 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
 
         //对当前一秒数据处理给出能谱
         calculateAllSpectrum(unusedData1, unusedData2);
-        
+
+        SingleSpectrum tempSpec = AllSpectrum.back();
+        for(unsigned short i=0; i<MULTI_CHANNEL - 3; i++)
+        {
+            recentlySpectrum.time = tempSpec.time;
+            recentlySpectrum.spectrum[0][i] += tempSpec.spectrum[0][i];
+            recentlySpectrum.spectrum[1][i] += tempSpec.spectrum[1][i];
+        }
+
         //计算计数曲线
         if (countFlag)
         {   
             //自动拟合，更新能窗
             if(autoEnWidth) 
             {
-                for(unsigned short i=0; i<MULTI_CHANNEL; i++)
+                //SingleSpectrum tempSpec = AllSpectrum.back();
+                for(unsigned short i=0; i<MULTI_CHANNEL - 3; i++)
                 {
                     GaussFitSpec.time = tempSpec.time;
                     GaussFitSpec.spectrum[0][i] += tempSpec.spectrum[0][i];
                     GaussFitSpec.spectrum[1][i] += tempSpec.spectrum[1][i];
-                    recentlySpectrum.time = tempSpec.time;
-                    recentlySpectrum.spectrum[0][i] += tempSpec.spectrum[0][i];
-                    recentlySpectrum.spectrum[1][i] += tempSpec.spectrum[1][i];
+                    // recentlySpectrum.time = tempSpec.time;
+                    // recentlySpectrum.spectrum[0][i] += tempSpec.spectrum[0][i];
+                    // recentlySpectrum.spectrum[1][i] += tempSpec.spectrum[1][i];
                 }
 
                 //距离上次自动高斯拟合的时间间隔，单位：s
@@ -137,12 +146,13 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
                 //若更新了能窗，则重置相关数据
                 if(isChangeEnWindow){
                     recentlySpectrum = GaussFitSpec; //更新这个最近能谱
-                    for(unsigned short i=0; i<MULTI_CHANNEL; i++)
-                    {
-                        GaussFitSpec.time = 0;//注意这里是在探测器2之后才重置
-                        GaussFitSpec.spectrum[0][i] = 0;          
-                        GaussFitSpec.spectrum[1][i] = 0;
-                    }
+                    memset(&GaussFitSpec, 0, sizeof(GaussFitSpec));
+                    // for(unsigned short i=0; i<MULTI_CHANNEL; i++)
+                    // {
+                    //     GaussFitSpec.time = 0;//注意这里是在探测器2之后才重置
+                    //     GaussFitSpec.spectrum[0][i] = 0;
+                    //     GaussFitSpec.spectrum[1][i] = 0;
+                    // }
                 }
             }
 
@@ -391,8 +401,6 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
 // 自动更新能窗
 void CoincidenceAnalyzer::AutoEnergyWidth()
 {
-    SingleSpectrum tempSpec = AllSpectrum.back();
-
     //计算自动拟合的数据点数
     int sumEnergy1 = 0; 
     int sumEnergy2 = 0;
@@ -434,11 +442,11 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
             }
             else
             {
-                qDebug().noquote() <<"探测器1自动高斯拟合发生异常,可能原因，选取的初始峰位不具有高斯形状，无法进行高斯拟合";
+                // qDebug().noquote() <<"探测器1自动高斯拟合发生异常,可能原因，选取的初始峰位不具有高斯形状，无法进行高斯拟合";
             }
         }
         else{
-            qDebug().noquote() <<"探测器1自动高斯拟合发生异常,待拟合的数据点数小于6个，无法拟合";
+            // qDebug().noquote() <<"探测器1自动高斯拟合发生异常,待拟合的数据点数小于6个，无法拟合";
         }
     }
 
@@ -469,7 +477,7 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
             else EnergyWindow[3] = MULTI_CHANNEL - 1u;
         }
         else{
-            qDebug().noquote()<<"探测器2 自动高斯拟合发生异常,可能原因，选取的初始峰位不具有高斯形状，无法进行高斯拟合";
+            // qDebug().noquote()<<"探测器2 自动高斯拟合发生异常,可能原因，选取的初始峰位不具有高斯形状，无法进行高斯拟合";
         }
     }
     if(changed) GaussFitLog.push_back({countCoin, EnergyWindow[0], EnergyWindow[1], EnergyWindow[2], EnergyWindow[3]});

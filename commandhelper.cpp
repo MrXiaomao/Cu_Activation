@@ -204,9 +204,61 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                 }
             }
             qInfo().noquote() << tr("本次测量累积能谱已存放在：%1").arg(SpecFile);
+        } else if(detectorParameter.transferModel == 0x03){
+            //测量停止保存波形测量参数
+            QString configResultFile = netDataFileName + ".配置";
+            {
+                QFile file(configResultFile);
+                if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+                    QTextStream out(&file);
+
+                    // 保存粒子测量参数
+                    out << tr("阈值1=") << detectorParameter.triggerThold1 << Qt::endl;
+                    out << tr("阈值2=") << detectorParameter.triggerThold2 << Qt::endl;
+                    out << tr("波形极性=") << ((detectorParameter.waveformPolarity==0x00) ? tr("正极性") : tr("负极性")) << Qt::endl;
+
+                    out << tr("波形触发模式=") << ((detectorParameter.triggerModel==0x00) ? tr("normal") : tr("auto")) << Qt::endl;
+                    if (gainValue.contains(detectorParameter.gain))
+                        out << tr("探测器增益=") << gainValue[detectorParameter.gain] << Qt::endl;
+
+                    out << tr("波形长度=") << detectorParameter.waveLength << Qt::endl;
+
+                    file.flush();
+                    file.close();
+                }
+            }
+            qInfo().noquote() << tr("本次波形测量参数配置已存放在：%1").arg(configResultFile);
         }
     });
 
+    connect(this, &CommandHelper::sigMeasureStopWave, this, [=](){
+        //测量停止，进行符合计算，给出产额结果
+        if(detectorParameter.transferModel == 0x03){
+            //测量停止保存波形测量参数
+            QString configResultFile = netDataFileName + ".配置";
+            {
+                QFile file(configResultFile);
+                if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+                    QTextStream out(&file);
+
+                    // 保存粒子测量参数
+                    out << tr("阈值1=") << detectorParameter.triggerThold1 << Qt::endl;
+                    out << tr("阈值2=") << detectorParameter.triggerThold2 << Qt::endl;
+                    out << tr("波形极性=") << ((detectorParameter.waveformPolarity==0x00) ? tr("正极性") : tr("负极性")) << Qt::endl;
+
+                    out << tr("波形触发模式=") << ((detectorParameter.triggerModel==0x00) ? tr("normal") : tr("auto")) << Qt::endl;
+                    if (gainValue.contains(detectorParameter.gain))
+                        out << tr("探测器增益=") << gainValue[detectorParameter.gain] << Qt::endl;
+
+                    out << tr("波形长度=") << detectorParameter.waveLength << Qt::endl;
+
+                    file.flush();
+                    file.close();
+                }
+            }
+            qInfo().noquote() << tr("本次波形测量参数配置已存放在：%1").arg(configResultFile);
+        }
+    });
 
     initSocket(&socketDetector);
     socketDetector->setSocketOption(QAbstractSocket::LowDelayOption, 1);//优化Socket以实现低延迟
@@ -217,7 +269,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
         emit sigDetectorFault();});
 #else
     // Qt 5.15 及之后版本
-    connect(socketDetector, &QAbstractSocket::errorOccurred, this, [=] {
+    connect(socketDetector, &QAbstractSocket::errorOccurred, this, [=](QAbstractSocket::SocketError) {
         // 网络故障，停止一切数据处理操作
         this->detectorException = true;
         emit sigDetectorFault();
@@ -337,17 +389,18 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
 
     //更新能窗与能窗对应的竖线，目前默认都要更新，产生计数曲线后才会更新
     if(countCoin>0){
-        autoEnWindow.clear();
+        //autoEnWindow.clear();//屏蔽，否则下面if判断条件始终不成立
         std::vector<unsigned short> newEnWindow;
         coincidenceAnalyzer->GetEnWidth(newEnWindow);
         if(newEnWindow == autoEnWindow){
         }
         else{
             autoEnWindow = newEnWindow;
-            qInfo().noquote()<<"自动更新能窗，探测器1:["<<autoEnWindow[0]<<","<<autoEnWindow[1]
-                <<"], 探测器2:["<<autoEnWindow[2]<<","<<autoEnWindow[3]<<"]";
-        }
-        emit sigUpdateAutoEnWidth(autoEnWindow, detectorParameter.measureModel);
+            // qInfo().noquote()<<"自动更新能窗，探测器1:["<<autoEnWindow[0]<<","<<autoEnWindow[1]
+            //     <<"], 探测器2:["<<autoEnWindow[2]<<","<<autoEnWindow[3]<<"]";
+
+            emit sigUpdateAutoEnWidth(autoEnWindow, detectorParameter.measureModel);
+        }        
     }
 
     emit sigPlot(r1, rr3);
@@ -410,6 +463,7 @@ void CommandHelper::handleManualMeasureNetData()
     if (detectorParameter.transferModel == 0x03)
     {
         //波形模式，直接保存原始数据
+        QMutexLocker locker(&mutexFile);
         if (nullptr != pfSaveNet && binaryData.size() > 0){
             pfSaveNet->write(binaryData);
             pfSaveNet->flush();
@@ -423,6 +477,7 @@ void CommandHelper::handleManualMeasureNetData()
     {
 #ifdef QT_DEBUG
         //粒子模式，DEBUG模式下保存原始数据查找问题
+        QMutexLocker locker(&mutexFile);
         if (nullptr != pfSaveNet && binaryData.size() > 0){
             pfSaveNet->write(binaryData);
             pfSaveNet->flush();
@@ -467,6 +522,7 @@ void CommandHelper::handleAutoMeasureNetData()
 
 #ifdef QT_DEBUG
     //粒子模式，DEBUG模式下保存原始数据查找问题
+    QMutexLocker locker(&mutexFile);
     if (nullptr != pfSaveNet && binaryData.size() > 0){
         pfSaveNet->write(binaryData);
         pfSaveNet->flush();
@@ -952,6 +1008,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     this->autoChangeEnWindow = false;
     this->detectorException = false;
     sendStopCmd = false;
+    autoEnWindow.clear();
 
     //连接之前清空缓冲区
     QMutexLocker locker(&mutexCache);
@@ -972,8 +1029,9 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     if(detectorParameter.transferModel == 0x05)
     {
         //创建缓存文件
-        validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_valid.dat");   
-    
+        validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_valid.dat");
+
+        QMutexLocker locker(&mutexFile);
 #ifdef QT_DEBUG
         netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_Net.dat");
         if (nullptr != pfSaveNet){
@@ -1010,6 +1068,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     {
         //创建缓存文件
         netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_WaveNet.dat");
+        QMutexLocker locker(&mutexFile);
         if (nullptr != pfSaveNet){
             pfSaveNet->close();
             delete pfSaveNet;
@@ -1151,6 +1210,35 @@ void CommandHelper::slotStopManualMeasure()
         socketDetector->write(cmdStopTrigger);
         sendStopCmd = true;
         qDebug()<<"Send HEX: "<<cmdStopTrigger.toHex(' ');
+
+        //00:能谱 03:波形 05:粒子
+        if (detectorParameter.transferModel == 0x00){
+            emit sigMeasureStopSpectrum();
+
+            //测量停止保存波形测量参数
+            QString configResultFile = netDataFileName + ".配置";
+            {
+                QFile file(configResultFile);
+                if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+                    QTextStream out(&file);
+
+                    // 保存粒子测量参数
+                    out << tr("阈值1=") << detectorParameter.triggerThold1 << Qt::endl;
+                    out << tr("阈值2=") << detectorParameter.triggerThold2 << Qt::endl;
+                    out << tr("波形极性=") << ((detectorParameter.waveformPolarity==0x00) ? tr("正极性") : tr("负极性")) << Qt::endl;
+
+                    out << tr("死时间=") << detectorParameter.deadTime << Qt::endl;
+                    if (gainValue.contains(detectorParameter.gain))
+                        out << tr("探测器增益=") << gainValue[detectorParameter.gain] << Qt::endl;
+
+                    out << tr("能谱刷新时间=") << detectorParameter.refreshTimeLength << Qt::endl;
+
+                    file.flush();
+                    file.close();
+                }
+            }
+            qInfo().noquote() << tr("本次能谱测量参数配置已存放在：%1").arg(configResultFile);
+        }
     } else {
         emit sigDetectorFault();
     }
@@ -1181,8 +1269,9 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
         dir.mkdir(ShotDir);
     //创建缓存文件
     validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_valid.dat");
+    QMutexLocker locker2(&mutexFile);
 #ifdef QT_DEBUG
-    netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_Net.dat"); 
+    netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_Net.dat");
     if (nullptr != pfSaveNet){
         pfSaveNet->close();
         delete pfSaveNet;
@@ -1323,6 +1412,7 @@ void CommandHelper::netFrameWorkThead()
                     {
                         foundStop = true;
                         qDebug()<<"Recv HEX: "<<cmdStopTrigger.toHex(' ');
+                        QMutexLocker locker(&mutexFile);
 #ifdef QT_DEBUG
                         if (nullptr != pfSaveNet){
                             pfSaveNet->close();
@@ -1532,15 +1622,39 @@ void CommandHelper::netFrameWorkThead()
                                 count++;
                                 continue;
                             } else {
-                                handlerPool.remove(0, 1);
+                                handlerPool.remove(0, 1);//正常情况这个地方不应该进来
                             }     
-                        } else {
-                            handlerPool.remove(0, 1);
+                        } else {                            
+                            //正常情况这个地方不应该进来
+
+                            //先判断一下是否是停止指令插入进来了
+                            QByteArray cmd = handlerPool.left(cmdStopTrigger.size());
+                            if (cmd.compare(cmdStopTrigger) == 0){
+                                qDebug()<<"Recv2 HEX: "<<cmdStopTrigger.toHex(' ');
+
+                                QMutexLocker locker(&mutexFile);
+                                if (nullptr != pfSaveNet){
+                                    pfSaveNet->close();
+                                    delete pfSaveNet;
+                                    pfSaveNet = nullptr;
+                                }
+
+                                //测量停止是否需要清空所有数据
+                                handlerPool.clear();
+                                workStatus = WorkEnd;
+
+                                slotStopManualMeasure(); //再次发送停止指令
+                                emit sigMeasureStopWave();
+                                break;
+                            } else {
+                                handlerPool.remove(0, 1);
+                            }
                         }
                     } else if (handlerPool.size() == 12){
                         if (handlerPool.compare(cmdStopTrigger) == 0){                            
                             qDebug()<<"Recv HEX: "<<cmdStopTrigger.toHex(' ');
 
+                            QMutexLocker locker(&mutexFile);
                             if (nullptr != pfSaveNet){
                                 pfSaveNet->close();
                                 delete pfSaveNet;
@@ -1737,16 +1851,25 @@ void CommandHelper::exportFile(QString dstPath)
         }
 
         //进行文件copy
-        QFile::copy(validDataFileName + ".配置", dstPath + ".配置");
         if (this->detectorParameter.transferModel == 0x05){
-            QFile::copy(validDataFileName + ".符合计数", dstPath + ".符合计数");
+            //符合测量才需要复制配置文件
+            QFile::copy(validDataFileName + ".配置", dstPath + ".配置");
+            if (this->detectorParameter.transferModel == 0x05){
+                QFile::copy(validDataFileName + ".符合计数", dstPath + ".符合计数");
+            }
+
+            if (QFile::copy(validDataFileName, dstPath))
+                QMessageBox::information(nullptr, tr("提示"), tr("数据保存成功！"), QMessageBox::Ok, QMessageBox::Ok);
+            else
+                QMessageBox::information(nullptr, tr("提示"), tr("数据保存失败！"), QMessageBox::Ok, QMessageBox::Ok);
+        } else {
+            QFile::copy(netDataFileName + ".配置", dstPath + ".配置");
+
+            if (QFile::copy(netDataFileName, dstPath))
+                QMessageBox::information(nullptr, tr("提示"), tr("数据保存成功！"), QMessageBox::Ok, QMessageBox::Ok);
+            else
+                QMessageBox::information(nullptr, tr("提示"), tr("数据保存失败！"), QMessageBox::Ok, QMessageBox::Ok);
         }
-
-        if (QFile::copy(validDataFileName, dstPath))        
-            QMessageBox::information(nullptr, tr("提示"), tr("数据保存成功！"), QMessageBox::Ok, QMessageBox::Ok);
-        else
-            QMessageBox::information(nullptr, tr("提示"), tr("数据保存失败！"), QMessageBox::Ok, QMessageBox::Ok);
-
     } else if (dstPath.endsWith(".txt")) {
         // 将源文件转换为文本文件
         QFile fileSrc(validDataFileName);

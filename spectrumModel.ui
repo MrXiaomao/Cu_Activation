@@ -258,6 +258,13 @@
            </property>
           </widget>
          </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_stop">
+           <property name="text">
+            <string>停止测量</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </widget>
       </item>

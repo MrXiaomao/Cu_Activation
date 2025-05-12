@@ -90,7 +90,13 @@ void SplashWidget::setInfo(const QString &info, bool allowClose, bool showProgre
     else
         ui->pushButton_cancel->hide();
 
-    setInfo(info, fontSizeMain, timeout);
+    this->timeout = timeout;
+    this->currentSec = 0;
+
+    QFont font;
+    font.setPixelSize(fontSizeMain);
+    ui->label_Info->setFont(font);
+    ui->label_Info->setText(info);
 }
 
 #include "controlhelper.h"

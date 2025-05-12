@@ -547,7 +547,7 @@ void PlotWidget::updateTracerPosition(QCustomPlot* customPlot, double key, doubl
         case DataTracer:
         {
             coordsTipItemTracer->position->setCoords(key, value);
-            coordsTipItemText->position->setCoords(25, 0);
+            coordsTipItemText->position->setCoords(50, -50);
             coordsTipItemText->setText(tr("%1,%2").arg(QString::number(key, 'f', 0)).arg(QString::number(value, 'f', 2)));
             break;
         }

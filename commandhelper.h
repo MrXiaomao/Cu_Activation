@@ -110,6 +110,7 @@ signals:
     void sigMeasureWait();
     void sigMeasureStop();
     void sigMeasureStopWave();
+    void sigMeasureStopSpectrum();
     void sigActiveOmiga(double a); //计算出初始活度乘以近端探测器几何效率
 
     //网络包数大小
@@ -131,6 +132,7 @@ private:
     QMutex mutexCache;//缓冲池交换网络数据所用 cachePool
     QMutex mutexPlot;//缓冲池交换帧数据所用 spectrumFrameCachePool
     QMutex mutexReset;//更新数据所用，一般用于开始测量，需要重置数据项
+    QMutex mutexFile;//写文件锁
     quint32 SequenceNumber;// 帧序列号
     QLiteThread* analyzeNetDataThread;//处理网络数据线程，将数据进行解析成时间能量队
     QLiteThread* plotUpdateThread;//能谱信息处理线程

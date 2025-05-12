@@ -409,6 +409,9 @@ MainWindow::MainWindow(QWidget *parent)
 
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
         plotWidget->slotUpdateEnWindow(EnWidth.data());
+
+        qInfo().noquote()<<"自动更新能窗，探测器1:["<<EnWidth[0]<<","<<EnWidth[1]
+                          <<"], 探测器2:["<<EnWidth[2]<<","<<EnWidth[3]<<"]";
     }, Qt::QueuedConnection/*防止堵塞*/);
 
     emit sigRefreshUi();
@@ -467,8 +470,7 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 void MainWindow::InitMainWindowUi()
 {
 #ifdef QT_NO_DEBUG
-    // ui->action_start_measure->hide();
-    ui->toolBar_online->removeAction(ui->action_start_measure);
+    //ui->toolBar_online->removeAction(ui->action_start_measure);
     ui->menu_4->removeAction(ui->action_Moving); // 屏蔽掉位移平台子界面
     ui->menu_view->removeAction(ui->action_SpectrumModel); //屏蔽掉能谱界面
 #endif
@@ -751,8 +753,7 @@ void MainWindow::InitMainWindowUi()
     RegisterHotKey(reinterpret_cast<HWND>(this->winId()), 1, 0x00, VK_F1);
     RegisterHotKey(reinterpret_cast<HWND>(this->winId()), 2, 0x00, VK_F2);
 
-    slotUpdateEnWindow();
-    qInfo().noquote() << QObject::tr("系统启动");
+    slotUpdateEnWindow();    
     // emit sigAppengMsg(QObject::tr("系统启动"), QtInfoMsg);
 }
 

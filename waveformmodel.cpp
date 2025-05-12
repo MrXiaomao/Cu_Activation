@@ -69,25 +69,26 @@ WaveformModel::WaveformModel(QWidget *parent)
 
     connect(commandhelper, &CommandHelper::sigMeasureStart, this, [=](qint8 mmode, qint8 tmode){
         measuring = true;
-        ui->pushButton_start->setText(tr("停止测量"));
 
         timerStart = QDateTime::currentDateTime();
         ui->label_7->setText(timerStart.toString("yyyy-MM-dd HH:mm:ss"));
         timer->start(500);
-        ui->pushButton_start->setEnabled(true);
+        ui->pushButton_start->setEnabled(false);
         ui->pushButton_save->setEnabled(false);
+        ui->pushButton_stop->setEnabled(true);
     });
 
     connect(commandhelper, &CommandHelper::sigMeasureStopWave, this, [=](){
         timer->stop();
         measuring = false;
-        ui->pushButton_start->setText(tr("开始测量"));
+        ui->pushButton_stop->setEnabled(false);
         ui->pushButton_save->setEnabled(true);
         ui->pushButton_start->setEnabled(true);
     });
 
     this->load();
     ui->pushButton_save->setEnabled(false);
+    ui->pushButton_stop->setEnabled(false);
     ui->pushButton_start->setEnabled(commandhelper->isConnected());
 }
 
@@ -243,7 +244,6 @@ void WaveformModel::on_pushButton_start_clicked()
     if (!measuring){
         // 先保存参数
         if (!this->save()){
-            measuring = !measuring;
             return;
         }
 
@@ -289,25 +289,11 @@ void WaveformModel::on_pushButton_start_clicked()
 
         ui->pushButton_save->setEnabled(false);
         ui->pushButton_start->setEnabled(false);
+        ui->pushButton_stop->setEnabled(true);
 
         QTimer::singleShot(3000, this, [=](){
             //指定时间未收到开始测量指令，则按钮恢复初始状态
             if (!measuring){
-                ui->pushButton_start->setEnabled(true);
-            }
-        });
-    } else {
-        ui->pushButton_save->setEnabled(false);
-        ui->pushButton_start->setEnabled(false);
-        commandhelper->slotStopManualMeasure();
-
-        QTimer::singleShot(5000, this, [=](){
-            //指定时间未收到停止测量指令，则按钮恢复初始状态
-            if (measuring){
-                //测试
-                measuring = false;
-                ui->pushButton_start->setText("开始测量");
-
                 ui->pushButton_start->setEnabled(true);
             }
         });
@@ -359,3 +345,9 @@ void WaveformModel::closeEvent(QCloseEvent *event)
 
     event->accept();
 }
+
+void WaveformModel::on_pushButton_stop_clicked()
+{
+    commandhelper->slotStopManualMeasure();
+}
+

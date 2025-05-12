@@ -7,6 +7,7 @@
 #include <algorithm> // 包含 std::find_if
 // #include <functional>// std::function
 #include <mutex>
+#include <string.h>//memset
 
 #include "sysutils.h"
 //使用前向声明，避免与文件sysutils.h相互包含
@@ -39,6 +40,7 @@ public:
         countCoin = 0;
         coolingTime_Manual = 0;
         coolingTime_Auto = 0;
+        memset(&recentlySpectrum, 0, sizeof(recentlySpectrum));
 
         // 清除向量中的所有元素并释放内存空间
         vector<CoincidenceResult>().swap(coinResult);

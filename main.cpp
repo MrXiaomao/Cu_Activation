@@ -144,6 +144,7 @@ int main(int argc, char *argv[])
     MainWindow w;
     mw = &w;
 
+    qInfo().noquote() << QObject::tr("系统启动");
     QObject::connect(&w, &MainWindow::sigRefreshBoostMsg, &splash, [&](const QString &msg) {
         splash.showMessage(msg, Qt::AlignLeft | Qt::AlignBottom, Qt::white);
     }/*, Qt::QueuedConnection */);

@@ -55,6 +55,9 @@ YieldCalibration::YieldCalibration(QWidget *parent)
 
     //最后一列自动拉伸
     ui->tableWidget_calibration->horizontalHeader()->setStretchLastSection(true);
+
+    QFont font("Microsoft YaHei", 10); // 设置字体为微软雅黑，大小为10
+    ui->label_attention->setFont(font);
     // ui->label_attention->setText("<p style='line-height:20px'>"
     //                       "<font style ='font-size:19px; color:#ffff00;font-weight:bold'> 客户端界面 </font>"
     //                       "<p style='line-height:7px'>"

@@ -483,8 +483,8 @@ void PlotWidget::updateTracerPosition(QCustomPlot* customPlot, double key, doubl
     coordsTipItemXLine->setVisible(true);
     coordsTipItemYLine->setVisible(true);
 
-    if (value > customPlot->yAxis->range().upper)
-        value = customPlot->yAxis->range().upper;
+    // if (value > customPlot->yAxis->range().upper)
+    //     value = customPlot->yAxis->range().upper;
 
     TracerType mTracerType = DataTracer;
     switch (mTracerType) {
@@ -512,17 +512,34 @@ void PlotWidget::updateTracerPosition(QCustomPlot* customPlot, double key, doubl
 
             // 调整位置以保持在视图内
             QCPItemLine *coordsTipItemArrowLine = customPlot->findChild<QCPItemLine*>("coordsTipItemArrowLine");
-            double pos = customPlot->graph(0)->keyAxis()->coordToPixel(key);
+            double posX = customPlot->graph(0)->keyAxis()->coordToPixel(key);
+            double posY = customPlot->graph(0)->valueAxis()->coordToPixel(value);
             if (coordsTipItemText){
-                int width = coordsTipItemText->textBoxRect().width();
-                QRect viewRect = customPlot->xAxis->axisRect()->rect(); // 获取视图区域
-                if ((pos + 50 + width) > viewRect.right()) {
-                    coordsTipItemArrowLine->start->setCoords(-50, -50);
-                    coordsTipItemText->position->setCoords(width*(-1) - 50, -50);
-                }else{
-                    QCPItemLine *coordsTipItemArrowLine = customPlot->findChild<QCPItemLine*>("coordsTipItemArrowLine");
-                    coordsTipItemArrowLine->start->setCoords(50, -50);
-                    coordsTipItemText->position->setCoords(50, -50);
+                if (value < customPlot->yAxis->range().lower || value > customPlot->yAxis->range().upper){
+                    coordsTipItemText->setVisible(false);
+                    coordsTipItemArrowLine->setVisible(false);
+                } else {
+                    coordsTipItemText->setVisible(true);
+                    coordsTipItemArrowLine->setVisible(true);
+                    int width = coordsTipItemText->textBoxRect().width();
+                    int height = coordsTipItemText->textBoxRect().height();
+                    QRect viewRect = customPlot->xAxis->axisRect()->rect(); // 获取视图区域
+                    if ((posX + 50 + width) > viewRect.right()) { //超出右边界
+                        if ((posY - 50 - height) < viewRect.top()) { //超出上边界
+                            coordsTipItemArrowLine->start->setCoords(-50, 50);
+                            coordsTipItemText->position->setCoords(width*(-1) - 50, 50);
+                        } else {
+                            coordsTipItemArrowLine->start->setCoords(-50, -50);
+                            coordsTipItemText->position->setCoords(width*(-1) - 50, -50);
+                        }
+                    } else if ((posY - 50 - height) < viewRect.top()) { //超出上边界
+                        coordsTipItemArrowLine->start->setCoords(50, 50);
+                        coordsTipItemText->position->setCoords(50, 50);
+                    }else{
+                        QCPItemLine *coordsTipItemArrowLine = customPlot->findChild<QCPItemLine*>("coordsTipItemArrowLine");
+                        coordsTipItemArrowLine->start->setCoords(50, -50);
+                        coordsTipItemText->position->setCoords(50, -50);
+                    }
                 }
             }
 
@@ -1904,7 +1921,7 @@ void PlotWidget::switchToTipMode()
     mPlot_Opt_model = pmTip;
     this->allowAreaSelected = false;
 
-    QList<QCustomPlot*> customPlots = getAllEnergyCustomPlot();
+    QList<QCustomPlot*> customPlots = getAllCustomPlot();
     for (auto customPlot : customPlots){
         customPlot->setInteraction(QCP::iRangeDrag, false);
     }
@@ -1915,22 +1932,23 @@ void PlotWidget::switchToTipMode()
 void PlotWidget::switchToDragMode()
 {
     mPlot_Opt_model = pmDrag;
-    this->allowAreaSelected = false;
-
+    this->allowAreaSelected = true;
     QWhatsThis::showText(QCursor::pos() + QPoint(0, 50), tr("请长按鼠标左键或Ctrl+鼠标左键，在能谱图上框选出符合能窗范围"), this);
     //图像进入区域选择模式
-    this->allowAreaSelected = true;
+
 
     //隐藏拟合曲线和提示信息框
     // QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
     // gaussResultItemText->setText("");
     // getGraph(3)->data()->clear();
 
-    QCustomPlot* customPlots[] = {getCustomPlot(amEnDet1), getCustomPlot(amEnDet2)};
+    //QCustomPlot* customPlots[] = {getCustomPlot(amEnDet1), getCustomPlot(amEnDet2)};
+    QList<QCustomPlot*> customPlots = getAllEnergyCustomPlot();
     for (auto customPlot : customPlots){
         //高斯拟合信息清空
         QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
-        gaussResultItemText->setText("");
+        if (gaussResultItemText)
+            gaussResultItemText->setText("");
 
         customPlot->setInteraction(QCP::iRangeDrag, false);
 
@@ -1952,7 +1970,7 @@ void PlotWidget::switchToMoveMode()
 {
     mPlot_Opt_model = pmMove;
     this->allowAreaSelected = false;
-    QList<QCustomPlot*> customPlots = getAllEnergyCustomPlot();
+    QList<QCustomPlot*> customPlots = getAllCustomPlot();
     for (auto customPlot : customPlots){
         customPlot->setInteraction(QCP::iRangeDrag, true);
     }
@@ -1977,10 +1995,10 @@ void PlotWidget::slotRestoreView()
             customPlot->rescaleAxes(true);
 
             //高斯拟合信息清空
-            QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
+            QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");            
             gaussResultItemText->setText("");
 
-            customPlot->setInteraction(QCP::iRangeDrag, true);
+            switchToMoveMode();
 
             //删除高斯曲线
             customPlot->graph(1)->data()->clear();

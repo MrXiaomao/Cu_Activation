@@ -2150,7 +2150,7 @@ void MainWindow::on_action_tip_triggered()
 
     PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
     if (ui->tabWidget_client->currentWidget()->objectName() == "OfflineDataAnalysisWidget"){
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
+        plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
     }
 
     plotWidget->switchToTipMode();
@@ -2176,12 +2176,11 @@ void MainWindow::on_action_restore_2_triggered()
     if (ui->tabWidget_client->currentWidget()->objectName() == "tabWidget_workLog")
         return ;
 
+    PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
     if (ui->tabWidget_client->currentWidget()->objectName() == "OfflineDataAnalysisWidget"){
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
-        plotWidget->slotRestoreView();
-    } else if (ui->tabWidget_client->currentWidget()->objectName() == "onlineDataAnalysisWidget"){
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
-        plotWidget->slotRestoreView();
+        plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
     }
+
+    plotWidget->slotRestoreView();
 }
 

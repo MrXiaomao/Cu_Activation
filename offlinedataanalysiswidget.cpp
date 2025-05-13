@@ -269,7 +269,7 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
             ui->spinBox_1_leftE->setValue(configMap.value("Det1符合能窗左").toInt());
             ui->spinBox_1_rightE->setValue(configMap.value("Det1符合能窗右").toInt());
             ui->spinBox_2_leftE->setValue(configMap.value("Det2符合能窗左").toInt());
-            ui->spinBox_2_rightE->setValue(configMap.value("Det1符合能窗右").toInt());
+            ui->spinBox_2_rightE->setValue(configMap.value("Det2符合能窗右").toInt());
         }
     }
 }
@@ -471,7 +471,7 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
         ui->spinBox_start->setRange(startTime, endTime);  // 设置范围
         ui->spinBox_end->setRange(startTime, endTime);  // 设置范围
 
-        analyse(detParameter, startTime, endTime);
+        analyse(detParameter, startTimeUI, endTimeUI);
 
         //在这里一次性更新图像和计数率，可以最大程度减小系统损耗时间
         {

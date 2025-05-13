@@ -101,6 +101,10 @@ signals:
     void sigPausePlot(bool); //是否暂停图像刷新
     void sigAreaSelected();//拟合区域选择完成
 
+    void sigSwitchToTipMode();
+    void sigSwitchToDragMode();
+    void sigSwitchToMoveMode();
+
 private:
     unsigned int multiChannel; //多道道数
     unsigned int max_UIChannel; //图像上最大道址，比多道道址略多一点，采用取整得到。
@@ -140,6 +144,8 @@ private:
     QAction *timeM1Action;
 
     QAction *allowSelectAreaAction;//选择拟合区域
+    QAction *dataTipAction;//数据提示
+    QAction *moveViewAction;//平移视图
     QAction *resetPlotAction;//恢复图像状态
 
     Plot_Opt_model mPlot_Opt_model = pmMove;

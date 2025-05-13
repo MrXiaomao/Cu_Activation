@@ -304,12 +304,19 @@ void PlotWidget::initCustomPlot(){
     }
     timeM10Action->setChecked(true);
 
-    allowSelectAreaAction = new QAction(tr("选择拟合区域"), this);
-    resetPlotAction = new QAction(tr("还原视图"), this);
+    allowSelectAreaAction = new QAction(QIcon(":/resource/expand-width-fill.png"), tr("选择拟合区域"), this);
+    dataTipAction = new QAction(QIcon(":/resource/tip.png"), tr("数据提示"), this);
+    moveViewAction = new QAction(QIcon(":/resource/move.png"), tr("平移视图"), this);
+    resetPlotAction = new QAction(QIcon(":/resource/resrore.png"), tr("还原视图"), this);
     connect(allowSelectAreaAction, &QAction::triggered, this, [=](){
         switchToDragMode();
     });
-
+    connect(dataTipAction, &QAction::triggered, this, [=](){
+        switchToTipMode();
+    });
+    connect(moveViewAction, &QAction::triggered, this, [=](){
+        switchToMoveMode();
+    });
     connect(resetPlotAction, &QAction::triggered, this, [=](){
         slotRestoreView();
     });
@@ -318,7 +325,7 @@ void PlotWidget::initCustomPlot(){
 void PlotWidget::areaSelectFinished()
 {
     this->allowAreaSelected = false;
-    this->setProperty("disableAreaSelect", true);
+    this->setProperty("disableAreaSelect", true);//allowSelectAreaAction
 }
 
 void PlotWidget::slotCountRefreshTimelength()
@@ -956,11 +963,13 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                         contextMenu.exec(QCursor::pos());
                     } else {
                         // 屏蔽右键菜单，改为工具栏菜单
-                        // QMenu contextMenu(customPlot);
-                        // if (!this->property("disableAreaSelect").isValid() || !this->property("disableAreaSelect").toBool())
-                        //     contextMenu.addAction(allowSelectAreaAction);
-                        // contextMenu.addAction(resetPlotAction);
-                        // contextMenu.exec(QCursor::pos());
+                        QMenu contextMenu(customPlot);
+                        if (!this->property("disableAreaSelect").isValid() || !this->property("disableAreaSelect").toBool())
+                            contextMenu.addAction(allowSelectAreaAction);
+                        contextMenu.addAction(dataTipAction);
+                        contextMenu.addAction(moveViewAction);
+                        contextMenu.addAction(resetPlotAction);
+                        contextMenu.exec(QCursor::pos());
                     }
 
                     //setCursor(Qt::ArrowCursor);
@@ -1899,6 +1908,8 @@ void PlotWidget::switchToTipMode()
     for (auto customPlot : customPlots){
         customPlot->setInteraction(QCP::iRangeDrag, false);
     }
+
+    emit sigSwitchToTipMode();
 }
 
 void PlotWidget::switchToDragMode()
@@ -1906,7 +1917,7 @@ void PlotWidget::switchToDragMode()
     mPlot_Opt_model = pmDrag;
     this->allowAreaSelected = false;
 
-    QWhatsThis::showText(QCursor::pos(), tr("请长按鼠标左键或Ctrl+鼠标左键，在能谱图上框选出符合能窗范围"), this);
+    QWhatsThis::showText(QCursor::pos() + QPoint(0, 50), tr("请长按鼠标左键或Ctrl+鼠标左键，在能谱图上框选出符合能窗范围"), this);
     //图像进入区域选择模式
     this->allowAreaSelected = true;
 
@@ -1930,9 +1941,11 @@ void PlotWidget::switchToDragMode()
 
     //图像停止刷新
     emit sigPausePlot(true);
-    QTimer::singleShot(30000, this, [=](){
+    QTimer::singleShot(3000, this, [=](){
         QWhatsThis::hideText();
     });
+
+    emit sigSwitchToDragMode();
 }
 
 void PlotWidget::switchToMoveMode()
@@ -1943,6 +1956,8 @@ void PlotWidget::switchToMoveMode()
     for (auto customPlot : customPlots){
         customPlot->setInteraction(QCP::iRangeDrag, true);
     }
+
+    emit sigSwitchToMoveMode();
 }
 
 void PlotWidget::slotRestoreView()

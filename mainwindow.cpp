@@ -475,6 +475,12 @@ void MainWindow::InitMainWindowUi()
     ui->menu_view->removeAction(ui->action_SpectrumModel); //屏蔽掉能谱界面
 #endif
 
+    QActionGroup *actGroup = new QActionGroup(this);
+    actGroup->setExclusive(true);
+    actGroup->addAction(ui->action_move);
+    actGroup->addAction(ui->action_drag);
+    actGroup->addAction(ui->action_tip);
+
     ui->toolBar_offline->hide();
 
     // 获取当前时间
@@ -827,6 +833,19 @@ void MainWindow::initCustomPlot()
             //QWhatsThis::showText(ui->pushButton_gauss->mapToGlobal(ui->pushButton_confirm->geometry().bottomRight()), tr("点击按钮，查看拟合曲线效果图"), ui->pushButton_gauss);
         });
 
+        connect(customPlotWidget, &PlotWidget::sigSwitchToTipMode, this, [=](){
+            ui->action_tip->setChecked(true);
+            customPlotWidget->setProperty("Plot_Opt_model", ui->action_tip->objectName());
+        });
+        connect(customPlotWidget, &PlotWidget::sigSwitchToDragMode, this, [=](){
+            ui->action_drag->setChecked(true);
+            customPlotWidget->setProperty("Plot_Opt_model", ui->action_drag->objectName());
+        });
+        connect(customPlotWidget, &PlotWidget::sigSwitchToMoveMode, this, [=](){
+            ui->action_move->setChecked(true);
+            customPlotWidget->setProperty("Plot_Opt_model", ui->action_move->objectName());
+        });
+
         ui->widget_plot->layout()->addWidget(customPlotWidget);
     }
 }
@@ -897,6 +916,21 @@ void MainWindow::on_action_DataAnalysis_triggered()
         //         // ui->pushButton_confirm->setIcon(QIcon());
         //     }
         // });
+
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");        
+        connect(plotWidget, &PlotWidget::sigSwitchToTipMode, this, [=](){
+            ui->action_tip->setChecked(true);
+            plotWidget->setProperty("Plot_Opt_model", ui->action_tip->objectName());
+        });
+        connect(plotWidget, &PlotWidget::sigSwitchToDragMode, this, [=](){
+            ui->action_drag->setChecked(true);
+            plotWidget->setProperty("Plot_Opt_model", ui->action_drag->objectName());
+        });
+        connect(plotWidget, &PlotWidget::sigSwitchToMoveMode, this, [=](){
+            ui->action_move->setChecked(true);
+            plotWidget->setProperty("Plot_Opt_model", ui->action_move->objectName());
+        });
+        plotWidget->switchToMoveMode();
 
         int index = ui->tabWidget_client->addTab(offlineDataAnalysisWidget, tr("数据查看和分析"));
         ui->tabWidget_client->setCurrentIndex(index);
@@ -1126,13 +1160,7 @@ void MainWindow::on_pushButton_measure_clicked()
             ui->lineEdit_CuActive->setText("0");
             ui->lineEdit_Yield->setText("0");
 
-            QList<QAction*> actions = ui->toolBar_online->actions();
-            for (auto action : actions){
-                if (action->objectName() == "action_drag"){
-                    action->setEnabled(true);
-                }
-            }
-
+            ui->action_drag->setEnabled(true);
             commandHelper->setShotNumber(ui->lineEdit_ShotNum->text()); //设置测量发次，QString类型
             commandHelper->updateParamter(stepT, EnWin, false);
             commandHelper->slotStartManualMeasure(detectorParameter);
@@ -1231,14 +1259,8 @@ void MainWindow::on_pushButton_measure_2_clicked()
         ui->lcdNumber_DeathRatio1->display("0.0");
         ui->lcdNumber_DeathRatio2->display("0.0");
         ui->lineEdit_CuActive->setText("0");
-        ui->lineEdit_Yield->setText("0");
-        
-        QList<QAction*> actions = ui->toolBar_online->actions();
-        for (auto action : actions){
-            if (action->objectName() == "action_drag"){
-                action->setEnabled(false);
-            }
-        }
+        ui->lineEdit_Yield->setText("0");        
+        ui->action_drag->setEnabled(false);
 
         int stepT = ui->spinBox_step_2->value();
         unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE_2->value(), (unsigned short)ui->spinBox_1_rightE_2->value(),
@@ -2033,10 +2055,25 @@ void MainWindow::on_tabWidget_client_currentChanged(int /*index*/)
             this->setWindowTitle(this->property("offline-filename").toString() + " - Cu_Activation");
         else
             this->setWindowTitle("Cu_Activation");
+
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
+        QAction* action = this->findChild<QAction*>(plotWidget->property("Plot_Opt_model").toString());
+        action->setChecked(true);
+        ui->action_drag->setEnabled(true);
     } else if (ui->tabWidget_client->currentWidget()->objectName() == "onlineDataAnalysisWidget"){
         ui->toolBar_offline->hide();
         ui->toolBar_online->show();
         this->setWindowTitle("Cu_Activation");
+
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
+        QAction* action = this->findChild<QAction*>(plotWidget->property("Plot_Opt_model").toString());
+        action->setChecked(true);
+
+        if (this->property("measure-status").toInt() == msStart){
+            ui->action_drag->setEnabled(false);
+        } else {
+            ui->action_drag->setEnabled(true);
+        }
     }
 }
 
@@ -2098,43 +2135,39 @@ void MainWindow::on_action_move_triggered()
     if (ui->tabWidget_client->currentWidget()->objectName() == "tabWidget_workLog")
         return ;
 
+    PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
     if (ui->tabWidget_client->currentWidget()->objectName() == "OfflineDataAnalysisWidget"){
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
-        plotWidget->switchToMoveMode();
-    } else if (ui->tabWidget_client->currentWidget()->objectName() == "onlineDataAnalysisWidget"){
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
-        plotWidget->switchToMoveMode();
+        plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
     }
-}
 
+    plotWidget->switchToMoveMode();
+}
 
 void MainWindow::on_action_tip_triggered()
 {
     if (ui->tabWidget_client->currentWidget()->objectName() == "tabWidget_workLog")
         return ;
 
+    PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
     if (ui->tabWidget_client->currentWidget()->objectName() == "OfflineDataAnalysisWidget"){
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
-        plotWidget->switchToTipMode();
-    } else if (ui->tabWidget_client->currentWidget()->objectName() == "onlineDataAnalysisWidget"){
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
-        plotWidget->switchToTipMode();
     }
-}
 
+    plotWidget->switchToTipMode();
+}
 
 void MainWindow::on_action_drag_triggered()
 {
+    QAction *_action = (QAction*)sender();
     if (ui->tabWidget_client->currentWidget()->objectName() == "tabWidget_workLog")
         return ;
 
+    PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
     if (ui->tabWidget_client->currentWidget()->objectName() == "OfflineDataAnalysisWidget"){
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
-        plotWidget->switchToDragMode();
-    } else if (ui->tabWidget_client->currentWidget()->objectName() == "onlineDataAnalysisWidget"){
-        PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
-        plotWidget->switchToDragMode();
+        plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
     }
+
+    plotWidget->switchToDragMode();
 }
 
 

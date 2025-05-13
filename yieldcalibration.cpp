@@ -53,11 +53,11 @@ YieldCalibration::YieldCalibration(QWidget *parent)
     ui->tableWidget_calibration->setHorizontalHeaderItem(4, new QTableWidgetItem("探测器1\n本底计数率(cps)"));
     ui->tableWidget_calibration->setHorizontalHeaderItem(5, new QTableWidgetItem("探测器2\n本底计数率(cps)"));
 
-    ui->label_attention->setText("<p style='line-height:20px'>"
-                          "<font style ='font-size:19px; color:#ffff00;font-weight:bold'> 客户端界面 </font>"
-                          "<p style='line-height:7px'>"
-                          "<font style = 'font-size:12px; color:#ffffff; '> 工具可模拟TCP/UDP通信 </font>"
-                          );
+    // ui->label_attention->setText("<p style='line-height:20px'>"
+    //                       "<font style ='font-size:19px; color:#ffff00;font-weight:bold'> 客户端界面 </font>"
+    //                       "<p style='line-height:7px'>"
+    //                       "<font style = 'font-size:12px; color:#ffffff; '> 工具可模拟TCP/UDP通信 </font>"
+    //                       );
 
     // 连接单元格变化信号
     // 连接cellChanged信号
@@ -95,7 +95,7 @@ bool YieldCalibration::isTableModified(QTableWidget *table)
 {
     bool changed = false;
     for (int row = 0; row < table->rowCount(); ++row) {
-        for(int colum = 0; colum<6; colum)
+        for(int colum = 0; colum<6; colum++)
         {
             QTableWidgetItem *item = table->item(row, colum);
             if (item->text().toDouble() != calibrationData[row][colum]) {
@@ -195,37 +195,37 @@ bool YieldCalibration::save()
             bool ok;
             double yield = ui->tableWidget_calibration->item(i, 0)->text().toDouble(&ok);
             if(!ok) {
-                QMessageBox::information(nullptr, tr("提示"), QString("保存失败：存在非法输入！请检查后保存。行：%1,列:2%").arg(i+1).arg(1));
+                QMessageBox::information(nullptr, tr("提示"), QString("保存失败：存在非法输入！请检查后保存。行：%1,列:%2").arg(i+1).arg(1));
                 return false;
             }
             
             double active = ui->tableWidget_calibration->item(i, 1)->text().toDouble(&ok);
             if(!ok) {
-                QMessageBox::information(nullptr, tr("提示"), QString("保存失败：存在非法输入！请检查后保存。行：%1,列:2%").arg(i+1).arg(2));
+                QMessageBox::information(nullptr, tr("提示"), QString("保存失败：存在非法输入！请检查后保存。行：%1,列:%2").arg(i+1).arg(2));
                 return false;
             }
 
             double ratioCu62 = ui->tableWidget_calibration->item(i, 2)->text().toDouble(&ok);
             if(!ok) {
-                QMessageBox::information(nullptr, tr("提示"), QString("保存失败：存在非法输入！请检查后保存。行：%1,列:2%").arg(i+1).arg(3));
+                QMessageBox::information(nullptr, tr("提示"), QString("保存失败：存在非法输入！请检查后保存。行：%1,列:%2").arg(i+1).arg(3));
                 return false;
             }
 
             double ratioCu64 = ui->tableWidget_calibration->item(i, 3)->text().toDouble(&ok);
             if(!ok) {
-                QMessageBox::information(nullptr, tr("提示"), QString("保存失败：存在非法输入！请检查后保存。行：%1,列:2%").arg(i+1).arg(4));
+                QMessageBox::information(nullptr, tr("提示"), QString("保存失败：存在非法输入！请检查后保存。行：%1,列:%2").arg(i+1).arg(4));
                 return false;
             }
 
             double backRatesDet1 = ui->tableWidget_calibration->item(i, 4)->text().toDouble(&ok);
             if(!ok) {
-                QMessageBox::information(nullptr, tr("提示"), QString("保存失败：存在非法输入！请检查后保存。行：%1,列:2%").arg(i+1).arg(5));
+                QMessageBox::information(nullptr, tr("提示"), QString("保存失败：存在非法输入！请检查后保存。行：%1,列:%2").arg(i+1).arg(5));
                 return false;
             }
 
             double backRatesDet2 = ui->tableWidget_calibration->item(i, 5)->text().toDouble(&ok);
             if(!ok) {
-                QMessageBox::information(nullptr, tr("提示"), QString("保存失败：存在非法输入！请检查后保存。行：%1,列:2%").arg(i+1).arg(6));
+                QMessageBox::information(nullptr, tr("提示"), QString("保存失败：存在非法输入！请检查后保存。行：%1,列:%2").arg(i+1).arg(6));
                 return false;
             }
 
@@ -285,7 +285,8 @@ bool YieldCalibration::save()
     return true;
 }
 
-void YieldCalibration::closeEvent(QCloseEvent */*event*/)
+#include <QCloseEvent>
+void YieldCalibration::closeEvent(QCloseEvent *event)
 {
     // 用户不确认则不保存，或者检查用户更改后提醒用户是否保存
     bool changed = isTableModified(ui->tableWidget_calibration);
@@ -294,6 +295,7 @@ void YieldCalibration::closeEvent(QCloseEvent */*event*/)
                                   QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::Yes)
         {
             this->save();
+            event->accept();
             return ;
         }
     }

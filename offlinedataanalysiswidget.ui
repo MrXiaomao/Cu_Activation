@@ -396,7 +396,7 @@
                   </sizepolicy>
                  </property>
                  <property name="text">
-                  <string>1E4-1E7</string>
+                  <string>小量程</string>
                  </property>
                  <property name="readOnly">
                   <bool>true</bool>
@@ -597,6 +597,9 @@
                   </item>
                   <item>
                    <widget class="QPushButton" name="pushButton_start">
+                    <property name="enabled">
+                     <bool>false</bool>
+                    </property>
                     <property name="minimumSize">
                      <size>
                       <width>100</width>
@@ -604,7 +607,11 @@
                      </size>
                     </property>
                     <property name="text">
-                     <string>分析数据</string>
+                     <string>开始解析</string>
+                    </property>
+                    <property name="icon">
+                     <iconset resource="resource.qrc">
+                      <normaloff>:/resource/analyze.png</normaloff>:/resource/analyze.png</iconset>
                     </property>
                    </widget>
                   </item>
@@ -1074,6 +1081,9 @@
                  <property name="horizontalScrollBarPolicy">
                   <enum>Qt::ScrollBarAlwaysOff</enum>
                  </property>
+                 <attribute name="horizontalHeaderCascadingSectionResizes">
+                  <bool>false</bool>
+                 </attribute>
                  <row>
                   <property name="text">
                    <string>Det1计数率(cps)</string>
@@ -1086,7 +1096,7 @@
                  </row>
                  <row>
                   <property name="text">
-                   <string>符合计数(cps)</string>
+                   <string>符合计数率(cps)</string>
                   </property>
                  </row>
                  <row>
@@ -1529,7 +1539,7 @@
                 <number>0</number>
                </property>
                <item row="1" column="1">
-                <widget class="QLineEdit" name="lineEdit_27"/>
+                <widget class="QLineEdit" name="lineEdit_fileName"/>
                </item>
                <item row="0" column="1">
                 <widget class="QLineEdit" name="lineEdit_savepath"/>
@@ -1553,7 +1563,7 @@
                   </size>
                  </property>
                  <property name="text">
-                  <string>文件名：</string>
+                  <string>文件名(.txt)：</string>
                  </property>
                  <property name="alignment">
                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -1589,7 +1599,7 @@
                    </spacer>
                   </item>
                   <item>
-                   <widget class="QPushButton" name="pushButton_2">
+                   <widget class="QPushButton" name="pushbutton_save">
                     <property name="text">
                      <string>保存数据</string>
                     </property>

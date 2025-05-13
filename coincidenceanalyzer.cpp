@@ -742,8 +742,8 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int sta
     double lamda62 = log(2) / halflife_Cu62;
     double lamda64 = log(2) / halflife_Cu64;
 
-    double f = 1/lamda62*(exp(-lamda62*start_time) - exp(-lamda62*time_end)) + \
-                1/lamda64*(exp(-lamda64*start_time) - exp(-lamda64*time_end));
+    double f = ratioCu62/lamda62*(exp(-lamda62*start_time) - exp(-lamda62*time_end)) + \
+                ratioCu64/lamda64*(exp(-lamda64*start_time) - exp(-lamda64*time_end));
 
     //对符合计数进行真偶符合修正
     //注意timeWidth_tmp单位为ns，要换为时间s。
@@ -765,7 +765,7 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int sta
 
 void CoincidenceAnalyzer::doFPGA_lossDATA_correction(std::map<unsigned int, unsigned long long> lossData)
 {
-    int coinNum = coinResult.size();
+    unsigned int coinNum = coinResult.size();
     for (const auto& pair:lossData) {
         unsigned int time_seconds = pair.first; 
         

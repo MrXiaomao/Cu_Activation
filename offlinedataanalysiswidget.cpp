@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-13 17:46:44
+ * @LastEditTime: 2025-05-13 23:47:40
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -231,6 +231,9 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
 
     QString configFile = validDataFileName + tr(".配置");
     if (QFileInfo::exists(configFile)){
+        //只有选取到有效文件后才允许使用
+        ui->pushButton_start->setEnabled(true);
+
         QFile file(configFile);
         if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             QMap<QString, QString> configMap;
@@ -675,8 +678,8 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
     double halflife_Cu64 = 12.7*60*60; // 单位s,Cu64的半衰期
     double lamda62 = log(2) / halflife_Cu62;
     double lamda64 = log(2) / halflife_Cu64;
-    double f = 1/lamda62*(exp(-lamda62*start_time) - exp(-lamda62*time_end)) + \
-                1/lamda64*(exp(-lamda64*start_time) - exp(-lamda64*time_end));
+    double f = ratioCu62/lamda62*(exp(-lamda62*start_time) - exp(-lamda62*time_end)) + \
+                ratioCu64/lamda64*(exp(-lamda64*start_time) - exp(-lamda64*time_end));
                 
     //对符合计数进行真偶符合修正
     //注意timeWidth_tmp单位为ns，要换为时间s。
@@ -728,4 +731,141 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
     ui->lineEdit_realativeA0->setText(QString::number(A0_omiga));
 
     emit sigActiveOmiga(A0_omiga);
+}
+
+void OfflineDataAnalysisWidget::on_pushbutton_save_clicked()
+{
+    //判断文件路径是否有效
+    QString path = ui->lineEdit_savepath->text();
+    if(!isValidFilePath(path)){
+        // 信息提示框
+        QMessageBox::information(nullptr, "提示", "保存失败，文件路径不存在或者不可用");
+        return;
+    }
+    
+    //判断文件是否已经存在，提示用户文件已存在。
+    QString filename = ui->lineEdit_fileName->text();
+    //自动转换文件后缀为.txt
+    QString wholepath = smartAddTxtExtension(path + "/" + filename);
+    if(fileExists(wholepath)){
+        if (QMessageBox::question(this, tr("提示"), tr("保存文件名已经存在，是否覆盖重写？"), QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) != QMessageBox::Yes)
+        return;
+    }
+     QFile file(wholepath);
+    if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+        QTextStream out(&file);
+        //测量基本信息
+        out << tr("解析文件路径=") << ui->textBrowser_filepath->toPlainText()<< Qt::endl;
+        out << tr("测量模式=") << ui->lineEdit_measuremodel->text()<< Qt::endl;
+        out << tr("量程=") << ui->lineEdit_range->text()<< Qt::endl;
+        out << tr("粒子数据个数=") << ui->lineEdit_particleNum->text()<< Qt::endl;
+        out << tr("冷却时长=") << ui->spinBox_coolingTime->value()<< Qt::endl;
+
+        //解析参数
+        out << tr("Det1符合能窗左=") << ui->spinBox_1_leftE->value() << Qt::endl;
+        out << tr("Det1符合能窗右=") << ui->spinBox_1_rightE->value() << Qt::endl;
+        out << tr("Det2符合能窗左=") << ui->spinBox_2_leftE->value() << Qt::endl;
+        out << tr("Det2符合能窗右=") << ui->spinBox_2_rightE->value() << Qt::endl;
+        out << tr("符合分辨时间/ns=") << ui->spinBox_timeWidth->value() << Qt::endl;
+        out << tr("延迟时间/ns=") << ui->spinBox_delayTime->value() << Qt::endl;
+        out << tr("开始时刻/s=") << ui->spinBox_start->value() << Qt::endl;
+        out << tr("结束时刻/s=") << ui->spinBox_end->value() << Qt::endl;
+        out << tr("时间步长/s=") << ui->spinBox_step->value() << Qt::endl;
+        
+        //数据分析结果
+        out << tr("Det1计数率/cps: 最小值=") << ui->tableWidget1->item(0, 0)->text()
+            << tr("，最大值=") << ui->tableWidget1->item(0, 1)->text()
+            << tr("，平均值=") << ui->tableWidget1->item(0, 2)->text() << Qt::endl;
+            
+        out << tr("Det2计数率/cps: 最小值=") << ui->tableWidget1->item(1, 0)->text()
+            << tr("，最大值=") << ui->tableWidget1->item(1, 1)->text()
+            << tr("平均值=") << ui->tableWidget1->item(1, 2)->text() << Qt::endl;
+
+        out << tr("符合计数率/cps: 最小值=") << ui->tableWidget1->item(2, 0)->text()
+            << tr("，最大值=") << ui->tableWidget1->item(2, 1)->text()
+            << tr("，平均值=") << ui->tableWidget1->item(2, 2)->text() << Qt::endl;
+            
+        out << tr("Det1死时间率(%): 最小值=") << ui->tableWidget1->item(3, 0)->text()
+            << tr("，最大值=") << ui->tableWidget1->item(3, 1)->text()
+            << tr("，平均值=") << ui->tableWidget1->item(3, 2)->text() << Qt::endl; 
+
+        out << tr("Det2死时间率(%): 最小值=") << ui->tableWidget1->item(4, 0)->text()
+            << tr("，最大值=") << ui->tableWidget1->item(4, 1)->text()
+            << tr("，平均值=") << ui->tableWidget1->item(4, 2)->text() << Qt::endl;
+
+        out << tr("符合计数死时间率(%): 最小值=") << ui->tableWidget1->item(5, 0)->text()
+            << tr("，最大值=") << ui->tableWidget1->item(5, 1)->text()
+            << tr("，平均值=") << ui->tableWidget1->item(5, 2)->text() << Qt::endl;
+
+        //死时间修正后
+        out << tr("Det1计数率/cps: 最小值=") << ui->countRateDet1_min->text()
+            << tr("，最大值=") << ui->countRateDet1_max->text()
+            << tr("，平均值=") << ui->countRateDet1_ave->text() << Qt::endl;
+
+        out << tr("Det2计数率/cps: 最小值=") << ui->countRateDet2_min->text()
+            << tr("，最大值=") << ui->countRateDet2_max->text()
+            << tr("，平均值=") << ui->countRateDet2_ave->text() << Qt::endl;            
+
+        out << tr("符合计数率/cps: 最小值=") << ui->countRateCoin_min->text()
+            << tr("，最大值=") << ui->countRateCoin_max->text()
+            << tr("，平均值=") << ui->countRateCoin_ave->text() << Qt::endl; 
+
+        out << tr("Det1总计数=") << ui->lineEdit_totalCount1->text() << Qt::endl; 
+        out << tr("Det2总计数=") << ui->lineEdit_totalCount2->text() << Qt::endl; 
+        out << tr("总符合计数=") << ui->lineEdit_totalCount3->text() << Qt::endl;
+        
+        out << tr("相对初始活度/Bq=") << ui->lineEdit_realativeA0->text() << Qt::endl;
+        out << tr("中子产额=") << ui->lineEdit_neutronYield->text() << Qt::endl;
+
+        file.flush();
+        file.close();
+        QMessageBox::information(nullptr, "提示", "文件保存成功！");
+    }
+}
+
+bool OfflineDataAnalysisWidget::isValidFilePath(const QString &path, bool checkExists, bool checkWritable) {
+    // 空路径无效
+    if (path.isEmpty()) return false;
+    
+    QFileInfo info(path);
+    
+    // 检查路径格式
+    QDir dir(path);
+    if (!dir.isAbsolute()) return false;
+    
+    // 检查路径是否存在(如果需要)
+    if (checkExists && !info.exists()) return false;
+    
+    // 检查是否可写(如果需要)
+    if (checkWritable && !info.isWritable()) return false;
+    
+    return true;
+}
+
+bool OfflineDataAnalysisWidget::fileExists(const QString &filePath) {
+    QFileInfo fileInfo(filePath);
+    return fileInfo.exists() && fileInfo.isFile();
+}
+
+
+QString OfflineDataAnalysisWidget::smartAddTxtExtension(const QString &fileName) {
+    QFileInfo fileInfo(fileName);
+    
+    // 获取文件后缀(不带点)
+    QString suffix = fileInfo.suffix().toLower();
+    
+    // 如果后缀不是txt，则追加.txt
+    if (suffix != "txt") {
+        // 如果原始文件名已有其他后缀，则替换
+        if (!suffix.isEmpty()) {
+            return fileInfo.path() + "/" + fileInfo.completeBaseName() + ".txt";
+        }
+        // 如果原始文件名没有后缀，直接追加
+        else {
+            return fileName + ".txt";
+        }
+    }
+    
+    // 如果已经是.txt后缀，直接返回原文件名
+    return fileName;
 }

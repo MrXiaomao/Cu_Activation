@@ -1,3 +1,10 @@
+/*
+ * @Author: MrPan
+ * @Date: 2025-04-20 09:21:32
+ * @LastEditors: Maoxiaoqing
+ * @LastEditTime: 2025-05-13 23:45:34
+ * @Description: 请填写简介
+ */
 #ifndef OFFLINEDATAANALYSISWIDGET_H
 #define OFFLINEDATAANALYSISWIDGET_H
 
@@ -22,6 +29,29 @@ public:
     void openEnergyFile(QString filePath);
     void analyse(DetectorParameter detPara, unsigned int start_time, unsigned int time_end);
 
+    /**
+     * @description: 检测文件路径是否有效
+     * @param {QString} &path
+     * @param {bool} checkExists
+     * @param {bool} checkWritable
+     * @return {*}true:路径有效，ffalse:路径无效
+     */
+    static bool isValidFilePath(const QString &path, bool checkExists = true, bool checkWritable = false);
+
+    /**
+     * @description: 检测文件是否已经存在
+     * @param {QString} &filePath
+     * @return {*}true:文件已经存在
+     */
+    static bool fileExists(const QString &filePath);
+
+    /**
+     * @description: 实现智能追加文件后缀的功能：如果文件名没有.txt后缀，则自动追加；如果已有则不追加。
+     * @param {QString} &fileName
+     * @return {*}
+     */
+    static QString smartAddTxtExtension(const QString &fileName);
+
 signals:
     void sigPlot(SingleSpectrum, vector<CoincidenceResult>);
     void sigStart();
@@ -39,6 +69,12 @@ public slots:
 private slots:
     void on_pushButton_start_clicked();
     void slotUpdateEnWindow();
+
+    /**
+     * @description: 保存解析数据
+     * @return {*}
+     */
+    void on_pushbutton_save_clicked();
 
 private:
     Ui::OfflineDataAnalysisWidget *ui;

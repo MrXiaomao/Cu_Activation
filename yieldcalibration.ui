@@ -6,122 +6,207 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>305</width>
-    <height>305</height>
+    <width>683</width>
+    <height>306</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>中子产额标定</string>
   </property>
-  <widget class="QTableWidget" name="tableWidget_calibration">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>30</y>
-     <width>251</width>
-     <height>151</height>
-    </rect>
-   </property>
-   <row>
-    <property name="text">
-     <string>小量程</string>
-    </property>
-   </row>
-   <row>
-    <property name="text">
-     <string>中量程</string>
-    </property>
-   </row>
-   <row>
-    <property name="text">
-     <string>大量程</string>
-    </property>
-   </row>
-   <column>
-    <property name="text">
-     <string>产额</string>
-    </property>
-   </column>
-   <column>
-    <property name="text">
-     <string>相对初始活度</string>
-    </property>
-   </column>
-   <item row="0" column="0">
-    <property name="text">
-     <string>1E4</string>
-    </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QTableWidget" name="tableWidget_calibration">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+     <row>
+      <property name="text">
+       <string>小量程</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>中量程</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>大量程</string>
+      </property>
+     </row>
+     <column>
+      <property name="text">
+       <string>产额</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>相对初始活度</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Cu62初始活度份额(%)</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Cu64初始活度份额(%)</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>探测器1本底计数率(cps)</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>探测器2本底计数率(cps)</string>
+      </property>
+     </column>
+     <item row="0" column="0">
+      <property name="text">
+       <string>1E4</string>
+      </property>
+     </item>
+     <item row="0" column="1">
+      <property name="text">
+       <string>1000</string>
+      </property>
+     </item>
+     <item row="0" column="2">
+      <property name="text">
+       <string>60</string>
+      </property>
+     </item>
+     <item row="0" column="3">
+      <property name="text">
+       <string>40</string>
+      </property>
+     </item>
+     <item row="0" column="4">
+      <property name="text">
+       <string>0.1</string>
+      </property>
+     </item>
+     <item row="0" column="5">
+      <property name="text">
+       <string>0.1</string>
+      </property>
+     </item>
+     <item row="1" column="0">
+      <property name="text">
+       <string>1E7</string>
+      </property>
+     </item>
+     <item row="1" column="1">
+      <property name="text">
+       <string>1000</string>
+      </property>
+     </item>
+     <item row="1" column="2">
+      <property name="text">
+       <string>50</string>
+      </property>
+     </item>
+     <item row="1" column="3">
+      <property name="text">
+       <string>50</string>
+      </property>
+     </item>
+     <item row="1" column="4">
+      <property name="text">
+       <string>0.14</string>
+      </property>
+     </item>
+     <item row="1" column="5">
+      <property name="text">
+       <string>0.12</string>
+      </property>
+     </item>
+     <item row="2" column="0">
+      <property name="text">
+       <string>1E11</string>
+      </property>
+     </item>
+     <item row="2" column="1">
+      <property name="text">
+       <string>1000</string>
+      </property>
+     </item>
+     <item row="2" column="2">
+      <property name="text">
+       <string>80</string>
+      </property>
+     </item>
+     <item row="2" column="3">
+      <property name="text">
+       <string>20</string>
+      </property>
+     </item>
+     <item row="2" column="4">
+      <property name="text">
+       <string>0.12</string>
+      </property>
+     </item>
+     <item row="2" column="5">
+      <property name="text">
+       <string>0.21</string>
+      </property>
+     </item>
+    </widget>
    </item>
-   <item row="0" column="1">
-    <property name="text">
-     <string>1000</string>
-    </property>
+   <item>
+    <widget class="QLabel" name="label_attention">
+     <property name="text">
+      <string>注：
+ ①相对初始化度，为活化后零时刻的活度乘以近端探测器的几何探测效率。
+ 相对初始活度是由本符合仪器计算给出。
+②Cu62与Cu64的初始活度份额是指铜片活化后，Cu62与Cu64各自释放的β+电子的释放率，可以是未归一化的数据。
+③探测器本底计数率是指在没有放射源状态下，全能峰的半高全宽区域下的放射性本底计数率。</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
    </item>
-   <item row="1" column="0">
-    <property name="text">
-     <string>1E7</string>
-    </property>
+   <item>
+    <widget class="QWidget" name="widget" native="true">
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_OK">
+        <property name="text">
+         <string>确认</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_cancel">
+        <property name="text">
+         <string>取消</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
    </item>
-   <item row="1" column="1">
-    <property name="text">
-     <string>1000</string>
-    </property>
-   </item>
-   <item row="2" column="0">
-    <property name="text">
-     <string>1E11</string>
-    </property>
-   </item>
-   <item row="2" column="1">
-    <property name="text">
-     <string>1000</string>
-    </property>
-   </item>
-  </widget>
-  <widget class="QPushButton" name="pushButton_OK">
-   <property name="geometry">
-    <rect>
-     <x>50</x>
-     <y>270</y>
-     <width>75</width>
-     <height>23</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>确认</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="pushButton_cancel">
-   <property name="geometry">
-    <rect>
-     <x>150</x>
-     <y>270</y>
-     <width>75</width>
-     <height>23</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>取消</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>190</y>
-     <width>251</width>
-     <height>61</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>注：
- 相对初始化度，为活化后零时刻的活度乘以近端探测器的几何探测效率。
- 相对初始活度是由本符合仪器计算给出。</string>
-   </property>
-   <property name="wordWrap">
-    <bool>true</bool>
-   </property>
-  </widget>
+  </layout>
  </widget>
  <resources/>
  <connections/>

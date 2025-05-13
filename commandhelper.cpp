@@ -152,7 +152,20 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                     out << tr("波形触发模式=") << ((detectorParameter.triggerModel==0x00) ? tr("normal") : tr("auto")) << Qt::endl;
                     if (gainValue.contains(detectorParameter.gain))
                         out << tr("探测器增益=") << gainValue[detectorParameter.gain] << Qt::endl;
-                    out << tr("量程选取=")<<detectorParameter.measureRange<< Qt::endl;
+                    switch (detectorParameter.measureRange){
+                        case 1:
+                            out << tr("量程选取=小量程")<< Qt::endl;
+                            break;
+                        case 2:
+                            out << tr("量程选取=中量程")<< Qt::endl;
+                            break;
+                        case 3:
+                            out << tr("量程选取=大量程")<< Qt::endl;
+                            break;
+                        default:
+                        break;
+                    }
+                    // out << tr("量程选取=")<<detectorParameter.measureRange<< Qt::endl;
                     out << tr("冷却时长=") << detectorParameter.coolingTime << Qt::endl; //单位s
                     
                     //开始保存FPGA数据的时间，单位s，FPGA内部时钟。
@@ -1312,6 +1325,8 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
     //网口数据缓存文件，波形模式、能谱模式直接存网口数据缓存文件
     pfSaveNet = new QFile(netDataFileName);
     if (pfSaveNet->open(QIODevice::WriteOnly)) {
+        unsigned int FileHead = 0xFFFFFFFF; //文件包头，有效数据的识别码
+        pfSaveVaildData->write((char*)&FileHead, sizeof(FileHead));
         qDebug() << tr("创建网口数据缓存文件成功，文件名：%1").arg(netDataFileName);
     } else {
         qWarning().noquote() << tr("创建网口数据缓存文件失败，文件名：%1").arg(netDataFileName);

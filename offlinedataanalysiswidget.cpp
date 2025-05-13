@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-13 09:39:05
+ * @LastEditTime: 2025-05-13 17:46:44
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -252,14 +252,19 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
             else if(configMap.value("测量模式") == "自动") detParameter.measureModel = mmAuto;
             detParameter.coolingTime = configMap.value("冷却时长").toInt();
             detParameter.timeWidth = configMap.value("符合分辨时间").toInt();
-            detParameter.measureRange = configMap.value("量程选取").toInt();
+            
+            QString rangeStr = configMap.value("量程选取");
+            if(rangeStr == "小量程") detParameter.measureRange = 1;
+            if(rangeStr == "中量程") detParameter.measureRange = 2;
+            if(rangeStr == "大量程") detParameter.measureRange = 3;
+
             this->startTime_FPGA = static_cast<unsigned int>(configMap.value("测量开始时间(FPGA时钟)").toInt());
 
             ui->lineEdit_measuremodel->setText(configMap.value("测量模式"));
             ui->spinBox_step->setValue(configMap.value("时间步长").toInt());
             ui->spinBox_timeWidth->setValue(configMap.value("符合分辨时间").toInt());
             ui->spinBox_coolingTime->setValue(configMap.value("冷却时长").toInt());
-            ui->lineEdit_range->setText(configMap.value("量程选取"));
+            ui->lineEdit_range->setText(rangeStr);
             
             ui->spinBox_1_leftE->setValue(configMap.value("Det1符合能窗左").toInt());
             ui->spinBox_1_rightE->setValue(configMap.value("Det1符合能窗右").toInt());
@@ -525,6 +530,47 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
  */
 void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int start_time, unsigned int time_end)
 {
+        // 根据量程，自动获取本量程下对应的中子产额刻度参数——Cu62与Cu64的初始β+活度分支比，本底全能峰位置的半高宽下计数率，
+    // 如果缺失参数则直接采用默认值。
+    int measureRange = detPara.measureRange - 1;
+    double ratioCu62 = 0.0, ratioCu64 = 1.0;
+    double backRatesDet1 = 0.0, backRatesDet2 = 0.0;
+    QFile file(QApplication::applicationDirPath() + "/config/user.json");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // 读取文件内容
+        QByteArray jsonData = file.readAll();
+        file.close(); //释放资源
+
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+        QJsonObject jsonObj = jsonDoc.object();
+        
+        QJsonObject jsonCalibration, jsonYield;
+        if (jsonObj.contains("YieldCalibration")){
+            jsonCalibration = jsonObj["YieldCalibration"].toObject();
+            
+            QString key = QString("Range%1").arg(measureRange);
+            QJsonArray rangeArray;
+            if (jsonCalibration.contains(key)){
+                rangeArray = jsonCalibration[key].toArray();
+                QJsonObject rangeData = rangeArray[0].toObject();
+                
+                double ratio1 = rangeData["branchingRatio_Cu62"].toDouble();
+                double ratio2 = rangeData["branchingRatio_Cu64"].toDouble();
+                backRatesDet1 = rangeData["backgroundRatesDet1"].toDouble();
+                backRatesDet2 = rangeData["backgroundRatesDet2"].toDouble();
+                //归一化
+                ratioCu62 = ratio1 / (ratio1 + ratio2);
+                ratioCu64 = ratio2 / (ratio1 + ratio2);
+            }
+            else{
+                qCritical().noquote()<<"离线数据分析：未找到对应量程的拟合参数，请检查仪器是否进行了相应量程刻度,请对仪器刻度后重新计算";
+            }
+        }
+    }
+    else{
+        qCritical().noquote()<<"离线数据分析：未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算";
+    }
+    
     vector<CoincidenceResult> coinResult = coincidenceAnalyzer->GetCoinResult();
     //如果没有前面的calculate的计算，那么后续计算不能进行
     if(coinResult.size() == 0) return ;
@@ -537,9 +583,9 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
 
     if(time_end < start_time) return ; //不允许起始时间小于停止时间
 
-    int N1 = 0;
-    int N2 = 0;
-    int Nc = 0;
+    double N1 = 0;
+    double N2 = 0;
+    double Nc = 0;
     double deathTime_Ratio1 = 0.0;
     double deathTime_Ratio2 = 0.0;
     
@@ -595,8 +641,8 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
             maxCount_correct[1] = qMax(maxCount_correct[1], n20);
             maxCount_correct[2] = qMax(maxCount_correct[2], nc0);
 
-            N1 += n1;
-            N2 += n2;
+            N1 += (n1 - backRatesDet1);
+            N2 += (n2 - backRatesDet2);
             Nc += nc;
             deathTime_Ratio1 += ratio1;
             deathTime_Ratio2 += ratio2;
@@ -625,14 +671,17 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
     //f因子。暂且称为积分因子
     //这里不考虑Cu62的衰变分支，也就是测量必须时采用冷却时长远大于Cu62半衰期(9.67min = 580s)的数据。
     // double T_halflife = 9.67*60; //单位s，Cu62的半衰期
-    double T_halflife = 12.7*60*60; // 单位s,Cu64的半衰期
-    double lamda = log(2) / T_halflife;
-    double f = 1/lamda*(exp(-lamda*start_time) - exp(-lamda*time_end));
-
+    double halflife_Cu62 = 9.67*60; //单位s，Cu62的半衰期
+    double halflife_Cu64 = 12.7*60*60; // 单位s,Cu64的半衰期
+    double lamda62 = log(2) / halflife_Cu62;
+    double lamda64 = log(2) / halflife_Cu64;
+    double f = 1/lamda62*(exp(-lamda62*start_time) - exp(-lamda62*time_end)) + \
+                1/lamda64*(exp(-lamda64*start_time) - exp(-lamda64*time_end));
+                
     //对符合计数进行真偶符合修正
     //注意timeWidth_tmp单位为ns，要换为时间s。
     double measureTime = (time_end - start_time)*1.0;
-    double Nco = (Nc*measureTime - 2*timeWidth_tmp*N1*N2)/(measureTime - timeWidth_tmp*(N1+N2));
+    double Nco = (Nc*measureTime - 2*timeWidth_tmp*N1*N2)/(measureTime - timeWidth_tmp*(N1 + N2));
 
     //死时间修正
     double N10 = N1 / (1 - deathRatioAverage[0]);

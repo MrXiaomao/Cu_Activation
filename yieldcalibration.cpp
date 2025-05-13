@@ -12,18 +12,52 @@ YieldCalibration::YieldCalibration(QWidget *parent)
     , ui(new Ui::YieldCalibration)
 {
     ui->setupUi(this);
-    mapCalibration.insert(0, caliPair(1.0E4, 1111.0));//量程1
-    mapCalibration.insert(1, caliPair(1.0E7, 2222.0));//量程2
-    mapCalibration.insert(2, caliPair(1.0E11, 3333.0));//量程3
+    //小量程
+    calibrationData[0][0] = 1.0e3; 
+    calibrationData[0][1] = 1.0e3; 
+    calibrationData[0][2] = 60.0; 
+    calibrationData[0][3] = 40.0; 
+    calibrationData[0][4] = 0.1;
+    calibrationData[0][5] = 0.1;
+    //中量程
+    calibrationData[1][0] = 1.0e7; 
+    calibrationData[1][1] = 1.0e3; 
+    calibrationData[1][2] = 60.0; 
+    calibrationData[1][3] = 40.0; 
+    calibrationData[1][4] = 0.1;
+    calibrationData[1][5] = 0.1;
+    //大量程
+    calibrationData[2][0] = 1.0e11; 
+    calibrationData[2][1] = 1.0e3; 
+    calibrationData[2][2] = 60.0; 
+    calibrationData[2][3] = 40.0; 
+    calibrationData[2][4] = 0.1;
+    calibrationData[2][5] = 0.1;
+
     this->load();
 
-    ui->tableWidget_calibration->item(0, 0)->setText(QString::number(mapCalibration[0].yield, 'E', 3));
-    ui->tableWidget_calibration->item(1, 0)->setText(QString::number(mapCalibration[1].yield, 'E', 3));
-    ui->tableWidget_calibration->item(2, 0)->setText(QString::number(mapCalibration[2].yield, 'E', 3));
+    for(int i=0; i<3; i++){
+        ui->tableWidget_calibration->item(i, 0)->setText(QString::number(calibrationData[i][0], 'E', 3));
+        for(int j=1; j<6; j++){
+            ui->tableWidget_calibration->item(i, j)->setText(QString::number(calibrationData[i][j]));
+        }
+    }
 
-    ui->tableWidget_calibration->item(0, 1)->setText(QString::number(mapCalibration[0].active_t0, 'E', 5));
-    ui->tableWidget_calibration->item(1, 1)->setText(QString::number(mapCalibration[1].active_t0, 'E', 5));
-    ui->tableWidget_calibration->item(2, 1)->setText(QString::number(mapCalibration[2].active_t0, 'E', 5));
+    // 设置表头换行
+    ui->tableWidget_calibration->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tableWidget_calibration->horizontalHeader()->setStyleSheet("QHeaderView::section { white-space: pre-wrap; }");
+    ui->tableWidget_calibration->setHorizontalHeaderItem(0, new QTableWidgetItem("产额"));
+    ui->tableWidget_calibration->setHorizontalHeaderItem(1, new QTableWidgetItem("相对初始活度"));
+    ui->tableWidget_calibration->setHorizontalHeaderItem(2, new QTableWidgetItem("Cu62初始\n活度份额(%)"));
+    ui->tableWidget_calibration->setHorizontalHeaderItem(3, new QTableWidgetItem("Cu64初始\n活度份额(%)"));
+    ui->tableWidget_calibration->setHorizontalHeaderItem(4, new QTableWidgetItem("探测器1\n本底计数率(cps)"));
+    ui->tableWidget_calibration->setHorizontalHeaderItem(5, new QTableWidgetItem("探测器2\n本底计数率(cps)"));
+
+    ui->label_attention->setText("<p style='line-height:20px'>"
+                          "<font style ='font-size:19px; color:#ffff00;font-weight:bold'> 客户端界面 </font>"
+                          "<p style='line-height:7px'>"
+                          "<font style = 'font-size:12px; color:#ffffff; '> 工具可模拟TCP/UDP通信 </font>"
+                          );
 
     // 连接单元格变化信号
     // 连接cellChanged信号
@@ -61,14 +95,12 @@ bool YieldCalibration::isTableModified(QTableWidget *table)
 {
     bool changed = false;
     for (int row = 0; row < table->rowCount(); ++row) {
-        QTableWidgetItem *item = table->item(row, 0);
-        if (item->text().toDouble() != mapCalibration[row].yield) {
-            changed = true;
-        }
-
-        QTableWidgetItem *item2 = table->item(row, 1);
-        if (item2->text().toDouble() != mapCalibration[row].active_t0) {
-            changed = true;
+        for(int colum = 0; colum<6; colum)
+        {
+            QTableWidgetItem *item = table->item(row, colum);
+            if (item->text().toDouble() != calibrationData[row][colum]) {
+                changed = true;
+            }
         }
     }
     return changed;
@@ -109,7 +141,7 @@ void YieldCalibration::load()
         QJsonObject jsonCalibration, jsonYield;
         if (jsonObj.contains("YieldCalibration")){
             jsonCalibration = jsonObj["YieldCalibration"].toObject();
-            for(int i=0; i<4; i++)
+            for(int i=0; i<3; i++)
             {
                 QString key = QString("Range%1").arg(i);
                 QJsonArray  rangeArray;
@@ -119,7 +151,17 @@ void YieldCalibration::load()
 
                     double yield = rangeData["Yield"].toDouble();
                     double active0 = rangeData["active0"].toDouble();
-                    mapCalibration[i] = caliPair(yield, active0);
+                    double ratioCu62 = rangeData["branchingRatio_Cu62"].toDouble();
+                    double ratioCu64 = rangeData["branchingRatio_Cu64"].toDouble();
+                    double backRatesDet1 = rangeData["backgroundRatesDet1"].toDouble();
+                    double backRatesDet2 = rangeData["backgroundRatesDet2"].toDouble();
+                    
+                    calibrationData[i][0] = yield;
+                    calibrationData[i][1] = active0;
+                    calibrationData[i][2] = ratioCu62;
+                    calibrationData[i][3] = ratioCu64;
+                    calibrationData[i][4] = backRatesDet1;
+                    calibrationData[i][5] = backRatesDet2;
                 }
             }
         }
@@ -144,7 +186,7 @@ bool YieldCalibration::save()
         QJsonObject jsonObj = jsonDoc.object();
 
         QJsonObject jsonRange;
-        for(int i=0; i<4; i++)
+        for(int i=0; i<3; i++)
         {
             QJsonArray items;
             QJsonObject item;
@@ -153,20 +195,55 @@ bool YieldCalibration::save()
             bool ok;
             double yield = ui->tableWidget_calibration->item(i, 0)->text().toDouble(&ok);
             if(!ok) {
-                QMessageBox::information(nullptr, tr("提示"), tr("保存失败：存在非法输入！请检查后保存"));
+                QMessageBox::information(nullptr, tr("提示"), QString("保存失败：存在非法输入！请检查后保存。行：%1,列:2%").arg(i+1).arg(1));
                 return false;
             }
+            
             double active = ui->tableWidget_calibration->item(i, 1)->text().toDouble(&ok);
             if(!ok) {
-                QMessageBox::information(nullptr, tr("提示"), tr("保存失败：存在非法输入！请检查后保存"));
+                QMessageBox::information(nullptr, tr("提示"), QString("保存失败：存在非法输入！请检查后保存。行：%1,列:2%").arg(i+1).arg(2));
                 return false;
             }
+
+            double ratioCu62 = ui->tableWidget_calibration->item(i, 2)->text().toDouble(&ok);
+            if(!ok) {
+                QMessageBox::information(nullptr, tr("提示"), QString("保存失败：存在非法输入！请检查后保存。行：%1,列:2%").arg(i+1).arg(3));
+                return false;
+            }
+
+            double ratioCu64 = ui->tableWidget_calibration->item(i, 3)->text().toDouble(&ok);
+            if(!ok) {
+                QMessageBox::information(nullptr, tr("提示"), QString("保存失败：存在非法输入！请检查后保存。行：%1,列:2%").arg(i+1).arg(4));
+                return false;
+            }
+
+            double backRatesDet1 = ui->tableWidget_calibration->item(i, 4)->text().toDouble(&ok);
+            if(!ok) {
+                QMessageBox::information(nullptr, tr("提示"), QString("保存失败：存在非法输入！请检查后保存。行：%1,列:2%").arg(i+1).arg(5));
+                return false;
+            }
+
+            double backRatesDet2 = ui->tableWidget_calibration->item(i, 5)->text().toDouble(&ok);
+            if(!ok) {
+                QMessageBox::information(nullptr, tr("提示"), QString("保存失败：存在非法输入！请检查后保存。行：%1,列:2%").arg(i+1).arg(6));
+                return false;
+            }
+
             item["Yield"] = yield;
             item["active0"] = active;
-            // 同步成员变量的数值，方便下次检查table是否变化
-            mapCalibration[i].yield = yield;
-            mapCalibration[i].active_t0 = active;
+            item["branchingRatio_Cu62"] = ratioCu62;
+            item["branchingRatio_Cu64"] = ratioCu64;
+            item["backgroundRatesDet1"] = backRatesDet1;
+            item["backgroundRatesDet2"] = backRatesDet2;
 
+            // 同步成员变量的数值，方便下次检查table是否变化
+            calibrationData[i][0] = yield;
+            calibrationData[i][1] = active;
+            calibrationData[i][2] = ratioCu62;
+            calibrationData[i][3] = ratioCu64;
+            calibrationData[i][4] = backRatesDet1;
+            calibrationData[i][5] = backRatesDet2;
+            
             items.append(item);
             jsonRange[key] = items;
         }
@@ -181,13 +258,18 @@ bool YieldCalibration::save()
     {
         QJsonObject jsonObj;
         QJsonObject jsonRange;
-        for(int i=0; i<4; i++)
+        for(int i=0; i<3; i++)
         {
             QJsonArray items;
             QJsonObject item;
             QString key = QString("Range%1").arg(i);
-            item["Yield"] = mapCalibration[i].yield;
-            item["active0"] = mapCalibration[i].active_t0;
+            item["Yield"] = calibrationData[i][0];
+            item["active0"] = calibrationData[i][1];
+            item["branchingRatio_Cu62"] = calibrationData[i][2];
+            item["branchingRatio_Cu64"] = calibrationData[i][3];
+            item["backgroundRatesDet1"] = calibrationData[i][4];
+            item["backgroundRatesDet2"] = calibrationData[i][5];
+
             items.append(item);
             jsonRange[key] = items;
         }

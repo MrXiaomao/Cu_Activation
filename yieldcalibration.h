@@ -1,8 +1,8 @@
 /*
  * @Author: MaoXiaoqing
  * @Date: 2025-04-23 19:19:37
- * @LastEditors: 
- * @LastEditTime: 2025-04-24 13:06:04
+ * @LastEditors: Maoxiaoqing
+ * @LastEditTime: 2025-05-13 17:08:15
  * @Description: 请填写简介
  */
 #ifndef YIELDCALIBRATION_H
@@ -45,7 +45,7 @@ private slots:
 private:
     Ui::YieldCalibration *ui;
     bool isTableModified(QTableWidget *table);
-    QMap<int, caliPair> mapCalibration;
+    double calibrationData[3][6]; //存放刻度数据
 };
 
 #endif // YIELDCALIBRATION_H

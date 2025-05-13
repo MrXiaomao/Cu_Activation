@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-12 17:45:58
+ * @LastEditTime: 2025-05-13 16:08:05
  * @Description: 请填写简介
  */
 #ifndef SYSUTILS_H
@@ -138,7 +138,7 @@ typedef struct tagDetectorParameter{
     // 测量模式
     int8_t measureModel;//01-手动测量 02-自动测量 03-标定测量
 
-    //运行的量程
+    //运行的量程，下标从1开始
     int measureRange; // 量程1，量程2，量程3，量程4。。。
 
     //梯形成形

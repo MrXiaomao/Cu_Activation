@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-13 09:33:57
+ * @LastEditTime: 2025-05-13 17:48:42
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -10,6 +10,12 @@
 // #include "linearfit.h"
 #include "gaussFit.h"
 #include "sysutils.h"
+
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <QFile>
+#include <QtWidgets/QApplication>
 
 using namespace std;
 
@@ -646,6 +652,50 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int tim
  */
 double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int start_time, int time_end)
 {
+    // 根据量程，自动获取本量程下对应的中子产额刻度参数——Cu62与Cu64的初始β+活度分支比，本底全能峰位置的半高宽下计数率，
+    // 如果缺失参数则直接采用默认值。
+    int measureRange = detPara.measureRange - 1;
+    double ratioCu62 = 0.0, ratioCu64 = 1.0;
+    double backRatesDet1 = 0.0, backRatesDet2 = 0.0;
+    QFile file(QApplication::applicationDirPath() + "/config/user.json");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // 读取文件内容
+        QByteArray jsonData = file.readAll();
+        file.close(); //释放资源
+
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+        QJsonObject jsonObj = jsonDoc.object();
+        
+        QJsonObject jsonCalibration, jsonYield;
+        if (jsonObj.contains("YieldCalibration")){
+            jsonCalibration = jsonObj["YieldCalibration"].toObject();
+            
+            QString key = QString("Range%1").arg(measureRange);
+            QJsonArray rangeArray;
+            if (jsonCalibration.contains(key)){
+                rangeArray = jsonCalibration[key].toArray();
+                QJsonObject rangeData = rangeArray[0].toObject();
+                
+                double ratio1 = rangeData["branchingRatio_Cu62"].toDouble();
+                double ratio2 = rangeData["branchingRatio_Cu64"].toDouble();
+                backRatesDet1 = rangeData["backgroundRatesDet1"].toDouble();
+                backRatesDet2 = rangeData["backgroundRatesDet2"].toDouble();
+                //归一化
+                ratioCu62 = ratio1 / (ratio1 + ratio2);
+                ratioCu64 = ratio2 / (ratio1 + ratio2);
+            }
+            else{
+                qCritical().noquote()<<"离线数据分析：未找到对应量程的拟合参数，请检查仪器是否进行了相应量程刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
+            }
+        }
+        else{
+            qCritical().noquote()<<"离线数据分析：未找到对应量程的拟合参数，请检查仪器是否进行了相应量程刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
+        }
+    }
+    else{
+        qCritical().noquote()<<"未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
+    }
+
     // vector<CoincidenceResult> coinResult = GetCoinResult();
     //如果没有前面的calculate的计算，那么后续计算不能进行
     if(coinResult.size() == 0) return 0.0;
@@ -658,18 +708,16 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int sta
 
     if(time_end < start_time) return 0.0; //不允许起始时间小于停止时间
 
-    int N1 = 0;
-    int N2 = 0;
-    int Nc = 0;
+    double N1 = 0;
+    double N2 = 0;
+    double Nc = 0;
     double deathTime_ratio_total[2] = {0.0, 0.0};
     double deathTime_ratio_ave[2] = {0.0, 0.0};
     for(auto coin:coinResult)
     {
         // 手动测量，在改变能窗之前的数据不处理，注意剔除。现在数据没有保存这一段数据
-        // if(coin.time <= time_SetEnWindow) continue;
-
-        N1 += coin.CountRate1;
-        N2 += coin.CountRate2;
+        N1 += (coin.CountRate1 - backRatesDet1);
+        N2 += (coin.CountRate2 - backRatesDet2);
         Nc = Nc + coin.ConCount_single + coin.ConCount_multiple;
         deathTime_ratio_total[0] += coin.DeathRatio1 * 0.01; //注意将百分比但我转化为小数
         deathTime_ratio_total[1] += coin.DeathRatio2 * 0.01;
@@ -680,15 +728,18 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int sta
     
     //f因子。暂且称为积分因子
     //这里不考虑Cu62的衰变分支，也就是测量必须时采用冷却时长远大于Cu62半衰期(9.67min = 580s)的数据。
-    // double T_halflife = 9.67*60; //单位s，Cu62的半衰期
-    double T_halflife = 12.7*60*60; // 单位s,Cu64的半衰期
-    double lamda = log(2) / T_halflife;
-    double f = 1/lamda*(exp(-lamda*start_time) - exp(-lamda*time_end));
+    double halflife_Cu62 = 9.67*60; //单位s，Cu62的半衰期
+    double halflife_Cu64 = 12.7*60*60; // 单位s,Cu64的半衰期
+    double lamda62 = log(2) / halflife_Cu62;
+    double lamda64 = log(2) / halflife_Cu64;
+
+    double f = 1/lamda62*(exp(-lamda62*start_time) - exp(-lamda62*time_end)) + \
+                1/lamda64*(exp(-lamda64*start_time) - exp(-lamda64*time_end));
 
     //对符合计数进行真偶符合修正
     //注意timeWidth_tmp单位为ns，要换为时间s。
     double measureTime = (time_end - start_time)*1.0;
-    double Nco = (Nc*measureTime - 2*timeWidth_tmp*N1*N2)/(measureTime - timeWidth_tmp*(N1+N2));
+    double Nco = (Nc*measureTime - 2*timeWidth_tmp*N1*N2)/(measureTime - timeWidth_tmp*(N1 + N2));
 
     //死时间修正
     double N10 = N1 / (1 - deathTime_ratio_ave[0]);

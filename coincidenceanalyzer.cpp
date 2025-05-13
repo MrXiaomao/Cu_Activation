@@ -32,7 +32,7 @@ CoincidenceAnalyzer::CoincidenceAnalyzer():
 countCoin(0), coolingTime_Manual(0), coolingTime_Auto(0), isChangeEnWindow(false),autoFirst(true),
 GaussCountMin(200000),
 #ifdef QT_DEBUG
-GaussMinGapTime(300)
+GaussMinGapTime(10)
 #else
 GaussMinGapTime(10)
 #endif

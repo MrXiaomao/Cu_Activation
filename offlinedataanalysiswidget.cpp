@@ -332,11 +332,12 @@ void OfflineDataAnalysisWidget::slotStart()
             }
 
             quint8 channel = detTimeEnergy.channel;
-            detectNum += detTimeEnergy.timeEnergy.size();
 
             if (channel == 0x00){
+                detectNum += detTimeEnergy.timeEnergy.size();
                 data1_2 = detTimeEnergy.timeEnergy;
             } else if(channel == 0x01){
+                detectNum += detTimeEnergy.timeEnergy.size();
                 data2_2 = detTimeEnergy.timeEnergy;
             }
             else if(channel == 0x02){ //请注意，这里对于0x02通道其实放的是FPGA修正时刻，具体参见commandhelper中信号sigMeasureStop的关联函数部分

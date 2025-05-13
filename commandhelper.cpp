@@ -190,17 +190,14 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
             QString lossDataFile = validDataFileName;
             {
                 QFile file(validDataFileName);
-                if (file.open(QIODevice::WriteOnly)) { //二进制写入
-                    std::map<int, unsigned long long> lossData_temp;
-                    lossData_temp[1] = 100000002ULL;
-                    lossData_temp[5] = 300000004ULL;
-                    if(!lossData_temp.empty()){
-                        quint32 mapSize = lossData_temp.size();
+                if (file.open(QIODevice::WriteOnly | QIODevice::Append)) { //二进制写入
+                    if(!lossData.empty()){
+                        quint32 mapSize = lossData.size();
                         unsigned char channel = 2;
-                        pfSaveVaildData->write((char*)&mapSize, sizeof(quint32));
-                        pfSaveVaildData->write((char*)&channel, sizeof(unsigned char));
+                        file.write((char*)&mapSize, sizeof(quint32));
+                        file.write((char*)&channel, sizeof(unsigned char));
                         vector<TimeEnergy> data3;
-                        for (const auto& pair : lossData_temp) {
+                        for (const auto& pair : lossData) {
                             TimeEnergy timeEn;
                             quint32 time = pair.first;
                             unsigned long long deltaTime = pair.second;
@@ -209,10 +206,8 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                             timeEn.dietime = static_cast<unsigned short>(time >> 16); // 取高16位
                             timeEn.energy = static_cast<unsigned short>(time); //取低16位
                             data3.push_back(timeEn);
-                            // pfSaveVaildData->write((char*)&deltaTime, sizeof(unsigned long long)); 
-                            // pfSaveVaildData->write((char*)&time, sizeof(time));
                         }
-                        pfSaveVaildData->write((char*)data3.data(), sizeof(TimeEnergy)*mapSize);
+                        file.write((char*)data3.data(), sizeof(TimeEnergy)*mapSize);
                     }
                     file.flush();
                     file.close();
@@ -1637,18 +1632,28 @@ void CommandHelper::netFrameWorkThead()
                         
                         //检测丢包跨度是否刚好跨过某一秒的前后，
                         //经过初步测试，丢包的时候从来没有连续丢失超过1s的数据。
-                        unsigned int firstT = static_cast<unsigned int>(ceil(firstTime/1e9)); //向上取整
-                        unsigned int lastT = static_cast<unsigned int>(ceil(lastTime/1e9));
-                        if(lastT - firstT > 0){
-                            // double ratio1 = (lastTime*1.0 - firstTime) / delataT; //计算出属于前一秒的比例
-                            lossData[firstT] = static_cast<unsigned long long>(lastT*1e9 - firstTime); //注意计时从1开始，因为是向上取整
-                            lossData[lastT] = static_cast<unsigned long long>(lastTime - lastT*1e9); //注意计时从1开始
+                        int firstT = static_cast<int>(ceil(firstTime/1e9)); //向上取整
+                        int lastT = static_cast<int>(ceil(lastTime/1e9));
+                        if( firstT - lastT > 0){
+                            long long t1 = 0LL, t2 = 0LL;
+                            t1 = firstTime - lastT*1e9;
+                            t2 = lastT*1e9 - lastTime;
+                            if(t1>0 && t2>0)
+                            {
+                                lossData[static_cast<unsigned int>(lastT)] += static_cast<unsigned long long>(t1); //注意计时从1开始，因为是向上取整
+                                lossData[static_cast<unsigned int>(firstT)] += static_cast<unsigned long long>(t2); //注意计时从1开始
+                                coincidenceAnalyzer->AddLossMap(static_cast<unsigned int>(lastT), static_cast<unsigned long long>(t1));
+                                coincidenceAnalyzer->AddLossMap(static_cast<unsigned int>(firstT), static_cast<unsigned long long>(t2));
+                            }
                         }
-                        else {
+                        else if((firstT - lastT) == 0){
                             // 记录丢失的数据点个数，考虑到丢包总是发送在大计数率，因此直接认为每次丢一个包损失64个计数。
-                            lossData[firstT] = delataT;
+                            lossData[static_cast<unsigned int>(firstT)] += delataT;
                         }
-                        coincidenceAnalyzer->AddLossMap(lossData);
+                        else{
+                            
+                        }
+                        
                     }
 
                     //记录数据帧序号

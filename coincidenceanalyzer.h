@@ -74,12 +74,10 @@ public:
      * @param {map<unsigned int, long long>} lossData [丢失时刻、丢失时间长度], 其中时刻为FPGA时钟，单位s，时间长度单位为ns
      * @return {*}
      */
-    inline void AddLossMap(std::map<unsigned int, unsigned long long> lossData)
+    inline void AddLossMap(unsigned int key, unsigned long long value)
     {
         QMutexLocker locker(&mutexlossDATA);
-        for (const auto& pair:lossData) {
-            lossData_time_num[pair.first] = pair.second;
-        }
+        lossData_time_num[key] += value;
     }
 
     /**

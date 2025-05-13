@@ -34,6 +34,13 @@ class PlotWidget : public QStackedWidget
         amGaussEnDet2= 0x11,     //高斯2
     };
 
+    enum Plot_Opt_model{
+        pmNone = 0x00,
+        pmMove = 0x01,
+        pmTip = 0x04,
+        pmDrag = 0x08
+    };
+
 public:
     explicit PlotWidget(QWidget *parent = nullptr);
 
@@ -46,6 +53,10 @@ public:
 
     void switchToCountMode(bool isCountModel);
     void switchToLogarithmicMode(bool isLogarithmic);
+
+    void switchToTipMode();
+    void switchToDragMode();
+    void switchToMoveMode();
 
     void resetAxisCoords();
     void rescalAxisCoords(QCustomPlot* customPlot);
@@ -61,10 +72,10 @@ public:
     void areaSelectFinished();
 
 public slots:
-    void slotPlotClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event);
     void slotBeforeReplot();
     void slotRestorePlot(QMouseEvent*);
     void slotUpdateEnWindow(unsigned short* EnWindow);
+    void slotRestoreView();
 
     //批量刷新
     void slotUpdatePlotDatas(SingleSpectrum, vector<CoincidenceResult>);
@@ -130,6 +141,8 @@ private:
 
     QAction *allowSelectAreaAction;//选择拟合区域
     QAction *resetPlotAction;//恢复图像状态
+
+    Plot_Opt_model mPlot_Opt_model = pmMove;
 };
 
 #endif // PLOTWIDGET_H

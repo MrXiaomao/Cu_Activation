@@ -30101,6 +30101,19 @@ void QCPItemText::draw(QCPPainter *painter)
   }
 }
 
+QRect QCPItemText::textBoxRect() const
+{
+    QPointF positionPixels(position->pixelPosition());
+
+    QFontMetrics fontMetrics(mFont);
+    QRect textRect = fontMetrics.boundingRect(0, 0, 0, 0, Qt::TextDontClip|mTextAlignment, mText);
+    QRect textBoxRect = textRect.adjusted(-mPadding.left(), -mPadding.top(), mPadding.right(), mPadding.bottom());
+    QPointF textPos = getTextDrawPoint(positionPixels, textBoxRect, mPositionAlignment);
+    textBoxRect.moveTopLeft(textPos.toPoint());
+
+    return textBoxRect;
+}
+
 /* inherits documentation from base class */
 QPointF QCPItemText::anchorPixelPosition(int anchorId) const
 {

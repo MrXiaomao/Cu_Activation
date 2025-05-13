@@ -286,6 +286,7 @@ void OfflineDataAnalysisWidget::slotStart()
 
     //读取历史数据重新进行运算
     PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
+    plotWidget->switchToMoveMode();
     plotWidget->slotStart();
 
     unsigned short EnWindow[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),

@@ -584,7 +584,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </sizepolicy>
              </property>
              <property name="currentIndex">
-              <number>0</number>
+              <number>1</number>
              </property>
              <widget class="QWidget" name="tab_3">
               <property name="sizePolicy">
@@ -628,7 +628,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <number>2</number>
                   </property>
                   <property name="rightMargin">
-                   <number>5</number>
+                   <number>9</number>
                   </property>
                   <property name="bottomMargin">
                    <number>2</number>
@@ -1357,6 +1357,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       <verstretch>0</verstretch>
                      </sizepolicy>
                     </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>90</width>
+                      <height>0</height>
+                     </size>
+                    </property>
                     <property name="text">
                      <string>Det1符合能窗：</string>
                     </property>
@@ -1372,6 +1378,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
                       <horstretch>0</horstretch>
                       <verstretch>0</verstretch>
                      </sizepolicy>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>90</width>
+                      <height>0</height>
+                     </size>
                     </property>
                     <property name="text">
                      <string>Det2符合能窗：</string>
@@ -1409,6 +1421,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          <horstretch>0</horstretch>
                          <verstretch>0</verstretch>
                         </sizepolicy>
+                       </property>
+                       <property name="minimumSize">
+                        <size>
+                         <width>90</width>
+                         <height>0</height>
+                        </size>
                        </property>
                        <property name="text">
                         <string>时间步长/s：</string>
@@ -1684,6 +1702,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
                          <verstretch>0</verstretch>
                         </sizepolicy>
                        </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>80</width>
+                         <height>16777215</height>
+                        </size>
+                       </property>
                        <property name="maximum">
                         <number>50000</number>
                        </property>
@@ -1755,7 +1779,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                    <number>2</number>
                   </property>
                   <property name="rightMargin">
-                   <number>0</number>
+                   <number>9</number>
                   </property>
                   <property name="bottomMargin">
                    <number>2</number>
@@ -2537,7 +2561,11 @@ li.checked::marker { content: &quot;\2612&quot;; }
    <addaction name="action_refresh"/>
    <addaction name="action_line_log"/>
    <addaction name="separator"/>
-   <addaction name="action_restore"/>
+   <addaction name="action_drag"/>
+   <addaction name="action_tip"/>
+   <addaction name="action_move"/>
+   <addaction name="action_restore_2"/>
+   <addaction name="separator"/>
    <addaction name="separator"/>
    <addaction name="action_start_measure"/>
    <addaction name="action_close"/>
@@ -2558,6 +2586,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
    <addaction name="action_openfile"/>
    <addaction name="action_analyze"/>
    <addaction name="action_line_log"/>
+   <addaction name="separator"/>
+   <addaction name="action_drag"/>
+   <addaction name="action_tip"/>
+   <addaction name="action_move"/>
+   <addaction name="action_restore_2"/>
+   <addaction name="separator"/>
    <addaction name="action_close"/>
   </widget>
   <action name="action_devices">
@@ -2828,6 +2862,54 @@ li.checked::marker { content: &quot;\2612&quot;; }
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::NoRole</enum>
+   </property>
+  </action>
+  <action name="action_move">
+   <property name="icon">
+    <iconset resource="resource.qrc">
+     <normaloff>:/resource/move.png</normaloff>:/resource/move.png</iconset>
+   </property>
+   <property name="text">
+    <string>平移视图</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::NoRole</enum>
+   </property>
+  </action>
+  <action name="action_tip">
+   <property name="icon">
+    <iconset resource="resource.qrc">
+     <normaloff>:/resource/tip.png</normaloff>:/resource/tip.png</iconset>
+   </property>
+   <property name="text">
+    <string>数据提示</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::NoRole</enum>
+   </property>
+  </action>
+  <action name="action_drag">
+   <property name="icon">
+    <iconset resource="resource.qrc">
+     <normaloff>:/resource/expand-width-fill.png</normaloff>:/resource/expand-width-fill.png</iconset>
+   </property>
+   <property name="text">
+    <string>选择拟合区域</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::NoRole</enum>
+   </property>
+  </action>
+  <action name="action_restore_2">
+   <property name="icon">
+    <iconset resource="resource.qrc">
+     <normaloff>:/resource/resrore.png</normaloff>:/resource/resrore.png</iconset>
+   </property>
+   <property name="text">
+    <string>还原视图</string>
    </property>
    <property name="menuRole">
     <enum>QAction::NoRole</enum>

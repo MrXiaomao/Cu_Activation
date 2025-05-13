@@ -146,7 +146,7 @@ MainWindow::MainWindow(QWidget *parent)
         }
     });
 
-    this->setProperty("axis-prepared", false);
+    this->setProperty("axis-prepared", false);//位移平台是否移动到指定量程
     connect(controlHelper, &ControlHelper::sigReportAbs, this, [=](float f1, float f2){
         QLabel* label_axis01 = this->findChild<QLabel*>("label_axis01");
         label_axis01->setText(tr("轴1：") + QString::number(f1 / 1000, 'f', 4) + " mm");
@@ -470,7 +470,7 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 void MainWindow::InitMainWindowUi()
 {
 #ifdef QT_NO_DEBUG
-    //ui->toolBar_online->removeAction(ui->action_start_measure);
+    ui->toolBar_online->removeAction(ui->action_start_measure);
     ui->menu_4->removeAction(ui->action_Moving); // 屏蔽掉位移平台子界面
     ui->menu_view->removeAction(ui->action_SpectrumModel); //屏蔽掉能谱界面
 #endif
@@ -1126,11 +1126,18 @@ void MainWindow::on_pushButton_measure_clicked()
             ui->lineEdit_CuActive->setText("0");
             ui->lineEdit_Yield->setText("0");
 
+            QList<QAction*> actions = ui->toolBar_online->actions();
+            for (auto action : actions){
+                if (action->objectName() == "action_drag"){
+                    action->setEnabled(true);
+                }
+            }
+
             commandHelper->setShotNumber(ui->lineEdit_ShotNum->text()); //设置测量发次，QString类型
             commandHelper->updateParamter(stepT, EnWin, false);
             commandHelper->slotStartManualMeasure(detectorParameter);
 
-            QTimer::singleShot(30000, this, [=](){
+            QTimer::singleShot(1000, this, [=](){
                 //指定时间未收到开始测量指令，则按钮恢复初始状态
                 if (this->property("measure-status").toUInt() == msPrepare){
                     commandHelper->slotStopManualMeasure();
@@ -1144,7 +1151,7 @@ void MainWindow::on_pushButton_measure_clicked()
         ui->pushButton_measure->setEnabled(false);
         commandHelper->slotStopManualMeasure();
 
-        QTimer::singleShot(30000, this, [=](){
+        QTimer::singleShot(3000, this, [=](){
             //指定时间未收到停止测量指令，则按钮恢复初始状态
             if (this->property("measure-status").toUInt() != msEnd){
                 ui->pushButton_measure->setEnabled(true);
@@ -1226,6 +1233,13 @@ void MainWindow::on_pushButton_measure_2_clicked()
         ui->lineEdit_CuActive->setText("0");
         ui->lineEdit_Yield->setText("0");
         
+        QList<QAction*> actions = ui->toolBar_online->actions();
+        for (auto action : actions){
+            if (action->objectName() == "action_drag"){
+                action->setEnabled(false);
+            }
+        }
+
         int stepT = ui->spinBox_step_2->value();
         unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE_2->value(), (unsigned short)ui->spinBox_1_rightE_2->value(),
                                    (unsigned short)ui->spinBox_2_leftE_2->value(), (unsigned short)ui->spinBox_2_rightE_2->value()};
@@ -1243,7 +1257,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
 
         // ui->pushButton_measure_2_tip->setText(tr("等待触发..."));
         // qInfo().noquote()<<"等待触发...";
-        QTimer::singleShot(30000, this, [=](){
+        QTimer::singleShot(1000, this, [=](){
             //指定时间未收到开始测量指令，则按钮恢复初始状态
             if (this->property("measure-status").toUInt() == msPrepare){
                 commandHelper->slotStopAutoMeasure();
@@ -1254,7 +1268,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         ui->pushButton_measure_2->setEnabled(false);
         commandHelper->slotStopAutoMeasure();
 
-        QTimer::singleShot(30000, this, [=](){
+        QTimer::singleShot(3000, this, [=](){
             //指定时间未收到停止测量指令，则按钮恢复初始状态
             if (this->property("measure-status").toUInt() != msEnd){
                 ui->pushButton_measure_2->setEnabled(true);
@@ -1981,6 +1995,13 @@ void MainWindow::on_pushButton_confirm_clicked()
     ui->spinBox_rightE->setEnabled(false);
     ui->pushButton_gauss->setEnabled(false);
 
+    QList<QAction*> actions = ui->toolBar_online->actions();
+    for (auto action : actions){
+        if (action->objectName() == "action_drag"){
+            action->setEnabled(false);
+        }
+    }
+
     //自动切换到计数模式
     commandHelper->switchToCountMode(true);
     plotWidget->switchToCountMode(true);
@@ -2017,7 +2038,6 @@ void MainWindow::on_tabWidget_client_currentChanged(int /*index*/)
         ui->toolBar_online->show();
         this->setWindowTitle("Cu_Activation");
     }
-
 }
 
 //工具栏打开文件按钮
@@ -2072,3 +2092,63 @@ bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, long *r
 
     return QWidget::nativeEvent(eventType, message, result); // 传递给基类处理
 }
+
+void MainWindow::on_action_move_triggered()
+{
+    if (ui->tabWidget_client->currentWidget()->objectName() == "tabWidget_workLog")
+        return ;
+
+    if (ui->tabWidget_client->currentWidget()->objectName() == "OfflineDataAnalysisWidget"){
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
+        plotWidget->switchToMoveMode();
+    } else if (ui->tabWidget_client->currentWidget()->objectName() == "onlineDataAnalysisWidget"){
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
+        plotWidget->switchToMoveMode();
+    }
+}
+
+
+void MainWindow::on_action_tip_triggered()
+{
+    if (ui->tabWidget_client->currentWidget()->objectName() == "tabWidget_workLog")
+        return ;
+
+    if (ui->tabWidget_client->currentWidget()->objectName() == "OfflineDataAnalysisWidget"){
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
+        plotWidget->switchToTipMode();
+    } else if (ui->tabWidget_client->currentWidget()->objectName() == "onlineDataAnalysisWidget"){
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
+        plotWidget->switchToTipMode();
+    }
+}
+
+
+void MainWindow::on_action_drag_triggered()
+{
+    if (ui->tabWidget_client->currentWidget()->objectName() == "tabWidget_workLog")
+        return ;
+
+    if (ui->tabWidget_client->currentWidget()->objectName() == "OfflineDataAnalysisWidget"){
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
+        plotWidget->switchToDragMode();
+    } else if (ui->tabWidget_client->currentWidget()->objectName() == "onlineDataAnalysisWidget"){
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
+        plotWidget->switchToDragMode();
+    }
+}
+
+
+void MainWindow::on_action_restore_2_triggered()
+{
+    if (ui->tabWidget_client->currentWidget()->objectName() == "tabWidget_workLog")
+        return ;
+
+    if (ui->tabWidget_client->currentWidget()->objectName() == "OfflineDataAnalysisWidget"){
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
+        plotWidget->slotRestoreView();
+    } else if (ui->tabWidget_client->currentWidget()->objectName() == "onlineDataAnalysisWidget"){
+        PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
+        plotWidget->slotRestoreView();
+    }
+}
+

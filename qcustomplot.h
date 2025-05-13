@@ -6668,7 +6668,8 @@ public:
   Qt::Alignment textAlignment() const { return mTextAlignment; }
   double rotation() const { return mRotation; }
   QMargins padding() const { return mPadding; }
-  
+  QRect textBoxRect() const;
+
   // setters;
   void setColor(const QColor &color);
   void setSelectedColor(const QColor &color);
@@ -6710,7 +6711,8 @@ protected:
   Qt::Alignment mTextAlignment;
   double mRotation;
   QMargins mPadding;
-  
+  QRect mTextBoxRect;
+
   // reimplemented virtual methods:
   virtual void draw(QCPPainter *painter) Q_DECL_OVERRIDE;
   virtual QPointF anchorPixelPosition(int anchorId) const Q_DECL_OVERRIDE;

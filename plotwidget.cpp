@@ -307,59 +307,11 @@ void PlotWidget::initCustomPlot(){
     allowSelectAreaAction = new QAction(tr("选择拟合区域"), this);
     resetPlotAction = new QAction(tr("还原视图"), this);
     connect(allowSelectAreaAction, &QAction::triggered, this, [=](){
-        QWhatsThis::showText(QCursor::pos(), tr("请长按鼠标左键或Ctrl+鼠标左键，在能谱图上框选出符合能窗范围"), this);
-        //图像进入区域选择模式
-        this->allowAreaSelected = true;
-
-        //隐藏拟合曲线和提示信息框
-        // QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
-        // gaussResultItemText->setText("");
-        // getGraph(3)->data()->clear();
-
-        QCustomPlot* customPlots[] = {getCustomPlot(amEnDet1), getCustomPlot(amEnDet2)};
-        for (auto customPlot : customPlots){
-            //高斯拟合信息清空
-            QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
-            gaussResultItemText->setText("");
-
-            //删除高斯曲线
-            customPlot->graph(1)->data()->clear();
-            customPlot->replot();
-        }
-
-        //图像停止刷新
-        emit sigPausePlot(true);
-        // QTimer::singleShot(30000, this, [=](){
-        //     btn->setEnabled(true);
-        //     emit sigPausePlot(false);
-        // });
-
-        // customPlot->replot();
+        switchToDragMode();
     });
 
     connect(resetPlotAction, &QAction::triggered, this, [=](){
-        this->setProperty("autoRefreshModel", true);
-        if (this->property("isCountModel").toBool()){
-            QList<QCustomPlot*> customPlots = getAllCountCustomPlot();
-            for (auto customPlot : customPlots){
-                customPlot->rescaleAxes(true);
-                customPlot->replot();
-            }
-        } else {
-            QList<QCustomPlot*> customPlots = getAllEnergyCustomPlot();
-            for (auto customPlot : customPlots){
-                customPlot->rescaleAxes(true);
-
-                //高斯拟合信息清空
-                QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
-                gaussResultItemText->setText("");
-
-                //删除高斯曲线
-                customPlot->graph(1)->data()->clear();
-                customPlot->replot();
-            }
-        }
-        emit sigPausePlot(false); //是否暂停图像刷新
+        slotRestoreView();
     });
 }
 
@@ -547,8 +499,26 @@ void PlotWidget::updateTracerPosition(QCustomPlot* customPlot, double key, doubl
         case DataTracer:
         {
             coordsTipItemTracer->position->setCoords(key, value);
-            coordsTipItemText->position->setCoords(50, -50);
+
+            QCPItemText* coordsTipItemText = customPlot->findChild<QCPItemText*>("coordsTipItemText");
             coordsTipItemText->setText(tr("%1,%2").arg(QString::number(key, 'f', 0)).arg(QString::number(value, 'f', 2)));
+
+            // 调整位置以保持在视图内
+            QCPItemLine *coordsTipItemArrowLine = customPlot->findChild<QCPItemLine*>("coordsTipItemArrowLine");
+            double pos = customPlot->graph(0)->keyAxis()->coordToPixel(key);
+            if (coordsTipItemText){
+                int width = coordsTipItemText->textBoxRect().width();
+                QRect viewRect = customPlot->xAxis->axisRect()->rect(); // 获取视图区域
+                if ((pos + 50 + width) > viewRect.right()) {
+                    coordsTipItemArrowLine->start->setCoords(-50, -50);
+                    coordsTipItemText->position->setCoords(width*(-1) - 50, -50);
+                }else{
+                    QCPItemLine *coordsTipItemArrowLine = customPlot->findChild<QCPItemLine*>("coordsTipItemArrowLine");
+                    coordsTipItemArrowLine->start->setCoords(50, -50);
+                    coordsTipItemText->position->setCoords(50, -50);
+                }
+            }
+
             break;
         }
         default:
@@ -558,6 +528,7 @@ void PlotWidget::updateTracerPosition(QCustomPlot* customPlot, double key, doubl
     slotShowTracerLine(customPlot, key, value);
 }
 
+//显示提示信息十字交叉线
 void PlotWidget::slotShowTracerLine(QCustomPlot* customPlot, double key, double value)
 {
     QCPItemLine* coordsTipItemXLine = customPlot->findChild<QCPItemLine*>("coordsTipItemXLine");
@@ -573,6 +544,9 @@ void PlotWidget::slotShowTracer(QMouseEvent *event)
 {
     //区域选择的时候，不做跟踪处理
     if (this->allowAreaSelected)
+        return;
+
+    if (mPlot_Opt_model == pmMove || mPlot_Opt_model == pmDrag)
         return;
 
     if (event->button() != Qt::LeftButton)
@@ -781,7 +755,6 @@ QCustomPlot *PlotWidget::allocCustomPlot(QString objName, bool needGauss, QWidge
         curveGraph->setVisible(false);
     }
 
-    //connect(customPlot, SIGNAL(plottableClick(QCPAbstractPlottable*, int, QMouseEvent*)), this, SLOT(slotPlotClick(QCPAbstractPlottable*, int, QMouseEvent*)));
     connect(customPlot, SIGNAL(beforeReplot()), this, SLOT(slotBeforeReplot()));
     connect(customPlot, SIGNAL(afterLayout()), this, SLOT(slotBeforeReplot()));
 
@@ -941,7 +914,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                     if (this->property("isCountModel").toBool())
                         return QWidget::eventFilter(watched, event);
 
-                    if (this->allowAreaSelected/* && this->property("allowAreaSelected-plot-name").toString() == customPlot->objectName()*/){
+                    if (this->allowAreaSelected){
                         this->isPressed = true;
                         this->dragStart = e->pos();
                         this->setProperty("PlotIndex", customPlot->property("PlotIndex").toUInt());
@@ -967,9 +940,9 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                         customPlot->replot();
                     }
                 } else if (e->button() == Qt::RightButton) {// 右键恢复
-                    this->allowAreaSelected = false;
-                    this->isPressed = false;
-                    this->isDragging = false;
+                    // this->allowAreaSelected = false;
+                    // this->isPressed = false;
+                    // this->isDragging = false;
 
                     if (this->property("isCountModel").toBool()){
                         QMenu contextMenu(customPlot);
@@ -982,14 +955,15 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                         contextMenu.addAction(resetPlotAction);
                         contextMenu.exec(QCursor::pos());
                     } else {
-                        QMenu contextMenu(customPlot);
-                        if (!this->property("disableAreaSelect").isValid() || !this->property("disableAreaSelect").toBool())
-                            contextMenu.addAction(allowSelectAreaAction);
-                        contextMenu.addAction(resetPlotAction);
-                        contextMenu.exec(QCursor::pos());
+                        // 屏蔽右键菜单，改为工具栏菜单
+                        // QMenu contextMenu(customPlot);
+                        // if (!this->property("disableAreaSelect").isValid() || !this->property("disableAreaSelect").toBool())
+                        //     contextMenu.addAction(allowSelectAreaAction);
+                        // contextMenu.addAction(resetPlotAction);
+                        // contextMenu.exec(QCursor::pos());
                     }
 
-                    setCursor(Qt::ArrowCursor);
+                    //setCursor(Qt::ArrowCursor);
                 }
             }
         } else if (event->type() == QEvent::MouseMove){
@@ -1140,6 +1114,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                 graph->setData(keys, values, colors);
                                 customPlot->replot();
 
+                                emit sigUpdateEnWindow(customPlot->objectName(), key_from, key_to);
                                 emit sigAreaSelected();
                             }
 
@@ -1211,7 +1186,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                     this->isDragging = false;
                     //this->allowAreaSelected = false;
 
-                    customPlot->setInteraction(QCP::iRangeDrag, true);
+                    //customPlot->setInteraction(QCP::iRangeDrag, true);
                 }
             }
         } else if (event->type() == QEvent::MouseButtonDblClick){
@@ -1220,45 +1195,6 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
     }
 
     return QWidget::eventFilter(watched, event);
-}
-
-#include <QTimer>
-void PlotWidget::slotPlotClick(QCPAbstractPlottable *plottable, int dataIndex, QMouseEvent *event)
-{
-    QMutexLocker locker(&mutexRefreshPlot);
-    QCustomPlot* customPlot = qobject_cast<QCustomPlot*>(sender());
-    QCPItemText* coordsTipItemText = customPlot->findChild<QCPItemText*>("coordsTipItemText");
-    QCPItemLine* coordsTipItemXLine = customPlot->findChild<QCPItemLine*>("coordsTipItemXLine");
-    // QCPItemLine* coordsTipItemYLine = customPlot->findChild<QCPItemLine*>("coordsTipItemYLine");
-    if (coordsTipItemText){
-        QCPGraph *graph = qobject_cast<QCPGraph*>(plottable);
-        QSharedPointer<QCPGraphDataContainer> data = graph->data();
-        const QCPGraphData *ghd = data->at(dataIndex);
-
-        //显示轴信息
-        QString text = QString::number(ghd->key,10,0) + "," + QString::number(ghd->value,10,0);
-        coordsTipItemText->setText(text);
-        coordsTipItemText->position->setCoords(event->pos().x() + 3, event->pos().y() - 3);
-        coordsTipItemText->setVisible(true);
-
-        //显示标记点
-        // QCPItemLine* flagItemXLine = customPlot->findChild<QCPItemLine*>("flagItemLine");
-        if (coordsTipItemXLine){
-            coordsTipItemXLine->setProperty("key", ghd->key);
-            coordsTipItemXLine->setProperty("value", ghd->value);
-            coordsTipItemXLine->setVisible(true);
-        }
-
-        customPlot->replot();
-
-        QTimer::singleShot(3000, this, [=](){
-            coordsTipItemXLine->setVisible(false);
-            coordsTipItemText->setVisible(false);
-            customPlot->replot();
-        });
-    }
-
-    setCursor(Qt::ArrowCursor);
 }
 
 void PlotWidget::slotBeforeReplot()
@@ -1952,4 +1888,89 @@ void PlotWidget::slotShowGaussInfor(bool visible)
             customPlot->replot(QCustomPlot::rpQueuedRefresh);
         }
     }
+}
+
+void PlotWidget::switchToTipMode()
+{
+    mPlot_Opt_model = pmTip;
+    this->allowAreaSelected = false;
+
+    QList<QCustomPlot*> customPlots = getAllEnergyCustomPlot();
+    for (auto customPlot : customPlots){
+        customPlot->setInteraction(QCP::iRangeDrag, false);
+    }
+}
+
+void PlotWidget::switchToDragMode()
+{
+    mPlot_Opt_model = pmDrag;
+    this->allowAreaSelected = false;
+
+    QWhatsThis::showText(QCursor::pos(), tr("请长按鼠标左键或Ctrl+鼠标左键，在能谱图上框选出符合能窗范围"), this);
+    //图像进入区域选择模式
+    this->allowAreaSelected = true;
+
+    //隐藏拟合曲线和提示信息框
+    // QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
+    // gaussResultItemText->setText("");
+    // getGraph(3)->data()->clear();
+
+    QCustomPlot* customPlots[] = {getCustomPlot(amEnDet1), getCustomPlot(amEnDet2)};
+    for (auto customPlot : customPlots){
+        //高斯拟合信息清空
+        QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
+        gaussResultItemText->setText("");
+
+        customPlot->setInteraction(QCP::iRangeDrag, false);
+
+        //删除高斯曲线
+        customPlot->graph(1)->data()->clear();
+        customPlot->replot();
+    }
+
+    //图像停止刷新
+    emit sigPausePlot(true);
+    QTimer::singleShot(30000, this, [=](){
+        QWhatsThis::hideText();
+    });
+}
+
+void PlotWidget::switchToMoveMode()
+{
+    mPlot_Opt_model = pmMove;
+    this->allowAreaSelected = false;
+    QList<QCustomPlot*> customPlots = getAllEnergyCustomPlot();
+    for (auto customPlot : customPlots){
+        customPlot->setInteraction(QCP::iRangeDrag, true);
+    }
+}
+
+void PlotWidget::slotRestoreView()
+{
+    mPlot_Opt_model = pmMove;
+    this->allowAreaSelected = false;
+    this->setProperty("autoRefreshModel", true);
+    if (this->property("isCountModel").toBool()){
+        QList<QCustomPlot*> customPlots = getAllCountCustomPlot();
+        for (auto customPlot : customPlots){
+            customPlot->rescaleAxes(true);
+            customPlot->replot();
+        }
+    } else {
+        QList<QCustomPlot*> customPlots = getAllEnergyCustomPlot();
+        for (auto customPlot : customPlots){
+            customPlot->rescaleAxes(true);
+
+            //高斯拟合信息清空
+            QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
+            gaussResultItemText->setText("");
+
+            customPlot->setInteraction(QCP::iRangeDrag, true);
+
+            //删除高斯曲线
+            customPlot->graph(1)->data()->clear();
+            customPlot->replot();
+        }
+    }
+    emit sigPausePlot(false); //是否暂停图像刷新
 }

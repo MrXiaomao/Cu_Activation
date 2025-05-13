@@ -77,6 +77,7 @@ private slots:
 
     void on_action_about_triggered();
 
+    // 工具栏恢复出厂设置，已移除
     void on_action_restore_triggered();
 
     void on_action_cachepath_triggered();
@@ -108,6 +109,15 @@ private slots:
     void on_action_help_triggered();
 
     void on_action_viewlog_triggered();
+
+    void on_action_move_triggered();
+
+    void on_action_tip_triggered();
+
+    void on_action_drag_triggered();
+
+    //工具栏还原视图
+    void on_action_restore_2_triggered();
 
 private:
     Ui::MainWindow *ui = nullptr;

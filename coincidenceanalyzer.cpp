@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-13 17:48:42
+ * @LastEditTime: 2025-05-13 19:42:55
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -510,7 +510,7 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
             // qDebug().noquote()<<"探测器2 自动高斯拟合发生异常,可能原因，选取的初始峰位不具有高斯形状，无法进行高斯拟合";
         }
     }
-    if(changed) GaussFitLog.push_back({countCoin, EnergyWindow[0], EnergyWindow[1], EnergyWindow[2], EnergyWindow[3]});
+    if(changed) GaussFitLog.push_back({countCoin + coolingTime_Auto, EnergyWindow[0], EnergyWindow[1], EnergyWindow[2], EnergyWindow[3]});
     isChangeEnWindow = changed;
 }
 
@@ -629,7 +629,16 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int tim
     //测量的起点时刻（这个时刻以活化物活化后开始计时）
     int start_time = 0;
     if(detPara.measureModel == mmManual) start_time = detPara.coolingTime + time_SetEnWindow; //对于手动拟合，选取能窗前的一段数据要舍弃
-    if(detPara.measureModel == mmAuto) start_time = detPara.coolingTime;
+    // if(detPara.measureModel == mmAuto) start_time = detPara.coolingTime;
+    if(detPara.measureModel == mmAuto) 
+    {
+        //对于自动测量，放弃第一组未自动拟合的能窗，因为可能第一组能窗选取不准确。
+        if(GaussFitLog.size()>0) start_time = GaussFitLog[0].time;
+        else
+        {
+            start_time = detPara.coolingTime;
+        }
+    }
     
     //测量时间终点时刻（相对于活化0时刻）。
     int time_end = 0;

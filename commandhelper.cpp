@@ -226,7 +226,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                     file.close();
                 }
             }
-            qDebug().noquote() << tr("本次测量FPGA丢包时刻及丢失时长已存放在：%1").arg(lossDataFile);
+            // qDebug().noquote() << tr("本次测量FPGA丢包时刻及丢失时长已存放在：%1").arg(lossDataFile);
 
             //符合测量模式保存测量能谱文件
             QString SpecFile = validDataFileName + ".累积能谱";

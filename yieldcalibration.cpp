@@ -53,6 +53,8 @@ YieldCalibration::YieldCalibration(QWidget *parent)
     ui->tableWidget_calibration->setHorizontalHeaderItem(4, new QTableWidgetItem("探测器1\n本底计数率(cps)"));
     ui->tableWidget_calibration->setHorizontalHeaderItem(5, new QTableWidgetItem("探测器2\n本底计数率(cps)"));
 
+    //最后一列自动拉伸
+    ui->tableWidget_calibration->horizontalHeader()->setStretchLastSection(true);
     // ui->label_attention->setText("<p style='line-height:20px'>"
     //                       "<font style ='font-size:19px; color:#ffff00;font-weight:bold'> 客户端界面 </font>"
     //                       "<p style='line-height:7px'>"

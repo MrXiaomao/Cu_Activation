@@ -2427,7 +2427,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
               <item row="0" column="0">
                <widget class="QLabel" name="label_11">
                 <property name="text">
-                 <string>相对活度：</string>
+                 <string>相对初始活度/Bq：</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>

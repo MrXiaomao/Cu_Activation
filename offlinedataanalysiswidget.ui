@@ -1478,7 +1478,7 @@
                         </size>
                        </property>
                        <property name="text">
-                        <string>初始活度/Bq：</string>
+                        <string>相对初始活度/Bq：</string>
                        </property>
                        <property name="alignment">
                         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>

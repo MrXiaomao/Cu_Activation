@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-12 20:26:35
+ * @LastEditTime: 2025-05-13 09:33:57
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -303,7 +303,7 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
         QMutexLocker locker(&mutexlossDATA);
         auto it = lossData_time_num.find(FPGA_time);
         if (it != lossData_time_num.end()) {
-            double value = it->second;  // 获取值
+            double value = it->second * 1.0 /1e9;  // 获取值
             if(value<1.0)  correctRatio = 1.0 / (1.0 - value); //确保异常情况导致
             lossData_time_num.erase(it);
         }
@@ -700,4 +700,28 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int sta
     double A0_omiga = N10 * N20 / Nco0 / f;
 
     return A0_omiga;
+}
+
+
+void CoincidenceAnalyzer::doFPGA_lossDATA_correction(std::map<unsigned int, unsigned long long> lossData)
+{
+    int coinNum = coinResult.size();
+    for (const auto& pair:lossData) {
+        unsigned int time_seconds = pair.first; 
+        
+        //从活化后开始计时，注意，手动测量模式下，FPGA计时之前存在一段非零计数。自动测量下coolingTime_Manual=0
+        unsigned int absolutetime_seconds = time_seconds + coolingTime_Manual;
+
+        double value = pair.second * 1.0 /1e9;  // 获取值
+        if(value<1.0) {
+            double correctRatio = 1.0 / (1.0 - value); //确保异常情况导致
+            unsigned int pos = absolutetime_seconds - 1; //注意下标索引的时候减一
+            if(pos < coinNum){
+                coinResult[pos].CountRate1 =  static_cast<int>(coinResult[pos].CountRate1 * correctRatio);
+                coinResult[pos].CountRate2 =  static_cast<int>(coinResult[pos].CountRate2 * correctRatio);
+                coinResult[pos].ConCount_single =  static_cast<int>(coinResult[pos].ConCount_single * correctRatio);
+                coinResult[pos].ConCount_multiple =  static_cast<int>(coinResult[pos].ConCount_multiple * correctRatio);
+            }
+        }
+    }
 }

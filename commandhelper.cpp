@@ -1,4 +1,5 @@
 #include "commandhelper.h"
+#include <math.h>
 #include "sysutils.h"
 #include <QDataStream>
 #include <QApplication>
@@ -186,14 +187,32 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
             qInfo().noquote() << tr("本次测量参数配置已存放在：%1").arg(configResultFile);
             
             //记录FPGA丢包的数据，用以离线分析时的修正
-            QString lossDataFile = validDataFileName + ".FPGA_loss";
+            QString lossDataFile = validDataFileName;
             {
-                QFile file(lossDataFile);
-                if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
-                    QTextStream out(&file);
-                    out << "time(FPGA,unit:s),losstime(s)"<<Qt::endl;
-                    for (const auto& pair : lossData) {
-                        out<<pair.first<<","<<pair.second<<Qt::endl;
+                QFile file(validDataFileName);
+                if (file.open(QIODevice::WriteOnly)) { //二进制写入
+                    std::map<int, unsigned long long> lossData_temp;
+                    lossData_temp[1] = 100000002ULL;
+                    lossData_temp[5] = 300000004ULL;
+                    if(!lossData_temp.empty()){
+                        quint32 mapSize = lossData_temp.size();
+                        unsigned char channel = 2;
+                        pfSaveVaildData->write((char*)&mapSize, sizeof(quint32));
+                        pfSaveVaildData->write((char*)&channel, sizeof(unsigned char));
+                        vector<TimeEnergy> data3;
+                        for (const auto& pair : lossData_temp) {
+                            TimeEnergy timeEn;
+                            quint32 time = pair.first;
+                            unsigned long long deltaTime = pair.second;
+                            //这里将[deltaTime,time]转化为结构体TimeEnergy。读取时按照TimeEnergy来读取
+                            timeEn.time = deltaTime;
+                            timeEn.dietime = static_cast<unsigned short>(time >> 16); // 取高16位
+                            timeEn.energy = static_cast<unsigned short>(time); //取低16位
+                            data3.push_back(timeEn);
+                            // pfSaveVaildData->write((char*)&deltaTime, sizeof(unsigned long long)); 
+                            // pfSaveVaildData->write((char*)&time, sizeof(time));
+                        }
+                        pfSaveVaildData->write((char*)data3.data(), sizeof(TimeEnergy)*mapSize);
                     }
                     file.flush();
                     file.close();
@@ -410,8 +429,6 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
         }
         else{
             autoEnWindow = newEnWindow;
-            // qInfo().noquote()<<"自动更新能窗，探测器1:["<<autoEnWindow[0]<<","<<autoEnWindow[1]
-            //     <<"], 探测器2:["<<autoEnWindow[2]<<","<<autoEnWindow[3]<<"]";
 
             emit sigUpdateAutoEnWidth(autoEnWindow, detectorParameter.measureModel);
         }        
@@ -1045,9 +1062,6 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     
     if(detectorParameter.transferModel == 0x05)
     {
-        //创建缓存文件
-        validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_valid.dat");
-
         QMutexLocker locker(&mutexFile);
 #ifdef QT_DEBUG
         netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_Net.dat");
@@ -1071,6 +1085,8 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
             pfSaveVaildData = nullptr;
         }
 
+        //创建缓存文件
+        validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_valid.dat");
         //有效数据缓存文件。符合模式（也称粒子模式）只存有效数据
         pfSaveVaildData = new QFile(validDataFileName);
         if (pfSaveVaildData->open(QIODevice::WriteOnly)) {
@@ -1616,21 +1632,21 @@ void CommandHelper::netFrameWorkThead()
                 if(channel == 0){
                     quint32 losspackageNum = dataNum - SequenceNumber - 1; //注意要减一才是丢失的包个数
                     if(losspackageNum > 0) {
-                        firstTime = firsttime_temp * 1.0 / 1e9;
-                        double delataT = firstTime - lastTime;//丢包的时间段长度
+                        firstTime = firsttime_temp;
+                        quint64 delataT = firstTime - lastTime;//丢包的时间段长度
                         
                         //检测丢包跨度是否刚好跨过某一秒的前后，
                         //经过初步测试，丢包的时候从来没有连续丢失超过1s的数据。
-                        int firstT = static_cast<int>(firstTime);
-                        int lastT = static_cast<int>(lastTime);
+                        unsigned int firstT = static_cast<unsigned int>(ceil(firstTime/1e9)); //向上取整
+                        unsigned int lastT = static_cast<unsigned int>(ceil(lastTime/1e9));
                         if(lastT - firstT > 0){
-                            double ratio1 = (lastTime*1.0 - firstTime) / delataT; //计算出属于前一秒的比例
-                            lossData[firstT+1] = ratio1; //注意计时从1开始
-                            lossData[lastT+1] = 1 - ratio1; //注意计时从1开始
+                            // double ratio1 = (lastTime*1.0 - firstTime) / delataT; //计算出属于前一秒的比例
+                            lossData[firstT] = static_cast<unsigned long long>(lastT*1e9 - firstTime); //注意计时从1开始，因为是向上取整
+                            lossData[lastT] = static_cast<unsigned long long>(lastTime - lastT*1e9); //注意计时从1开始
                         }
                         else {
                             // 记录丢失的数据点个数，考虑到丢包总是发送在大计数率，因此直接认为每次丢一个包损失64个计数。
-                            lossData[firstT+1] = delataT;
+                            lossData[firstT] = delataT;
                         }
                         coincidenceAnalyzer->AddLossMap(lossData);
                     }
@@ -1638,7 +1654,7 @@ void CommandHelper::netFrameWorkThead()
                     //记录数据帧序号
                     SequenceNumber = dataNum;
                     //记录数据帧最后时间
-                    lastTime = lasttime_temp * 1.0 / 1e9;
+                    lastTime = lasttime_temp;
                 }
 
                 //数据分拣完毕

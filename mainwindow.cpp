@@ -410,7 +410,7 @@ MainWindow::MainWindow(QWidget *parent)
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
         plotWidget->slotUpdateEnWindow(EnWidth.data());
 
-        qInfo().noquote()<<"自动更新能窗，探测器1:["<<EnWidth[0]<<","<<EnWidth[1]
+        qDebug().noquote()<<"自动更新能窗，探测器1:["<<EnWidth[0]<<","<<EnWidth[1]
                           <<"], 探测器2:["<<EnWidth[2]<<","<<EnWidth[3]<<"]";
     }, Qt::QueuedConnection/*防止堵塞*/);
 

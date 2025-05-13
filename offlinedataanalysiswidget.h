@@ -52,6 +52,8 @@ private:
     bool analyzerFinished = true;// 解析是否完成
     quint64 detectNum = 0; //探测到的粒子数
 
+    std::map<unsigned int, unsigned long long> lossData; //记录丢包的时刻（FPGA时钟，单位:s）以及丢失的时间长度(单位：ns)。
+
     bool firstPopup = true;//控制弹窗是否首次出现
     SingleSpectrum totalSingleSpectrum;
 };

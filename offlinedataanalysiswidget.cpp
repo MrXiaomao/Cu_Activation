@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-11 18:55:21
+ * @LastEditTime: 2025-05-13 09:39:05
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -281,6 +281,7 @@ void OfflineDataAnalysisWidget::slotStart()
     firstPopup = true;
     reAnalyzer = false;
     detectNum = 0;
+    lossData.clear();
     memset(&totalSingleSpectrum, 0, sizeof(totalSingleSpectrum));
 
     //读取历史数据重新进行运算
@@ -335,22 +336,20 @@ void OfflineDataAnalysisWidget::slotStart()
 
             if (channel == 0x00){
                 data1_2 = detTimeEnergy.timeEnergy;
-            } else {
+            } else if(channel == 0x01){
                 data2_2 = detTimeEnergy.timeEnergy;
             }
-            // while (!detTimeEnergy.timeEnergy.empty()){
-            //     TimeEnergy timeEnergy = detTimeEnergy.timeEnergy.front();
-            //     //detTimeEnergy.timeEnergy.erase(detTimeEnergy.timeEnergy.begin());//如果数组特别大，erase比较耗时
-            //     TimeEnergy* data = detTimeEnergy.timeEnergy.data();
-            //     memmove(data, data + 1, (detTimeEnergy.timeEnergy.size() - 1)*sizeof(TimeEnergy));
-            //     detTimeEnergy.timeEnergy.resize(detTimeEnergy.timeEnergy.size() - 1);
-
-            //     if (channel == 0x00){
-            //         data1_2.push_back(timeEnergy);
-            //     } else {
-            //         data2_2.push_back(timeEnergy);
-            //     }
-            // }
+            else if(channel == 0x02){ //请注意，这里对于0x02通道其实放的是FPGA修正时刻，具体参见commandhelper中信号sigMeasureStop的关联函数部分
+                //解析还原出数据
+                std::vector<TimeEnergy> t_En = detTimeEnergy.timeEnergy;
+                for (const TimeEnergy& te : t_En) {
+                    // 注意数据存储结构的对齐问题，
+                    unsigned long long deltaTime_ns = te.time;
+                    unsigned int time_seconds = static_cast<quint32>(te.dietime) << 16 | 
+                                        static_cast<quint32>(te.energy);
+                    lossData[time_seconds] = deltaTime_ns;
+                }
+            }
             
             //记录FPGA内的最大时刻，作为符合测量的时间区间右端点。
 
@@ -437,7 +436,10 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
     else
     {
         SplashWidget::instance()->setInfo(tr("开始数据分析，请等待..."));
-
+        
+        //进行FPGA丢包的修正
+        coincidenceAnalyzer->doFPGA_lossDATA_correction(lossData);
+        
         // 读取活化测量的数据时刻区间[起始时间，结束时间]
         vector<CoincidenceResult> result = coincidenceAnalyzer->GetCoinResult();
         // int startTime = result.begin()->time;

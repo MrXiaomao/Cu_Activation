@@ -634,7 +634,7 @@ void PlotWidget::dispatchAdditionalDragFunction(QCustomPlot *customPlot)
     gaussResultItemText->position->setCoords(55, 25);//X、Y轴坐标值
     gaussResultItemText->setLayer("overlay");
     gaussResultItemText->setText("");
-    gaussResultItemText->setVisible(true);
+    gaussResultItemText->setVisible(false);
 
     //创建符合能窗边界线
     auto createStraightLineItem = [=](QCPItemStraightLine** _line){
@@ -1175,13 +1175,19 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                                                .arg(QString::number(rightWindow, 10));
 
                                             gaussResultItemText->setText(info);
-                                            //double key, value;
-                                            //graph->pixelsToCoords(e->pos().x(), e->pos().y(), key, value);
-                                            //gaussResultItemText->position->setCoords(key, value);//以鼠标所在位置坐标为显示位置
                                             gaussResultItemText->position->setCoords(result[1], result[2]);//以峰值坐标为显示位置
                                             gaussResultItemText->setVisible(true);
                                             customPlot->replot();
                                         }
+
+                                        //显示拟合曲线
+                                        customPlot->setProperty("mean", mean/*result[1]*/);
+                                        customPlot->setProperty("FWHM", FWHM/*result[2]*/);
+                                        customPlot->setProperty("leftEnWindow", leftWindow);
+                                        customPlot->setProperty("rightEnWindow", rightWindow);
+                                        this->setProperty("showGaussInfo", true);
+                                        slotGauss(customPlot, leftWindow, rightWindow);
+                                        customPlot->replot();
                                     }
                                     else
                                     {
@@ -1612,6 +1618,10 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
                 customPlotDet1->yAxis2->setRange(customPlotDet1->yAxis->range().lower, maxEnergy / RANGE_SCARRE_LOWER);
             }
 
+            int leftWindow = customPlotDet1->property("leftEnWindow").toInt();
+            int rightWindow = customPlotDet1->property("rightEnWindow").toInt();
+            this->slotGauss(customPlotDet1, leftWindow, rightWindow);
+
             if (!this->property("isCountModel").toBool())
                 customPlotDet1->replot(refreshPriority);
         }
@@ -1646,6 +1656,10 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
                 customPlotDet2->yAxis2->setRange(customPlotDet2->yAxis->range().lower, maxEnergy / RANGE_SCARRE_LOWER);
             }
 
+            int leftWindow = customPlotDet2->property("leftEnWindow").toInt();
+            int rightWindow = customPlotDet2->property("rightEnWindow").toInt();
+            this->slotGauss(customPlotDet2, leftWindow, rightWindow);
+
             if (!this->property("isCountModel").toBool())
                 customPlotDet2->replot(refreshPriority);
         }
@@ -1661,6 +1675,7 @@ void PlotWidget::slotStart(unsigned int channel)
     //当第一次数据过来，将区域选择按钮设为可用
     this->setProperty("autoRefreshModel", true);
     this->setProperty("disableAreaSelect", false);
+    this->setProperty("showGaussInfo", false);
     QCustomPlot::RefreshPriority refreshPriority = QCustomPlot::rpQueuedReplot;
     QList<QCustomPlot*> customPlots = getAllCustomPlot();
     for (auto customPlot : customPlots){
@@ -1686,6 +1701,10 @@ void PlotWidget::slotStart(unsigned int channel)
         for (int i=0; i<customPlot->graphCount(); ++i)
             customPlot->graph(i)->data()->clear();
 
+        customPlot->setProperty("mean", 0.);
+        customPlot->setProperty("FWHM", 0.);
+        customPlot->setProperty("leftEnWindow", 0);
+        customPlot->setProperty("rightEnWindow", 0);
         customPlot->replot(refreshPriority);
     }
 
@@ -1773,19 +1792,21 @@ void PlotWidget::switchToLogarithmicMode(bool isLogarithmic)
     }
 }
 
-void PlotWidget::slotGauss(int leftE, int rightE)
+void PlotWidget::slotGauss(QCustomPlot* customPlot, int leftE, int rightE)
 {
-    QMutexLocker locker(&mutexRefreshPlot);
-    QCustomPlot* customPlot = getCustomPlot(this->property("PlotIndex").toUInt());
-
+    leftE = 0;
+    rightE = MULTI_CHANNEL;
     {
+        QCPGraph *graph = customPlot->graph(0);
+        if (graph->data()->size() <= 0)
+            return;
+
         double key_from = this->property("area-from-key").toDouble(); //dragRectItem->topLeft->key();
         double key_to = this->property("area-to-key").toDouble(); //dragRectItem->bottomRight->key();
         double key_temp = key_from;
         key_from = qMin(key_from, key_to);
         key_to = qMax(key_temp, key_to);
 
-        QCPGraph *graph = getGraph(0);//customPlot->graph(0);//getGraph(this->property("PlotIndex").toUInt() | 0x10);
         QVector<double> keys, values, curveKeys;
         QVector<QColor> colors;
         int fcount = 0;
@@ -1810,7 +1831,7 @@ void PlotWidget::slotGauss(int leftE, int rightE)
         }
 
         // 高斯拟合
-        {
+        if (fcount > 0){
             double result[3];
             bool status = GaussFit(sx, sy, fcount, result);
             if(status)
@@ -1832,7 +1853,7 @@ void PlotWidget::slotGauss(int leftE, int rightE)
                 curveGraph->setData(curveKeys, curveValues);
                 if (this->property("showGaussInfo").toBool()){
                     curveGraph->setVisible(true);
-                    customPlot->replot();
+                    //customPlot->replot();
                 }
             }
         }
@@ -1874,6 +1895,23 @@ void PlotWidget::slotUpdateEnWindow(unsigned short* EnWindow)
                 itemStraightLineRight->point2->setCoords(EnWindow[1], customPlotDet2->yAxis->range().upper);
                 itemStraightLineRight->setVisible(true);
             }
+
+            //更新拟合曲线信息
+            customPlotDet1->setProperty("leftEnWindow", EnWindow[0]);
+            customPlotDet1->setProperty("rightEnWindow", EnWindow[1]);
+            float mean = (float)(EnWindow[1] + EnWindow[0]) / 2;
+            float FWHM = EnWindow[1] - EnWindow[0];
+            QCPItemText* gaussResultItemText = customPlotDet1->findChild<QCPItemText*>("gaussResultItemText");
+            if (gaussResultItemText && mean!= 0 && FWHM != 0){
+                QString info = QString("峰  位: %1\n半高宽: %2\n左能窗: %3\n右能窗: %4")
+                                   .arg(QString::number(mean, 'f', 0))
+                                   .arg(QString::number(FWHM, 'f', 3))
+                                   .arg(QString::number(EnWindow[0], 10))//十进制输出整数
+                                   .arg(QString::number(EnWindow[1], 10));
+
+                gaussResultItemText->setText(info);
+                gaussResultItemText->position->setCoords(EnWindow[0], EnWindow[1]);//以峰值坐标为显示位置
+            }
         }
         {
             QCPItemStraightLine* itemStraightLineLeft = customPlotDet2->findChild<QCPItemStraightLine*>("itemStraightLineLeft");
@@ -1887,6 +1925,23 @@ void PlotWidget::slotUpdateEnWindow(unsigned short* EnWindow)
                 itemStraightLineRight->point1->setCoords(EnWindow[3], customPlotDet2->yAxis->range().lower);
                 itemStraightLineRight->point2->setCoords(EnWindow[3], customPlotDet2->yAxis->range().upper);
                 itemStraightLineRight->setVisible(true);
+            }
+
+            //更新拟合曲线信息
+            customPlotDet2->setProperty("leftEnWindow", EnWindow[2]);
+            customPlotDet2->setProperty("rightEnWindow", EnWindow[3]);
+            float mean = (float)(EnWindow[3] + EnWindow[2]) / 2;
+            float FWHM = EnWindow[3] - EnWindow[2];
+            QCPItemText* gaussResultItemText = customPlotDet2->findChild<QCPItemText*>("gaussResultItemText");
+            if (gaussResultItemText){
+                QString info = QString("峰  位: %1\n半高宽: %2\n左能窗: %3\n右能窗: %4")
+                                   .arg(QString::number(mean, 'f', 0))
+                                   .arg(QString::number(FWHM, 'f', 3))
+                                   .arg(QString::number(EnWindow[2], 10))//十进制输出整数
+                                   .arg(QString::number(EnWindow[3], 10));
+
+                gaussResultItemText->setText(info);
+                gaussResultItemText->position->setCoords(EnWindow[2], EnWindow[3]);//以峰值坐标为显示位置
             }
         }
 
@@ -1946,14 +2001,15 @@ void PlotWidget::switchToDragMode()
     QList<QCustomPlot*> customPlots = getAllEnergyCustomPlot();
     for (auto customPlot : customPlots){
         //高斯拟合信息清空
-        QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
-        if (gaussResultItemText)
-            gaussResultItemText->setText("");
+        // QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
+        // if (gaussResultItemText){
+        //     gaussResultItemText->setText("");
+
+        //     //清空高斯曲线数据
+        //     customPlot->graph(1)->data()->clear();
+        // }
 
         customPlot->setInteraction(QCP::iRangeDrag, false);
-
-        //删除高斯曲线
-        customPlot->graph(1)->data()->clear();
         customPlot->replot();
     }
 

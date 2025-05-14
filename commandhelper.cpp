@@ -168,7 +168,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                     // out << tr("量程选取=")<<detectorParameter.measureRange<< Qt::endl;
                     out << tr("冷却时长=") << detectorParameter.coolingTime << Qt::endl; //单位s
                     
-                    //开始保存FPGA数据的时间，单位s，FPGA内部时钟。
+                    //开始保存FPGA数据的时刻，单位s，以活化后开始计时(冷却时间+FPGA时钟)。
                     int savetime_FPGA = 0;
                     if(detectorParameter.measureModel == mmManual){
                         savetime_FPGA = this->time_SetEnWindow;
@@ -176,7 +176,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                         savetime_FPGA = detectorParameter.coolingTime;
                     }
 
-                    out << tr("测量开始时间(FPGA时钟)=")<< savetime_FPGA <<Qt::endl;
+                    out << tr("测量开始时间(冷却时间+FPGA时钟)=")<< savetime_FPGA <<Qt::endl;
                     out << tr("符合延迟时间=") << detectorParameter.delayTime << Qt::endl; //单位ns
                     out << tr("符合分辨时间=") << detectorParameter.timeWidth << Qt::endl; //单位ns
                     out << tr("时间步长=") << 1 << Qt::endl; //注意，存储的数据时间步长恒为1s
@@ -384,7 +384,7 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
                 if (ioFlags == QIODevice::Truncate)
                     out << "time,CountRate1,CountRate2,ConCount_single,ConCount_multiple,deathRatio1(%),deathRatio2(%)" << Qt::endl;
                 CoincidenceResult coincidenceResult = r3.back();
-                out << r1.time << "," << coincidenceResult.CountRate1 << "," << coincidenceResult.CountRate2 \
+                out << coincidenceResult.time << "," << coincidenceResult.CountRate1 << "," << coincidenceResult.CountRate2 \
                     << "," << coincidenceResult.ConCount_single << "," << coincidenceResult.ConCount_multiple 
                     << "," << coincidenceResult.DeathRatio1 << "," << coincidenceResult.DeathRatio2 
                     << Qt::endl;
@@ -1846,8 +1846,8 @@ void CommandHelper::detTimeEnergyWorkThread()
                             }
                         }
 #ifdef QT_DEBUG
-                    qDebug()<< "coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime()) \
-                        << "ms, data1.count=" << data1_2.size() \
+                    qDebug()<< "coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime())<<"ms, time0 = "<<data1_2[0].time/1e9 \
+                        << "s, data1.count=" << data1_2.size() \
                         << ", data2.count=" << data2_2.size();
 #endif
                         data1_2.clear();

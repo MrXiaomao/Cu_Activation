@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-13 23:47:40
+ * @LastEditTime: 2025-05-14 11:44:50
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -204,8 +204,8 @@ void OfflineDataAnalysisWidget::initCustomPlot()
         // });
 
         connect(customPlotWidget, &PlotWidget::sigAreaSelected, this, [=](){
-            // QWhatsThis::showText(ui->pushButton_confirm->mapToGlobal(ui->pushButton_confirm->geometry().bottomRight()), tr("需点击确认按钮，拟合区域才会设置生效"), ui->pushButton_confirm);
-            // ui->pushButton_confirm->setIcon(QIcon(":/resource/warn.png"));
+            //勾选高斯拟合
+            ui->checkBox_gauss->setChecked(true);
         });
 
         ui->widget_plot->layout()->addWidget(customPlotWidget);
@@ -261,7 +261,7 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
             if(rangeStr == "中量程") detParameter.measureRange = 2;
             if(rangeStr == "大量程") detParameter.measureRange = 3;
 
-            this->startTime_FPGA = static_cast<unsigned int>(configMap.value("测量开始时间(FPGA时钟)").toInt());
+            this->startTime_FPGA = static_cast<unsigned int>(configMap.value("测量开始时间(冷却时间+FPGA时钟)").toInt());
 
             ui->lineEdit_measuremodel->setText(configMap.value("测量模式"));
             ui->spinBox_step->setValue(configMap.value("时间步长").toInt());
@@ -453,12 +453,12 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
         // 读取活化测量的数据时刻区间[起始时间，结束时间]
         vector<CoincidenceResult> result = coincidenceAnalyzer->GetCoinResult();
         // int startTime = result.begin()->time;
-        unsigned int startTime = this->startTime_FPGA;
+        unsigned int startTime = this->startTime_FPGA + 1;
         unsigned int endTime = result.back().time;
 
         //检查界面的起始时刻和结束时刻不超范围，若超范围则调整到范围内。
-        unsigned int startTimeUI = static_cast<unsigned int>(ui->spinBox_start->value());
-        unsigned int endTimeUI = static_cast<unsigned int>(ui->spinBox_end->value());
+        startTimeUI = static_cast<unsigned int>(ui->spinBox_start->value());
+        endTimeUI = static_cast<unsigned int>(ui->spinBox_end->value());
 
         if(startTimeUI < startTime || startTimeUI > endTime){
             ui->spinBox_start->setValue(startTime);
@@ -599,7 +599,7 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
     double maxDeathRatio[3] = {0.0, 0.0, 0.0};
     
     //修正后的极值
-    double minCount_correct[3] = {10000.0, 10000.0, 10000.0}; //初值不能是一个小的数值
+    double minCount_correct[3] = {100000.0, 100000.0, 100000.0}; //初值不能是一个小的数值
     double maxCount_correct[3] = {0.0, 0.0, 0.0};
     for(auto coin:coinResult)
     {
@@ -608,7 +608,7 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
             return;
         }
 
-        if(coin.time > start_time && coin.time<time_end) {
+        if(coin.time >= start_time && coin.time <= time_end) {
             int n1 = coin.CountRate1;
             int n2 = coin.CountRate2;
             int nc = coin.ConCount_single + coin.ConCount_multiple;
@@ -673,7 +673,6 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
 
     //f因子。暂且称为积分因子
     //这里不考虑Cu62的衰变分支，也就是测量必须时采用冷却时长远大于Cu62半衰期(9.67min = 580s)的数据。
-    // double T_halflife = 9.67*60; //单位s，Cu62的半衰期
     double halflife_Cu62 = 9.67*60; //单位s，Cu62的半衰期
     double halflife_Cu64 = 12.7*60*60; // 单位s,Cu64的半衰期
     double lamda62 = log(2) / halflife_Cu62;
@@ -755,13 +754,16 @@ void OfflineDataAnalysisWidget::on_pushbutton_save_clicked()
     if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
         QTextStream out(&file);
         //测量基本信息
+        out << tr("测量基本信息:") << Qt::endl;
         out << tr("解析文件路径=") << ui->textBrowser_filepath->toPlainText()<< Qt::endl;
         out << tr("测量模式=") << ui->lineEdit_measuremodel->text()<< Qt::endl;
         out << tr("量程=") << ui->lineEdit_range->text()<< Qt::endl;
         out << tr("粒子数据个数=") << ui->lineEdit_particleNum->text()<< Qt::endl;
         out << tr("冷却时长=") << ui->spinBox_coolingTime->value()<< Qt::endl;
+        out << Qt::endl;
 
         //解析参数
+        out << tr("解析参数:") << Qt::endl;
         out << tr("Det1符合能窗左=") << ui->spinBox_1_leftE->value() << Qt::endl;
         out << tr("Det1符合能窗右=") << ui->spinBox_1_rightE->value() << Qt::endl;
         out << tr("Det2符合能窗左=") << ui->spinBox_2_leftE->value() << Qt::endl;
@@ -771,8 +773,10 @@ void OfflineDataAnalysisWidget::on_pushbutton_save_clicked()
         out << tr("开始时刻/s=") << ui->spinBox_start->value() << Qt::endl;
         out << tr("结束时刻/s=") << ui->spinBox_end->value() << Qt::endl;
         out << tr("时间步长/s=") << ui->spinBox_step->value() << Qt::endl;
-        
+        out << Qt::endl;
+
         //数据分析结果
+        out << tr("数据分析结果:") << Qt::endl;
         out << tr("Det1计数率/cps: 最小值=") << ui->tableWidget1->item(0, 0)->text()
             << tr("，最大值=") << ui->tableWidget1->item(0, 1)->text()
             << tr("，平均值=") << ui->tableWidget1->item(0, 2)->text() << Qt::endl;
@@ -796,8 +800,10 @@ void OfflineDataAnalysisWidget::on_pushbutton_save_clicked()
         out << tr("符合计数死时间率(%): 最小值=") << ui->tableWidget1->item(5, 0)->text()
             << tr("，最大值=") << ui->tableWidget1->item(5, 1)->text()
             << tr("，平均值=") << ui->tableWidget1->item(5, 2)->text() << Qt::endl;
+        out << Qt::endl;
 
         //死时间修正后
+        out << tr("死时间修正后:") << Qt::endl;
         out << tr("Det1计数率/cps: 最小值=") << ui->countRateDet1_min->text()
             << tr("，最大值=") << ui->countRateDet1_max->text()
             << tr("，平均值=") << ui->countRateDet1_ave->text() << Qt::endl;
@@ -819,7 +825,32 @@ void OfflineDataAnalysisWidget::on_pushbutton_save_clicked()
 
         file.flush();
         file.close();
-        QMessageBox::information(nullptr, "提示", "文件保存成功！");
+
+        //保存计数率
+        {
+            wholepath += ".符合计数";
+            file.setFileName(wholepath);
+            if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+                QTextStream out(&file);
+                //测量基本信息
+                //out << tr("时间,Det-1 计数率/cps,Det-2 计数率/cps,符合结果 计数率/cps") << Qt::endl;
+                out << "time,CountRate1,CountRate2,ConCount_single,ConCount_multiple,deathRatio1(%),deathRatio2(%)" << Qt::endl;
+                vector<CoincidenceResult> coinResult = coincidenceAnalyzer->GetCoinResult();
+                for (auto coin : coinResult){
+                    if (coin.time > startTimeUI && coin.time <= endTimeUI){
+                        //out << coin.time << "," << coin.CountRate1 << "," << coin.CountRate2  << "," << coin.ConCount_single << Qt::endl;
+                        out << coin.time << "," << coin.CountRate1 << "," << coin.CountRate2 \
+                            << "," << coin.ConCount_single << "," << coin.ConCount_multiple
+                            << "," << coin.DeathRatio1 << "," << coin.DeathRatio2
+                            << Qt::endl;
+                    }
+                }
+
+                file.flush();
+                file.close();
+                QMessageBox::information(nullptr, "提示", "文件保存成功！");
+            }
+        }
     }
 }
 
@@ -869,3 +900,10 @@ QString OfflineDataAnalysisWidget::smartAddTxtExtension(const QString &fileName)
     // 如果已经是.txt后缀，直接返回原文件名
     return fileName;
 }
+
+void OfflineDataAnalysisWidget::on_checkBox_gauss_stateChanged(int arg1)
+{
+    PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
+    plotWidget->slotShowGaussInfor(arg1 == Qt::CheckState::Checked);
+}
+

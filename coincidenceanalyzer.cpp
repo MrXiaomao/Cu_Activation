@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-13 19:42:55
+ * @LastEditTime: 2025-05-14 15:14:15
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -205,7 +205,7 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
  * data1：探测器1测量数据
  * data2：探测器2测量数据
  */
-void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> data1, vector<TimeEnergy> data2)
+void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> &data1, vector<TimeEnergy> &data2)
 {
     SingleSpectrum spec_temp;
     spec_temp.time = countCoin;
@@ -292,7 +292,7 @@ vector<int> CoincidenceAnalyzer::GetSingleSpectrum(const vector<int>& data, int 
  * 单符合计数曲线：
  * 多符合事件曲线：
 */
-void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnergy> data2,
+void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> &data1, vector<TimeEnergy> &data2,
         unsigned short EnWindowWidth[4],
         int windowWidthT, int delayTime)
 {
@@ -325,7 +325,7 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
     int deathTime1 = 0;
     for (int i=0; i<length1; i++)
     {
-        if(data1[i].energy>EnWindowWidth[0] && data1[i].energy <=EnWindowWidth[1]) {
+        if(data1[i].energy > EnWindowWidth[0] && data1[i].energy <= EnWindowWidth[1]) {
             count1++;
             data1[i].time += delayTime; //增加对电路延迟时间的处理
             data_temp1.push_back(data1[i]);
@@ -341,7 +341,7 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> data1, vector<TimeEnerg
     int deathTime2 = 0;
     for (int i=0; i<length2; i++)
     {
-        if(data2[i].energy>EnWindowWidth[2] && data2[i].energy <=EnWindowWidth[3]) {
+        if(data2[i].energy > EnWindowWidth[2] && data2[i].energy <= EnWindowWidth[3]) {
             count2++;
             data_temp2.push_back(data2[i]);
         }
@@ -448,9 +448,14 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
     if(sumEnergy1 > GaussCountMin && sumEnergy2 > GaussCountMin)  
     {
         vector<double> sx,sy;
+        sx.reserve(EnergyWindow[1] - EnergyWindow[0] + 1);
+        sy.reserve(EnergyWindow[1] - EnergyWindow[0] + 1);
         for(unsigned short i=0; i<MULTI_CHANNEL; i++)
         {
-            if(i >= EnergyWindow[0] && i <= EnergyWindow[1]) {sx.push_back(i*1.0); sy.push_back(GaussFitSpec.spectrum[0][i]);}
+            if(i >= EnergyWindow[0] && i <= EnergyWindow[1]) {
+                sx.push_back(i*1.0); 
+                sy.push_back(GaussFitSpec.spectrum[0][i]);
+            }
         }
         
         int fcount = EnergyWindow[1] - EnergyWindow[0] + 1;
@@ -484,9 +489,14 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
     if(sumEnergy1 > GaussCountMin && sumEnergy2 > GaussCountMin)
     {
         vector<double> sx,sy;
+        sx.reserve(EnergyWindow[1] - EnergyWindow[0] + 1);
+        sy.reserve(EnergyWindow[1] - EnergyWindow[0] + 1);
         for(unsigned short i=0; i<MULTI_CHANNEL; i++)
         {
-            if(i >= EnergyWindow[2] && i <= EnergyWindow[3]) {sx.push_back(i*1.0); sy.push_back(GaussFitSpec.spectrum[1][i]);}
+            if(i >= EnergyWindow[2] && i <= EnergyWindow[3]) {
+                sx.push_back(i*1.0); 
+                sy.push_back(GaussFitSpec.spectrum[1][i]);
+            }
         }
         
         int fcount = EnergyWindow[3] - EnergyWindow[2] + 1;
@@ -515,7 +525,7 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
 }
 
 //统计给出当前一秒内的两个探测器各自数据点的个数
-bool CoincidenceAnalyzer::GetDataPoint(vector<TimeEnergy> data1, vector<TimeEnergy> data2)
+bool CoincidenceAnalyzer::GetDataPoint(vector<TimeEnergy>& data1, vector<TimeEnergy>& data2)
 {
     countCoin++;
     CurrentPoint onePoint;
@@ -576,7 +586,7 @@ vector<int> CoincidenceAnalyzer::computeHistogram(const vector<int>& data, const
 }
 
 //找到第一个大于value的下标。返回是否查找到的标记
-bool CoincidenceAnalyzer::find_index_above(vector<TimeEnergy> data, unsigned long long value, int& index)
+bool CoincidenceAnalyzer::find_index_above(vector<TimeEnergy>& data, unsigned long long value, int& index)
 {
     if(data.size() ==0 ) return false;
 
@@ -600,7 +610,7 @@ bool CoincidenceAnalyzer::find_index_above(vector<TimeEnergy> data, unsigned lon
 }
 
 //找到最后一个小于value的下标。返回是否查找到的标记
-bool CoincidenceAnalyzer::find_index_below(vector<TimeEnergy> data, unsigned long long value, int& index)
+bool CoincidenceAnalyzer::find_index_below(vector<TimeEnergy>& data, unsigned long long value, int& index)
 {
     if(data.size() ==0 ) return false;
 

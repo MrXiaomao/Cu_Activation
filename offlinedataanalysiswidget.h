@@ -76,6 +76,8 @@ private slots:
      */
     void on_pushbutton_save_clicked();
 
+    void on_checkBox_gauss_stateChanged(int arg1);
+
 private:
     Ui::OfflineDataAnalysisWidget *ui;
     QString validDataFileName;
@@ -92,6 +94,9 @@ private:
 
     bool firstPopup = true;//控制弹窗是否首次出现
     SingleSpectrum totalSingleSpectrum;
+
+    unsigned int startTimeUI = 0;
+    unsigned int endTimeUI = 0;
 };
 
 #endif // OFFLINEDATAANALYSISWIDGET_H

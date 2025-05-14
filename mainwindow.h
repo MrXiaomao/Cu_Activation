@@ -71,8 +71,6 @@ private slots:
 
     void on_action_refresh_triggered();
 
-    void on_pushButton_gauss_clicked();
-
     void on_action_config_triggered();
 
     void on_action_about_triggered();

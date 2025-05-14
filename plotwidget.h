@@ -54,9 +54,9 @@ public:
     void switchToCountMode(bool isCountModel);
     void switchToLogarithmicMode(bool isLogarithmic);
 
-    void switchToTipMode();
-    void switchToDragMode();
-    void switchToMoveMode();
+    void switchToTipMode();//数据提示
+    void switchToDragMode();//选择拟合区域
+    void switchToMoveMode();//平移视图
 
     void resetAxisCoords();
     void rescalAxisCoords(QCustomPlot* customPlot);
@@ -84,7 +84,7 @@ public slots:
 
     void slotStart(unsigned int channel = 8192);
     void slotResetPlot();
-    void slotGauss(int leftE, int rightE);
+    void slotGauss(QCustomPlot* customPlot, int leftE, int rightE);
     void slotShowGaussInfor(bool visible);
 
     void slotShowTracer(QMouseEvent *event);//显示跟踪器，游标
@@ -101,9 +101,9 @@ signals:
     void sigPausePlot(bool); //是否暂停图像刷新
     void sigAreaSelected();//拟合区域选择完成
 
-    void sigSwitchToTipMode();
-    void sigSwitchToDragMode();
-    void sigSwitchToMoveMode();
+    void sigSwitchToTipMode();//数据提示
+    void sigSwitchToDragMode();//选择拟合区域
+    void sigSwitchToMoveMode();//平移视图
 
 private:
     unsigned int multiChannel; //多道道数

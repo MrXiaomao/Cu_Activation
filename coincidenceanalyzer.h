@@ -149,13 +149,13 @@ public:
     void set_callback(pfRealCallbackFunction func, void *callbackUser);
 private:
     // 统计给出两个探测器各自当前一秒钟测量数据的能谱，当前一秒钟没有测量信号，则能谱全为零
-    void calculateAllSpectrum(vector<TimeEnergy> data1, vector<TimeEnergy> data2);
+    void calculateAllSpectrum(vector<TimeEnergy> &data1, vector<TimeEnergy> &data2);
     
     //自动能窗更新，根据初始的能窗，每到能谱数据累积满一定的数据量后， 进行高斯拟合，拟合得到的高斯半高宽作为新的能窗。
     void AutoEnergyWidth();
 
     //进行符合事件处理
-    void Coincidence(vector<TimeEnergy> data1, vector<TimeEnergy> data2,
+    void Coincidence(vector<TimeEnergy> &data1, vector<TimeEnergy> &data2,
           unsigned short EnWindowWidth[4],
           int windowWidthT, int delayTime);
 
@@ -166,16 +166,16 @@ private:
     vector<int> GetSingleSpectrum(const vector<int>& data, int maxEnergy, unsigned short ch);
     
     //统计给出当前一秒内的两个探测器各自数据点的个数
-    bool GetDataPoint(vector<TimeEnergy> data1, vector<TimeEnergy> data2);
+    bool GetDataPoint(vector<TimeEnergy>& data1, vector<TimeEnergy>& data2);
 
     //统计给出直方图分布，类似matlab中的hist。
     vector<int> computeHistogram(const vector<int>& data, const vector<int>& binEdges);
 
     //找到不大于value的最后一个数的下标。返回是否查找到的标记
-    bool find_index_above(vector<TimeEnergy> data, unsigned long long value, int& index);
+    bool find_index_above(vector<TimeEnergy>& data, unsigned long long value, int& index);
 
     //找到第一个小于value的下标。返回是否查找到的标记
-    bool find_index_below(vector<TimeEnergy> data, unsigned long long value, int& index);
+    bool find_index_below(vector<TimeEnergy>& data, unsigned long long value, int& index);
 
 private:
     int countCoin; //符合计数曲线的数据点个数,一个数据点对应1s.

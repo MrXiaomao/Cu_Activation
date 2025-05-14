@@ -54,7 +54,6 @@ MainWindow::MainWindow(QWidget *parent)
     this->setProperty("pause_plot", false);
     //线性模型
     this->setProperty("ScaleLogarithmicType", false);
-    ui->pushButton_gauss->setToolTip("在左侧图像中\'Ctrl+左键框选\'后，点击\"高斯拟合\"");
 
     ui->spinBox_timeWidth->setToolTip("请输入10的倍数（如10, 20, 30）");
     ui->spinBox_timeWidth->setSingleStep(10);
@@ -168,8 +167,6 @@ MainWindow::MainWindow(QWidget *parent)
                 //emit sigAppengMsg(tr("位移平台已到位"), QtInfoMsg);
                 qInfo().noquote() << tr("位移平台已到位");
             }
-
-            SplashWidget::instance()->hide();
         } else{
             this->setProperty("axis-prepared", false);
         }
@@ -496,9 +493,6 @@ void MainWindow::InitMainWindowUi()
     ui->spinBox_2_leftE_2->setMaximum(MULTI_CHANNEL);
     ui->spinBox_2_rightE_2->setMaximum(MULTI_CHANNEL);
 
-    ui->spinBox_leftE->setMaximum(MULTI_CHANNEL);
-    ui->spinBox_rightE->setMaximum(MULTI_CHANNEL);
-
     QString path = QApplication::applicationDirPath() + "/config";
     QDir dir(path);
     if (!dir.exists())
@@ -568,9 +562,6 @@ void MainWindow::InitMainWindowUi()
     });
 
     // 显示计数/能谱
-    ui->label_tag_2->setBuddy(ui->widget_tag_2);
-    ui->label_tag_2->installEventFilter(this);
-    ui->label_tag_2->setStyleSheet("");
     QButtonGroup *grp = new QButtonGroup(this);
     grp->addButton(ui->radioButton_ref, 0);
     grp->addButton(ui->radioButton_spectrum, 1);
@@ -578,12 +569,6 @@ void MainWindow::InitMainWindowUi()
         commandHelper->switchToCountMode(index == 0);
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
         plotWidget->switchToCountMode(index == 0);
-
-        if (0 == index){
-            ui->widget_gauss->hide();
-        } else {
-            ui->widget_gauss->show();
-        }
     });
     emit grp->idClicked(1);//默认能谱模式
 
@@ -804,9 +789,6 @@ void MainWindow::initCustomPlot()
                 ui->spinBox_2_leftE->setValue(leftEn);
                 ui->spinBox_2_rightE->setValue(rightEn);
             }
-
-           ui->spinBox_leftE->setValue(leftEn);
-           ui->spinBox_rightE->setValue(rightEn);
         });
 
         connect(customPlotWidget, &PlotWidget::sigPausePlot, this, [=](bool pause){
@@ -829,8 +811,8 @@ void MainWindow::initCustomPlot()
             QWhatsThis::showText(ui->pushButton_confirm->mapToGlobal(ui->pushButton_confirm->geometry().bottomRight()), tr("需点击确认按钮，拟合区域才会设置生效"), ui->pushButton_confirm);
             ui->pushButton_confirm->setIcon(QIcon(":/resource/warn.png"));
 
-            //恢复刷新状态
-            //QWhatsThis::showText(ui->pushButton_gauss->mapToGlobal(ui->pushButton_confirm->geometry().bottomRight()), tr("点击按钮，查看拟合曲线效果图"), ui->pushButton_gauss);
+            //勾选高斯拟合
+            ui->checkBox_gauss->setChecked(true);
         });
 
         connect(customPlotWidget, &PlotWidget::sigSwitchToTipMode, this, [=](){
@@ -1131,7 +1113,6 @@ void MainWindow::on_pushButton_measure_clicked()
             }
 
             // ui->pushButton_save->setEnabled(false);
-            ui->pushButton_gauss->setEnabled(true);
             ui->action_refresh->setEnabled(true);
             ui->pushButton_measure->setEnabled(false);
 
@@ -1242,7 +1223,6 @@ void MainWindow::on_pushButton_measure_2_clicked()
             detectorParameter.gain = jsonObj["DetectorGain"].toInt();
         }
 
-        ui->pushButton_gauss->setEnabled(true);
         ui->action_refresh->setEnabled(true);
         ui->pushButton_measure->setEnabled(false);
         ui->pushButton_measure_2->setText(tr("停止测量"));
@@ -1369,14 +1349,6 @@ void MainWindow::on_action_refresh_triggered()
             emit plotWidget->sigPausePlot(false);
         }
     }
-}
-
-void MainWindow::on_pushButton_gauss_clicked()
-{
-    this->saveConfigJson();
-
-    PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
-    plotWidget->slotGauss(ui->spinBox_leftE->value(), ui->spinBox_rightE->value());
 }
 
 void MainWindow::on_action_config_triggered()
@@ -1585,10 +1557,6 @@ void MainWindow::slotRefreshUi()
             ui->pushButton_refresh->setEnabled(true);
             ui->pushButton_confirm->setEnabled(true);
 
-            ui->spinBox_leftE->setEnabled(true);
-            ui->spinBox_rightE->setEnabled(true);
-            ui->pushButton_gauss->setEnabled(true);
-
             ui->spinBox_timelength->setEnabled(false);
             ui->comboBox_channel->setEnabled(false);
             ui->spinBox_coolingTime->setEnabled(false);
@@ -1613,7 +1581,6 @@ void MainWindow::slotRefreshUi()
 
             //公共
             // ui->pushButton_save->setEnabled(false);
-            ui->pushButton_gauss->setEnabled(true);
 
             //自动测量
             ui->pushButton_measure_2->setEnabled(false);
@@ -1645,7 +1612,6 @@ void MainWindow::slotRefreshUi()
 
             //公共
             // ui->pushButton_save->setEnabled(false);
-            ui->pushButton_gauss->setEnabled(true);
 
             //手动测量
             ui->pushButton_measure->setEnabled(false);
@@ -1714,7 +1680,6 @@ void MainWindow::slotRefreshUi()
             ui->pushButton_measure_2->setEnabled(false);
         }
 
-        ui->pushButton_gauss->setEnabled(false);
         ui->pushButton_refresh->setEnabled(false);
         ui->pushButton_confirm->setEnabled(false);
         ui->pushButton_refresh_2->setEnabled(false);
@@ -1795,9 +1760,6 @@ void MainWindow::load()
         QJsonObject jsonObjPub;
         if (jsonObj.contains("Public")){
             jsonObjPub = jsonObj["Public"].toObject();
-            //高斯拟合
-            ui->spinBox_leftE->setValue(jsonObjPub["Gauss_leftE"].toInt());
-            ui->spinBox_rightE->setValue(jsonObjPub["Gauss_rightE"].toInt());
             //保存数据
             // ui->lineEdit_path->setText(jsonObjPub["path"].toString());
             // ui->lineEdit_filename->setText(jsonObjPub["filename"].toString());
@@ -1876,9 +1838,7 @@ void MainWindow::saveConfigJson(bool bSafeExitFlag)
 
         //公共
         QJsonObject jsonObjPub;
-        //高斯拟合
-        jsonObjPub["Gauss_leftE"] = ui->spinBox_leftE->value();
-        jsonObjPub["Gauss_rightE"] = ui->spinBox_rightE->value();
+
         //保存数据
         jsonObjPub["safe_exit"] = bSafeExitFlag;
         // jsonObjPub["path"] = ui->lineEdit_path->text();
@@ -2013,10 +1973,6 @@ void MainWindow::on_pushButton_confirm_clicked()
     ui->spinBox_2_rightE->setEnabled(false);
     ui->pushButton_confirm->setEnabled(false);
 
-    ui->spinBox_leftE->setEnabled(false);
-    ui->spinBox_rightE->setEnabled(false);
-    ui->pushButton_gauss->setEnabled(false);
-
     QList<QAction*> actions = ui->toolBar_online->actions();
     for (auto action : actions){
         if (action->objectName() == "action_drag"){
@@ -2027,7 +1983,6 @@ void MainWindow::on_pushButton_confirm_clicked()
     //自动切换到计数模式
     commandHelper->switchToCountMode(true);
     plotWidget->switchToCountMode(true);
-    ui->widget_gauss->hide();
     ui->radioButton_ref->setChecked(true);
 
     plotWidget->areaSelectFinished();
@@ -2094,7 +2049,7 @@ void MainWindow::on_action_openfile_triggered()
 void MainWindow::on_action_help_triggered()
 {
     //帮助
-    QString helpFilePath = QApplication::applicationDirPath() + "/帮助文档.pdf";
+    QString helpFilePath = QApplication::applicationDirPath() + "/软件使用说明书.pdf";
 
     QDesktopServices::openUrl(QUrl::fromLocalFile(helpFilePath));
 }
@@ -2183,4 +2138,3 @@ void MainWindow::on_action_restore_2_triggered()
 
     plotWidget->slotRestoreView();
 }
-

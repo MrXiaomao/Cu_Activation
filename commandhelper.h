@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-13 09:32:15
+ * @LastEditTime: 2025-05-14 11:20:49
  * @Description: 用来管理网口的数据发送与接受，管理网口数据的处理相关业务。
  */
 #ifndef COMMANDHELPER_H
@@ -143,7 +143,7 @@ private:
     QLiteThread* plotUpdateThread;//能谱信息处理线程
     quint32 currentFPGATime = 0;// FPGA当前时刻，单位：s
     bool autoChangeEnWindow = false; //是否自动适应能窗，用以修正温漂
-    quint32 time_SetEnWindow = 0;// 记录下手动测量下，用户设置能窗的时间戳，单位：s
+    quint32 time_SetEnWindow = 0;// 记录下手动测量下，用户设置能窗的时间戳，以活化后开始计时(冷却时间+FPGA时钟)，单位：s
 
     CoincidenceAnalyzer* coincidenceAnalyzer;
 

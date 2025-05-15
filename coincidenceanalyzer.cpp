@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-14 15:14:15
+ * @LastEditTime: 2025-05-15 21:32:36
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -447,6 +447,7 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
     //探测器1高斯拟合
     if(sumEnergy1 > GaussCountMin && sumEnergy2 > GaussCountMin)  
     {
+        // printf("autoEn FPGAtime = %f\n",AllPoint.back().time);
         vector<double> sx,sy;
         sx.reserve(EnergyWindow[1] - EnergyWindow[0] + 1);
         sy.reserve(EnergyWindow[1] - EnergyWindow[0] + 1);

@@ -1,8 +1,8 @@
 /*
  * @Author: 程梓芸
  * @Date: 2025-04-22 17:21:41
- * @LastEditors: Please set LastEditors
- * @LastEditTime: 2025-04-22 20:55:29
+ * @LastEditors: Maoxiaoqing
+ * @LastEditTime: 2025-05-15 21:35:22
  * @Description: 改自程梓芸的高斯拟合程序，需要用到GSL库。在原有程序的基础上增加了一个拟合是否成功的判断。
  */
 
@@ -330,7 +330,7 @@ bool GaussFit(std::vector<double> sx, std::vector<double> sy, int n, double* res
         double ti = fit_data.x[i];
 		double yi = fit_data.y[i];
 		double fi = gaussian(A, B, C, ti);
-        printf("%f %f %f\n", ti, yi, fi);
+        // printf("GaussFit %f %f %f\n", ti, yi, fi);
 	}
 
 	double _FWHM;

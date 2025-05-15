@@ -1168,15 +1168,15 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                         //显示拟合数据
                                         QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
                                         if (gaussResultItemText){
-                                            QString info = QString("峰  位: %1\n半高宽: %2\n左能窗: %3\n右能窗: %4")
-                                                               .arg(QString::number(mean, 'f', 0))
-                                                               .arg(QString::number(FWHM, 'f', 3))
-                                                               .arg(QString::number(leftWindow, 10))//十进制输出整数
-                                                               .arg(QString::number(rightWindow, 10));
+                                            // QString info = QString("峰  位: %1\n半高宽: %2\n左能窗: %3\n右能窗: %4")
+                                            //                    .arg(QString::number(mean, 'f', 0))
+                                            //                    .arg(QString::number(FWHM, 'f', 3))
+                                            //                    .arg(QString::number(leftWindow, 10))//十进制输出整数
+                                            //                    .arg(QString::number(rightWindow, 10));
 
-                                            gaussResultItemText->setText(info);
-                                            gaussResultItemText->position->setCoords(result[1], result[2]);//以峰值坐标为显示位置
-                                            gaussResultItemText->setVisible(true);
+                                            // gaussResultItemText->setText(info);
+                                            // gaussResultItemText->position->setCoords(result[1], result[2]);//以峰值坐标为显示位置
+                                            // gaussResultItemText->setVisible(true);
                                             customPlot->replot();
                                         }
 
@@ -1620,7 +1620,9 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
 
             int leftWindow = customPlotDet1->property("leftEnWindow").toInt();
             int rightWindow = customPlotDet1->property("rightEnWindow").toInt();
-            this->slotGauss(customPlotDet1, leftWindow, rightWindow);
+            if (this->property("showGaussInfo").toBool()){
+                this->slotGauss(customPlotDet1, leftWindow, rightWindow);
+            }
 
             if (!this->property("isCountModel").toBool())
                 customPlotDet1->replot(refreshPriority);
@@ -1658,7 +1660,9 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
 
             int leftWindow = customPlotDet2->property("leftEnWindow").toInt();
             int rightWindow = customPlotDet2->property("rightEnWindow").toInt();
-            this->slotGauss(customPlotDet2, leftWindow, rightWindow);
+            if (this->property("showGaussInfo").toBool()){
+                this->slotGauss(customPlotDet2, leftWindow, rightWindow);
+            }
 
             if (!this->property("isCountModel").toBool())
                 customPlotDet2->replot(refreshPriority);
@@ -1852,6 +1856,22 @@ void PlotWidget::slotGauss(QCustomPlot* customPlot, int leftE, int rightE)
                 curveGraph->setData(curveKeys, curveValues);
                 if (this->property("showGaussInfo").toBool()){
                     curveGraph->setVisible(true);
+                    
+                    //拟合结果展示
+                    QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
+                    double FWHM = 2*sqrt(2*log(2))*sigma;
+                    if (gaussResultItemText){
+                        // if (gaussResultItemText && mean > 0 && FWHM > 0){
+                        QString info = QString("峰  位: %1\n半高宽: %2\n左能窗: %3\n右能窗: %4")
+                                    .arg(QString::number(mean, 'f', 2))
+                                    .arg(QString::number(FWHM, 'f', 3))
+                                    .arg(QString::number(mean - FWHM*0.5, 'f', 2))
+                                    .arg(QString::number(mean + FWHM*0.5, 'f', 2));
+                        
+                        gaussResultItemText->position->setCoords(result[1], result[2]);//以峰值坐标为显示位置
+                        gaussResultItemText->setText(info);
+                        gaussResultItemText->setVisible(true);
+                    }
                     //customPlot->replot();
                 }
             }
@@ -1890,8 +1910,8 @@ void PlotWidget::slotUpdateEnWindow(unsigned short* EnWindow)
             }
             QCPItemStraightLine* itemStraightLineRight = customPlotDet1->findChild<QCPItemStraightLine*>("itemStraightLineRight");
             if (itemStraightLineRight){
-                itemStraightLineRight->point1->setCoords(EnWindow[1], customPlotDet2->yAxis->range().lower);
-                itemStraightLineRight->point2->setCoords(EnWindow[1], customPlotDet2->yAxis->range().upper);
+                itemStraightLineRight->point1->setCoords(EnWindow[1], customPlotDet1->yAxis->range().lower);
+                itemStraightLineRight->point2->setCoords(EnWindow[1], customPlotDet1->yAxis->range().upper);
                 itemStraightLineRight->setVisible(true);
             }
 
@@ -1901,7 +1921,7 @@ void PlotWidget::slotUpdateEnWindow(unsigned short* EnWindow)
             float mean = (float)(EnWindow[1] + EnWindow[0]) / 2;
             float FWHM = EnWindow[1] - EnWindow[0];
             QCPItemText* gaussResultItemText = customPlotDet1->findChild<QCPItemText*>("gaussResultItemText");
-            if (gaussResultItemText && mean!= 0 && FWHM != 0){
+            if (gaussResultItemText && mean > 0 && FWHM > 0){
                 QString info = QString("峰  位: %1\n半高宽: %2\n左能窗: %3\n右能窗: %4")
                                    .arg(QString::number(mean, 'f', 0))
                                    .arg(QString::number(FWHM, 'f', 3))

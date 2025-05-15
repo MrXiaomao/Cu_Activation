@@ -1130,6 +1130,10 @@ void MainWindow::on_pushButton_measure_clicked()
             multi_CHANNEL = static_cast<unsigned int>(value);
 
             PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
+            
+            // 开始测量时取消勾选高斯拟合，因为刚开始统计涨落大，无法拟合。
+            ui->checkBox_gauss->setChecked(false);
+
             plotWidget->slotStart(multi_CHANNEL);            
             plotWidget->slotUpdateEnWindow(EnWin);
 
@@ -1230,6 +1234,9 @@ void MainWindow::on_pushButton_measure_2_clicked()
         qInfo().noquote()<<"等待触发";
 
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
+        // 开始测量时取消勾选高斯拟合，因为刚开始统计涨落大，无法拟合。
+        ui->checkBox_gauss->setChecked(false);
+        
         plotWidget->slotStart(multi_CHANNEL);
         plotWidget->areaSelectFinished();//直接禁用自动测量的高斯拟合功能
         

@@ -1794,8 +1794,8 @@ void PlotWidget::switchToLogarithmicMode(bool isLogarithmic)
 
 void PlotWidget::slotGauss(QCustomPlot* customPlot, int leftE, int rightE)
 {
-    leftE = 0;
-    rightE = MULTI_CHANNEL;
+    // leftE = 0;
+    // rightE = rightE;
     {
         QCPGraph *graph = customPlot->graph(0);
         if (graph->data()->size() <= 0)
@@ -1821,13 +1821,12 @@ void PlotWidget::slotGauss(QCustomPlot* customPlot, int leftE, int rightE)
                 fcount++;
                 sx.push_back((double)graph->data()->at(i)->key);
                 sy.push_back((double)graph->data()->at(i)->value);
-
-                curveKeys << (double)graph->data()->at(i)->key;
             } else {
                 keys << (double)graph->data()->at(i)->key;
                 values << (double)graph->data()->at(i)->value;
                 colors << graph->data()->at(i)->color;
             }
+            curveKeys << (double)graph->data()->at(i)->key;
         }
 
         // 高斯拟合
@@ -1844,7 +1843,7 @@ void PlotWidget::slotGauss(QCustomPlot* customPlot, int leftE, int rightE)
                 double sigma = result[2];
                 // double base = result[3];
                 
-                for (int i=0; i<curveKeys.size(); ++i){
+                for (int i=0; i< curveKeys.size(); ++i){
                     double x = curveKeys[i];
                     double v = a*exp(-0.5*pow(x-mean,2)/pow(sigma, 2));
                     curveValues.push_back(v);

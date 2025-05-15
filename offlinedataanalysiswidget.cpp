@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-14 11:44:50
+ * @LastEditTime: 2025-05-14 17:58:16
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -261,7 +261,7 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
             if(rangeStr == "中量程") detParameter.measureRange = 2;
             if(rangeStr == "大量程") detParameter.measureRange = 3;
 
-            this->startTime_FPGA = static_cast<unsigned int>(configMap.value("测量开始时间(冷却时间+FPGA时钟)").toInt());
+            this->startTime_absolute = static_cast<unsigned int>(configMap.value("测量开始时间(冷却时间+FPGA时钟)").toInt());
 
             ui->lineEdit_measuremodel->setText(configMap.value("测量模式"));
             ui->spinBox_step->setValue(configMap.value("时间步长").toInt());
@@ -362,7 +362,6 @@ void OfflineDataAnalysisWidget::slotStart()
             }
             
             //记录FPGA内的最大时刻，作为符合测量的时间区间右端点。
-
             if (data1_2.size() > 0 || data2_2.size() > 0 ){
                 coincidenceAnalyzer->calculate(data1_2, data2_2, (unsigned short*)EnWindow, timeWidth, delayTime, true, false);
                 data1_2.clear();
@@ -453,7 +452,7 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
         // 读取活化测量的数据时刻区间[起始时间，结束时间]
         vector<CoincidenceResult> result = coincidenceAnalyzer->GetCoinResult();
         // int startTime = result.begin()->time;
-        unsigned int startTime = this->startTime_FPGA + 1;
+        unsigned int startTime = this->startTime_absolute + 1;
         unsigned int endTime = result.back().time;
 
         //检查界面的起始时刻和结束时刻不超范围，若超范围则调整到范围内。
@@ -483,10 +482,11 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
 
             //时间步长，求均值
             if (_stepT > 1){
-                if (count>1 && (count % _stepT == 0)){
+                int validCount = count - startTime_absolute; //由于符合曲线的前面部分填充了零。startTimeFPGA~startTime_absolute之间填充的零
+                if (validCount>1 && (validCount % _stepT == 0)){
                     vector<CoincidenceResult> rr3;
 
-                    for (size_t i=0; i < count/_stepT; i++){
+                    for (size_t i=startTime_absolute; i < validCount/_stepT; i++){
                         CoincidenceResult v;
                         for (int j=0; j<_stepT; ++j){
                             size_t posI = i*_stepT + j;
@@ -508,7 +508,7 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
                 }
             } else{
                 vector<CoincidenceResult> rr3;
-                for (size_t i=0; i < count; i++){
+                for (size_t i=startTime_absolute; i < count; i++){
                     rr3.push_back(result[i]);
                 }
 

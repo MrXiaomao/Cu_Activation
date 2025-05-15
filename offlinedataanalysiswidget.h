@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:32
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-13 23:45:34
+ * @LastEditTime: 2025-05-14 17:54:08
  * @Description: 请填写简介
  */
 #ifndef OFFLINEDATAANALYSISWIDGET_H
@@ -85,7 +85,7 @@ private:
     DetectorParameter detParameter;
 
     quint32 stepT = 1;
-    unsigned int startTime_FPGA; //记录保存数据的FPGA起始时刻。单位s，FPGA内部时钟
+    unsigned int startTime_absolute; //记录保存数据的起始时刻(冷却时间+FPGA时钟)。单位s，FPGA内部时钟
     bool reAnalyzer = false; // 是否重新开始解析
     bool analyzerFinished = true;// 解析是否完成
     quint64 detectNum = 0; //探测到的粒子数

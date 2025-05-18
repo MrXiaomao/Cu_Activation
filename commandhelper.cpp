@@ -385,7 +385,6 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
 
     //更新能窗与能窗对应的竖线，目前默认都要更新，产生计数曲线后才会更新
     if(countCoin>0){
-        //autoEnWindow.clear();//屏蔽，否则下面if判断条件始终不成立
         std::vector<unsigned short> newEnWindow;
         coincidenceAnalyzer->GetEnWidth(newEnWindow);
         if(newEnWindow == autoEnWindow){
@@ -393,6 +392,32 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
         else{
             autoEnWindow = newEnWindow;
 
+            //打印能窗自动更新的日志
+            vector<AutoGaussFit> gausslog = coincidenceAnalyzer->GetGaussFitLog();
+            if(gausslog.size()>0){
+                //有新的能窗产生
+                QString autoEnChangeFile = validDataFileName + ".能窗自动更新";
+                {
+                    QFile::OpenMode ioFlags = QIODevice::Truncate;
+                    if (QFileInfo::exists(autoEnChangeFile))
+                        ioFlags = QIODevice::Append;
+                    QFile file(autoEnChangeFile);
+                    if (file.open(QIODevice::ReadWrite | QIODevice::Text | ioFlags)) {
+                        QTextStream out(&file);
+                        // if (ioFlags == QIODevice::Truncate)
+                        // {
+                        //     out << "time, Det1左能窗, Det1右能窗, Det2左能窗, Det2右能窗, Det1峰位, Det2峰位" << Qt::endl;
+                        // }
+                        out << gausslog.back().time << "," << gausslog.back().EnLeft1 << "," << gausslog.back().EnRight1 \
+                            << "," << gausslog.back().EnLeft2 << "," << gausslog.back().EnRight2
+                            << "," << gausslog.back().EnRight1 - gausslog.back().EnLeft1 << "," << gausslog.back().EnRight2 - gausslog.back().EnLeft2
+                            << Qt::endl;
+
+                        file.flush();
+                        file.close();
+                    }
+                }
+            }
             emit sigUpdateAutoEnWidth(autoEnWindow, detectorParameter.measureModel);
         }        
     }
@@ -1363,6 +1388,31 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
         }
     }
     qInfo().noquote() << tr("本次测量参数配置已存放在：%1").arg(configResultFile);
+
+    //存放自动更新能窗的日志，存放第一次能窗数据，由于第一次能窗不一定是高斯拟合给出，因为不给出峰位
+    QString autoEnChangeFile = validDataFileName + ".能窗自动更新";
+    {
+        QFile::OpenMode ioFlags = QIODevice::Truncate;
+        if (QFileInfo::exists(autoEnChangeFile))
+            ioFlags = QIODevice::Append;
+        QFile file(autoEnChangeFile);
+        if (file.open(QIODevice::ReadWrite | QIODevice::Text | ioFlags)) {
+            QTextStream out(&file);
+            if (ioFlags == QIODevice::Truncate)
+            {   
+                out << tr("time(s), Det1左能窗, Det1右能窗, Det2左能窗, Det2右能窗, Det1峰位, Det2峰位") << Qt::endl;
+            }
+            vector<AutoGaussFit> gausslog = coincidenceAnalyzer->GetGaussFitLog();
+            
+            out << detectorParameter.coolingTime << "," << this->EnWindow[0] << "," << this->EnWindow[1] \
+                << "," << this->EnWindow[2] << "," << this->EnWindow[3]
+                << Qt::endl;
+
+            file.flush();
+            file.close();
+        }
+    }
+    qInfo().noquote() << tr("本次测量中，自动更新能窗的参数日志存放在：%1").arg(autoEnChangeFile);
 
     cmdPool.clear();
     //阈值

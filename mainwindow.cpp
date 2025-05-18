@@ -411,8 +411,8 @@ MainWindow::MainWindow(QWidget *parent)
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
         plotWidget->slotUpdateEnWindow(EnWidth.data());
 
-        // qDebug().noquote()<<"自动更新能窗，探测器1:["<<EnWidth[0]<<","<<EnWidth[1]
-        //                   <<"], 探测器2:["<<EnWidth[2]<<","<<EnWidth[3]<<"]";
+        qInfo().noquote()<<tr("自动更新能窗，探测器1:[")<<EnWidth[0]<<","<<EnWidth[1]
+                          <<tr("], 探测器2:[")<<EnWidth[2]<<","<<EnWidth[3]<<"]";
     }, Qt::QueuedConnection/*防止堵塞*/);
 
     emit sigRefreshUi();
@@ -2033,6 +2033,30 @@ void MainWindow::on_pushButton_confirm_clicked()
         }
     }
     qInfo().noquote() << tr("本次测量参数配置已存放在：%1").arg(configResultFile);
+
+    //存放自动更新能窗的日志，存放第一次能窗数据，由于第一次能窗不一定是高斯拟合给出，因为不给出峰位
+    QString autoEnChangeFile = validDataFileName + ".能窗自动更新";
+    {
+        QFile::OpenMode ioFlags = QIODevice::Truncate;
+        if (QFileInfo::exists(autoEnChangeFile))
+            ioFlags = QIODevice::Append;
+        QFile file(autoEnChangeFile);
+        if (file.open(QIODevice::ReadWrite | QIODevice::Text | ioFlags)) {
+            QTextStream out(&file);
+            if (ioFlags == QIODevice::Truncate)
+            {                                   
+                out << tr("time(s), Det1左能窗, Det1右能窗, Det2左能窗, Det2右能窗, Det1峰位, Det2峰位") << Qt::endl;
+            }
+            DetectorParameter detParameter = commandHelper->getDetParameter();
+            out << detParameter.coolingTime << "," << EnWin[0] << "," << EnWin[1] \
+                << "," << EnWin[2] << "," << EnWin[3]
+                << Qt::endl;
+
+            file.flush();
+            file.close();
+        }
+    }
+    qInfo().noquote() << tr("本次测量中，自动更新能窗的参数日志存放在：%1").arg(autoEnChangeFile);
 
     //取消画面暂停刷新
     this->setProperty("pause-plot", false);

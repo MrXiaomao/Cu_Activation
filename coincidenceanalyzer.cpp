@@ -507,7 +507,7 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
             // qDebug().noquote()<<"探测器2 自动高斯拟合发生异常,可能原因，选取的初始峰位不具有高斯形状，无法进行高斯拟合";
         }
     }
-    if(changed) GaussFitLog.push_back({countCoin + coolingTime_Auto, EnergyWindow[0], EnergyWindow[1], EnergyWindow[2], EnergyWindow[3]});
+    if(changed) GaussFitLog.push_back({AllPoint.back().time, EnergyWindow[0], EnergyWindow[1], EnergyWindow[2], EnergyWindow[3]});
     isChangeEnWindow = changed;
 }
 

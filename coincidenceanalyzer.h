@@ -43,12 +43,10 @@ public:
         coolingTime_Manual = 0;
         coolingTime_Auto = 0;
         memset(&recentlySpectrum, 0, sizeof(recentlySpectrum));
+        memset(&currentSpec, 0, sizeof(currentSpec));
 
         // 清除向量中的所有元素并释放内存空间
         vector<CoincidenceResult>().swap(coinResult);
-
-        vector<SingleSpectrum> emptySpec;
-        swap(AllSpectrum, emptySpec);
 
         vector<CurrentPoint>().swap(AllPoint);
 
@@ -93,10 +91,6 @@ public:
     // 读取数据
     inline vector<CoincidenceResult> GetCoinResult(){
         return coinResult;
-    }
-
-    inline vector<SingleSpectrum> GetSpectrum(){
-        return AllSpectrum;
     }
 
     //获取累计能谱
@@ -183,7 +177,8 @@ private:
     int coolingTime_Manual; //手动测量的冷却时间，注意这段时间，FPGA并没有开始工作，这是有别于自动测量的冷却时间。
     int coolingTime_Auto; //自动测量的冷却时间，这段时间的数据并没有处理。因此图像数据的时间起点应该是以coolingTime_Auto为起点。
     vector<CoincidenceResult> coinResult; //将所有处理的数据都存放在这个容器中，FPGA时钟每一秒钟产生一个点
-    vector<SingleSpectrum> AllSpectrum;  //将处理的能谱数据都存放在这个容器中，FPGA时钟每一秒钟产生一个能谱，只存放最近一个小时的能谱。单端队列
+    // vector<SingleSpectrum> AllSpectrum;  //将处理的能谱数据都存放在这个容器中，FPGA时钟每一秒钟产生一个能谱，只存放最近一个小时的能谱。单端队列
+    SingleSpectrum currentSpec; //最近1秒的能谱
     SingleSpectrum AccumulateSpectrum; //累积能谱,将每秒的能谱进行累积后的能谱
     SingleSpectrum recentlySpectrum; //最近的累积能谱,将上一次的自动拟合的能谱叠加上之后每秒的能谱，用于更新界面的能谱曲线
     vector<CurrentPoint> AllPoint; //每一秒内的各探测器的数据点个数

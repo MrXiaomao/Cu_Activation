@@ -118,7 +118,7 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
         //对当前一秒数据处理给出能谱
         calculateAllSpectrum(unusedData1, unusedData2);
 
-        SingleSpectrum tempSpec = AllSpectrum.back();
+        SingleSpectrum tempSpec = this->currentSpec;
         for(unsigned short i=0; i<MULTI_CHANNEL - 3; i++)
         {
             recentlySpectrum.time = tempSpec.time;
@@ -132,15 +132,11 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
             //自动拟合，更新能窗
             if(autoEnWidth) 
             {
-                //SingleSpectrum tempSpec = AllSpectrum.back();
                 for(unsigned short i=0; i<MULTI_CHANNEL - 3; i++)
                 {
                     GaussFitSpec.time = tempSpec.time;
                     GaussFitSpec.spectrum[0][i] += tempSpec.spectrum[0][i];
                     GaussFitSpec.spectrum[1][i] += tempSpec.spectrum[1][i];
-                    // recentlySpectrum.time = tempSpec.time;
-                    // recentlySpectrum.spectrum[0][i] += tempSpec.spectrum[0][i];
-                    // recentlySpectrum.spectrum[1][i] += tempSpec.spectrum[1][i];
                 }
 
                 //距离上次自动高斯拟合的时间间隔，单位：s
@@ -153,12 +149,6 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
                 if(isChangeEnWindow){
                     recentlySpectrum = GaussFitSpec; //更新这个最近能谱
                     memset(&GaussFitSpec, 0, sizeof(GaussFitSpec));
-                    // for(unsigned short i=0; i<MULTI_CHANNEL; i++)
-                    // {
-                    //     GaussFitSpec.time = 0;//注意这里是在探测器2之后才重置
-                    //     GaussFitSpec.spectrum[0][i] = 0;
-                    //     GaussFitSpec.spectrum[1][i] = 0;
-                    // }
                 }
             }
 
@@ -206,7 +196,8 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
  * data2：探测器2测量数据
  */
 void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> &data1, vector<TimeEnergy> &data2)
-{
+{ 
+    QDateTime now = QDateTime::currentDateTime();
     SingleSpectrum spec_temp;
     spec_temp.time = countCoin;
 
@@ -255,12 +246,7 @@ void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> &data1, vector
     }
 
     AccumulateSpectrum.time = countCoin;
-    if(AllSpectrum.size() >= MAX_REMAIN_SPECTRUM){
-        // 删除头部元素
-        // 交换法，适合大规模数据
-        vector<SingleSpectrum>(AllSpectrum.begin() + 1, AllSpectrum.end()).swap(AllSpectrum);
-    }
-    AllSpectrum.push_back(spec_temp);
+    this->currentSpec = spec_temp;
 }
 
 // 根据输入能量数据，绘制出能谱，

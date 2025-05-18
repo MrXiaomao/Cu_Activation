@@ -25,6 +25,13 @@ public:
 
     void load();
     void saveConfigJson(bool bSafeExitFlag = false);
+    
+    /**
+     * @description: 保存当前的运行时间，便于下次打开软件时打印上次异常退出的时间。
+     * @param {bool} bSafeExitFlag
+     * @return {*} 是否保存成功
+     */
+    bool saveCurrentTConfigJson(bool bSafeExitFlag = false);
 
 protected:
     virtual bool eventFilter(QObject *watched, QEvent *event) override;

@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-19 01:54:48
+ * @LastEditTime: 2025-05-19 03:32:46
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -458,9 +458,9 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
             bool status = GaussFit(sx, sy, fcount, result);
             if(status)
             {
-                if(abs(lastSigma - result[2])/lastSigma > MAX_SIGAMA_CHANGE) {
+                if(lastSigma>0.0 && abs(lastSigma - result[2])/lastSigma > MAX_SIGAMA_CHANGE) {
                     qDebug()<<QString("CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，自动高斯拟合，\
-                        Det1拟合结果与上一次高斯拟合偏差大于%1，放弃能窗更新\%").arg(QString::number(MAX_SIGAMA_CHANGE*100));
+                        Det1拟合结果与上一次高斯拟合偏差大于%1\%，放弃能窗更新").arg(QString::number(MAX_SIGAMA_CHANGE*100));
                         return;
                 }
                 double mean = result[1];
@@ -514,9 +514,9 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
         bool status = GaussFit(sx, sy, fcount, result);
         if(status)
         {
-            if(abs(lastSigma - result[2])/lastSigma > MAX_SIGAMA_CHANGE) {
+            if(lastSigma>0.0 && abs(lastSigma - result[2])/lastSigma > MAX_SIGAMA_CHANGE) {
                 qDebug()<<QString("CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，自动高斯拟合，\
-                    Det2拟合结果与上一次高斯拟合偏差大于%1，放弃能窗更新\%").arg(QString::number(MAX_SIGAMA_CHANGE*100));
+                    Det2拟合结果与上一次高斯拟合偏差大于%1\%，放弃能窗更新").arg(QString::number(MAX_SIGAMA_CHANGE*100));
                     return;
             }
             double mean = result[1];

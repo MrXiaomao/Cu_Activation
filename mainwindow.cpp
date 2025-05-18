@@ -242,7 +242,7 @@ MainWindow::MainWindow(QWidget *parent)
         this->setProperty("measure-status", msStart);
         this->setProperty("measure-model", mmode);
 
-        //启动异常检测机制
+        //启动异常检测机制，用于检测测量是否异常停止
         QTimer* exceptionCheckTimer = this->findChild<QTimer*>("exceptionCheckTimer");
         exceptionCheckTimer->start(1000);
 
@@ -529,6 +529,13 @@ void MainWindow::InitMainWindowUi()
         commandHelper->setDefaultCacheDir("./cache");
     }
 
+    //专门用来记录软件最新时刻，每秒钟一次更新一次到json文件中。
+    QTimer* currentStatusTimer = new QTimer(this);
+    currentStatusTimer->setObjectName("statusTimer");
+    connect(currentStatusTimer, &QTimer::timeout, this, [=](){
+        saveCurrentTConfigJson(false);
+    });
+    currentStatusTimer->start(1000);
     // 测量结果另存为-存储路径
     /*{
         QAction *action = ui->lineEdit_path->addAction(QIcon(":/resource/open.png"), QLineEdit::TrailingPosition);
@@ -726,7 +733,7 @@ void MainWindow::InitMainWindowUi()
             this->lastRecvDataTime = now;
         }
     });
-    exceptionCheckTimer->stop();
+    // exceptionCheckTimer->stop();
 
     QTimer::singleShot(500, this, [=](){
        this->showMaximized();
@@ -1448,6 +1455,11 @@ void MainWindow::closeEvent(QCloseEvent *event)
     qInstallMessageHandler(nullptr);
     slotSafeExit();
 
+    QTimer* currentStatusTimer = this->findChild<QTimer*>("statusTimer");
+    if(currentStatusTimer) currentStatusTimer->stop();
+
+    this->saveConfigJson(true);
+
     event->accept();
 }
 
@@ -1456,8 +1468,6 @@ void MainWindow::slotSafeExit()
     commandHelper->closeDetector();
     commandHelper->closeRelay();
     controlHelper->close();
-
-
 }
 
 #include "cachedirconfigwidget.h"
@@ -1779,6 +1789,15 @@ void MainWindow::load()
             ui->comboBox_range->setCurrentIndex(jsonObjPub["select-range"].toInt());  //量程索引值
 
             bool bSafeExitFlag = jsonObjPub["safe_exit"].toBool();
+            //如果上一次异常退出，则打印上一次的最后运行时间
+            if(!bSafeExitFlag) {
+                if(jsonObjPub.contains("lastRunTime")){
+                    QString lastTimeStr = jsonObjPub["lastRunTime"].toString();
+                    QString msg = tr("上一次软件异常退出，最后运行时间为：") + lastTimeStr;
+                    qCritical().noquote()<<msg;
+                    emit sigAppengMsg(msg, QtCriticalMsg);
+                }
+            }
             this->setProperty("last_safe_exit", bSafeExitFlag);
         }
     }
@@ -1857,6 +1876,11 @@ void MainWindow::saveConfigJson(bool bSafeExitFlag)
         // jsonObjPub["path"] = ui->lineEdit_path->text();
         // jsonObjPub["filename"] = ui->lineEdit_filename->text();
         jsonObjPub["select-range"] = ui->comboBox_range->currentIndex();  //量程索引值
+        //记录当前运行时间
+        QDateTime now = QDateTime::currentDateTime();
+        QString timeStr = now.toString("yyyy-MM-dd hh:mm:ss");
+        jsonObjPub["lastRunTime"] = timeStr;
+
         jsonObj["Public"] = jsonObjPub;
 
         file.open(QIODevice::WriteOnly | QIODevice::Text);
@@ -1864,6 +1888,56 @@ void MainWindow::saveConfigJson(bool bSafeExitFlag)
         file.write(jsonDocNew.toJson());
         file.close();
     }
+}
+
+bool MainWindow::saveCurrentTConfigJson(bool bSafeExitFlag)
+{
+    // 保存参数
+    QString path = QApplication::applicationDirPath() + "/config";
+    QDir dir(path);
+    if (!dir.exists())
+        dir.mkdir(path);
+
+    QFile file(QApplication::applicationDirPath() + "/config/user.json");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // 读取文件内容
+        QByteArray jsonData = file.readAll();
+        file.close(); //释放资源
+
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+        QJsonObject jsonObj = jsonDoc.object();
+        
+        QJsonObject jsonObjPub;
+        if (jsonObj.contains("Public")){
+            jsonObjPub = jsonObj["Public"].toObject();
+        
+            jsonObjPub["safe_exit"] = bSafeExitFlag;
+            //最后运行的时间
+            QDateTime now = QDateTime::currentDateTime();
+            QString timeStr = now.toString("yyyy-MM-dd hh:mm:ss");
+            jsonObjPub["lastRunTime"] = timeStr;
+
+            jsonObj["Public"] = jsonObjPub;            
+        }
+        else{
+            jsonObjPub["safe_exit"] = bSafeExitFlag;
+            //最后运行的时间
+            QDateTime now = QDateTime::currentDateTime();
+            QString timeStr = now.toString("yyyy-MM-dd hh:mm:ss");
+            jsonObjPub["lastRunTime"] = timeStr;
+
+            jsonObj["Public"] = jsonObjPub;   
+        }
+		
+        file.open(QIODevice::WriteOnly | QIODevice::Text);
+        jsonDoc.setObject(jsonObj);
+        file.write(jsonDoc.toJson());
+        file.close();
+		return true;
+    }
+	else{
+		return false;
+	}
 }
 
 void MainWindow::on_pushButton_refresh_2_clicked()

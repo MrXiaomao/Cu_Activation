@@ -82,8 +82,8 @@ struct CoincidenceResult{
 };
 
 struct CurrentPoint{
-    unsigned int time; //时刻(单位s)，以冷却时间+FPGA时钟进行计时，给出当前的计数点对应的时刻。从1开始计数。\
-        这里冷却时间指FPGA未开始计时前的冷却时长，不是界面的冷却时间
+    unsigned int time; //时刻(单位s)，以冷却时间+FPGA时钟进行计时，给出当前的计数点对应的时刻。从1开始计数。
+                        //这里冷却时间指FPGA未开始计时前的冷却时长，不是界面的冷却时间
     int dataPoint1 = 0; //这次处理的探测器1数据点数
     int dataPoint2 = 0; //这次处理的探测器2数据点数
 };
@@ -95,7 +95,7 @@ struct SingleSpectrum{ //存放每秒钟的能谱数据。1s产生一个能谱
 };
 
 struct AutoGaussFit{
-    int time; //修改时间，单位s
+    unsigned int time; //修改时间，单位s
     unsigned short EnLeft1;  // 探测器1符合能窗左边界
     unsigned short EnRight1; // 探测器1符合能窗右边界
     unsigned short EnLeft2;  // 探测器2符合能窗左边界

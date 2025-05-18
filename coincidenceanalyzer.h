@@ -19,6 +19,7 @@
 // long long nanoseconds = 1000000000LL; //1s = 1E9ns
 #define NANOSECONDS 1e9
 #define MAX_REMAIN_SPECTRUM 3600 //最大存留能谱数目
+#define MAX_SIGAMA_CHANGE 0.2 //自动能窗更新中，高斯拟合区域的sigma变化允许范围，如果超出范围，则放弃新的拟合结果。
 
 using namespace std;
 

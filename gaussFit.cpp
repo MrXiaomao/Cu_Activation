@@ -2,7 +2,7 @@
  * @Author: 程梓芸
  * @Date: 2025-04-22 17:21:41
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-15 21:35:22
+ * @LastEditTime: 2025-05-19 01:45:29
  * @Description: 改自程梓芸的高斯拟合程序，需要用到GSL库。在原有程序的基础上增加了一个拟合是否成功的判断。
  */
 
@@ -256,7 +256,7 @@ int testFun(void)
  * @param {vector<double>} sx
  * @param {vector<double>} sy
  * @param {int} n
- * @param {double*} result
+ * @param {double*} result result[3] = [A, mu, sigma].注意这个result必须给初值，因为result[2]在下面进行了判断使用
  * @return {bool} false:拟合失败，true：拟合成功
  */ 
 bool GaussFit(std::vector<double> sx, std::vector<double> sy, int n, double* result)
@@ -286,6 +286,8 @@ bool GaussFit(std::vector<double> sx, std::vector<double> sy, int n, double* res
 
     //sigma
     double sigma = mean * 0.04;
+    //若存在上次的拟合结果，直接用上次的拟合值作为本次拟合的初值
+    if(result[2] > 0.0000001) sigma = result[2];
 
 	const gsl_rng_type* T = gsl_rng_default;	
 	const size_t p = 3;    /* number of model parameters */

@@ -2677,6 +2677,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
    </property>
   </action>
   <action name="action_clear">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resource.qrc">
      <normaloff>:/resource/qingchu.png</normaloff>:/resource/qingchu.png</iconset>

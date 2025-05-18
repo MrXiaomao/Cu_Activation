@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-15 21:32:36
+ * @LastEditTime: 2025-05-19 01:54:48
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -447,10 +447,22 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
         
         int fcount = EnergyWindow[1] - EnergyWindow[0] + 1;
         if(fcount>5){
-            double result[3];
+            double lastSigma = 0.0;
+            //利用上一次的拟合结果作为本次拟合的初值
+            if(GaussFitLog.size()>0) {
+                lastSigma = (GaussFitLog.back().EnRight1 - GaussFitLog.back().EnLeft1) * 1.0 / (2*sqrt(2*log(2)));
+            }
+            
+            double result[3] = {0.0, 0.0, lastSigma};
+            qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理,自动高斯拟合,Det1开始高斯拟合";
             bool status = GaussFit(sx, sy, fcount, result);
             if(status)
             {
+                if(abs(lastSigma - result[2])/lastSigma > MAX_SIGAMA_CHANGE) {
+                    qDebug()<<QString("CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，自动高斯拟合，\
+                        Det1拟合结果与上一次高斯拟合偏差大于%1，放弃能窗更新\%").arg(QString::number(MAX_SIGAMA_CHANGE*100));
+                        return;
+                }
                 double mean = result[1];
                 double FWHM = 2*sqrt(2*log(2))*result[2];
                 changed = true;
@@ -461,13 +473,16 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
 
                 if(Right < MULTI_CHANNEL - 1u) EnergyWindow[1] = (unsigned short)Right;
                 else EnergyWindow[1] = MULTI_CHANNEL-1u;
+                qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，自动高斯拟合，Det1高斯拟合成功";
             }
             else
             {
+                qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，自动高斯拟合，Det1高斯拟合失败";
                 // qDebug().noquote() <<"探测器1自动高斯拟合发生异常,可能原因，选取的初始峰位不具有高斯形状，无法进行高斯拟合";
             }
         }
         else{
+            qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，Det1自动高斯拟合待拟合的数据点数小于6个，不允许拟合";
             // qDebug().noquote() <<"探测器1自动高斯拟合发生异常,待拟合的数据点数小于6个，无法拟合";
         }
     }
@@ -487,10 +502,23 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
         }
         
         int fcount = EnergyWindow[3] - EnergyWindow[2] + 1;
-        double result[3];
+        
+        double lastSigma = 0.0;
+        //利用上一次的拟合结果作为本次拟合的初值
+        if(GaussFitLog.size()>0) {
+            lastSigma = (GaussFitLog.back().EnRight2 - GaussFitLog.back().EnLeft2) * 1.0 / (2*sqrt(2*log(2)));
+        }
+        
+        double result[3] = {0.0, 0.0, lastSigma};
+        qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理,自动高斯拟合,Det2开始高斯拟合";
         bool status = GaussFit(sx, sy, fcount, result);
         if(status)
         {
+            if(abs(lastSigma - result[2])/lastSigma > MAX_SIGAMA_CHANGE) {
+                qDebug()<<QString("CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，自动高斯拟合，\
+                    Det2拟合结果与上一次高斯拟合偏差大于%1，放弃能窗更新\%").arg(QString::number(MAX_SIGAMA_CHANGE*100));
+                    return;
+            }
             double mean = result[1];
             double FWHM = 2*sqrt(2*log(2))*result[2];
             changed = true;
@@ -502,8 +530,10 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
 
             if(Right < MULTI_CHANNEL - 1u) EnergyWindow[3] = (unsigned short)Right;
             else EnergyWindow[3] = MULTI_CHANNEL - 1u;
+            qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，自动高斯拟合，Det2高斯拟合成功";
         }
         else{
+            qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，自动高斯拟合，Det2高斯拟合失败";
             // qDebug().noquote()<<"探测器2 自动高斯拟合发生异常,可能原因，选取的初始峰位不具有高斯形状，无法进行高斯拟合";
         }
     }
@@ -691,11 +721,11 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int sta
                 ratioCu64 = ratio2 / (ratio1 + ratio2);
             }
             else{
-                qCritical().noquote()<<"离线数据分析：未找到对应量程的拟合参数，请检查仪器是否进行了相应量程刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
+                qCritical().noquote()<<"在线数据分析：未找到对应量程的拟合参数，请检查仪器是否进行了相应量程刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
             }
         }
         else{
-            qCritical().noquote()<<"离线数据分析：未找到对应量程的拟合参数，请检查仪器是否进行了相应量程刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
+            qCritical().noquote()<<"在线数据分析：未找到对应量程的拟合参数，请检查仪器是否进行了相应量程刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
         }
     }
     else{

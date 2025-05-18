@@ -1151,10 +1151,12 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                             // 高斯拟合
                             if (fcount > 5){
                                 //显示拟合曲线
-                                double result[3];
+                                double result[3] = {0.0, 0.0, 0.0}; //这个框选之前没有上一次的拟合值
+                                qDebug()<<tr("PlotWidget::eventFilter():框选区域，开始高斯拟合");
                                 bool status = GaussFit(sx, sy, fcount, result);
                                 if(status)
                                 {
+                                    qDebug()<<tr("框选区域，高斯拟合成功");
                                     if (!std::isnan(result[1]) && result[2]>0){
                                         double mean = result[1];
                                         double FWHM = 2*sqrt(2*log(2))*result[2];
@@ -1208,6 +1210,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                             lastfitStatus = false;
                                             qCritical().noquote()<<"高斯拟合发生错误,可能原因：选取的峰位不具有高斯形状，无法进行高斯拟合，\n建议：请重新选取高斯曲线区域或等统计涨落变小后再选取";
                                         }
+                                        qDebug()<<tr("PlotWidget::eventFilter():框选区域，高斯拟合失败");
                                     }
                                 }
                                 else
@@ -1852,7 +1855,10 @@ void PlotWidget::slotGauss(QCustomPlot* customPlot, int leftE, int rightE)
 
         // 高斯拟合
         if (fcount > 0){
-            double result[3];
+            double lastSigma = 
+            lastSigma = (rightE - leftE) * 1.0 / (2*sqrt(2*log(2)));
+            double result[3] = {0.0, 0.0, lastSigma};
+            qDebug()<<tr("PlotWidget::slotGauss():显示高斯拟合信息，准备对能窗区域自动高斯拟合，绘制拟合曲线");
             bool status = GaussFit(sx, sy, fcount, result);
             if(status)
             {
@@ -1871,6 +1877,7 @@ void PlotWidget::slotGauss(QCustomPlot* customPlot, int leftE, int rightE)
                 }
 
                 curveGraph->setData(curveKeys, curveValues);
+                qDebug()<<tr("PlotWidget::slotGauss():显示高斯拟合信息，拟合成功");
                 if (this->property("showGaussInfo").toBool()){
                     curveGraph->setVisible(true);
                     
@@ -1891,6 +1898,9 @@ void PlotWidget::slotGauss(QCustomPlot* customPlot, int leftE, int rightE)
                     }*/
                     //customPlot->replot();
                 }
+            }
+            else{
+                qDebug()<<tr("显示高斯拟合信息，拟合失败");
             }
         }
     }

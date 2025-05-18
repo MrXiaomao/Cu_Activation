@@ -75,6 +75,7 @@ public:
     void updateTracerPosition(QCustomPlot*, double, double);
     void areaSelectFinished();
 
+
 public slots:
     void slotBeforeReplot();
     void slotRestorePlot(QMouseEvent*);
@@ -96,6 +97,7 @@ public slots:
 
     void slotCountRefreshTimelength();
 
+    void slotHideDataTip();
 protected:
     virtual bool eventFilter(QObject *watched, QEvent *event) override;
 

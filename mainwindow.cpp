@@ -138,9 +138,10 @@ MainWindow::MainWindow(QWidget *parent)
                 QPair<float, float> pair = controlHelper->gotoAbs(ui->comboBox_range->currentIndex());
                 this->setProperty("axis01-target-position", pair.first);
                 this->setProperty("axis02-target-position", pair.second);
-
-                SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待...\n正在移动位移平台至目标位置..."));
-                SplashWidget::instance()->exec();
+                if(!this->property("axis-prepared").toBool()){
+                    SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待...\n正在移动位移平台至目标位置..."));
+                    SplashWidget::instance()->exec();
+                }
             });
         }
     });
@@ -184,6 +185,7 @@ MainWindow::MainWindow(QWidget *parent)
         emit sigRefreshUi();
     });
 
+    qRegisterMetaType<QtMsgType>("QtMsgType");
     connect(commandHelper, &CommandHelper::sigAppendMsg2, this, [=](const QString & msg, QtMsgType msgType){
         qInfo().noquote()<<msg;
     }, Qt::QueuedConnection);
@@ -2233,3 +2235,18 @@ void MainWindow::on_action_restore_2_triggered()
 
     plotWidget->slotRestoreView();
 }
+
+void MainWindow::on_action_clear_triggered()
+{
+    QAction *_action = (QAction*)sender();
+    if (ui->tabWidget_client->currentWidget()->objectName() == "tabWidget_workLog")
+        return ;
+
+    PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
+    if (ui->tabWidget_client->currentWidget()->objectName() == "OfflineDataAnalysisWidget"){
+        plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
+    }
+
+    plotWidget->slotHideDataTip();
+}
+

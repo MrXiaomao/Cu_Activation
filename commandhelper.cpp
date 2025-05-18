@@ -334,7 +334,7 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
                 if (ioFlags == QIODevice::Truncate)
                 {   
                     QString msg = "开始计数测量";
-                    qInfo().noquote()<<msg;
+                    //qInfo().noquote()<<msg;
                     emit sigAppendMsg2(msg, QtInfoMsg);
                     out << "time,CountRate1,CountRate2,ConCount_single,ConCount_multiple,deathRatio1(%),deathRatio2(%)" << Qt::endl;
                 }

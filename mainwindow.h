@@ -117,6 +117,8 @@ private slots:
     //工具栏还原视图
     void on_action_restore_2_triggered();
 
+    void on_action_clear_triggered();
+
 private:
     Ui::MainWindow *ui = nullptr;
     SpectrumModel *spectrummodel = nullptr;//能谱模型

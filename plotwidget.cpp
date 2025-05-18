@@ -477,6 +477,9 @@ void PlotWidget::updateTracerPosition(QCustomPlot* customPlot, double key, doubl
     QCPItemLine* coordsTipItemXLine = customPlot->findChild<QCPItemLine*>("coordsTipItemXLine");
     QCPItemLine* coordsTipItemYLine = customPlot->findChild<QCPItemLine*>("coordsTipItemYLine");
 
+    if (!this->property("showDataTip").toBool())
+        return;
+
     coordsTipItemTracer->setVisible(true);
     coordsTipItemText->setVisible(true);
     coordsTipItemArrowLine->setVisible(true);
@@ -594,6 +597,7 @@ void PlotWidget::slotShowTracer(QMouseEvent *event)
         //const QCPGraphData *ghd = data->at(key);
         QVector<QCPGraphData>::const_iterator ghd = data->findBegin(key, false);
         if (ghd != data->constEnd() && abs(ghd->mainKey()-key)<stepT && ghd->mainValue()>=0){
+            this->setProperty("showDataTip", true);
             updateTracerPosition(customPlot, ghd->mainKey(), ghd->mainValue());
             if (this->property("isCountModel").toBool())
                 customPlot->setProperty("tracer-key2", ghd->mainKey());
@@ -2125,3 +2129,28 @@ bool PlotWidget::getLastFitStatus()
     }
 }
 */
+
+void PlotWidget::slotHideDataTip()
+{
+    QList<QCustomPlot*> customPlots = getAllEnergyCustomPlot();
+    for (auto customPlot : customPlots){
+        QCPItemText *coordsTipItemText = customPlot->findChild<QCPItemText*>("coordsTipItemText");
+        if (coordsTipItemText){
+            coordsTipItemText->setText("");
+        }
+
+        QCPItemTracer *coordsTipItemTracer = customPlot->findChild<QCPItemTracer*>("coordsTipItemTracer");
+        QCPItemLine *coordsTipItemArrowLine = customPlot->findChild<QCPItemLine*>("coordsTipItemArrowLine");
+        QCPItemLine* coordsTipItemXLine = customPlot->findChild<QCPItemLine*>("coordsTipItemXLine");
+        QCPItemLine* coordsTipItemYLine = customPlot->findChild<QCPItemLine*>("coordsTipItemYLine");
+
+        if (coordsTipItemTracer) coordsTipItemTracer->setVisible(false);
+        if (coordsTipItemText) coordsTipItemText->setVisible(false);
+        if (coordsTipItemArrowLine) coordsTipItemArrowLine->setVisible(false);
+        if (coordsTipItemXLine) coordsTipItemXLine->setVisible(false);
+        if (coordsTipItemYLine) coordsTipItemYLine->setVisible(false);
+
+        this->setProperty("showDataTip", false);
+        customPlot->replot();
+    }
+}

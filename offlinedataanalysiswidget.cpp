@@ -302,6 +302,8 @@ void OfflineDataAnalysisWidget::slotStart()
     int delayTime = ui->spinBox_delayTime->value();//符合延迟时间,ns
     int timeWidth = ui->spinBox_timeWidth->value();//时间窗宽度，单位ns(符合分辨时间)
     detParameter.timeWidth = timeWidth;
+    // if(detParameter.measureModel == mmManual) 
+    detParameter.coolingTime = ui->spinBox_coolingTime->value(); //更新冷却时间，只有手动模式可以更新
 
     QLiteThread *calThread = new QLiteThread();
     calThread->setObjectName("calThread");
@@ -363,7 +365,7 @@ void OfflineDataAnalysisWidget::slotStart()
             
             //记录FPGA内的最大时刻，作为符合测量的时间区间右端点。
             if (data1_2.size() > 0 || data2_2.size() > 0 ){
-                coincidenceAnalyzer->calculate(data1_2, data2_2, (unsigned short*)EnWindow, timeWidth, delayTime, true, false);
+                coincidenceAnalyzer->calculate(data1_2, data2_2, (unsigned short*)EnWindow, timeWidth, delayTime, true, true);
                 data1_2.clear();
                 data2_2.clear();
             }

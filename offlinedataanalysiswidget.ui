@@ -179,8 +179,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>390</width>
-             <height>1011</height>
+             <width>425</width>
+             <height>990</height>
             </rect>
            </property>
            <property name="maximumSize">
@@ -456,7 +456,7 @@
                   </sizepolicy>
                  </property>
                  <property name="readOnly">
-                  <bool>true</bool>
+                  <bool>false</bool>
                  </property>
                  <property name="minimum">
                   <number>1</number>

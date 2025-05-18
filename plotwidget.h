@@ -54,6 +54,10 @@ public:
     void switchToCountMode(bool isCountModel);
     void switchToLogarithmicMode(bool isLogarithmic);
 
+    //获取上一次拟合状态，true:拟合成功，false:拟合失败
+    // bool getLastFitStatus();
+    //向配置文件中写入上一次拟合状态。
+    // bool setLastFitStatus();
     void switchToTipMode();//数据提示
     void switchToDragMode();//选择拟合区域
     void switchToMoveMode();//平移视图
@@ -112,6 +116,7 @@ private:
     bool isDragging = false;
     bool allowAreaSelected = false;//是否允许鼠标拖选择区域
     bool isPressed = false;
+    bool lastfitStatus = false;//上一次拟合是否成功
     QPoint dragStart;
 
     QColor clrBackground = QColor(255, 255, 255);

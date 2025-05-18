@@ -1179,6 +1179,9 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                             // gaussResultItemText->setVisible(true);
                                             customPlot->replot();
                                         }
+                                        //打印日志更新拟合状态
+                                        if(!lastfitStatus) qInfo().noquote()<<"拟合成功";
+                                        lastfitStatus = true;
 
                                         //显示拟合曲线
                                         customPlot->setProperty("mean", mean/*result[1]*/);
@@ -1195,7 +1198,12 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                         if (gaussResultItemText){
                                             gaussResultItemText->setVisible(false);
                                         }
-                                        qCritical().noquote()<<"高斯拟合发生错误,可能原因：选取的峰位不具有高斯形状，无法进行高斯拟合，\n建议：请重新选取高斯曲线区域或等统计涨落变小后再选取";
+                                        //打印日志更新拟合状态
+                                        if(lastfitStatus) 
+                                        {
+                                            lastfitStatus = false;
+                                            qCritical().noquote()<<"高斯拟合发生错误,可能原因：选取的峰位不具有高斯形状，无法进行高斯拟合，\n建议：请重新选取高斯曲线区域或等统计涨落变小后再选取";
+                                        }
                                     }
                                 }
                                 else
@@ -1204,11 +1212,16 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                     if (gaussResultItemText){
                                         gaussResultItemText->setVisible(false);
                                     }
-                                    qCritical().noquote()<<"高斯拟合发生错误,可能原因：选取的初始峰位不具有高斯形状，无法进行高斯拟合，\n建议：请重新选取高斯曲线区域或等统计涨落变小后再选取";
+                                    if(lastfitStatus) 
+                                    {
+                                        lastfitStatus = false;
+                                        qCritical().noquote()<<"高斯拟合发生错误,可能原因：选取的初始峰位不具有高斯形状，无法进行高斯拟合，\n建议：请重新选取高斯曲线区域或等统计涨落变小后再选取";
+                                    }
                                 }
                             }
                             else
                             {
+                                lastfitStatus = false;
                                 qInfo().noquote()<<"框选数据点过少，请至少框选6个及以上数据点";
                             }
                         }
@@ -2082,3 +2095,33 @@ void PlotWidget::slotRestoreView()
     }
     emit sigPausePlot(false); //是否暂停图像刷新
 }
+/*
+bool PlotWidget::getLastFitStatus()
+{
+    bool bFitStatus = false;
+    QString path = QApplication::applicationDirPath() + "/config";
+    QDir dir(path);
+    if (!dir.exists())
+        dir.mkdir(path);
+
+    QFile file(QApplication::applicationDirPath() + "/config/user.json");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // 读取文件内容
+        QByteArray jsonData = file.readAll();
+        file.close();
+
+        // 将 JSON 数据解析为 QJsonDocument
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+        QJsonObject jsonObj = jsonDoc.object();
+
+        //公共
+        QJsonObject jsonObjPub;
+        if (jsonObj.contains("Public")){
+            jsonObjPub = jsonObj["Public"].toObject();
+            if(jsonObjPub.contains("fit_status")){
+                bFitStatus = jsonObjPub["fit_status"].toBool();
+            }
+        }
+    }
+}
+*/

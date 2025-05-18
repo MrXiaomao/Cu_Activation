@@ -72,7 +72,7 @@ struct StepTimeCount{
 
 // 符合计数的结果
 struct CoincidenceResult{
-    unsigned time = 0; //时刻，单位:s。
+    unsigned int time = 0; //时刻，单位:s。
     int ConCount_single = 0;//一秒内的单符合的个数
     int ConCount_multiple = 0;//一秒内的多符合的个数
     int CountRate1 = 0; //探测器1的计数率，是指在能窗内的计数率

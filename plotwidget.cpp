@@ -1168,15 +1168,15 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                         //显示拟合数据
                                         QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
                                         if (gaussResultItemText){
-                                            // QString info = QString("峰  位: %1\n半高宽: %2\n左能窗: %3\n右能窗: %4")
-                                            //                    .arg(QString::number(mean, 'f', 0))
-                                            //                    .arg(QString::number(FWHM, 'f', 3))
-                                            //                    .arg(QString::number(leftWindow, 10))//十进制输出整数
-                                            //                    .arg(QString::number(rightWindow, 10));
+                                            QString info = QString("峰  位: %1\n半高宽: %2\n左能窗: %3\n右能窗: %4")
+                                                               .arg(QString::number(mean, 'f', 0))
+                                                               .arg(QString::number(FWHM, 'f', 3))
+                                                               .arg(QString::number(leftWindow, 10))//十进制输出整数
+                                                               .arg(QString::number(rightWindow, 10));
 
-                                            // gaussResultItemText->setText(info);
-                                            // gaussResultItemText->position->setCoords(result[1], result[2]);//以峰值坐标为显示位置
-                                            // gaussResultItemText->setVisible(true);
+                                            gaussResultItemText->setText(info);
+                                            gaussResultItemText->position->setCoords(result[1], result[2]);//以峰值坐标为显示位置
+                                            gaussResultItemText->setVisible(true);
                                             customPlot->replot();
                                         }
                                         //打印日志更新拟合状态
@@ -1871,7 +1871,7 @@ void PlotWidget::slotGauss(QCustomPlot* customPlot, int leftE, int rightE)
                     curveGraph->setVisible(true);
                     
                     //拟合结果展示
-                    QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
+                    /*QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
                     double FWHM = 2*sqrt(2*log(2))*sigma;
                     if (gaussResultItemText){
                         // if (gaussResultItemText && mean > 0 && FWHM > 0){
@@ -1884,7 +1884,7 @@ void PlotWidget::slotGauss(QCustomPlot* customPlot, int leftE, int rightE)
                         gaussResultItemText->position->setCoords(result[1], result[2]);//以峰值坐标为显示位置
                         gaussResultItemText->setText(info);
                         gaussResultItemText->setVisible(true);
-                    }
+                    }*/
                     //customPlot->replot();
                 }
             }

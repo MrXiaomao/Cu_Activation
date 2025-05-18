@@ -416,7 +416,7 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
                 }
 
                 //给出平均计数率cps,注意，这里是整除，当计数率小于1cps时会变成零。
-                v.time = r3[posI].time;
+                v.time = r3[posI-1].time;
                 v.CountRate1 /= _stepT;
                 v.CountRate2 /= _stepT;
                 v.ConCount_single /= _stepT;

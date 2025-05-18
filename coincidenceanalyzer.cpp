@@ -38,9 +38,9 @@ CoincidenceAnalyzer::CoincidenceAnalyzer():
 countCoin(0), coolingTime_Manual(0), coolingTime_Auto(0), isChangeEnWindow(false),autoFirst(true),
 GaussCountMin(200000),
 #ifdef QT_DEBUG
-GaussMinGapTime(10)
+GaussMinGapTime(60)
 #else
-GaussMinGapTime(10)
+GaussMinGapTime(60)
 #endif
 {
     for(unsigned short i=0; i<MULTI_CHANNEL; i++)

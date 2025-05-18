@@ -399,10 +399,11 @@ void OfflineDataAnalysisWidget::doEnWindowData(SingleSpectrum r1, vector<Coincid
         if (count>1 && (count % _stepT == 0)){
             vector<CoincidenceResult> rr3;
 
+            size_t posI = 0;
             for (size_t i=0; i < count/_stepT; i++){
                 CoincidenceResult v;
                 for (int j=0; j<_stepT; ++j){
-                    size_t posI = i*_stepT + j;
+                    posI = i*_stepT + j;
                     v.CountRate1 += r3[posI].CountRate1;
                     v.CountRate2 += r3[posI].CountRate2;
                     v.ConCount_single += r3[posI].ConCount_single;
@@ -410,6 +411,7 @@ void OfflineDataAnalysisWidget::doEnWindowData(SingleSpectrum r1, vector<Coincid
                 }
 
                 //给出平均计数率cps,注意，这里是整除，当计数率小于1cps时会变成零。
+                v.time = r3[posI].time;
                 v.CountRate1 /= _stepT;
                 v.CountRate2 /= _stepT;
                 v.ConCount_single /= _stepT;
@@ -485,13 +487,14 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
             //时间步长，求均值
             if (_stepT > 1){
                 int validCount = count - startTime_absolute; //由于符合曲线的前面部分填充了零。startTimeFPGA~startTime_absolute之间填充的零
-                if (validCount>1 && (validCount % _stepT == 0)){
+                if (validCount>1){
                     vector<CoincidenceResult> rr3;
-
-                    for (size_t i=startTime_absolute; i < validCount/_stepT; i++){
+                    size_t count = validCount/_stepT;
+                    size_t posI = 0;
+                    for (size_t i=startTime_absolute; i < count; i++){
                         CoincidenceResult v;
                         for (int j=0; j<_stepT; ++j){
-                            size_t posI = i*_stepT + j;
+                            posI = i*_stepT + j;
                             v.CountRate1 += result[posI].CountRate1;
                             v.CountRate2 += result[posI].CountRate2;
                             v.ConCount_single += result[posI].ConCount_single;
@@ -499,6 +502,7 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
                         }
 
                         //给出平均计数率cps,注意，这里是整除，当计数率小于1cps时会变成零。
+                        v.time = result[posI].time;
                         v.CountRate1 /= _stepT;
                         v.CountRate2 /= _stepT;
                         v.ConCount_single /= _stepT;

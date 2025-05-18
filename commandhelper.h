@@ -40,6 +40,29 @@ public:
     void startWork();
     void switchToCountMode(bool refModel);
     void updateStepTime(int stepT); //用于响应主界面点击刷新按钮
+    
+    // 获取有效数据的文件名
+    inline const QString getValidFilename(){
+        return validDataFileName;
+    }
+
+    //获取测量参数
+    inline const DetectorParameter getDetParameter(){
+        return detectorParameter;
+    }
+
+    //获取增益表
+    inline const QMap<qint8, double> getGainValue()
+    {
+        return gainValue;
+    }
+
+    //获取设置能窗时的起始时刻
+    inline const quint32 getsetEnTime()
+    {
+        return time_SetEnWindow;
+    }
+
     /**
      * @description: 更新能窗和步长，适用于点击开始测量后，将参数传递给命令管理类
      * @param {int} stepT 时间步长，单位s
@@ -85,6 +108,8 @@ protected:
     QMap<qint8, double> gainValue;
 
 signals:
+    //更新界面日志
+    void sigAppendMsg2(const QString &msg, QtMsgType msgType);
     // 继电器状态
     void sigRelayStatus(bool on);
     void sigRelayFault();//故障，一般指网络不通

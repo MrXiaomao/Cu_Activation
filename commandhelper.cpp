@@ -137,69 +137,19 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
     connect(this, &CommandHelper::sigMeasureStop, this, [=](){
         //测量停止，进行符合计算，给出产额结果
         if(detectorParameter.transferModel == 0x05){
-            //测量停止保存符合运算测量参数
+            //测量停止保存测量时长，其他测量参数在开始测量时已经保存
             QString configResultFile = validDataFileName + ".配置";
             {
                 QFile file(configResultFile);
-                if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+                if (file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Append)) {
                     QTextStream out(&file);
-
-                    // 保存粒子测量参数
-                    out << tr("阈值1=") << detectorParameter.triggerThold1 << Qt::endl;
-                    out << tr("阈值2=") << detectorParameter.triggerThold2 << Qt::endl;
-                    out << tr("波形极性=") << ((detectorParameter.waveformPolarity==0x00) ? tr("正极性") : tr("负极性")) << Qt::endl;
-                    out << tr("死时间=") << detectorParameter.deadTime << Qt::endl;
-                    out << tr("波形触发模式=") << ((detectorParameter.triggerModel==0x00) ? tr("normal") : tr("auto")) << Qt::endl;
-                    if (gainValue.contains(detectorParameter.gain))
-                        out << tr("探测器增益=") << gainValue[detectorParameter.gain] << Qt::endl;
-                    switch (detectorParameter.measureRange){
-                        case 1:
-                            out << tr("量程选取=小量程")<< Qt::endl;
-                            break;
-                        case 2:
-                            out << tr("量程选取=中量程")<< Qt::endl;
-                            break;
-                        case 3:
-                            out << tr("量程选取=大量程")<< Qt::endl;
-                            break;
-                        default:
-                        break;
-                    }
-                    // out << tr("量程选取=")<<detectorParameter.measureRange<< Qt::endl;
-                    out << tr("冷却时长=") << detectorParameter.coolingTime << Qt::endl; //单位s
-                    
-                    //开始保存FPGA数据的时刻，单位s，以活化后开始计时(冷却时间+FPGA时钟)。
-                    int savetime_FPGA = 0;
-                    if(detectorParameter.measureModel == mmManual){
-                        savetime_FPGA = this->time_SetEnWindow;
-                    }else if(detectorParameter.measureModel == mmAuto){
-                        savetime_FPGA = detectorParameter.coolingTime;
-                    }
-
-                    out << tr("测量开始时间(冷却时间+FPGA时钟)=")<< savetime_FPGA <<Qt::endl;
-                    out << tr("符合延迟时间=") << detectorParameter.delayTime << Qt::endl; //单位ns
-                    out << tr("符合分辨时间=") << detectorParameter.timeWidth << Qt::endl; //单位ns
-                    out << tr("时间步长=") << 1 << Qt::endl; //注意，存储的数据时间步长恒为1s
                     out << tr("测量时长=") <<currentFPGATime<< Qt::endl;
-                    out << tr("Det1符合能窗左=") << this->EnWindow[0] << Qt::endl;
-                    out << tr("Det1符合能窗右=") << this->EnWindow[1] << Qt::endl;
-                    out << tr("Det2符合能窗左=") << this->EnWindow[2] << Qt::endl;
-                    out << tr("Det2符合能窗右=") << this->EnWindow[3] << Qt::endl;
-                    if (detectorParameter.measureModel == mmManual){
-                        //手动
-                        out << tr("测量模式=手动") << Qt::endl;
-                    } else if (detectorParameter.measureModel == mmAuto){
-                        //自动
-                        out << tr("测量模式=自动") << Qt::endl;
-                    }
-
                     file.flush();
                     file.close();
                 }
             }
-            qInfo().noquote() << tr("本次测量参数配置已存放在：%1").arg(configResultFile);
-            
-            //记录FPGA丢包的数据，用以离线分析时的修正
+
+            //记录FPGA丢包的数据，用以离线分析时的修正,该数据放在有效数据文件末尾
             QString lossDataFile = validDataFileName;
             {
                 QFile file(validDataFileName);
@@ -383,7 +333,9 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
                 QTextStream out(&file);
                 if (ioFlags == QIODevice::Truncate)
                 {   
-                    qInfo().noquote()<<"开始计数测量";
+                    QString msg = "开始计数测量";
+                    qInfo().noquote()<<msg;
+                    emit sigAppendMsg2(msg, QtInfoMsg);
                     out << "time,CountRate1,CountRate2,ConCount_single,ConCount_multiple,deathRatio1(%),deathRatio2(%)" << Qt::endl;
                 }
                 CoincidenceResult coincidenceResult = r3.back();
@@ -1349,6 +1301,68 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
     } else {
         qWarning().noquote() << tr("创建缓存文件失败，文件名：%1").arg(validDataFileName);
     }
+
+    //保存测量参数,自动测量一开始就保存参数
+    QString configResultFile = validDataFileName + ".配置";
+    {
+        QFile file(configResultFile);
+        if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+            QTextStream out(&file);
+
+            // 保存粒子测量参数
+            out << tr("阈值1=") << detectorParameter.triggerThold1 << Qt::endl;
+            out << tr("阈值2=") << detectorParameter.triggerThold2 << Qt::endl;
+            out << tr("波形极性=") << ((detectorParameter.waveformPolarity==0x00) ? tr("正极性") : tr("负极性")) << Qt::endl;
+            out << tr("死时间=") << detectorParameter.deadTime << Qt::endl;
+            out << tr("波形触发模式=") << ((detectorParameter.triggerModel==0x00) ? tr("normal") : tr("auto")) << Qt::endl;
+            if (gainValue.contains(detectorParameter.gain))
+                out << tr("探测器增益=") << gainValue[detectorParameter.gain] << Qt::endl;
+            switch (detectorParameter.measureRange){
+                case 1:
+                    out << tr("量程选取=小量程")<< Qt::endl;
+                    break;
+                case 2:
+                    out << tr("量程选取=中量程")<< Qt::endl;
+                    break;
+                case 3:
+                    out << tr("量程选取=大量程")<< Qt::endl;
+                    break;
+                default:
+                break;
+            }
+            // out << tr("量程选取=")<<detectorParameter.measureRange<< Qt::endl;
+            out << tr("冷却时长=") << detectorParameter.coolingTime << Qt::endl; //单位s
+            
+            //开始保存FPGA数据的时刻，单位s，以活化后开始计时(冷却时间+FPGA时钟)。
+            int savetime_FPGA = 0;
+            if(detectorParameter.measureModel == mmManual){
+                savetime_FPGA = this->time_SetEnWindow;
+            }else if(detectorParameter.measureModel == mmAuto){
+                savetime_FPGA = detectorParameter.coolingTime;
+            }
+
+            out << tr("测量开始时间(冷却时间+FPGA时钟)=")<< savetime_FPGA <<Qt::endl;
+            out << tr("符合延迟时间=") << detectorParameter.delayTime << Qt::endl; //单位ns
+            out << tr("符合分辨时间=") << detectorParameter.timeWidth << Qt::endl; //单位ns
+            out << tr("时间步长=") << 1 << Qt::endl; //注意，存储的数据时间步长恒为1s
+            // out << tr("测量时长=") <<currentFPGATime<< Qt::endl;
+            out << tr("Det1符合能窗左=") << this->EnWindow[0] << Qt::endl;
+            out << tr("Det1符合能窗右=") << this->EnWindow[1] << Qt::endl;
+            out << tr("Det2符合能窗左=") << this->EnWindow[2] << Qt::endl;
+            out << tr("Det2符合能窗右=") << this->EnWindow[3] << Qt::endl;
+            if (detectorParameter.measureModel == mmManual){
+                //手动
+                out << tr("测量模式=手动") << Qt::endl;
+            } else if (detectorParameter.measureModel == mmAuto){
+                //自动
+                out << tr("测量模式=自动") << Qt::endl;
+            }
+
+            file.flush();
+            file.close();
+        }
+    }
+    qInfo().noquote() << tr("本次测量参数配置已存放在：%1").arg(configResultFile);
 
     cmdPool.clear();
     //阈值

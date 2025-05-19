@@ -107,9 +107,10 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
     if(unusedData2.size()>0) 
         time2_elapseFPGA = unusedData2.back().time/NANOSECONDS - (countCoin + coolingTime_Auto);//计算FPGA当前最大时间与上一时刻的时间差
 
-    int deltaT = 1; //单位秒
+    int deltaT = 2; //单位秒
     //都存够1秒的数据才进行处理，或者其中某一个存满2s数据。
-    while((time1_elapseFPGA >= deltaT && time2_elapseFPGA >= deltaT) || time1_elapseFPGA>1 || time2_elapseFPGA>1)
+    while(time1_elapseFPGA >= deltaT && time2_elapseFPGA >= deltaT)
+    // while((time1_elapseFPGA >= deltaT && time2_elapseFPGA >= deltaT) || time1_elapseFPGA>1 || time2_elapseFPGA>1)
     {
         isChangeEnWindow = false;
         //先计算出当前一秒的数据点个数,若都没有完整一秒数据时，直接退出计算，下一次处理。
@@ -548,6 +549,9 @@ bool CoincidenceAnalyzer::GetDataPoint(vector<TimeEnergy>& data1, vector<TimeEne
     CurrentPoint onePoint;
 
     long long current_nanosconds = (long long)(countCoin + coolingTime_Auto)  * NANOSECONDS;
+    if(current_nanosconds/NANOSECONDS > (1516-coolingTime_Manual)){
+        int a =1;
+    }
     onePoint.time = countCoin + coolingTime_Auto + coolingTime_Manual; //对于自动测量时，coolingTime_Manual为0。对于手动测量时，coolingTime_Auto为零
     int ilocation1_below = 0;
     int ilocation2_below = 0;

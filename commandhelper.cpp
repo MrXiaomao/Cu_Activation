@@ -494,14 +494,14 @@ void CommandHelper::handleManualMeasureNetData()
     }
     else if(detectorParameter.transferModel == 0x05)
     {
-#ifdef QT_DEBUG
+// #ifdef QT_DEBUG
         //粒子模式，DEBUG模式下保存原始数据查找问题
         QMutexLocker locker(&mutexFile);
         if (nullptr != pfSaveNet && binaryData.size() > 0){
             pfSaveNet->write(binaryData);
             pfSaveNet->flush();
         }
-#endif
+// #endif
     }
 
     //00:能谱 03:波形 05:粒子
@@ -539,14 +539,14 @@ void CommandHelper::handleAutoMeasureNetData()
 {
     QByteArray binaryData = socketDetector->readAll();
 
-#ifdef QT_DEBUG
+// #ifdef QT_DEBUG
     //粒子模式，DEBUG模式下保存原始数据查找问题
     QMutexLocker locker(&mutexFile);
     if (nullptr != pfSaveNet && binaryData.size() > 0){
         pfSaveNet->write(binaryData);
         pfSaveNet->flush();
     }
-#endif
+// #endif
 
     //00:能谱 03:波形 05:粒子
     if (workStatus == Preparing){
@@ -1051,7 +1051,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     if(detectorParameter.transferModel == 0x05)
     {
         QMutexLocker locker(&mutexFile);
-#ifdef QT_DEBUG
+// #ifdef QT_DEBUG
         netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_Net.dat");
         if (nullptr != pfSaveNet){
             pfSaveNet->close();
@@ -1061,11 +1061,11 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
         //网口数据缓存文件，波形模式、能谱模式直接存网口数据缓存文件
         pfSaveNet = new QFile(netDataFileName);
         if (pfSaveNet->open(QIODevice::WriteOnly)) {
-            qInfo().noquote() << tr("创建网口数据缓存文件成功，文件名：%1").arg(netDataFileName);
+            qDebug().noquote() << tr("创建网口数据缓存文件成功，文件名：%1").arg(netDataFileName);
         } else {
-            qWarning().noquote() << tr("创建网口数据缓存文件失败，文件名：%1").arg(netDataFileName);
+            qDebug().noquote() << tr("创建网口数据缓存文件失败，文件名：%1").arg(netDataFileName);
         }
-#endif
+// #endif
 
         if (nullptr != pfSaveVaildData){
             pfSaveVaildData->close();
@@ -1294,7 +1294,7 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
     //创建缓存文件
     validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_valid.dat");
     QMutexLocker locker2(&mutexFile);
-#ifdef QT_DEBUG
+// #ifdef QT_DEBUG
     netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_Net.dat");
     if (nullptr != pfSaveNet){
         pfSaveNet->close();
@@ -1305,11 +1305,11 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
     //网口数据缓存文件，波形模式、能谱模式直接存网口数据缓存文件
     pfSaveNet = new QFile(netDataFileName);
     if (pfSaveNet->open(QIODevice::WriteOnly)) {
-        qDebug() << tr("创建网口数据缓存文件成功，文件名：%1").arg(netDataFileName);
+        qDebug().noquote() << tr("创建网口数据缓存文件成功，文件名：%1").arg(netDataFileName);
     } else {
-        qWarning().noquote() << tr("创建网口数据缓存文件失败，文件名：%1").arg(netDataFileName);
+        qDebug().noquote() << tr("创建网口数据缓存文件失败，文件名：%1").arg(netDataFileName);
     }
-#endif
+// #endif
 
     if (nullptr != pfSaveVaildData){
         pfSaveVaildData->close();
@@ -1526,13 +1526,13 @@ void CommandHelper::netFrameWorkThead()
                         foundStop = true;
                         qDebug()<<"Recv HEX: "<<cmdStopTrigger.toHex(' ');
                         QMutexLocker locker(&mutexFile);
-#ifdef QT_DEBUG
+// #ifdef QT_DEBUG
                         if (nullptr != pfSaveNet){
                             pfSaveNet->close();
                             delete pfSaveNet;
                             pfSaveNet = nullptr;
                         }
-#endif
+// #endif
                         if (nullptr != pfSaveVaildData){
                             pfSaveVaildData->close();
                             delete pfSaveVaildData;

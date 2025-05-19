@@ -262,6 +262,8 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
             if(rangeStr == "大量程") detParameter.measureRange = 3;
 
             this->startTime_absolute = static_cast<unsigned int>(configMap.value("测量开始时间(冷却时间+FPGA时钟)").toInt());
+            if(detParameter.measureModel == mmManual) startFPGA_time = this->startTime_absolute - detParameter.coolingTime;
+            else startFPGA_time = detParameter.coolingTime;
 
             ui->lineEdit_measuremodel->setText(configMap.value("测量模式"));
             ui->spinBox_step->setValue(configMap.value("时间步长").toInt());
@@ -455,8 +457,11 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
         
         // 读取活化测量的数据时刻区间[起始时间，结束时间]
         vector<CoincidenceResult> result = coincidenceAnalyzer->GetCoinResult();
-        // int startTime = result.begin()->time;
-        unsigned int startTime = this->startTime_absolute + 1;
+        
+        unsigned int startTime = 0;
+        if(detParameter.measureModel == mmManual) startTime = detParameter.coolingTime + startFPGA_time + 1;
+        else startTime = detParameter.coolingTime + 1;
+
         unsigned int endTime = result.back().time;
 
         //检查界面的起始时刻和结束时刻不超范围，若超范围则调整到范围内。
@@ -486,12 +491,12 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
 
             //时间步长，求均值
             if (_stepT > 1){
-                int validCount = count - startTime_absolute; //由于符合曲线的前面部分填充了零。startTimeFPGA~startTime_absolute之间填充的零
+                int validCount = count - startFPGA_time; //由于符合曲线的前面部分填充了零。
                 if (validCount>1){
                     vector<CoincidenceResult> rr3;
                     size_t count = validCount/_stepT;
                     size_t posI = 0;
-                    for (size_t i=startTime_absolute; i < count; i++){
+                    for (size_t i=startFPGA_time; i < count; i++){
                         CoincidenceResult v;
                         for (int j=0; j<_stepT; ++j){
                             posI = i*_stepT + j;
@@ -514,7 +519,7 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
                 }
             } else{
                 vector<CoincidenceResult> rr3;
-                for (size_t i=startTime_absolute; i < count; i++){
+                for (size_t i=startFPGA_time; i < count; i++){
                     rr3.push_back(result[i]);
                 }
 

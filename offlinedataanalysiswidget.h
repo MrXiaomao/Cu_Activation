@@ -86,6 +86,7 @@ private:
 
     quint32 stepT = 1;
     unsigned int startTime_absolute; //记录保存数据的起始时刻(冷却时间+FPGA时钟)。单位s，FPGA内部时钟
+    unsigned int startFPGA_time; //开始保存FPGA数据的时刻(FPGA时钟),在这之前计数值都为零
     bool reAnalyzer = false; // 是否重新开始解析
     bool analyzerFinished = true;// 解析是否完成
     quint64 detectNum = 0; //探测到的粒子数

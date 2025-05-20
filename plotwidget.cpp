@@ -27,8 +27,8 @@ PlotWidget::PlotWidget(QWidget *parent) : QStackedWidget(parent)
 
     COUNT_Y_AXIS_LOWER[0] = 0;
     COUNT_Y_AXIS_LOWER[1] = 0;
-    COUNT_Y_AXIS_UPPER[0] = 1e2;
-    COUNT_Y_AXIS_UPPER[1] = 1e2;
+    COUNT_Y_AXIS_UPPER[0] = 10;
+    COUNT_Y_AXIS_UPPER[1] = 10;
 
     //能谱模式下
     SPECTRUM_X_AXIS_LOWER = 0;
@@ -807,15 +807,15 @@ QCustomPlot *PlotWidget::allocCustomPlot(QString objName, bool needGauss, QWidge
         }
     });
     connect(customPlot->yAxis, QOverload<const QCPRange &>::of(&QCPAxis::rangeChanged), this, [=](const QCPRange &range){
-        qint64 maxRange = range.upper - range.lower;
+        qint32 maxRange = range.upper - range.lower;
         if (this->property("isLogarithmic").toBool()){//对数坐标
-            if (maxRange < 1e2){
-                customPlot->yAxis->setRange(SPECTURM_Y_AXIS_LOWER_LOG, range.lower + 1e2);//0.01~1000
+            if (maxRange < 10){
+                customPlot->yAxis->setRange(SPECTURM_Y_AXIS_LOWER_LOG, range.lower + 10);//0.01~1000
             }
-        } else if (maxRange < 1e2){
-            customPlot->yAxis->setRange(range.lower, range.lower + 1e2);//0.01~1000
+        } else if (maxRange < 10){
+            customPlot->yAxis->setRange(range.lower, range.lower + 10);//0.01~1000
         } else if (range.lower < Y_AXIS_LOWER){
-            customPlot->yAxis->setRange(Y_AXIS_LOWER, maxRange + 1e2);//0.01~1000
+            customPlot->yAxis->setRange(Y_AXIS_LOWER, maxRange + 10);//0.01~1000
         }
 
         QCPItemStraightLine* itemStraightLineLeft = customPlot->findChild<QCPItemStraightLine*>("itemStraightLineLeft");
@@ -1807,7 +1807,6 @@ void PlotWidget::switchToLogarithmicMode(bool isLogarithmic)
             customPlot->yAxis->setTicker(ticker);
 
             customPlot->yAxis->setScaleType(QCPAxis::ScaleType::stLinear);
-            // customPlot->yAxis->setRange(0, 1e2);
             customPlot->yAxis->setNumberFormat("f");
             customPlot->yAxis->setNumberPrecision(0);
 

@@ -134,14 +134,13 @@ MainWindow::MainWindow(QWidget *parent)
             //这里采用异步触发，避免堵塞主界面刷新状态
             QTimer::singleShot(500, this, [=](){
                 commandHelper->openRelay(true);
-
-                QPair<float, float> pair = controlHelper->gotoAbs(ui->comboBox_range->currentIndex());
-                this->setProperty("axis01-target-position", pair.first);
-                this->setProperty("axis02-target-position", pair.second);
                 if(!this->property("axis-prepared").toBool()){
                     SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待...\n正在移动位移平台至目标位置..."));
                     SplashWidget::instance()->exec();
                 }
+                QPair<float, float> pair = controlHelper->gotoAbs(ui->comboBox_range->currentIndex());
+                this->setProperty("axis01-target-position", pair.first);
+                this->setProperty("axis02-target-position", pair.second);
             });
         }
     });
@@ -1337,10 +1336,12 @@ void MainWindow::on_pushButton_save_clicked()
 
 void MainWindow::on_pushButton_refresh_clicked()
 {
+    qDebug().noquote()<<tr("[手动测量]点击刷新按钮");
     this->saveConfigJson();
 
     int stepT = ui->spinBox_step->value();
-
+    QString msg = QString("刷新时间更新为：%1s").arg(stepT);
+    qDebug().noquote()<<msg;
     commandHelper->updateStepTime(stepT);
 }
 
@@ -1942,10 +1943,12 @@ bool MainWindow::saveCurrentTConfigJson(bool bSafeExitFlag)
 
 void MainWindow::on_pushButton_refresh_2_clicked()
 {
+    qDebug().noquote()<<tr("[自动测量]点击刷新按钮");
     this->saveConfigJson();
 
     int stepT = ui->spinBox_step_2->value();
-
+    QString msg = QString("刷新时间更新为：%1s").arg(stepT);
+    qDebug().noquote()<<msg;
     commandHelper->updateStepTime(stepT);
 }
 
@@ -2036,7 +2039,7 @@ void MainWindow::on_pushButton_confirm_clicked()
 {
     if (QMessageBox::question(this, tr("提示"), tr("您确定用当前能宽值来进行运算吗？\r\n\r\n提醒：整个测量过程中只允许设置能宽一次。"), QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) != QMessageBox::Yes)
         return ;
-
+    qDebug().noquote()<<tr("点击确认能窗");
     this->saveConfigJson();
 
     int stepT = ui->spinBox_step->value();

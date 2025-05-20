@@ -1181,7 +1181,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                                                .arg(QString::number(rightWindow, 10));
 
                                             gaussResultItemText->setText(info);
-                                            gaussResultItemText->position->setCoords(result[1], result[2]);//以峰值坐标为显示位置
+                                            gaussResultItemText->position->setCoords(result[1], result[0]);//以峰值坐标为显示位置
                                             gaussResultItemText->setVisible(true);
                                             customPlot->replot();
                                         }
@@ -1267,7 +1267,7 @@ void PlotWidget::slotBeforeReplot()
 
     QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
     if (gaussResultItemText){
-        gaussResultItemText->position->setCoords(customPlot->axisRect()->topLeft() + QPointF(50., 100.));
+        gaussResultItemText->position->setCoords(customPlot->axisRect()->topLeft() + QPointF(50., 120.));
     }
 
     double key = customPlot->property("tracer-key").toDouble();
@@ -1892,7 +1892,7 @@ void PlotWidget::slotGauss(QCustomPlot* customPlot, int leftE, int rightE)
                                     .arg(QString::number(mean - FWHM*0.5, 'f', 2))
                                     .arg(QString::number(mean + FWHM*0.5, 'f', 2));
 
-                        gaussResultItemText->position->setCoords(result[1], result[2]);//以峰值坐标为显示位置
+                        gaussResultItemText->position->setCoords(result[1], result[0]);//以峰值坐标为显示位置
                         gaussResultItemText->setText(info);
                         gaussResultItemText->setVisible(true);
                     }*/
@@ -1956,7 +1956,7 @@ void PlotWidget::slotUpdateEnWindow(unsigned short* EnWindow)
                                    .arg(QString::number(EnWindow[1], 10));
 
                 gaussResultItemText->setText(info);
-                gaussResultItemText->position->setCoords(EnWindow[0], EnWindow[1]);//以峰值坐标为显示位置
+                // gaussResultItemText->position->setCoords(mean, customPlotDet1->yAxis->range().upper);//以峰值坐标为显示位置
             }
         }
         {
@@ -1987,7 +1987,7 @@ void PlotWidget::slotUpdateEnWindow(unsigned short* EnWindow)
                                    .arg(QString::number(EnWindow[3], 10));
 
                 gaussResultItemText->setText(info);
-                gaussResultItemText->position->setCoords(EnWindow[2], EnWindow[3]);//以峰值坐标为显示位置
+                // gaussResultItemText->position->setCoords(mean, customPlotDet2->yAxis->range().upper);//以峰值坐标为显示位置
             }
         }
 
@@ -2097,14 +2097,14 @@ void PlotWidget::slotRestoreView()
             customPlot->rescaleAxes(true);
 
             //高斯拟合信息清空
-            QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
-            gaussResultItemText->setText("");
+            // QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
+            // gaussResultItemText->setText("");
 
             switchToMoveMode();
 
             //删除高斯曲线
-            customPlot->graph(1)->data()->clear();
-            customPlot->replot();
+            // customPlot->graph(1)->data()->clear();
+            // customPlot->replot();
         }
     }
     emit sigPausePlot(false); //是否暂停图像刷新

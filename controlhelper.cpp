@@ -406,7 +406,7 @@ bool ControlHelper::single_jogright(int axis_no)
     return fti_single_jogright(mHandle, mAxiaName[axis_no].toStdString().c_str()) == FT_SUCCESS;
 }
 
-/// 单轴获取当前位值（绝对坐标值）。
+/// 单轴获取当前位置（绝对坐标值）。
 bool ControlHelper::single_getpos(int axis_no, float* value)
 {
     if (mHandle == 0)

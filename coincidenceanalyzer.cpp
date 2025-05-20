@@ -549,9 +549,6 @@ bool CoincidenceAnalyzer::GetDataPoint(vector<TimeEnergy>& data1, vector<TimeEne
     CurrentPoint onePoint;
 
     long long current_nanosconds = (long long)(countCoin + coolingTime_Auto)  * NANOSECONDS;
-    if(current_nanosconds/NANOSECONDS > (1516-coolingTime_Manual)){
-        int a =1;
-    }
     onePoint.time = countCoin + coolingTime_Auto + coolingTime_Manual; //对于自动测量时，coolingTime_Manual为0。对于手动测量时，coolingTime_Auto为零
     int ilocation1_below = 0;
     int ilocation2_below = 0;

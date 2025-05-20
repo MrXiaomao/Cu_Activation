@@ -181,17 +181,20 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
             //符合测量模式保存测量能谱文件
             QString SpecFile = validDataFileName + ".累积能谱";
             {
-                QFile file(SpecFile);
-                if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
-                    QTextStream out(&file);
+                vector<CoincidenceResult> coinresult = coincidenceAnalyzer->GetCoinResult();
+                if(coinresult.size()>0) {
+                    QFile file(SpecFile);
+                    if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+                        QTextStream out(&file);
 
-                    SingleSpectrum spec = coincidenceAnalyzer->GetAccumulateSpectrum();
-                    out << "channel,"<< "SpectrumDet1,"<<"SpectrumDet2"<<Qt::endl;
-                    for (size_t j=0; j<MULTI_CHANNEL; ++j){
-                        out << j<<","<<spec.spectrum[0][j]<< ","<<spec.spectrum[1][j]<<Qt::endl;
+                        SingleSpectrum spec = coincidenceAnalyzer->GetAccumulateSpectrum();
+                        out << "channel,"<< "SpectrumDet1,"<<"SpectrumDet2"<<Qt::endl;
+                        for (size_t j=0; j<MULTI_CHANNEL; ++j){
+                            out << j<<","<<spec.spectrum[0][j]<< ","<<spec.spectrum[1][j]<<Qt::endl;
+                        }
+                        file.flush();
+                        file.close();
                     }
-                    file.flush();
-                    file.close();
                 }
             }
             qInfo().noquote() << tr("本次测量累积能谱已存放在：%1").arg(SpecFile);

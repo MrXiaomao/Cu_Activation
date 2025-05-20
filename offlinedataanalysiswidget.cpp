@@ -262,8 +262,8 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
             if(rangeStr == "大量程") detParameter.measureRange = 3;
 
             this->startTime_absolute = static_cast<unsigned int>(configMap.value("测量开始时间(冷却时间+FPGA时钟)").toInt());
-            if(detParameter.measureModel == mmManual) startFPGA_time = this->startTime_absolute - detParameter.coolingTime;
-            else startFPGA_time = detParameter.coolingTime;
+            if(detParameter.measureModel == mmManual) startFPGA_time = this->startTime_absolute - detParameter.coolingTime +1 ;
+            else startFPGA_time = detParameter.coolingTime + 1;
 
             ui->lineEdit_measuremodel->setText(configMap.value("测量模式"));
             ui->spinBox_step->setValue(configMap.value("时间步长").toInt());
@@ -460,7 +460,7 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
         
         unsigned int startTime = 0;
         if(detParameter.measureModel == mmManual) startTime = detParameter.coolingTime + startFPGA_time + 1;
-        else startTime = detParameter.coolingTime + 1;
+        else startTime = detParameter.coolingTime +1;
 
         unsigned int endTime = result.back().time;
 

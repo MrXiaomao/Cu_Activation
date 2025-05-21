@@ -1656,7 +1656,7 @@ void MainWindow::slotRefreshUi()
 
         // 手动测量
         ui->spinBox_timelength->setEnabled(true);
-        ui->comboBox_channel->setEnabled(true);
+        // ui->comboBox_channel->setEnabled(true);
         ui->comboBox_range->setEnabled(true);
         ui->spinBox_coolingTime->setEnabled(true);
         ui->lineEdit_ShotNum->setEnabled(true);
@@ -1665,11 +1665,11 @@ void MainWindow::slotRefreshUi()
         ui->spinBox_2_leftE->setEnabled(true);
         ui->spinBox_2_rightE->setEnabled(true);        
         ui->spinBox_timeWidth->setEnabled(true);
-        ui->spinBox_delayTime->setEnabled(true);
+        // ui->spinBox_delayTime->setEnabled(true);
 
         // 自动测量
         ui->spinBox_timelength_2->setEnabled(true);
-        ui->comboBox_channel2->setEnabled(true);
+        // ui->comboBox_channel2->setEnabled(true);
         ui->comboBox_range_2->setEnabled(true);
         ui->spinBox_coolingTime_2->setEnabled(true);
         ui->lineEdit_ShotNum_2->setEnabled(true);
@@ -1678,7 +1678,7 @@ void MainWindow::slotRefreshUi()
         ui->spinBox_2_leftE_2->setEnabled(true);
         ui->spinBox_2_rightE_2->setEnabled(true);
         ui->spinBox_timeWidth_2->setEnabled(true);
-        ui->spinBox_delayTime_2->setEnabled(true);
+        // ui->spinBox_delayTime_2->setEnabled(true);
 
         //位移平台到位才允许开始测量
         if (this->property("detector_on").toBool() && this->property("axis-prepared").toBool()){

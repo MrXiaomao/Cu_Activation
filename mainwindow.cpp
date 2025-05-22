@@ -204,17 +204,19 @@ MainWindow::MainWindow(QWidget *parent)
                 QTimer::singleShot(500, this, [=](){
                     this->setProperty("last_safe_exit", true);
                     commandHelper->openRelay(true);
-
+                    // if(!this->property("axis-prepared").toBool()){
                     SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待...\n正在移动位移平台至目标位置..."));
                     SplashWidget::instance()->exec();
-
+                    // }
                     QPair<float, float> pair = controlHelper->gotoAbs(ui->comboBox_range->currentIndex());
                     this->setProperty("axis01-target-position", pair.first);
                     this->setProperty("axis02-target-position", pair.second);                    
                 });
             } else {
+                // if(!this->property("axis-prepared").toBool()){
                 SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待...\n正在移动位移平台至目标位置..."));
                 SplashWidget::instance()->exec();
+                // }
                 QPair<float, float> pair = controlHelper->gotoAbs(ui->comboBox_range->currentIndex());
                 this->setProperty("axis01-target-position", pair.first);
                 this->setProperty("axis02-target-position", pair.second);
@@ -563,11 +565,11 @@ void MainWindow::InitMainWindowUi()
     connect(ui->comboBox_range_2, QOverload<int>::of(&QComboBox::currentIndexChanged), ui->comboBox_range, &QComboBox::setCurrentIndex);
     connect(ui->comboBox_range, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [=](int index){
         if (controlHelper->connected()){
-            SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待...\n正在移动位移平台至目标位置..."));
-            SplashWidget::instance()->exec();
             QPair<float, float> pair = controlHelper->gotoAbs(index);
             this->setProperty("axis01-target-position", pair.first);
-            this->setProperty("axis02-target-position", pair.second);
+            this->setProperty("axis02-target-position", pair.second);  
+            SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待...\n正在移动位移平台至目标位置..."));
+            SplashWidget::instance()->exec();
         }
     });
 

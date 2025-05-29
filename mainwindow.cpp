@@ -213,10 +213,10 @@ MainWindow::MainWindow(QWidget *parent)
                     this->setProperty("axis02-target-position", pair.second);                    
                 });
             } else {
-                // if(!this->property("axis-prepared").toBool()){
+                if(!this->property("axis-prepared").toBool()){
                 SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待...\n正在移动位移平台至目标位置..."));
                 SplashWidget::instance()->exec();
-                // }
+                }
                 QPair<float, float> pair = controlHelper->gotoAbs(ui->comboBox_range->currentIndex());
                 this->setProperty("axis01-target-position", pair.first);
                 this->setProperty("axis02-target-position", pair.second);

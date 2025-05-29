@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-19 03:32:46
+ * @LastEditTime: 2025-05-29 16:19:19
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -198,7 +198,6 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
  */
 void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> &data1, vector<TimeEnergy> &data2)
 { 
-    QDateTime now = QDateTime::currentDateTime();
     SingleSpectrum spec_temp;
     spec_temp.time = countCoin;
 
@@ -312,7 +311,7 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> &data1, vector<TimeEner
     int deathTime1 = 0;
     for (int i=0; i<length1; i++)
     {
-        if(data1[i].energy > EnWindowWidth[0] && data1[i].energy <= EnWindowWidth[1]) {
+        if(data1[i].energy >= EnWindowWidth[0] && data1[i].energy < EnWindowWidth[1]) {
             count1++;
             data1[i].time += delayTime; //增加对电路延迟时间的处理
             data_temp1.push_back(data1[i]);
@@ -328,7 +327,7 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> &data1, vector<TimeEner
     int deathTime2 = 0;
     for (int i=0; i<length2; i++)
     {
-        if(data2[i].energy > EnWindowWidth[2] && data2[i].energy <= EnWindowWidth[3]) {
+        if(data2[i].energy >= EnWindowWidth[2] && data2[i].energy < EnWindowWidth[3]) {
             count2++;
             data_temp2.push_back(data2[i]);
         }
@@ -550,6 +549,7 @@ bool CoincidenceAnalyzer::GetDataPoint(vector<TimeEnergy>& data1, vector<TimeEne
 
     long long current_nanosconds = (long long)(countCoin + coolingTime_Auto)  * NANOSECONDS;
     onePoint.time = countCoin + coolingTime_Auto + coolingTime_Manual; //对于自动测量时，coolingTime_Manual为0。对于手动测量时，coolingTime_Auto为零
+
     int ilocation1_below = 0;
     int ilocation2_below = 0;
     int ilocation1_above = 0; 
@@ -803,8 +803,8 @@ void CoincidenceAnalyzer::doFPGA_lossDATA_correction(std::map<unsigned int, unsi
         double value = pair.second * 1.0 /1e9;  // 获取值
         if(value<1.0) {
             double correctRatio = 1.0 / (1.0 - value); //确保异常情况导致
-            unsigned int pos = absolutetime_seconds - 1; //注意下标索引的时候减一
-            if(pos < coinNum){
+            unsigned int pos = absolutetime_seconds - 1 - coinResult[0].time; //注意下标索引的时候减一
+            if(pos >0 && pos < coinNum){
                 coinResult[pos].CountRate1 =  static_cast<int>(coinResult[pos].CountRate1 * correctRatio);
                 coinResult[pos].CountRate2 =  static_cast<int>(coinResult[pos].CountRate2 * correctRatio);
                 coinResult[pos].ConCount_single =  static_cast<int>(coinResult[pos].ConCount_single * correctRatio);

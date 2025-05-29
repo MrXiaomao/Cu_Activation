@@ -26,6 +26,9 @@
    </item>
    <item row="0" column="1">
     <widget class="QComboBox" name="comboBox">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <item>
       <property name="text">
        <string>正极性</string>
@@ -50,6 +53,9 @@
    </item>
    <item row="1" column="1">
     <widget class="QComboBox" name="comboBox_4">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="currentIndex">
       <number>0</number>
      </property>
@@ -82,6 +88,9 @@
    </item>
    <item row="2" column="1">
     <widget class="QSpinBox" name="spinBox">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="minimum">
       <number>1</number>
      </property>
@@ -105,6 +114,9 @@
    </item>
    <item row="3" column="1">
     <widget class="QSpinBox" name="spinBox_2">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="minimum">
       <number>1</number>
      </property>
@@ -128,6 +140,9 @@
    </item>
    <item row="4" column="1">
     <widget class="QSpinBox" name="spinBox_3">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="minimum">
       <number>500</number>
      </property>

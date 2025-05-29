@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-14 17:58:16
+ * @LastEditTime: 2025-05-29 16:44:23
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -251,8 +251,14 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
             }
             file.close();
 
-            if(configMap.value("测量模式") == "手动") detParameter.measureModel = mmManual;
-            else if(configMap.value("测量模式") == "自动") detParameter.measureModel = mmAuto;
+            if(configMap.value("测量模式") == "手动") {
+                detParameter.measureModel = mmManual;
+                ui->spinBox_coolingTime->setEnabled(true); //手动模式允许修改冷却时长
+            }
+            else if(configMap.value("测量模式") == "自动") {
+                detParameter.measureModel = mmAuto;
+                ui->spinBox_coolingTime->setEnabled(false);//自动模式不允许修改冷却时长
+            }
             detParameter.coolingTime = configMap.value("冷却时长").toInt();
             detParameter.timeWidth = configMap.value("符合分辨时间").toInt();
             
@@ -315,6 +321,8 @@ void OfflineDataAnalysisWidget::slotStart()
         if(detParameter.measureModel == mmManual){
             coincidenceAnalyzer->setCoolingTime_Manual(detParameter.coolingTime);
         }
+        //注意：手动模式、自动模式都调用这个语句，用来设置前面一段没有保存数据的时长。手动测量在“确认能窗”前不保存数据。
+        coincidenceAnalyzer->setCoolingTime_Auto(startFPGA_time-1);
 
         QByteArray aDatas = validDataFileName.toLocal8Bit();
         vector<TimeEnergy> data1_2, data2_2;
@@ -458,9 +466,9 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
         // 读取活化测量的数据时刻区间[起始时间，结束时间]
         vector<CoincidenceResult> result = coincidenceAnalyzer->GetCoinResult();
         
-        unsigned int startTime = 0;
-        if(detParameter.measureModel == mmManual) startTime = detParameter.coolingTime + startFPGA_time + 1;
-        else startTime = detParameter.coolingTime +1;
+        unsigned int startTime = result.at(0).time;
+        // if(detParameter.measureModel == mmManual) startTime = detParameter.coolingTime + startFPGA_time;
+        // else startTime = detParameter.coolingTime;
 
         unsigned int endTime = result.back().time;
 
@@ -491,12 +499,13 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
 
             //时间步长，求均值
             if (_stepT > 1){
-                int validCount = count - startFPGA_time; //由于符合曲线的前面部分填充了零。
+                // int validCount = count - startFPGA_time; //由于符合曲线的前面部分填充了零。
+                int validCount = count; //后续修改后，计数曲线前面部分没有填0的部分了。
                 if (validCount>1){
                     vector<CoincidenceResult> rr3;
                     size_t count = validCount/_stepT;
                     size_t posI = 0;
-                    for (size_t i=startFPGA_time; i < count; i++){
+                    for (size_t i=0; i < count; i++){
                         CoincidenceResult v;
                         for (int j=0; j<_stepT; ++j){
                             posI = i*_stepT + j;
@@ -519,7 +528,7 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
                 }
             } else{
                 vector<CoincidenceResult> rr3;
-                for (size_t i=startFPGA_time; i < count; i++){
+                for (size_t i=0; i < count; i++){
                     rr3.push_back(result[i]);
                 }
 

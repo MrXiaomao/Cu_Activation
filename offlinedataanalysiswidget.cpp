@@ -276,7 +276,20 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
             ui->spinBox_timeWidth->setValue(configMap.value("符合分辨时间").toInt());
             ui->spinBox_coolingTime->setValue(configMap.value("冷却时长").toInt());
             ui->lineEdit_range->setText(rangeStr);
-            
+
+            int minTime = 0;
+            int maxTime = 0;
+            // if(detParameter.measureModel == mmManual) {
+            //     minTime = startTime_absolute + 1;
+            //     maxTime = configMap.value("测量时长").toInt() + detParameter.coolingTime;
+            // }else{
+            minTime = startTime_absolute + 1;
+            maxTime = configMap.value("测量时长").toInt() + detParameter.coolingTime - 1;
+            // }
+            //读取配置参数的时候，默认数据分析参数为全部时间段测量数据。
+            ui->spinBox_start->setValue(minTime+2); //丢弃前两个点的数据，因为前两个点数据经常不完整
+            ui->spinBox_end->setValue(maxTime);
+
             ui->spinBox_1_leftE->setValue(configMap.value("Det1符合能窗左").toInt());
             ui->spinBox_1_rightE->setValue(configMap.value("Det1符合能窗右").toInt());
             ui->spinBox_2_leftE->setValue(configMap.value("Det2符合能窗左").toInt());

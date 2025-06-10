@@ -1,5 +1,6 @@
 temp/rcc/qrc_resource.o
 temp/rcc/qrc_qm.o
+temp/obj/QImageProgressBar.o
 temp/obj/cachedirconfigwidget.o
 temp/obj/coincidenceanalyzer.o
 temp/obj/controlhelper.o
@@ -9,10 +10,11 @@ temp/obj/aboutwidget.o
 temp/obj/augmentedmatrix.o
 temp/obj/commandhelper.o
 temp/obj/coolingtimewidget.o
-temp/obj/dataanalysiswidget.o
 temp/obj/energycalibrationform.o
 temp/obj/equipmentmanagementform.o
+temp/obj/gaussFit.o
 temp/obj/linearfit.o
+temp/obj/offlinedataanalysiswidget.o
 temp/obj/plotwidget.o
 temp/obj/polynomialfit.o
 temp/obj/qcustomplot.o
@@ -24,15 +26,16 @@ temp/obj/splashwidget.o
 temp/obj/sysutils.o
 temp/obj/waveformmodel.o
 temp/obj/FPGASetting.o
+temp/obj/yieldcalibration.o
 temp/obj/moc_cachedirconfigwidget.o
 temp/obj/moc_controlhelper.o
 temp/obj/moc_controlwidget.o
 temp/obj/moc_aboutwidget.o
 temp/obj/moc_commandhelper.o
 temp/obj/moc_coolingtimewidget.o
-temp/obj/moc_dataanalysiswidget.o
 temp/obj/moc_energycalibrationform.o
 temp/obj/moc_equipmentmanagementform.o
+temp/obj/moc_offlinedataanalysiswidget.o
 temp/obj/moc_plotwidget.o
 temp/obj/moc_qcustomplot.o
 temp/obj/moc_mainwindow.o
@@ -41,3 +44,4 @@ temp/obj/moc_spectrumModel.o
 temp/obj/moc_splashwidget.o
 temp/obj/moc_waveformmodel.o
 temp/obj/moc_FPGASetting.o
+temp/obj/moc_yieldcalibration.o

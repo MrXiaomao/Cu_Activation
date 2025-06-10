@@ -1857,7 +1857,7 @@ void PlotWidget::slotGauss(QCustomPlot* customPlot, int leftE, int rightE)
             double lastSigma =
                 lastSigma = (rightE - leftE) * 1.0 / (2*sqrt(2*log(2)));
             double result[3] = {0.0, 0.0, lastSigma};
-            qDebug()<<tr("PlotWidget::slotGauss():显示高斯拟合信息，准备对能窗区域自动高斯拟合，绘制拟合曲线");
+            // qDebug()<<tr("PlotWidget::slotGauss():显示高斯拟合信息，准备对能窗区域自动高斯拟合，绘制拟合曲线");
             bool status = GaussFit(sx, sy, fcount, result);
             if(status)
             {
@@ -1876,7 +1876,7 @@ void PlotWidget::slotGauss(QCustomPlot* customPlot, int leftE, int rightE)
                 }
 
                 curveGraph->setData(curveKeys, curveValues);
-                qDebug()<<tr("PlotWidget::slotGauss():显示高斯拟合信息，拟合成功");
+                // qDebug()<<tr("PlotWidget::slotGauss():显示高斯拟合信息，拟合成功");
                 if (this->property("showGaussInfo").toBool()){
                     curveGraph->setVisible(true);
 

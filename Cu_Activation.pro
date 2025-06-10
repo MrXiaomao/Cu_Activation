@@ -127,7 +127,8 @@ RC_ICONS = $$PWD/resource/logo.ico
 # QT_VER_MAJ = $$member(QT_VERSION, 0)
 # QT_VER_MIN = $$member(QT_VERSION, 1)
 
-DESTDIR = $$PWD/../build
+#DESTDIR = $$PWD/../build
+DESTDIR = $$PWD/../build_Cu
 contains(QT_ARCH, x86_64) {
     # x64
     DESTDIR = $$DESTDIR/x64

@@ -356,10 +356,21 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
     }
 
     vector<CoincidenceResult> rr3;
+    
+    //对于自动测量，在第一次自动拟合之前的计数点数据不再显示，也不再作为中子产额计算处理。
+    int start_time = 0;
+    int start_pos = 0;
+    vector<AutoGaussFit> gausslog = coincidenceAnalyzer->GetGaussFitLog();
+    if(gausslog.size()>0 && detectorParameter.measureModel == mmAuto){
+        start_time = gausslog.begin()->time;
+        countCoin = r3.back().time - start_time;
+        start_pos = r3.size() - countCoin;
+    }
+
     //时间步长，求均值
+    size_t posI = start_pos;
     if (_stepT > 1){
         if (countCoin>1 && (countCoin % _stepT == 0)){
-            size_t posI = 0;
             for (size_t i=0; i < countCoin/_stepT; i++){
                 CoincidenceResult v;
                 for (int j=0; j<_stepT; ++j){
@@ -382,7 +393,8 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
         }
     } else{
         for (size_t i=0; i < countCoin; i++){
-            rr3.push_back(r3[i]);
+            rr3.push_back(r3[posI]);
+            posI++;
         }
     }
 
@@ -1404,9 +1416,7 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
             if (ioFlags == QIODevice::Truncate)
             {   
                 out << tr("time(s), Det1左能窗, Det1右能窗, Det2左能窗, Det2右能窗, Det1峰位, Det2峰位") << Qt::endl;
-            }
-            vector<AutoGaussFit> gausslog = coincidenceAnalyzer->GetGaussFitLog();
-            
+            }            
             out << detectorParameter.coolingTime << "," << this->EnWindow[0] << "," << this->EnWindow[1] \
                 << "," << this->EnWindow[2] << "," << this->EnWindow[3]
                 << Qt::endl;

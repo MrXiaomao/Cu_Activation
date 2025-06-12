@@ -1159,12 +1159,13 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                     qDebug()<<tr("框选区域，高斯拟合成功");
                                     if (!std::isnan(result[1]) && result[2]>0){
                                         double mean = result[1];
-                                        double FWHM = 2*sqrt(2*log(2))*result[2];
+                                        // double FWHM = 2*sqrt(2*log(2))*result[2];
+                                        double foursigma = 4.0*result[2];
                                         //计算符合能窗
-                                        unsigned int leftWindow = (int)(mean - FWHM*0.5);
+                                        unsigned int leftWindow = (int)(mean - foursigma*0.5);
                                         if (leftWindow < 0) leftWindow = 0;
 
-                                        unsigned int rightWindow = (int)(mean + FWHM*0.5);
+                                        unsigned int rightWindow = (int)(mean + foursigma*0.5);
                                         if (rightWindow < 0 || rightWindow > multiChannel)
                                         {
                                             rightWindow = multiChannel;
@@ -1174,9 +1175,9 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                         //显示拟合数据
                                         QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
                                         if (gaussResultItemText){
-                                            QString info = QString("峰  位: %1\n半高宽: %2\n左能窗: %3\n右能窗: %4")
+                                            QString info = QString("峰  位: %1\n4sigma: %2\n左能窗: %3\n右能窗: %4")
                                                                .arg(QString::number(mean, 'f', 0))
-                                                               .arg(QString::number(FWHM, 'f', 3))
+                                                               .arg(QString::number(foursigma, 'f', 3))
                                                                .arg(QString::number(leftWindow, 10))//十进制输出整数
                                                                .arg(QString::number(rightWindow, 10));
 
@@ -1191,7 +1192,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
 
                                         //显示拟合曲线
                                         customPlot->setProperty("mean", mean/*result[1]*/);
-                                        customPlot->setProperty("FWHM", FWHM/*result[2]*/);
+                                        customPlot->setProperty("fourSigma", foursigma/*result[2]*/);
                                         customPlot->setProperty("leftEnWindow", leftWindow);
                                         customPlot->setProperty("rightEnWindow", rightWindow);
                                         this->setProperty("showGaussInfo", true);
@@ -1726,7 +1727,7 @@ void PlotWidget::slotStart(unsigned int channel)
             customPlot->graph(i)->data()->clear();
 
         customPlot->setProperty("mean", 0.);
-        customPlot->setProperty("FWHM", 0.);
+        customPlot->setProperty("fourSigma", 0.);
         customPlot->setProperty("leftEnWindow", 0);
         customPlot->setProperty("rightEnWindow", 0);
         customPlot->replot(refreshPriority);
@@ -1945,12 +1946,12 @@ void PlotWidget::slotUpdateEnWindow(unsigned short* EnWindow)
             customPlotDet1->setProperty("leftEnWindow", EnWindow[0]);
             customPlotDet1->setProperty("rightEnWindow", EnWindow[1]);
             float mean = (float)(EnWindow[1] + EnWindow[0]) / 2;
-            float FWHM = EnWindow[1] - EnWindow[0];
+            float fourSigma = EnWindow[1] - EnWindow[0];
             QCPItemText* gaussResultItemText = customPlotDet1->findChild<QCPItemText*>("gaussResultItemText");
-            if (gaussResultItemText && mean > 0 && FWHM > 0){
-                QString info = QString("峰  位: %1\n半高宽: %2\n左能窗: %3\n右能窗: %4")
+            if (gaussResultItemText && mean > 0 && fourSigma > 0){
+                QString info = QString("峰  位: %1\n4sigma: %2\n左能窗: %3\n右能窗: %4")
                                    .arg(QString::number(mean, 'f', 0))
-                                   .arg(QString::number(FWHM, 'f', 3))
+                                   .arg(QString::number(fourSigma, 'f', 3))
                                    .arg(QString::number(EnWindow[0], 10))//十进制输出整数
                                    .arg(QString::number(EnWindow[1], 10));
 
@@ -1976,12 +1977,12 @@ void PlotWidget::slotUpdateEnWindow(unsigned short* EnWindow)
             customPlotDet2->setProperty("leftEnWindow", EnWindow[2]);
             customPlotDet2->setProperty("rightEnWindow", EnWindow[3]);
             float mean = (float)(EnWindow[3] + EnWindow[2]) / 2;
-            float FWHM = EnWindow[3] - EnWindow[2];
+            float fourSigma = EnWindow[3] - EnWindow[2];
             QCPItemText* gaussResultItemText = customPlotDet2->findChild<QCPItemText*>("gaussResultItemText");
             if (gaussResultItemText){
-                QString info = QString("峰  位: %1\n半高宽: %2\n左能窗: %3\n右能窗: %4")
+                QString info = QString("峰  位: %1\n4sigma: %2\n左能窗: %3\n右能窗: %4")
                                    .arg(QString::number(mean, 'f', 0))
-                                   .arg(QString::number(FWHM, 'f', 3))
+                                   .arg(QString::number(fourSigma, 'f', 3))
                                    .arg(QString::number(EnWindow[2], 10))//十进制输出整数
                                    .arg(QString::number(EnWindow[3], 10));
 

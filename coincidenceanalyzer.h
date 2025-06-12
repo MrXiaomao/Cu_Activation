@@ -146,7 +146,7 @@ private:
     // 统计给出两个探测器各自当前一秒钟测量数据的能谱，当前一秒钟没有测量信号，则能谱全为零
     void calculateAllSpectrum(vector<TimeEnergy> &data1, vector<TimeEnergy> &data2);
     
-    //自动能窗更新，根据初始的能窗，每到能谱数据累积满一定的数据量后， 进行高斯拟合，拟合得到的高斯半高宽作为新的能窗。
+    //自动能窗更新，根据初始的能窗，每到能谱数据累积满一定的数据量后， 进行高斯拟合，拟合得到的4*sigma作为新的能窗。
     void AutoEnergyWidth();
 
     //进行符合事件处理
@@ -192,7 +192,7 @@ private:
     std::map<unsigned int, unsigned long long> lossData_time_num; //记录丢包的时刻（FPGA时钟，单位:s）以及丢失的时间长度(单位：ns)。需要注意，计时从1开始。
     // 用于高斯拟合，自动更新能窗
     bool isChangeEnWindow; //记录当前1秒是否更新了能窗
-    bool autoFirst; //自动调节符合计算能窗宽度，用于解决峰飘问题，每测量一定数据点之后，自动拟合出高斯曲线，以新的半高宽来作为符合计算能窗。
+    bool autoFirst; //自动调节符合计算能窗宽度，用于解决峰飘问题，每测量一定数据点之后，自动拟合出高斯曲线，以新的4*sigma来作为符合计算能窗。
     SingleSpectrum GaussFitSpec; // 用于高斯拟合的能谱，每秒钟汇总一次，并且计算能窗内计数点是否到达指定的点数。满足点数后便进行拟合，更新能谱
     int GaussCountMin; //自动高斯拟合的最小探测器计数
     int GaussMinGapTime; //自动高斯拟合的能窗最小时间间隔,单位：s

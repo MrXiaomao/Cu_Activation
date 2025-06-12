@@ -339,11 +339,11 @@ void OfflineDataAnalysisWidget::slotStart()
 
         QByteArray aDatas = validDataFileName.toLocal8Bit();
         vector<TimeEnergy> data1_2, data2_2;
-// #ifdef QT_NO_DEBUG
+#ifdef QT_NO_DEBUG
         SysUtils::realQuickAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/, bool eof, bool *interrupted){
-// #else
-//         SysUtils::realAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, bool eof, bool *interrupted){
-// #endif
+#else
+        SysUtils::realAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, bool eof, bool *interrupted){
+#endif
             if (firstPopup && !eof){
                 QTimer::singleShot(1, this, [=](){
                     SplashWidget::instance()->setInfo(tr("文件正在解析中，请等待..."), true, true);
@@ -352,9 +352,9 @@ void OfflineDataAnalysisWidget::slotStart()
 
                 firstPopup = false;
             }
-
+#ifdef QT_NO_DEBUG
             emit SplashWidget::instance()->sigUpdataProgress(progress, filesize);
-
+#endif
             if (eof){
                 if (interrupted)
                     emit sigEnd(true);
@@ -566,7 +566,7 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
  */
 void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int start_time, unsigned int time_end)
 {
-        // 根据量程，自动获取本量程下对应的中子产额刻度参数——Cu62与Cu64的初始β+活度分支比，本底全能峰位置的半高宽下计数率，
+        // 根据量程，自动获取本量程下对应的中子产额刻度参数——Cu62与Cu64的初始β+活度分支比，本底全能峰位置的4*sigma下计数率，
     // 如果缺失参数则直接采用默认值。
     int measureRange = detPara.measureRange - 1;
     double ratioCu62 = 0.0, ratioCu64 = 1.0;

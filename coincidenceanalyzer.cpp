@@ -450,7 +450,7 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
             double lastSigma = 0.0;
             //利用上一次的拟合结果作为本次拟合的初值
             if(GaussFitLog.size()>0) {
-                lastSigma = (GaussFitLog.back().EnRight1 - GaussFitLog.back().EnLeft1) * 1.0 / (2*sqrt(2*log(2)));
+                lastSigma = (GaussFitLog.back().EnRight1 - GaussFitLog.back().EnLeft1) * 1.0 / 4.0;
             }
             
             double result[3] = {0.0, 0.0, lastSigma};
@@ -464,10 +464,12 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
                         return;
                 }
                 double mean = result[1];
-                double FWHM = 2*sqrt(2*log(2))*result[2];
+                // double FWHM = 2*sqrt(2*log(2))*result[2];
+                //4sigma作为能窗
+                double fourSigma = 4*result[2];
                 changed = true;
-                double Left = mean - FWHM*0.5; // 峰位-0.5*半高宽FWHM
-                double Right = mean + FWHM*0.5; // 峰位+0.5*半高宽FWHM
+                double Left = mean - fourSigma*0.5; // 峰位-0.5*能窗宽度
+                double Right = mean + fourSigma*0.5; // 峰位+0.5*能窗宽度
                 if(Left >= 1) EnergyWindow[0] = (unsigned short) Left;
                 else EnergyWindow[0] = 1u;
 
@@ -506,7 +508,7 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
         double lastSigma = 0.0;
         //利用上一次的拟合结果作为本次拟合的初值
         if(GaussFitLog.size()>0) {
-            lastSigma = (GaussFitLog.back().EnRight2 - GaussFitLog.back().EnLeft2) * 1.0 / (2*sqrt(2*log(2)));
+            lastSigma = (GaussFitLog.back().EnRight2 - GaussFitLog.back().EnLeft2) * 1.0 / 4.0;
         }
         
         double result[3] = {0.0, 0.0, lastSigma};
@@ -519,11 +521,14 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
                     Det2拟合结果与上一次高斯拟合偏差大于%1\%，放弃能窗更新").arg(QString::number(MAX_SIGAMA_CHANGE*100));
                     return;
             }
+
             double mean = result[1];
-            double FWHM = 2*sqrt(2*log(2))*result[2];
+            // double FWHM = 2*sqrt(2*log(2))*result[2];
+            //4sigma作为能窗
+            double fourSigma = 4*result[2];
             changed = true;
-            double Left = mean - FWHM*0.5; // 峰位-0.5*半高宽FWHM
-            double Right = mean + FWHM*0.5; // 峰位+0.5*半高宽FWHM
+            double Left = mean - fourSigma*0.5; // 峰位-0.5*能窗宽度
+            double Right = mean + fourSigma*0.5; // 峰位+0.5*能窗宽度
 
             if(Left >= 1) EnergyWindow[2] = (unsigned short) Left;
             else EnergyWindow[2] = 1u;
@@ -689,7 +694,7 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int tim
  */
 double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int start_time, int time_end)
 {
-    // 根据量程，自动获取本量程下对应的中子产额刻度参数——Cu62与Cu64的初始β+活度分支比，本底全能峰位置的半高宽下计数率，
+    // 根据量程，自动获取本量程下对应的中子产额刻度参数——Cu62与Cu64的初始β+活度分支比，本底全能峰位置的4*sigma下的计数率，
     // 如果缺失参数则直接采用默认值。
     int measureRange = detPara.measureRange - 1;
     double ratioCu62 = 0.0, ratioCu64 = 1.0;

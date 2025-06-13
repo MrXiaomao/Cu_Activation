@@ -371,7 +371,7 @@ bool ControlHelper::single_moveabs(int axis_no, float value)
         return false;
 
     QMutexLocker locker(&mutex);
-    qDebug() << tr("轴") << axis_no << tr("移动位置") << value;
+    qDebug().noquote() << tr("轴") << axis_no << tr("(um))") << value;
     int ret = fti_single_moveabs(mHandle, mAxiaName[axis_no].toStdString().c_str(), value);
     if (ret != FT_SUCCESS){
         int errRef = 1;

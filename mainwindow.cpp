@@ -226,7 +226,7 @@ MainWindow::MainWindow(QWidget *parent)
         if (this->property("last_safe_exit").toBool()){
             //异常退出先不要恢复继电器状态，等重启继电器之后再说吧
 
-            QString msg = QString(tr("电源状态：%1")).arg(on ? tr("开") : tr("关"));
+            QString msg = QString(tr("探测器电源状态：%1")).arg(on ? tr("开") : tr("关"));
             // emit sigAppengMsg(msg, QtInfoMsg);
             qInfo().noquote()<<msg;
             emit sigRefreshUi();
@@ -366,7 +366,7 @@ MainWindow::MainWindow(QWidget *parent)
             measureTimer->stop();
         }
 
-        QString msg = QString(tr("探测器状态：%1")).arg(on ? tr("开") : tr("关"));
+        QString msg = QString(tr("探测器网络状态：%1")).arg(on ? tr("已连接") : tr("已断开"));
         // emit sigAppengMsg(msg, QtInfoMsg);
         qInfo().noquote()<<msg;
         emit sigRefreshUi();
@@ -1460,14 +1460,15 @@ void MainWindow::closeEvent(QCloseEvent *event)
     if(currentStatusTimer) currentStatusTimer->stop();
 
     this->saveConfigJson(true);
-    qDebug().noquote()<<tr("退出软件");
+    // qInfo().noquote()<<tr("退出软件");
+    // QCoreApplication::processEvents();
     event->accept();
 }
 
 void MainWindow::slotSafeExit()
 {
     commandHelper->closeDetector();
-    commandHelper->closeRelay();
+    //commandHelper->closeRelay();
     controlHelper->close();
 }
 

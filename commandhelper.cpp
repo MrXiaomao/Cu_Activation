@@ -686,6 +686,8 @@ void CommandHelper::openRelay(bool first)
 
 void CommandHelper::closeRelay()
 {
+    if (!socketRelay->isOpen()) return;
+
     QByteArray command;
     QDataStream dataStream(&command, QIODevice::WriteOnly);
     dataStream << (quint8)0x48;
@@ -743,8 +745,8 @@ void CommandHelper::closeDetector()
 {
     //停止测量
     slotStopManualMeasure();
-
-    socketDetector->close();
+    if (socketDetector->isOpen())
+        socketDetector->close();
     emit sigDetectorStatus(false);
 }
 

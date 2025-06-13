@@ -136,7 +136,7 @@ int main(int argc, char *argv[])
     splash.show();
 
     // 保留最近3次的日志
-    cleanOldLogs(3);
+    // cleanOldLogs(3);
     //安装日志
     qInstallMessageHandler(AppMessageHandler);
 

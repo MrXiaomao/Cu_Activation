@@ -339,11 +339,11 @@ void OfflineDataAnalysisWidget::slotStart()
 
         QByteArray aDatas = validDataFileName.toLocal8Bit();
         vector<TimeEnergy> data1_2, data2_2;
-#ifdef QT_NO_DEBUG
+// #ifdef QT_NO_DEBUG
         SysUtils::realQuickAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/, bool eof, bool *interrupted){
-#else
-        SysUtils::realAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, bool eof, bool *interrupted){
-#endif
+// #else
+        // SysUtils::realAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, bool eof, bool *interrupted){
+// #endif
             if (firstPopup && !eof){
                 QTimer::singleShot(1, this, [=](){
                     SplashWidget::instance()->setInfo(tr("文件正在解析中，请等待..."), true, true);
@@ -352,9 +352,9 @@ void OfflineDataAnalysisWidget::slotStart()
 
                 firstPopup = false;
             }
-#ifdef QT_NO_DEBUG
+// #ifdef QT_NO_DEBUG
             emit SplashWidget::instance()->sigUpdataProgress(progress, filesize);
-#endif
+// #endif
             if (eof){
                 if (interrupted)
                     emit sigEnd(true);

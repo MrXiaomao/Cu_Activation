@@ -1460,7 +1460,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
     if(currentStatusTimer) currentStatusTimer->stop();
 
     this->saveConfigJson(true);
-
+    qDebug().noquote()<<tr("退出软件");
     event->accept();
 }
 

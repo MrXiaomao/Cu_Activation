@@ -259,8 +259,8 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
                 detParameter.measureModel = mmAuto;
                 ui->spinBox_coolingTime->setEnabled(false);//自动模式不允许修改冷却时长
             }
-            detParameter.coolingTime = configMap.value("冷却时长").toInt();
-            detParameter.timeWidth = configMap.value("符合分辨时间").toInt();
+            detParameter.coolingTime = configMap.value("冷却时长(s)").toInt();
+            detParameter.timeWidth = configMap.value("符合分辨时间(ns)").toInt();
             
             QString rangeStr = configMap.value("量程选取");
             if(rangeStr == "小量程") detParameter.measureRange = 1;
@@ -272,19 +272,19 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
             else startFPGA_time = detParameter.coolingTime + 1;
 
             ui->lineEdit_measuremodel->setText(configMap.value("测量模式"));
-            ui->spinBox_step->setValue(configMap.value("时间步长").toInt());
-            ui->spinBox_timeWidth->setValue(configMap.value("符合分辨时间").toInt());
-            ui->spinBox_coolingTime->setValue(configMap.value("冷却时长").toInt());
+            ui->spinBox_step->setValue(configMap.value("时间步长(s)").toInt());
+            ui->spinBox_timeWidth->setValue(configMap.value("符合分辨时间(ns)").toInt());
+            ui->spinBox_coolingTime->setValue(configMap.value("冷却时长(s)").toInt());
             ui->lineEdit_range->setText(rangeStr);
 
             int minTime = 0;
             int maxTime = 0;
             // if(detParameter.measureModel == mmManual) {
             //     minTime = startTime_absolute + 1;
-            //     maxTime = configMap.value("测量时长").toInt() + detParameter.coolingTime;
+            //     maxTime = configMap.value("测量时长(s)").toInt() + detParameter.coolingTime;
             // }else{
             minTime = startTime_absolute + 1;
-            maxTime = configMap.value("测量时长").toInt() + detParameter.coolingTime - 1;
+            maxTime = configMap.value("测量时长(s)").toInt() + detParameter.coolingTime - 1;
             // }
             //读取配置参数的时候，默认数据分析参数为全部时间段测量数据。
             ui->spinBox_start->setValue(minTime+2); //丢弃前两个点的数据，因为前两个点数据经常不完整
@@ -792,7 +792,7 @@ void OfflineDataAnalysisWidget::on_pushbutton_save_clicked()
         out << tr("测量模式=") << ui->lineEdit_measuremodel->text()<< Qt::endl;
         out << tr("量程=") << ui->lineEdit_range->text()<< Qt::endl;
         out << tr("粒子数据个数=") << ui->lineEdit_particleNum->text()<< Qt::endl;
-        out << tr("冷却时长=") << ui->spinBox_coolingTime->value()<< Qt::endl;
+        out << tr("冷却时长(s)=") << ui->spinBox_coolingTime->value()<< Qt::endl;
         out << Qt::endl;
 
         //解析参数

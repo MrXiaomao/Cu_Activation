@@ -143,7 +143,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                 QFile file(configResultFile);
                 if (file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Append)) {
                     QTextStream out(&file);
-                    out << tr("测量时长=") <<currentFPGATime<< Qt::endl;
+                    out << tr("测量时长(s)=") <<currentFPGATime<< Qt::endl;
                     file.flush();
                     file.close();
                 }
@@ -1265,11 +1265,11 @@ void CommandHelper::slotStopManualMeasure()
                     out << tr("阈值2=") << detectorParameter.triggerThold2 << Qt::endl;
                     out << tr("波形极性=") << ((detectorParameter.waveformPolarity==0x00) ? tr("正极性") : tr("负极性")) << Qt::endl;
 
-                    out << tr("死时间=") << detectorParameter.deadTime << Qt::endl;
+                    out << tr("死时间(ns)=") << detectorParameter.deadTime << Qt::endl;
                     if (gainValue.contains(detectorParameter.gain))
                         out << tr("探测器增益=") << gainValue[detectorParameter.gain] << Qt::endl;
 
-                    out << tr("能谱刷新时间=") << detectorParameter.refreshTimeLength << Qt::endl;
+                    out << tr("能谱刷新时间(s)=") << detectorParameter.refreshTimeLength << Qt::endl;
 
                     file.flush();
                     file.close();
@@ -1355,7 +1355,7 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
             out << tr("阈值1=") << detectorParameter.triggerThold1 << Qt::endl;
             out << tr("阈值2=") << detectorParameter.triggerThold2 << Qt::endl;
             out << tr("波形极性=") << ((detectorParameter.waveformPolarity==0x00) ? tr("正极性") : tr("负极性")) << Qt::endl;
-            out << tr("死时间=") << detectorParameter.deadTime << Qt::endl;
+            out << tr("死时间(ns)=") << detectorParameter.deadTime << Qt::endl;
             out << tr("波形触发模式=") << ((detectorParameter.triggerModel==0x00) ? tr("normal") : tr("auto")) << Qt::endl;
             if (gainValue.contains(detectorParameter.gain))
                 out << tr("探测器增益=") << gainValue[detectorParameter.gain] << Qt::endl;
@@ -1373,7 +1373,7 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
                 break;
             }
             // out << tr("量程选取=")<<detectorParameter.measureRange<< Qt::endl;
-            out << tr("冷却时长=") << detectorParameter.coolingTime << Qt::endl; //单位s
+            out << tr("冷却时长(s)=") << detectorParameter.coolingTime << Qt::endl; //单位s
             
             //开始保存FPGA数据的时刻，单位s，以活化后开始计时(冷却时间+FPGA时钟)。
             int savetime_FPGA = 0;
@@ -1384,10 +1384,10 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
             }
 
             out << tr("测量开始时间(冷却时间+FPGA时钟)=")<< savetime_FPGA <<Qt::endl;
-            out << tr("符合延迟时间=") << detectorParameter.delayTime << Qt::endl; //单位ns
-            out << tr("符合分辨时间=") << detectorParameter.timeWidth << Qt::endl; //单位ns
-            out << tr("时间步长=") << 1 << Qt::endl; //注意，存储的数据时间步长恒为1s
-            // out << tr("测量时长=") <<currentFPGATime<< Qt::endl;
+            out << tr("符合延迟时间(ns))=") << detectorParameter.delayTime << Qt::endl; //单位ns
+            out << tr("符合分辨时间(ns)=") << detectorParameter.timeWidth << Qt::endl; //单位ns
+            out << tr("时间步长(s)=") << 1 << Qt::endl; //注意，存储的数据时间步长恒为1s
+            // out << tr("测量时长(s)=") <<currentFPGATime<< Qt::endl;
             out << tr("Det1符合能窗左=") << this->EnWindow[0] << Qt::endl;
             out << tr("Det1符合能窗右=") << this->EnWindow[1] << Qt::endl;
             out << tr("Det2符合能窗左=") << this->EnWindow[2] << Qt::endl;

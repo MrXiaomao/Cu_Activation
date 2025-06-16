@@ -2072,7 +2072,7 @@ void MainWindow::on_pushButton_confirm_clicked()
             out << tr("阈值1=") << detParameter.triggerThold1 << Qt::endl;
             out << tr("阈值2=") << detParameter.triggerThold2 << Qt::endl;
             out << tr("波形极性=") << ((detParameter.waveformPolarity==0x00) ? tr("正极性") : tr("负极性")) << Qt::endl;
-            out << tr("死时间=") << detParameter.deadTime << Qt::endl;
+            out << tr("死时间(ns)=") << detParameter.deadTime << Qt::endl;
             out << tr("波形触发模式=") << ((detParameter.triggerModel==0x00) ? tr("normal") : tr("auto")) << Qt::endl;
             if (gainvalue.contains(detParameter.gain))
                 out << tr("探测器增益=") << gainvalue[detParameter.gain] << Qt::endl;
@@ -2089,13 +2089,13 @@ void MainWindow::on_pushButton_confirm_clicked()
                 default:
                 break;
             }
-            out << tr("冷却时长=") << detParameter.coolingTime << Qt::endl; //单位s
+            out << tr("冷却时长(s)=") << detParameter.coolingTime << Qt::endl; //单位s
 
             out << tr("测量开始时间(冷却时间+FPGA时钟)=")<< savetime_FPGA <<Qt::endl;
-            out << tr("符合延迟时间=") << detParameter.delayTime << Qt::endl; //单位ns
-            out << tr("符合分辨时间=") << detParameter.timeWidth << Qt::endl; //单位ns
-            out << tr("时间步长=") << 1 << Qt::endl; //注意，存储的数据时间步长恒为1s
-            // out << tr("测量时长=") <<currentFPGATime<< Qt::endl;
+            out << tr("符合延迟时间(ns))=") << detParameter.delayTime << Qt::endl; //单位ns
+            out << tr("符合分辨时间(ns)=") << detParameter.timeWidth << Qt::endl; //单位ns
+            out << tr("时间步长(s)=") << 1 << Qt::endl; //注意，存储的数据时间步长恒为1s
+            // out << tr("测量时长(s)=") <<currentFPGATime<< Qt::endl;
             out << tr("Det1符合能窗左=") << EnWin[0] << Qt::endl;
             out << tr("Det1符合能窗右=") << EnWin[1] << Qt::endl;
             out << tr("Det2符合能窗左=") << EnWin[2] << Qt::endl;

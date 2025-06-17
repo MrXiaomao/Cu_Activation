@@ -107,10 +107,10 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
     if(unusedData2.size()>0) 
         time2_elapseFPGA = unusedData2.back().time/NANOSECONDS - (countCoin + coolingTime_Auto);//计算FPGA当前最大时间与上一时刻的时间差
 
-    int deltaT = 2; //单位秒
-    //都存够1秒的数据才进行处理，或者其中某一个存满2s数据。
+    int deltaT = 1; //单位秒
+    //都存够1秒的数据才进行处理
     while(time1_elapseFPGA >= deltaT && time2_elapseFPGA >= deltaT)
-    // while((time1_elapseFPGA >= deltaT && time2_elapseFPGA >= deltaT) || time1_elapseFPGA>1 || time2_elapseFPGA>1)
+    // while((time1_elapseFPGA >= deltaT && time2_elapseFPGA >= deltaT) || time1_elapseFPGA>1 || time2_elapseFPGA>1) //或者其中某一个存满2s数据。
     {
         isChangeEnWindow = false;
         //先计算出当前一秒的数据点个数,若都没有完整一秒数据时，直接退出计算，下一次处理。

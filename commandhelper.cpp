@@ -1250,7 +1250,7 @@ void CommandHelper::slotStopManualMeasure()
         qDebug()<<"Send HEX: "<<cmdStopTrigger.toHex(' ');
 
         //00:能谱 03:波形 05:粒子
-        if (detectorParameter.transferModel == 0x00){
+        /*if (detectorParameter.transferModel == 0x00){
             emit sigMeasureStopSpectrum();
 
             //测量停止保存波形测量参数
@@ -1276,7 +1276,7 @@ void CommandHelper::slotStopManualMeasure()
                 }
             }
             qInfo().noquote() << tr("本次能谱测量参数配置已存放在：%1").arg(configResultFile);
-        }
+        }*/
     } else {
         emit sigDetectorFault();
     }

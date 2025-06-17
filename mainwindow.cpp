@@ -335,7 +335,7 @@ MainWindow::MainWindow(QWidget *parent)
         exceptionCheckTimer->stop();
 
         this->setProperty("measure-status", msEnd);
-        QString msg = tr("测量已停止");
+        QString msg = tr("测量已停止\n");
         // emit sigAppengMsg(msg, QtInfoMsg);
         qInfo().noquote()<<msg;
         emit sigRefreshUi();
@@ -1080,6 +1080,8 @@ void MainWindow::on_pushButton_measure_clicked()
             ui->spinBox_coolingTime->setValue(new_timelength);
         */
        {
+            //开始测量前空一行
+            qInfo().noquote()<<"\n";
             this->setProperty("measure-status", msPrepare);
 
             //手动测量
@@ -1165,6 +1167,7 @@ void MainWindow::on_pushButton_measure_clicked()
             QTimer::singleShot(1000, this, [=](){
                 //指定时间未收到开始测量指令，则按钮恢复初始状态
                 if (this->property("measure-status").toUInt() == msPrepare){
+                    qCritical().noquote()<<"1s内未收到开始测量反馈指令，系统异常";
                     commandHelper->slotStopManualMeasure();
                     ui->pushButton_measure->setEnabled(true);
                 }
@@ -1182,6 +1185,8 @@ void MainWindow::on_pushButton_measure_clicked()
                 ui->pushButton_measure->setEnabled(true);
             }
         });
+        //停止测量后空一行
+        // qInfo().noquote()<<"\n";
     }
 }
 

@@ -704,7 +704,7 @@ void MainWindow::InitMainWindowUi()
         QDateTime currentDateTime = QDateTime::currentDateTime();
         qint64 days = currentDateTime.daysTo(measureStartTime);
         if (days >= 1){
-            ui->lcdNumber->display(QString::number(days) + tr("天 ") + QTime(0,0,0).addSecs(measureStartTime.secsTo(currentDateTime) - days * 24 * 60 * 60).toString("hh:mm:ss"));
+            ui->lcdNumber->display(QString::number(days) + tr("d") + QTime(0,0,0).addSecs(measureStartTime.secsTo(currentDateTime) - days * 24 * 60 * 60).toString("hh:mm:ss"));
         } else{
             ui->lcdNumber->display(QTime(0,0,0).addSecs(measureStartTime.secsTo(currentDateTime)).toString("hh:mm:ss"));
         }
@@ -1081,7 +1081,7 @@ void MainWindow::on_pushButton_measure_clicked()
         */
        {
             //开始测量前空一行
-            qInfo().noquote()<<"\n";
+            qInfo().noquote()<<"\n按下\“开始测量\”";
             this->setProperty("measure-status", msPrepare);
 
             //手动测量
@@ -1176,6 +1176,7 @@ void MainWindow::on_pushButton_measure_clicked()
         // });
 
     } else {
+        qInfo().noquote()<<"按下\“停止测量\”";
         ui->pushButton_measure->setEnabled(false);
         commandHelper->slotStopManualMeasure();
 
@@ -2074,6 +2075,7 @@ void MainWindow::on_pushButton_confirm_clicked()
             quint32 savetime_FPGA = commandHelper->getsetEnTime();
 
             // 保存粒子测量参数
+            out << tr("测量开始时刻=") << QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz ")<< Qt::endl;
             out << tr("阈值1=") << detParameter.triggerThold1 << Qt::endl;
             out << tr("阈值2=") << detParameter.triggerThold2 << Qt::endl;
             out << tr("波形极性=") << ((detParameter.waveformPolarity==0x00) ? tr("正极性") : tr("负极性")) << Qt::endl;

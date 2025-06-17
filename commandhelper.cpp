@@ -1245,8 +1245,11 @@ void CommandHelper::slotStopManualMeasure()
 
     if (socketDetector->isWritable() && socketDetector->state() == QAbstractSocket::ConnectedState){
         cmdPool.push_back(cmdStopTrigger);
+        {
+            QMutexLocker locker(&mutexCache);
+            sendStopCmd = true;
+        }
         socketDetector->write(cmdStopTrigger);
-        sendStopCmd = true;
         qDebug()<<"Send HEX: "<<cmdStopTrigger.toHex(' ');
 
         //00:能谱 03:波形 05:粒子
@@ -1352,6 +1355,7 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
             QTextStream out(&file);
 
             // 保存粒子测量参数
+            out << tr("测量开始时刻=") << QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz ")<< Qt::endl;
             out << tr("阈值1=") << detectorParameter.triggerThold1 << Qt::endl;
             out << tr("阈值2=") << detectorParameter.triggerThold2 << Qt::endl;
             out << tr("波形极性=") << ((detectorParameter.waveformPolarity==0x00) ? tr("正极性") : tr("负极性")) << Qt::endl;
@@ -1452,8 +1456,11 @@ void CommandHelper::slotStopAutoMeasure()
         return;
 
     cmdPool.push_back(cmdStopTrigger);
+    {
+        QMutexLocker locker(&mutexCache);
+        sendStopCmd = true;
+    }
     socketDetector->write(cmdStopTrigger);
-    sendStopCmd = true;
     qDebug()<<"Send HEX: "<<cmdStopTrigger.toHex(' ');
 }
 
@@ -1462,12 +1469,13 @@ void CommandHelper::netFrameWorkThead()
     std::cout << "netFrameWorkThead thread id:" << QThread::currentThreadId() << std::endl;
     while (!taskFinished)
     {        
-        {            
+        {
             QMutexLocker locker(&mutexCache);
-            if (cachePool.size() <= 0){
+            if (cachePool.size() == 0){
                 if (handlerPool.size() < 12){
                     // 数据单位最小值为12（一个指令长度）
                     QThread::msleep(1);
+                    continue;
                 }
             } else {
                 handlerPool.append(cachePool);
@@ -1475,7 +1483,7 @@ void CommandHelper::netFrameWorkThead()
             }
         }
 
-        if (handlerPool.size() <= 0)
+        if (handlerPool.size() == 0)
             continue;
 
         QByteArray validFrame;
@@ -1903,8 +1911,11 @@ void CommandHelper::detTimeEnergyWorkThread()
                         QDateTime now = QDateTime::currentDateTime();
                         
                         if (detectorParameter.measureModel == mmAuto){//自动测量，需要获取能宽
+                            double time1 = 0.0, time2 = 0.0;
+                            if(data1_2.size() > 0) time1 = data1_2.begin()->time/1e9;
+                            if(data2_2.size() > 0) time2 = data2_2.begin()->time/1e9;
                             //在冷却时长之后的数据才进行处理
-                            if(data1_2.begin()->time/1e9 >= detectorParameter.coolingTime || data2_2.begin()->time/1e9 >= detectorParameter.coolingTime)
+                            if(time1 >= detectorParameter.coolingTime || time2 >= detectorParameter.coolingTime)
                             {
                                 saveParticleInfo(data1_2, data2_2);
                                 coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, \
@@ -1923,12 +1934,17 @@ void CommandHelper::detTimeEnergyWorkThread()
                             else
                             {
                                 //只计算能谱数据，不进行符合计数
+                                qDebug().noquote()<<"Into Size1 = "<<data1_2.size()<<", Size2 = "<<data2_2.size();
                                 coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, \
                                     detectorParameter.timeWidth, detectorParameter.delayTime, false, false);
+                                qDebug().noquote()<<"Out";
                             }
                         }
 #ifdef QT_DEBUG
-                    qDebug()<< "coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime())<<"ms, time0 = "<<data1_2[0].time/1e9 \
+                        double time0 = 0.0;
+                        if(data1_2.size() > 0) time0 = data1_2[0].time/1e9;
+                        else time0 = data2_2[0].time/1e9;
+                        qDebug()<< "coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime())<<"ms, time0 = "<<data1_2[0].time/1e9 \
                         << "s, data1.count=" << data1_2.size() \
                         << ", data2.count=" << data2_2.size();
 #endif

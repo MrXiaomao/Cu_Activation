@@ -284,7 +284,7 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
             //     maxTime = configMap.value("测量时长(s)").toInt() + detParameter.coolingTime;
             // }else{
             minTime = startTime_absolute + 1;
-            maxTime = configMap.value("测量时长(s)").toInt() + detParameter.coolingTime - 1;
+            maxTime = configMap.value("测量时长(s)").toInt() + detParameter.coolingTime;
             // }
             //读取配置参数的时候，默认数据分析参数为全部时间段测量数据。
             ui->spinBox_start->setValue(minTime+2); //丢弃前两个点的数据，因为前两个点数据经常不完整
@@ -301,6 +301,7 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
 #include <QMessageBox>
 void OfflineDataAnalysisWidget::slotStart()
 {
+    qInfo().noquote()<<"开始解析历史数据";
     if (!analyzerFinished){
         QMessageBox::information(this, tr("提示"), tr("当前解析还未完成，请稍后重试！"));
         reAnalyzer = true;
@@ -468,6 +469,7 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
     if (interrupted){
         SplashWidget::instance()->hide();
         QMessageBox::information(this, tr("提示"), tr("文件解析意外被终止！"));
+        qInfo().noquote()<<"历史数据解析意外被终止!";
     }
     else
     {
@@ -549,6 +551,7 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
             }
         }
 
+        qInfo().noquote()<<"历史数据解析顺利完成";
         SplashWidget::instance()->hide();
         QMessageBox::information(this, tr("提示"), tr("文件解析已顺利完成！"));
     }
@@ -710,8 +713,9 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
     double halflife_Cu64 = 12.7*60*60; // 单位s,Cu64的半衰期
     double lamda62 = log(2) / halflife_Cu62;
     double lamda64 = log(2) / halflife_Cu64;
-    double f = ratioCu62/lamda62*(exp(-lamda62*start_time) - exp(-lamda62*time_end)) + \
-                ratioCu64/lamda64*(exp(-lamda64*start_time) - exp(-lamda64*time_end));
+    //注意，起点位置要减一，时间积分的左端点
+    double f = ratioCu62/lamda62*(exp(-lamda62*(start_time-1)) - exp(-lamda62*time_end)) + \
+                ratioCu64/lamda64*(exp(-lamda64*(start_time-1)) - exp(-lamda64*time_end));
                 
     //对符合计数进行真偶符合修正
     //注意timeWidth_tmp单位为ns，要换为时间s。

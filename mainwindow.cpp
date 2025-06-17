@@ -435,6 +435,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
+    qDebug().noquote()<<"软件正常退出";
     delete ui;
 }
 

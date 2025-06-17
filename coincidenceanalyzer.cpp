@@ -661,7 +661,8 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int tim
    
     //测量的起点时刻（这个时刻以活化物活化后开始计时）
     int start_time = 0;
-    if(detPara.measureModel == mmManual) start_time = detPara.coolingTime + time_SetEnWindow; //对于手动拟合，选取能窗前的一段数据要舍弃
+    //对于手动拟合，选取能窗前的一段数据要舍弃,且放弃前两个点，注意这里是减3，保证时间左端点是减去两个点
+    if(detPara.measureModel == mmManual) start_time = /*detPara.coolingTime + */time_SetEnWindow + 3;
     // if(detPara.measureModel == mmAuto) start_time = detPara.coolingTime;
     if(detPara.measureModel == mmAuto) 
     {
@@ -675,7 +676,7 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int tim
     
     //测量时间终点时刻（相对于活化0时刻）。
     int time_end = 0;
-    if(detPara.measureModel == mmManual) time_end = detPara.coolingTime + coinResult.back().time;
+    if(detPara.measureModel == mmManual) time_end = /*detPara.coolingTime + */coinResult.back().time;
     if(detPara.measureModel == mmAuto) time_end = coinResult.back().time;
 
     if(time_end < start_time) return 0.0; //不允许起始时间小于停止时间
@@ -755,8 +756,14 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int sta
     double Nc = 0;
     double deathTime_ratio_total[2] = {0.0, 0.0};
     double deathTime_ratio_ave[2] = {0.0, 0.0};
+    int id = 0;
     for(auto coin:coinResult)
     {
+        //丢弃前两个数据点
+        if(id<2) {
+            id++;
+            continue;
+        }
         // 手动测量，在改变能窗之前的数据不处理，注意剔除。现在数据没有保存这一段数据
         N1 += (coin.CountRate1 - backRatesDet1);
         N2 += (coin.CountRate2 - backRatesDet2);
@@ -775,8 +782,9 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int sta
     double lamda62 = log(2) / halflife_Cu62;
     double lamda64 = log(2) / halflife_Cu64;
 
-    double f = ratioCu62/lamda62*(exp(-lamda62*start_time) - exp(-lamda62*time_end)) + \
-                ratioCu64/lamda64*(exp(-lamda64*start_time) - exp(-lamda64*time_end));
+    //注意，起点位置要减一，时间积分的左端点
+    double f = ratioCu62/lamda62*(exp(-lamda62*(start_time-1)) - exp(-lamda62*time_end)) + \
+                ratioCu64/lamda64*(exp(-lamda64*(start_time-1)) - exp(-lamda64*time_end));
 
     //对符合计数进行真偶符合修正
     //注意timeWidth_tmp单位为ns，要换为时间s。

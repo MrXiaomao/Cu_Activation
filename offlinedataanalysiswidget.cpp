@@ -57,11 +57,10 @@ OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
         bool pause_plot = this->property("pause_plot").toBool();
         if (!pause_plot){
             PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
+            // QDateTime now = QDateTime::currentDateTime();
             plotWidget->slotUpdatePlotDatas(r1, r3);
-
-            // ui->lcdNumber_CountRate1->display(r3.back().CountRate1);
-            // ui->lcdNumber_CountRate2->display(r3.back().CountRate2);
-            // ui->lcdNumber_ConCount_single->display(r3.back().ConCount_single);
+            // qDebug()<< "plot time=" << now.msecsTo(QDateTime::currentDateTime())\
+            //              << ", r3.size()=" << r3.size();
         }
     }, Qt::DirectConnection/*防止堵塞*/);
 
@@ -341,7 +340,8 @@ void OfflineDataAnalysisWidget::slotStart()
         QByteArray aDatas = validDataFileName.toLocal8Bit();
         vector<TimeEnergy> data1_2, data2_2;
 // #ifdef QT_NO_DEBUG
-        SysUtils::realQuickAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/, bool eof, bool *interrupted){
+        SysUtils::realQuickAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, \
+            unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/, bool eof, bool *interrupted){
 // #else
         // SysUtils::realAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, bool eof, bool *interrupted){
 // #endif
@@ -389,7 +389,17 @@ void OfflineDataAnalysisWidget::slotStart()
             
             //记录FPGA内的最大时刻，作为符合测量的时间区间右端点。
             if (data1_2.size() > 0 || data2_2.size() > 0 ){
+                // QDateTime now = QDateTime::currentDateTime();
+                // double time0 = 0.0;
+                // if(data1_2.size() > 0) time0 = data1_2[0].time/1e9;
+                // else time0 = data2_2[0].time/1e9;
+
                 coincidenceAnalyzer->calculate(data1_2, data2_2, (unsigned short*)EnWindow, timeWidth, delayTime, true, true);
+
+                // qDebug()<< "calculate time=" << now.msecsTo(QDateTime::currentDateTime())
+                //          <<"ms, time0="<<time0 \
+                //          << "s, data1.count=" << data1_2.size() \
+                //          << ", data2.count=" << data2_2.size();
                 data1_2.clear();
                 data2_2.clear();
             }
@@ -446,12 +456,11 @@ void OfflineDataAnalysisWidget::doEnWindowData(SingleSpectrum r1, vector<Coincid
             emit sigPlot(r1, rr3);
         }
     } else{
-        vector<CoincidenceResult> rr3;
-        for (size_t i=0; i < count; i++){
-            rr3.push_back(r3[i]);
-        }
-
-        emit sigPlot(r1, rr3);
+        // vector<CoincidenceResult> rr3;
+        // for (size_t i=0; i < count; i++){
+        //     rr3.push_back(r3[i]);
+        // }
+        emit sigPlot(r1, r3);
     }
 }
 
@@ -542,12 +551,12 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
                     emit sigPlot(totalSingleSpectrum, rr3);
                 }
             } else{
-                vector<CoincidenceResult> rr3;
-                for (size_t i=0; i < count; i++){
-                    rr3.push_back(result[i]);
-                }
+                // vector<CoincidenceResult> rr3;
+                // for (size_t i=0; i < count; i++){
+                //     rr3.push_back(result[i]);
+                // }
 
-                emit sigPlot(totalSingleSpectrum, rr3);
+                emit sigPlot(totalSingleSpectrum, result);
             }
         }
 

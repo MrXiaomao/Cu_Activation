@@ -379,9 +379,9 @@ MainWindow::MainWindow(QWidget *parent)
         this->lastRecvDataTime = QDateTime::currentDateTime();
         bool pause_plot = this->property("pause_plot").toBool();
         if (!pause_plot){
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");  
             plotWidget->slotUpdatePlotDatas(r1, r3);
-
+ 
             if(r3.size()==0) return;
             ui->lcdNumber_CountRate1->display(r3.back().CountRate1);
             ui->lcdNumber_CountRate2->display(r3.back().CountRate2);
@@ -389,7 +389,7 @@ MainWindow::MainWindow(QWidget *parent)
             ui->lcdNumber_DeathRatio1->display(r3.back().DeathRatio1);
             ui->lcdNumber_DeathRatio2->display(r3.back().DeathRatio2);
         }
-    }, Qt::DirectConnection/*防止堵塞*/);
+    }, Qt::QueuedConnection/*防止堵塞*/);
     //DirectConnection replot 子线程操作，不会堵塞，但是会崩溃
     //QueuedConnection replot 主线程操作，刷新慢
 

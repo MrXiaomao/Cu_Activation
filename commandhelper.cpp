@@ -389,13 +389,15 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
                 v.ConCount_multiple /= _stepT;
                 
                 rr3.push_back(v);
+                emit sigPlot(r1, rr3);
             }
         }
     } else{
-        for (size_t i=0; i < countCoin; i++){
-            rr3.push_back(r3[posI]);
-            posI++;
-        }
+        // for (size_t i=0; i < countCoin; i++){
+        //     rr3.push_back(r3[posI]);
+        //     posI++;
+        // }
+        emit sigPlot(r1, r3);
     }
 
     //更新能窗与能窗对应的竖线，目前默认都要更新，产生计数曲线后才会更新
@@ -436,8 +438,6 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
             emit sigUpdateAutoEnWidth(autoEnWindow, detectorParameter.measureModel);
         }        
     }
-
-    emit sigPlot(r1, rr3);
 }
 
 void CommandHelper::initCommand()
@@ -747,7 +747,7 @@ void CommandHelper::closeDetector()
     slotStopManualMeasure();
     if (socketDetector->isOpen())
         socketDetector->close();
-    emit sigDetectorStatus(false);
+    // emit sigDetectorStatus(false);
 }
 
 //触发阈值1
@@ -1934,17 +1934,18 @@ void CommandHelper::detTimeEnergyWorkThread()
                             else
                             {
                                 //只计算能谱数据，不进行符合计数
-                                qDebug().noquote()<<"Into Size1 = "<<data1_2.size()<<", Size2 = "<<data2_2.size();
+                                // qDebug().noquote()<<"Into Size1 = "<<data1_2.size()<<", Size2 = "<<data2_2.size();
                                 coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, \
                                     detectorParameter.timeWidth, detectorParameter.delayTime, false, false);
-                                qDebug().noquote()<<"Out";
+                                // qDebug().noquote()<<"Out";
                             }
                         }
 #ifdef QT_DEBUG
                         double time0 = 0.0;
                         if(data1_2.size() > 0) time0 = data1_2[0].time/1e9;
                         else time0 = data2_2[0].time/1e9;
-                        qDebug()<< "coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime())<<"ms, time0 = "<<data1_2[0].time/1e9 \
+                        qDebug()<< "coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime())
+                                 <<"ms, time0="<<time0 \
                         << "s, data1.count=" << data1_2.size() \
                         << ", data2.count=" << data2_2.size();
 #endif
@@ -2242,12 +2243,12 @@ void CommandHelper::analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult>
             sigPlot(r1, rr3);
         }
     } else{
-        vector<CoincidenceResult> rr3;
-        for (size_t i=0; i < count; i++){
-            rr3.push_back(r3[i]);
-        }
+        // vector<CoincidenceResult> rr3;
+        // for (size_t i=0; i < count; i++){
+        //     rr3.push_back(r3[i]);
+        // }
 
-        sigPlot(r1, rr3);
+        sigPlot(r1, r3);
     }
 }
 

@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-29 16:44:23
+ * @LastEditTime: 2025-06-23 10:47:38
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -245,7 +245,15 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
                 if (separatorIndex != -1) {
                     QString key = line.left(separatorIndex).trimmed();
                     QString value = line.mid(separatorIndex + 1).trimmed();
-                    configMap[key] = value;
+
+                    // 处理带单位的键和不带单位的键
+                    if(key.endsWith("(ns)") || key.endsWith("(s)")) {
+                        QString baseKey = key.left(key.length() - 4); // 去掉"(ns)"
+                        if(!configMap.contains(baseKey)) { // 如果基础键不存在，则添加
+                            configMap[baseKey] = value;
+                        }
+                    }
+                    configMap[key] = value; // 保留原始键值对
                 }
             }
             file.close();
@@ -258,8 +266,8 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
                 detParameter.measureModel = mmAuto;
                 ui->spinBox_coolingTime->setEnabled(false);//自动模式不允许修改冷却时长
             }
-            detParameter.coolingTime = configMap.value("冷却时长(s)").toInt();
-            detParameter.timeWidth = configMap.value("符合分辨时间(ns)").toInt();
+            detParameter.coolingTime = configMap.value("冷却时长").toInt();
+            detParameter.timeWidth = configMap.value("符合分辨时间").toInt();
             
             QString rangeStr = configMap.value("量程选取");
             if(rangeStr == "小量程") detParameter.measureRange = 1;
@@ -271,19 +279,19 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
             else startFPGA_time = detParameter.coolingTime + 1;
 
             ui->lineEdit_measuremodel->setText(configMap.value("测量模式"));
-            ui->spinBox_step->setValue(configMap.value("时间步长(s)").toInt());
-            ui->spinBox_timeWidth->setValue(configMap.value("符合分辨时间(ns)").toInt());
-            ui->spinBox_coolingTime->setValue(configMap.value("冷却时长(s)").toInt());
+            ui->spinBox_step->setValue(configMap.value("时间步长").toInt());
+            ui->spinBox_timeWidth->setValue(configMap.value("符合分辨时间").toInt());
+            ui->spinBox_coolingTime->setValue(configMap.value("冷却时长").toInt());
             ui->lineEdit_range->setText(rangeStr);
 
             int minTime = 0;
             int maxTime = 0;
             // if(detParameter.measureModel == mmManual) {
             //     minTime = startTime_absolute + 1;
-            //     maxTime = configMap.value("测量时长(s)").toInt() + detParameter.coolingTime;
+            //     maxTime = configMap.value("测量时长").toInt() + detParameter.coolingTime;
             // }else{
             minTime = startTime_absolute + 1;
-            maxTime = configMap.value("测量时长(s)").toInt() + detParameter.coolingTime;
+            maxTime = configMap.value("测量时长").toInt() + detParameter.coolingTime;
             // }
             //读取配置参数的时候，默认数据分析参数为全部时间段测量数据。
             ui->spinBox_start->setValue(minTime+2); //丢弃前两个点的数据，因为前两个点数据经常不完整

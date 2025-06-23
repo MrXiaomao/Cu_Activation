@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-29 16:19:19
+ * @LastEditTime: 2025-06-23 17:39:58
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -120,11 +120,31 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
         calculateAllSpectrum(unusedData1, unusedData2);
 
         SingleSpectrum tempSpec = this->currentSpec;
-        for(unsigned short i=0; i<MULTI_CHANNEL - 3; i++)
-        {
-            recentlySpectrum.time = tempSpec.time;
-            recentlySpectrum.spectrum[0][i] += tempSpec.spectrum[0][i];
-            recentlySpectrum.spectrum[1][i] += tempSpec.spectrum[1][i];
+        
+        //此处是为了在计数率低的时候，减少for循环执行次数
+        //很多时候1s内两个探测器都没有计数，则不进行for循环
+        int length1 = AllPoint.back().dataPoint1;
+        int length2 = AllPoint.back().dataPoint2;
+        
+        recentlySpectrum.time = tempSpec.time;
+        if(length1>0 && length2>0){
+            for(unsigned short i=0; i<MULTI_CHANNEL - 3; i++)
+            {
+                recentlySpectrum.spectrum[0][i] += tempSpec.spectrum[0][i];
+                recentlySpectrum.spectrum[1][i] += tempSpec.spectrum[1][i];
+            }
+        }
+        else if(length1>0){
+            for(unsigned short i=0; i<MULTI_CHANNEL - 3; i++)
+            {
+                recentlySpectrum.spectrum[0][i] += tempSpec.spectrum[0][i];
+            }
+        }
+        else if(length2>0){
+            for(unsigned short i=0; i<MULTI_CHANNEL - 3; i++)
+            {
+                recentlySpectrum.spectrum[1][i] += tempSpec.spectrum[1][i];
+            }
         }
 
         //计算计数曲线
@@ -133,13 +153,29 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
             //自动拟合，更新能窗
             if(autoEnWidth) 
             {
-                for(unsigned short i=0; i<MULTI_CHANNEL - 3; i++)
-                {
-                    GaussFitSpec.time = tempSpec.time;
-                    GaussFitSpec.spectrum[0][i] += tempSpec.spectrum[0][i];
-                    GaussFitSpec.spectrum[1][i] += tempSpec.spectrum[1][i];
-                }
+                GaussFitSpec.time = tempSpec.time;
+                currentGaussCount[0] += length1;
+                currentGaussCount[1] += length2;
 
+                if(length1>0 && length2>0){
+                    for(unsigned short i=0; i<MULTI_CHANNEL - 3; i++)
+                    {
+                        GaussFitSpec.spectrum[0][i] += tempSpec.spectrum[0][i];
+                        GaussFitSpec.spectrum[1][i] += tempSpec.spectrum[1][i];
+                    }
+                }
+                else if(length1>0){
+                    for(unsigned short i=0; i<MULTI_CHANNEL - 3; i++)
+                    {
+                        GaussFitSpec.spectrum[0][i] += tempSpec.spectrum[0][i];
+                    }
+                }
+                else if(length2>0){
+                    for(unsigned short i=0; i<MULTI_CHANNEL - 3; i++)
+                    {
+                        GaussFitSpec.spectrum[1][i] += tempSpec.spectrum[1][i];
+                    }
+                }
                 //距离上次自动高斯拟合的时间间隔，单位：s
                 int GapTime = countCoin;
                 if (GaussFitLog.size() > 0)
@@ -150,6 +186,8 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
                 if(isChangeEnWindow){
                     recentlySpectrum = GaussFitSpec; //更新这个最近能谱
                     memset(&GaussFitSpec, 0, sizeof(GaussFitSpec));
+                    currentGaussCount[0] = 0;
+                    currentGaussCount[1] = 0;
                 }
             }
 
@@ -212,13 +250,9 @@ void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> &data1, vector
             int binIndex = data1[i].energy/binWidth;
             if(binIndex >=0 && binIndex < MULTI_CHANNEL) {
                 spectrum1[binIndex]++;
+                spec_temp.spectrum[0][binIndex]++;
+                AccumulateSpectrum.spectrum[0][binIndex]++;
             }
-        }
-
-        for(int i = 0; i<MULTI_CHANNEL; i++)
-        {
-            spec_temp.spectrum[0][i] = spectrum1[i];
-            AccumulateSpectrum.spectrum[0][i] += spectrum1[i];
         }
     }
     if(length2>0)
@@ -229,13 +263,9 @@ void CoincidenceAnalyzer::calculateAllSpectrum(vector<TimeEnergy> &data1, vector
             int binIndex = data2[i].energy/binWidth;
             if(binIndex >=0 && binIndex < MULTI_CHANNEL) {
                 spectrum2[binIndex]++;
+                spec_temp.spectrum[1][binIndex]++;
+                AccumulateSpectrum.spectrum[1][binIndex]++;
             }
-        }
-
-        for(int i = 0; i<MULTI_CHANNEL; i++)
-        {
-            spec_temp.spectrum[1][i] = spectrum2[i];
-            AccumulateSpectrum.spectrum[1][i] += spectrum2[i];
         }
     }
     
@@ -417,21 +447,9 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> &data1, vector<TimeEner
 // 自动更新能窗
 void CoincidenceAnalyzer::AutoEnergyWidth()
 {
-    //计算自动拟合的数据点数
-    int sumEnergy1 = 0; 
-    int sumEnergy2 = 0;
-
-    for(unsigned short i=0; i<MULTI_CHANNEL; i++)
-    {        
-        //记录全谱的计数
-        sumEnergy1 += GaussFitSpec.spectrum[0][i];
-        sumEnergy2 += GaussFitSpec.spectrum[1][i];
-    }
-
     bool changed = false;
-
     //探测器1高斯拟合
-    if(sumEnergy1 > GaussCountMin && sumEnergy2 > GaussCountMin)  
+    if(currentGaussCount[0] > GaussCountMin && currentGaussCount[1] > GaussCountMin)  
     {
         // printf("autoEn FPGAtime = %f\n",AllPoint.back().time);
         vector<double> sx,sy;
@@ -490,7 +508,7 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
     }
 
     //探测器2高斯拟合
-    if(sumEnergy1 > GaussCountMin && sumEnergy2 > GaussCountMin)
+    if(currentGaussCount[0] > GaussCountMin && currentGaussCount[1] > GaussCountMin)
     {
         vector<double> sx,sy;
         sx.reserve(EnergyWindow[1] - EnergyWindow[0] + 1);

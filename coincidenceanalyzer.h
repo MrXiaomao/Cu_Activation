@@ -65,6 +65,9 @@ public:
             AccumulateSpectrum.spectrum[0][i] = 0;
             AccumulateSpectrum.spectrum[1][i] = 0;
         }
+        
+        currentGaussCount[0] = 0;
+        currentGaussCount[1] = 0;
     }
 
     /**
@@ -196,6 +199,7 @@ private:
     SingleSpectrum GaussFitSpec; // 用于高斯拟合的能谱，每秒钟汇总一次，并且计算能窗内计数点是否到达指定的点数。满足点数后便进行拟合，更新能谱
     int GaussCountMin; //自动高斯拟合的最小探测器计数
     int GaussMinGapTime; //自动高斯拟合的能窗最小时间间隔,单位：s
+    int currentGaussCount[2]; //待高斯拟合的探测器计数。
     unsigned short EnergyWindow[4];//能窗边界，依次存放探测器1左边界、右边界，探测器2左边界、右边界。
     vector<AutoGaussFit> GaussFitLog; //记录修改能窗区间的左右宽度,
 };

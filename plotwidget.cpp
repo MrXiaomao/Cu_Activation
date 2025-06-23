@@ -1604,6 +1604,252 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
                 customPlotCoResult->replot(refreshPriority);
         }
     }
+    if(1){//能谱
+        QCustomPlot* customPlotDet1 = getCustomPlot(amEnDet1);
+        QCustomPlot* customPlotDet2 = getCustomPlot(amEnDet2);
+
+        {//Det1
+            double maxEnergy = 0;
+            QVector<double> keys, values;
+            QVector<QColor> colors;
+
+            int ch = 0;
+            int mersize = MULTI_CHANNEL / multiChannel;
+            for (unsigned int i=0; i<multiChannel; ++i){
+                keys << i+1;
+
+                //合并道址
+                int mergechannel = 0;
+                for(int j=0; j<mersize; j++)
+                {
+                    mergechannel += r1.spectrum[0][ch];
+                    energyValues[0][ch] = r1.spectrum[0][ch];
+                    ch++; // ch = i * mersize + j
+                }
+
+                values << mergechannel;
+                colors << clrLine;
+
+                maxEnergy = qMax(maxEnergy, mergechannel*1.0);
+            }
+
+            customPlotDet1->graph(0)->setData(keys, values, colors);
+            if (maxEnergy > customPlotDet1->yAxis->range().upper * RANGE_SCARRE_UPPER){
+                customPlotDet1->yAxis->setRange(customPlotDet1->yAxis->range().lower, maxEnergy / RANGE_SCARRE_LOWER);
+                customPlotDet1->yAxis2->setRange(customPlotDet1->yAxis->range().lower, maxEnergy / RANGE_SCARRE_LOWER);
+            }
+
+            int leftWindow = customPlotDet1->property("leftEnWindow").toInt();
+            int rightWindow = customPlotDet1->property("rightEnWindow").toInt();
+            if (this->property("showGaussInfo").toBool()){
+                this->slotGauss(customPlotDet1, leftWindow, rightWindow);
+            }
+
+            if (!this->property("isCountModel").toBool())
+                customPlotDet1->replot(refreshPriority);
+        }
+
+        {//Det2
+            double maxEnergy = 0;
+            QVector<double> keys, values;
+            QVector<QColor> colors;
+
+            int ch = 0;
+            int mersize = MULTI_CHANNEL / multiChannel;
+            for (unsigned int i=0; i<multiChannel; ++i){
+                keys << i+1;
+
+                //合并道址
+                int mergechannel = 0;
+                for(int j=0; j<mersize; j++)
+                {
+                    mergechannel += r1.spectrum[1][ch];
+                    energyValues[1][i] = r1.spectrum[1][ch];
+                    ch++;// ch = i*mersize + j;
+                }
+
+                values << mergechannel;
+                colors << clrLine;
+                maxEnergy = qMax(maxEnergy, mergechannel*1.0);
+            }
+
+            customPlotDet2->graph(0)->setData(keys, values, colors);
+            if (maxEnergy > customPlotDet2->yAxis->range().upper * RANGE_SCARRE_UPPER){
+                customPlotDet2->yAxis->setRange(customPlotDet2->yAxis->range().lower, maxEnergy / RANGE_SCARRE_LOWER);
+                customPlotDet2->yAxis2->setRange(customPlotDet2->yAxis->range().lower, maxEnergy / RANGE_SCARRE_LOWER);
+            }
+
+            int leftWindow = customPlotDet2->property("leftEnWindow").toInt();
+            int rightWindow = customPlotDet2->property("rightEnWindow").toInt();
+            if (this->property("showGaussInfo").toBool()){
+                this->slotGauss(customPlotDet2, leftWindow, rightWindow);
+            }
+
+            if (!this->property("isCountModel").toBool())
+                customPlotDet2->replot(refreshPriority);
+        }
+    }
+}
+
+void PlotWidget::slotAddPlotDatas(SingleSpectrum r1, CoincidenceResult r3)
+{
+    QMutexLocker locker(&mutexRefreshPlot);
+    QCustomPlot::RefreshPriority refreshPriority = QCustomPlot::rpQueuedReplot;
+
+    times.append(r3.time);
+    count1.append(r3.CountRate1);
+    count2.append(r3.CountRate2);
+    count3.append(r3.ConCount_single);
+    colorsCount.append(clrLine);
+
+    if(times.size()>0)
+    {
+        //计数模式
+        QCustomPlot* customPlotDet1 = getCustomPlot(amCountDet1);
+        QCustomPlot* customPlotDet2 = getCustomPlot(amCountDet2);
+        QCustomPlot* customPlotCoResult = getCustomPlot(amCoResult);
+
+        {//Det1
+            minCount[0] = qMin(minCount[0], 1.0*r3.CountRate1);
+            maxCount[0] = qMax(maxCount[0], 1.0*r3.CountRate1);
+
+            customPlotDet1->graph(0)->setData(times, count1, colorsCount);
+            //考虑到曲线是一直下降，因此只调节下限
+            double upper = customPlotDet1->yAxis->range().upper;
+            double lower = customPlotDet1->yAxis->range().lower;
+
+            // 考虑到屏幕画面下半部分留白，必须先算上限
+            if(maxCount[0] > upper){
+                upper = maxCount[0] /RANGE_SCARRE_UPPER;
+            }
+            if (maxCount[0] < 10)
+            {
+                upper = 10;
+            }
+
+            if (minCount[0] < lower){
+                lower = upper - (upper - minCount[0]) / RANGE_COUNT_RATIO;
+                if(lower < 0.0) lower = 0.0; //因为计数恒为正
+            }
+            customPlotDet1->yAxis->setRange(lower, upper);
+            customPlotDet1->yAxis2->setRange(lower, upper);
+
+            if (this->property("autoRefreshModel").toBool()){
+                qint32 timeRange = this->property("refresh-time-range").toInt();
+                if (times.back() > customPlotDet1->xAxis->range().upper){
+                    if (timeRange == -1){
+                        customPlotDet1->xAxis->setRange(0, times.back());
+                        customPlotDet1->xAxis2->setRange(0, times.back());
+                    }
+                    else if (times.back() > timeRange){
+                        customPlotDet1->xAxis->setRange(times.back() - timeRange, times.back());
+                        customPlotDet1->xAxis2->setRange(times.back() - timeRange, times.back());
+                    }
+                    else{
+                        customPlotDet1->xAxis->setRange(0, timeRange/*times.back()*/);
+                        customPlotDet1->xAxis2->setRange(0, timeRange/*times.back()*/);
+                    }
+                }
+            }
+
+            if (this->property("isCountModel").toBool())
+                customPlotDet1->replot(refreshPriority);
+        }
+
+        {//Det2
+            minCount[1] = qMin(minCount[1], 1.0*r3.CountRate2);
+            maxCount[1] = qMax(maxCount[1], 1.0*r3.CountRate2);
+
+            customPlotDet2->graph(0)->setData(times, count2, colorsCount);
+            //考虑到曲线是一直下降，因此只调节下限
+            double upper = customPlotDet2->yAxis->range().upper;
+            double lower = customPlotDet2->yAxis->range().lower;
+            // 考虑到屏幕画面下半部分留白，必须先算上限
+            if(maxCount[1] > upper){
+                upper = maxCount[1] /RANGE_SCARRE_UPPER;
+            }
+            if (maxCount[1] < 10)
+            {
+                upper = 10;
+            }
+
+            if (minCount[1] < lower){
+                lower = upper - (upper - minCount[1]) / RANGE_COUNT_RATIO;
+                if(lower < 0.0) lower = 0.0; //因为计数恒为正
+
+            }
+            customPlotDet2->yAxis->setRange(lower, upper);
+            customPlotDet2->yAxis2->setRange(lower, upper);
+
+            if (this->property("autoRefreshModel").toBool()){
+                qint32 timeRange = this->property("refresh-time-range").toInt();
+                if (times.back() > customPlotDet2->xAxis->range().upper){
+                    if (timeRange == -1){
+                        customPlotDet2->xAxis->setRange(0, times.back());
+                        customPlotDet2->xAxis2->setRange(0, times.back());
+                    }
+                    else if (times.back() > timeRange){
+                        customPlotDet2->xAxis->setRange(times.back() - timeRange, times.back());
+                        customPlotDet2->xAxis2->setRange(times.back() - timeRange, times.back());
+                    }
+                    else{
+                        customPlotDet2->xAxis->setRange(0, timeRange/*times.back()*/);
+                        customPlotDet2->xAxis2->setRange(0, timeRange/*times.back()*/);
+                    }
+                }
+            }
+
+            if (this->property("isCountModel").toBool())
+                customPlotDet2->replot(refreshPriority);
+        }
+
+        {//符合结果
+            minCount[2] = qMin(minCount[2], 1.0*r3.CountRate2);
+            maxCount[2] = qMax(maxCount[2], 1.0*r3.CountRate2);
+
+            customPlotCoResult->graph(0)->setData(times, count3, colorsCount);
+            double upper = customPlotCoResult->yAxis->range().upper;
+            double lower = customPlotCoResult->yAxis->range().lower;
+
+            // 考虑到屏幕画面下半部分留白，必须先算上限
+            if(maxCount[2] > upper){
+                upper = maxCount[2] /RANGE_SCARRE_UPPER;
+            }
+            if (maxCount[2] < 10)
+            {
+                upper = 10;
+            }
+
+            if (minCount[2] < lower){
+                lower = upper - (upper - minCount[2]) / RANGE_COUNT_RATIO;
+                if(lower < 0.0) lower = 0.0; //因为计数恒为正
+            }
+            customPlotCoResult->yAxis->setRange(lower, upper);
+            customPlotCoResult->yAxis2->setRange(lower, upper);
+
+
+            if (this->property("autoRefreshModel").toBool()){
+                qint32 timeRange = this->property("refresh-time-range").toInt();
+                if (times.back() > customPlotCoResult->xAxis->range().upper){
+                    if (timeRange == -1){
+                        customPlotCoResult->xAxis->setRange(0, times.back());
+                        customPlotCoResult->xAxis2->setRange(0, times.back());
+                    }
+                    else if (times.back() > timeRange){
+                        customPlotCoResult->xAxis->setRange(times.back() - timeRange, times.back());
+                        customPlotCoResult->xAxis2->setRange(0, times.back());
+                    }
+                    else{
+                        customPlotCoResult->xAxis->setRange(0, timeRange/*times.back()*/);
+                        customPlotCoResult->xAxis2->setRange(0, timeRange/*times.back()*/);
+                    }
+                }
+            }
+
+            if (this->property("isCountModel").toBool())
+                customPlotCoResult->replot(refreshPriority);
+        }
+    }
     {//能谱
         QCustomPlot* customPlotDet1 = getCustomPlot(amEnDet1);
         QCustomPlot* customPlotDet2 = getCustomPlot(amEnDet2);
@@ -1693,6 +1939,17 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
 
 void PlotWidget::slotStart(unsigned int channel)
 {
+    //清空计数曲线,注意，内存没被清空
+    times.clear(); 
+    count1.clear(); 
+    count2.clear(); 
+    count3.clear();
+    colorsCount.clear();
+    for(int i=0; i<3; i++){
+        minCount[i] = 100000; //这里特意取一个大数值，因为计数器上限总是比该数小
+        maxCount[i] = 0.0; //这里特意取0.，因为计数器计数总是比该数大
+    }
+
     this->multiChannel = channel;
     max_UIChannel = (channel/100 + 1)*100;
     SPECTRUM_X_AXIS_UPPER = max_UIChannel;

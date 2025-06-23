@@ -368,10 +368,27 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
     }
 
     //时间步长，求均值
-    size_t posI = start_pos;
+    //size_t posI = start_pos;
     if (_stepT > 1){
         if (countCoin>1 && (countCoin % _stepT == 0)){
-            for (size_t i=0; i < countCoin/_stepT; i++){
+            //对最近一个步长的计数数据求均值
+            CoincidenceResult v;
+            size_t posI = r3.size() - _stepT - 1;
+            for (size_t i=0; i < _stepT; i++){
+                v.CountRate1 += r3[posI].CountRate1;
+                v.CountRate2 += r3[posI].CountRate2;
+                v.ConCount_single += r3[posI].ConCount_single;
+                v.ConCount_multiple += r3[posI].ConCount_multiple;
+                posI++;  
+            }
+            //给出平均计数率cps,注意，这里是整除，当计数率小于1cps时会变成零。
+            v.time = r3[posI-1].time;
+            v.CountRate1 /= _stepT;
+            v.CountRate2 /= _stepT;
+            v.ConCount_single /= _stepT;
+            v.ConCount_multiple /= _stepT;
+            emit sigPlot(r1, v);
+            /*for (size_t i=0; i < countCoin/_stepT; i++){
                 CoincidenceResult v;
                 for (int j=0; j<_stepT; ++j){
                     v.CountRate1 += r3[posI].CountRate1;
@@ -390,14 +407,22 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
                 
                 rr3.push_back(v);
                 emit sigPlot(r1, rr3);
-            }
+            }*/
+        }
+        else{//只绘制能谱
+            sigNewPlot(r1, r3);
         }
     } else{
         // for (size_t i=0; i < countCoin; i++){
         //     rr3.push_back(r3[posI]);
         //     posI++;
         // }
-        emit sigPlot(r1, r3);
+        if(countCoin>1){
+            emit sigPlot(r1, r3.back());
+        }
+        else{
+            sigNewPlot(r1, r3);
+        }
     }
 
     //更新能窗与能窗对应的竖线，目前默认都要更新，产生计数曲线后才会更新
@@ -2177,80 +2202,6 @@ bool CommandHelper::isConnected()
     return socketDetector->isOpen();
 }
 
-// 暂时弃用，没有调用该函数
-void CommandHelper::analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult> r3)
-{
-    size_t count = r3.size();
-    int _stepT = this->stepT;
-    
-    if (count <= 0)
-        return;
-
-    QDateTime now = QDateTime::currentDateTime();
-    std::cout << "[" << now.toString("hh:mm:ss.zzz").toStdString() \
-              << "] coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime()) \
-              << ", time=" << r1.time \
-              << ", count=" << r3.size() << std::endl;
-    return;
-
-    //保存信息
-    if (r1.time != currentFPGATime){
-        //有新的能谱数据产生
-        QString coincidenceResultFile = validDataFileName + ".符合计数";
-        {
-            QFile file(coincidenceResultFile);
-            if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
-                QTextStream out(&file);
-                out << "time,CountRate1,CountRate2,ConCount_single,ConCount_multiple,deathRatio1,deathRatio2";
-                CoincidenceResult coincidenceResult = r3.back();
-                for (size_t i=0; i<r3.size(); ++i){
-                    out << r1.time << "," << coincidenceResult.CountRate1 << "," << coincidenceResult.CountRate2 \
-                        << "," << coincidenceResult.ConCount_single << "," << coincidenceResult.ConCount_multiple
-                        << "," << coincidenceResult.DeathRatio1 << "," << coincidenceResult.DeathRatio2;
-                }
-
-                file.flush();
-                file.close();
-            }
-        }
-        currentFPGATime = r1.time;
-    }
-
-    //时间步长，求均值
-    if (_stepT > 1){
-        if (count>1 && (count % _stepT == 0)){
-            vector<CoincidenceResult> rr3;
-
-            for (size_t i=0; i < count/_stepT; i++){
-                CoincidenceResult v;
-                for (int j=0; j<_stepT; ++j){
-                    size_t posI = i*_stepT + j;
-                    //冷却时长内的数据才是有效数据
-                    v.CountRate1 += r3[posI].CountRate1;
-                    v.CountRate2 += r3[posI].CountRate2;
-                    v.ConCount_single += r3[posI].ConCount_single;
-                    v.ConCount_multiple += r3[posI].ConCount_multiple;
-                }
-
-                //给出平均计数率cps,注意，这里是整除，当计数率小于1cps时会变成零。
-                v.CountRate1 /= _stepT;
-                v.CountRate2 /= _stepT;
-                v.ConCount_single /= _stepT;
-                v.ConCount_multiple /= _stepT;
-                rr3.push_back(v);
-            }
-
-            sigPlot(r1, rr3);
-        }
-    } else{
-        // vector<CoincidenceResult> rr3;
-        // for (size_t i=0; i < count; i++){
-        //     rr3.push_back(r3[i]);
-        // }
-
-        sigPlot(r1, r3);
-    }
-}
 
 bool CommandHelper::checkAndClearQByteArray(QByteArray &data) {
     if (data.capacity() > MAX_BYTEARRAY_SIZE) {

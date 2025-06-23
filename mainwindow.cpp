@@ -373,9 +373,26 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     qRegisterMetaType<SingleSpectrum>("SingleSpectrum");
-    qRegisterMetaType<vector<CoincidenceResult>>("vector<CoincidenceResult>");
+    qRegisterMetaType<CoincidenceResult>("CoincidenceResult");
     std::cout << "main thread id:" << QThread::currentThreadId() << std::endl;
-    connect(commandHelper, &CommandHelper::sigPlot, this, [=](SingleSpectrum r1, vector<CoincidenceResult> r3){
+    connect(commandHelper, &CommandHelper::sigPlot, this, [=](SingleSpectrum r1, CoincidenceResult r3){
+        this->lastRecvDataTime = QDateTime::currentDateTime();
+        bool pause_plot = this->property("pause_plot").toBool();
+        if (!pause_plot){
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");  
+            plotWidget->slotAddPlotDatas(r1, r3);
+ 
+            // if(r3.size()==0) return;
+            ui->lcdNumber_CountRate1->display(r3.CountRate1);
+            ui->lcdNumber_CountRate2->display(r3.CountRate2);
+            ui->lcdNumber_ConCount_single->display(r3.ConCount_single);
+            ui->lcdNumber_DeathRatio1->display(r3.DeathRatio1);
+            ui->lcdNumber_DeathRatio2->display(r3.DeathRatio2);
+        }
+    }, Qt::QueuedConnection/*防止堵塞*/);
+    
+    qRegisterMetaType<vector<CoincidenceResult>>("vector<CoincidenceResult>");
+    connect(commandHelper, &CommandHelper::sigNewPlot, this, [=](SingleSpectrum r1, vector<CoincidenceResult> r3){
         this->lastRecvDataTime = QDateTime::currentDateTime();
         bool pause_plot = this->property("pause_plot").toBool();
         if (!pause_plot){

@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:32
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-14 17:54:08
+ * @LastEditTime: 2025-06-23 19:43:13
  * @Description: 请填写简介
  */
 #ifndef OFFLINEDATAANALYSISWIDGET_H
@@ -53,7 +53,7 @@ public:
     static QString smartAddTxtExtension(const QString &fileName);
 
 signals:
-    void sigPlot(SingleSpectrum, vector<CoincidenceResult>);
+    void sigNewPlot(SingleSpectrum, vector<CoincidenceResult>);
     void sigStart();
     void sigPausePlot(bool); //是否暂停图像刷新
     void sigEnd(bool);

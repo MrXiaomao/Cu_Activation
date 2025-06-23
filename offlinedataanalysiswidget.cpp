@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-06-23 19:02:58
+ * @LastEditTime: 2025-06-23 19:43:18
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -53,7 +53,7 @@ OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
         }
     }
 
-    connect(this, &OfflineDataAnalysisWidget::sigPlot, this, [=](SingleSpectrum r1, vector<CoincidenceResult> r3){
+    connect(this, &OfflineDataAnalysisWidget::sigNewPlot, this, [=](SingleSpectrum r1, vector<CoincidenceResult> r3){
         bool pause_plot = this->property("pause_plot").toBool();
         if (!pause_plot){
             PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
@@ -463,14 +463,14 @@ void OfflineDataAnalysisWidget::doEnWindowData(SingleSpectrum r1, vector<Coincid
                 rr3.push_back(v);
             }
 
-            emit sigPlot(r1, rr3);
+            emit sigNewPlot(r1, rr3);
         }
     } else{
         // vector<CoincidenceResult> rr3;
         // for (size_t i=0; i < count; i++){
         //     rr3.push_back(r3[i]);
         // }
-        emit sigPlot(r1, r3);
+        emit sigNewPlot(r1, r3);
     }
 }
 
@@ -558,7 +558,7 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
                         rr3.push_back(v);
                     }
 
-                    emit sigPlot(totalSingleSpectrum, rr3);
+                    emit sigNewPlot(totalSingleSpectrum, rr3);
                 }
             } else{
                 // vector<CoincidenceResult> rr3;
@@ -566,7 +566,7 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
                 //     rr3.push_back(result[i]);
                 // }
 
-                emit sigPlot(totalSingleSpectrum, result);
+                emit sigNewPlot(totalSingleSpectrum, result);
             }
         }
 

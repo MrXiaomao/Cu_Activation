@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-14 11:20:49
+ * @LastEditTime: 2025-06-24 00:19:16
  * @Description: 用来管理网口的数据发送与接受，管理网口数据的处理相关业务。
  */
 #ifndef COMMANDHELPER_H
@@ -125,7 +125,11 @@ signals:
     void sigCoincidenceResult(quint32, CoincidenceResult);
     void sigSingleSpectrum(SingleSpectrum);
     void sigCurrentPoint(quint32, CurrentPoint);
-    void sigPlot(SingleSpectrum, vector<CoincidenceResult>);
+    
+    //对于计数曲线，每次只添加一个点，减少大容器的数据拷贝耗时
+    void sigPlot(SingleSpectrum, CoincidenceResult);
+    //刷新整个曲线
+    void sigNewPlot(SingleSpectrum, vector<CoincidenceResult>);
 
     void sigDoTasks();
     void sigAnalyzeFrame();
@@ -177,8 +181,7 @@ private:
     void doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> r3);
  
     static void analyzerRealCalback(SingleSpectrum r1, vector<CoincidenceResult> r3, void *callbackUser);
-    // 暂时弃用该函数
-    void analyzerCalback(SingleSpectrum r1, vector<CoincidenceResult> r3);       
+    
 public slots:
     void openRelay(bool first = false);
     void closeRelay();

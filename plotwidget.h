@@ -84,6 +84,10 @@ public slots:
 
     //批量刷新
     void slotUpdatePlotDatas(SingleSpectrum, vector<CoincidenceResult>);
+    
+    //能谱刷新整个数据，计数曲线增加一个数据点。
+    void slotAddPlotDatas(SingleSpectrum r1, CoincidenceResult r3);
+    
     //更新空数据
     void slotUpdatePlotNullData(int refreshTime);
 
@@ -128,6 +132,11 @@ private:
     QColor clrSelect = QColor(0, 0, 255, 200);
     QColor clrGauseCurve = QColor(0, 0, 255, 200);
     bool axisVisible = true;
+
+    //三条计数曲线,这种模式仅仅适合于数据点固定刷新时间间隔，测量途中不可切换。
+    QVector<double> times, count1, count2, count3;
+    QVector<QColor> colorsCount; //计数曲线数据点的颜色，三条曲线同样颜色
+    double minCount[3], maxCount[3];
 
     //计数模式下，坐标轴默认范围值
     qint32 COUNT_X_AXIS_LOWER[2];

@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-06-23 10:47:38
+ * @LastEditTime: 2025-06-23 19:02:58
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -294,6 +294,8 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
             maxTime = configMap.value("测量时长").toInt() + detParameter.coolingTime;
             // }
             //读取配置参数的时候，默认数据分析参数为全部时间段测量数据。
+            ui->spinBox_start->setRange(0, INT_MAX); // 先设置足够大的范围
+            ui->spinBox_end->setRange(0, INT_MAX); // 先设置足够大的范围
             ui->spinBox_start->setValue(minTime+2); //丢弃前两个点的数据，因为前两个点数据经常不完整
             ui->spinBox_end->setValue(maxTime);
 

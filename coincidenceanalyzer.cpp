@@ -825,6 +825,7 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int sta
 void CoincidenceAnalyzer::doFPGA_lossDATA_correction(std::map<unsigned int, unsigned long long> lossData)
 {
     unsigned int coinNum = coinResult.size();
+    if(coinNum == 0) return;
     for (const auto& pair:lossData) {
         unsigned int time_seconds = pair.first; 
         

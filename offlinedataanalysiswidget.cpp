@@ -247,8 +247,15 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
                     QString value = line.mid(separatorIndex + 1).trimmed();
 
                     // 处理带单位的键和不带单位的键
-                    if(key.endsWith("(ns)") || key.endsWith("(s)")) {
+                    if(key.endsWith("(ns)") ) {
                         QString baseKey = key.left(key.length() - 4); // 去掉"(ns)"
+                        if(!configMap.contains(baseKey)) { // 如果基础键不存在，则添加
+                            configMap[baseKey] = value;
+                        }
+                    }
+                    else if(key.endsWith("(s)"))
+                    {
+                        QString baseKey = key.left(key.length() - 3); // 去掉"(s)"
                         if(!configMap.contains(baseKey)) { // 如果基础键不存在，则添加
                             configMap[baseKey] = value;
                         }

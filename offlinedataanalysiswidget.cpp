@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-06-25 10:23:14
+ * @LastEditTime: 2025-06-25 10:44:37
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -645,7 +645,7 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
     //如果没有前面的calculate的计算，那么后续计算不能进行
     if(coinResult.size() == 0) return ;
     
-    size_t num = coinResult.size(); //计数点个数。
+    size_t num = time_end - start_time + 1; //计数点个数。
 
     //符合时间窗,单位ns
     int timeWidth_tmp = detPara.timeWidth;

@@ -1121,8 +1121,11 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
         pfSaveVaildData = new QFile(validDataFileName);
         if (pfSaveVaildData->open(QIODevice::WriteOnly)) {
             unsigned int FileHead = 0xFFFFFFFF; //文件包头，有效数据的识别码
-            pfSaveVaildData->write((char*)&FileHead, sizeof(FileHead));
+            qint64 num = pfSaveVaildData->write((char*)&FileHead, sizeof(FileHead));
             qInfo().noquote() << tr("创建缓存文件成功，文件名：%1").arg(validDataFileName);
+            if(num == -1){
+                qInfo().noquote() << tr("文件包头0xFFFFFFFF写入失败，文件名：%1").arg(validDataFileName);
+            }
         } else {
             qWarning().noquote() << tr("创建缓存文件失败，文件名：%1").arg(validDataFileName);
         }

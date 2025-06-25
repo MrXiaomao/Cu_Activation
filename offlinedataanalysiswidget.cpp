@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-06-23 19:43:18
+ * @LastEditTime: 2025-06-25 10:23:14
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -370,9 +370,9 @@ void OfflineDataAnalysisWidget::slotStart()
 
                 firstPopup = false;
             }
-// #ifdef QT_NO_DEBUG
+
             emit SplashWidget::instance()->sigUpdataProgress(progress, filesize);
-// #endif
+
             if (eof){
                 if (interrupted)
                     emit sigEnd(true);
@@ -506,7 +506,12 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
         
         // 读取活化测量的数据时刻区间[起始时间，结束时间]
         vector<CoincidenceResult> result = coincidenceAnalyzer->GetCoinResult();
-        
+        if(result.size()==0){
+            qCritical().noquote()<<"历史数据解析失败";
+            SplashWidget::instance()->hide();
+            QMessageBox::information(this, tr("提示"), tr("文件解析错误，文件中不存在有效测量数据！"));
+            return;
+        }
         unsigned int startTime = result.at(0).time;
         // if(detParameter.measureModel == mmManual) startTime = detParameter.coolingTime + startFPGA_time;
         // else startTime = detParameter.coolingTime;

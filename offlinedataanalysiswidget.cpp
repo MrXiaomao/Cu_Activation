@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-06-25 10:44:37
+ * @LastEditTime: 2025-06-26 16:39:47
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -406,17 +406,7 @@ void OfflineDataAnalysisWidget::slotStart()
             
             //记录FPGA内的最大时刻，作为符合测量的时间区间右端点。
             if (data1_2.size() > 0 || data2_2.size() > 0 ){
-                // QDateTime now = QDateTime::currentDateTime();
-                // double time0 = 0.0;
-                // if(data1_2.size() > 0) time0 = data1_2[0].time/1e9;
-                // else time0 = data2_2[0].time/1e9;
-
                 coincidenceAnalyzer->calculate(data1_2, data2_2, (unsigned short*)EnWindow, timeWidth, delayTime, true, true);
-
-                // qDebug()<< "calculate time=" << now.msecsTo(QDateTime::currentDateTime())
-                //          <<"ms, time0="<<time0 \
-                //          << "s, data1.count=" << data1_2.size() \
-                //          << ", data2.count=" << data2_2.size();
                 data1_2.clear();
                 data2_2.clear();
             }
@@ -492,6 +482,15 @@ void OfflineDataAnalysisWidget::on_pushButton_start_clicked()
 
 void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
 {
+    //结束线程,释放指针，避免野指针。
+    QLiteThread *thread = this->findChild<QLiteThread*>("calThread");
+    if (thread) {
+        qDebug() << "Found thread:" << thread->objectName();
+        thread->quit();
+        thread->wait();
+        delete thread;
+    }
+
     if (interrupted){
         SplashWidget::instance()->hide();
         QMessageBox::information(this, tr("提示"), tr("文件解析意外被终止！"));

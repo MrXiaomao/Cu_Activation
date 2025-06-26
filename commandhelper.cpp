@@ -1073,6 +1073,9 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
 
     //连接之前清空缓冲区
     QMutexLocker locker(&mutexCache);
+
+    //先清空TCP接收区缓存，以及相应的缓存变量
+    socketDetector->readAll();
     cachePool.clear();
     handlerPool.clear();
 
@@ -1326,6 +1329,9 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
 
     //连接之前清空缓冲区
     QMutexLocker locker(&mutexCache);
+
+    //先清空TCP接收区缓存，以及相应的缓存变量
+    socketDetector->readAll();
     cachePool.clear();
     handlerPool.clear();
 
@@ -1576,6 +1582,12 @@ void CommandHelper::netFrameWorkThead()
                     {
                         foundStop = true;
                         qDebug()<<"Recv HEX: "<<cmdStopTrigger.toHex(' ');
+                        
+                        //根据网口调试助手，有时候硬件无法停止下来因此这里补发一次停止指令，但是不对返回的指令做处理，下一次开始测量清空缓存
+                        //该问题后期需要硬件从根源上解决问题才合适。
+                        socketDetector->write(cmdStopTrigger);
+                        qDebug()<<"Send HEX: "<<cmdStopTrigger.toHex(' ');
+
                         QMutexLocker locker(&mutexFile);
 // #ifdef QT_DEBUG
                         if (nullptr != pfSaveNet){

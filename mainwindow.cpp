@@ -722,9 +722,9 @@ void MainWindow::InitMainWindowUi()
         QDateTime currentDateTime = QDateTime::currentDateTime();
         qint64 days = currentDateTime.daysTo(measureStartTime);
         if (days >= 1){
-            ui->lcdNumber->display(QString::number(days) + tr("d") + QTime(0,0,0).addSecs(measureStartTime.secsTo(currentDateTime) - days * 24 * 60 * 60).toString("hh:mm:ss"));
+            ui->label_measuretime->setText(QString::number(days) + tr("day") + QTime(0,0,0).addSecs(measureStartTime.secsTo(currentDateTime) - days * 24 * 60 * 60).toString("hh:mm:ss"));
         } else{
-            ui->lcdNumber->display(QTime(0,0,0).addSecs(measureStartTime.secsTo(currentDateTime)).toString("hh:mm:ss"));
+            ui->label_measuretime->setText(QTime(0,0,0).addSecs(measureStartTime.secsTo(currentDateTime)).toString("hh:mm:ss"));
         }
     });
 

@@ -180,27 +180,21 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QLCDNumber" name="lcdNumber">
+                  <widget class="QLabel" name="label_measuretime">
                    <property name="sizePolicy">
-                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                      <horstretch>0</horstretch>
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>0</width>
-                     <height>30</height>
+                     <width>70</width>
+                     <height>0</height>
                     </size>
                    </property>
-                   <property name="digitCount">
-                    <number>10</number>
-                   </property>
-                   <property name="segmentStyle">
-                    <enum>QLCDNumber::Flat</enum>
-                   </property>
-                   <property name="intValue" stdset="0">
-                    <number>0</number>
+                   <property name="text">
+                    <string>00:00:00</string>
                    </property>
                   </widget>
                  </item>

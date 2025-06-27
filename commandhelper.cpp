@@ -1074,7 +1074,11 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     //连接之前清空缓冲区
     QMutexLocker locker(&mutexCache);
 
-    //先清空TCP接收区缓存，以及相应的缓存变量
+    //先清空TCP发送区
+    socketDetector->flush();  // 强制尝试发送（不阻塞，实际发送由系统调度）
+    socketDetector->waitForBytesWritten();//等待数据发送完成。（阻塞直到数据写入操作系统）
+
+    //再清空TCP接收区缓存，以及相应的缓存变量
     socketDetector->readAll();
     cachePool.clear();
     handlerPool.clear();
@@ -1282,35 +1286,6 @@ void CommandHelper::slotStopManualMeasure()
         }
         socketDetector->write(cmdStopTrigger);
         qDebug()<<"Send HEX: "<<cmdStopTrigger.toHex(' ');
-
-        //00:能谱 03:波形 05:粒子
-        /*if (detectorParameter.transferModel == 0x00){
-            emit sigMeasureStopSpectrum();
-
-            //测量停止保存波形测量参数
-            QString configResultFile = netDataFileName + ".配置";
-            {
-                QFile file(configResultFile);
-                if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
-                    QTextStream out(&file);
-
-                    // 保存粒子测量参数
-                    out << tr("阈值1=") << detectorParameter.triggerThold1 << Qt::endl;
-                    out << tr("阈值2=") << detectorParameter.triggerThold2 << Qt::endl;
-                    out << tr("波形极性=") << ((detectorParameter.waveformPolarity==0x00) ? tr("正极性") : tr("负极性")) << Qt::endl;
-
-                    out << tr("死时间(ns)=") << detectorParameter.deadTime << Qt::endl;
-                    if (gainValue.contains(detectorParameter.gain))
-                        out << tr("探测器增益=") << gainValue[detectorParameter.gain] << Qt::endl;
-
-                    out << tr("能谱刷新时间(s)=") << detectorParameter.refreshTimeLength << Qt::endl;
-
-                    file.flush();
-                    file.close();
-                }
-            }
-            qInfo().noquote() << tr("本次能谱测量参数配置已存放在：%1").arg(configResultFile);
-        }*/
     } else {
         emit sigDetectorFault();
     }
@@ -1586,6 +1561,9 @@ void CommandHelper::netFrameWorkThead()
                         //根据网口调试助手，有时候硬件无法停止下来因此这里补发一次停止指令，但是不对返回的指令做处理，下一次开始测量清空缓存
                         //该问题后期需要硬件从根源上解决问题才合适。
                         socketDetector->write(cmdStopTrigger);
+                        socketDetector->flush();  // 强制尝试发送（不阻塞，实际发送由系统调度）
+                        socketDetector->waitForBytesWritten();//等待数据发送完成。
+
                         qDebug()<<"Send HEX: "<<cmdStopTrigger.toHex(' ');
 
                         QMutexLocker locker(&mutexFile);

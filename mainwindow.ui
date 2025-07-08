@@ -2423,9 +2423,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
    <property name="text">
     <string>帮助</string>
    </property>
-   <property name="shortcut">
-    <string>F1</string>
-   </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
    </property>
@@ -2614,9 +2611,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
    </property>
    <property name="text">
     <string>查看日志</string>
-   </property>
-   <property name="shortcut">
-    <string>F2</string>
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>

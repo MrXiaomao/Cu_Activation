@@ -720,7 +720,7 @@ void MainWindow::InitMainWindowUi()
     measureRefTimer->setObjectName("measureRefTimer");
     connect(measureRefTimer, &QTimer::timeout, this, [=](){
         QDateTime currentDateTime = QDateTime::currentDateTime();
-        qint64 days = currentDateTime.daysTo(measureStartTime);
+        qint64 days = measureStartTime.daysTo(currentDateTime);
         if (days >= 1){
             ui->label_measuretime->setText(QString::number(days) + tr("day") + QTime(0,0,0).addSecs(measureStartTime.secsTo(currentDateTime) - days * 24 * 60 * 60).toString("hh:mm:ss"));
         } else{

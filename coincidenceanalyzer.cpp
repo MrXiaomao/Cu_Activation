@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-06-23 17:39:58
+ * @LastEditTime: 2025-06-30 09:23:53
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -485,6 +485,8 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
                 // double FWHM = 2*sqrt(2*log(2))*result[2];
                 //4sigma作为能窗
                 double fourSigma = 4*result[2];
+                if(fourSigma < 0.0) return;
+
                 changed = true;
                 double Left = mean - fourSigma*0.5; // 峰位-0.5*能窗宽度
                 double Right = mean + fourSigma*0.5; // 峰位+0.5*能窗宽度
@@ -511,8 +513,8 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
     if(currentGaussCount[0] > GaussCountMin && currentGaussCount[1] > GaussCountMin)
     {
         vector<double> sx,sy;
-        sx.reserve(EnergyWindow[1] - EnergyWindow[0] + 1);
-        sy.reserve(EnergyWindow[1] - EnergyWindow[0] + 1);
+        sx.reserve(EnergyWindow[3] - EnergyWindow[2] + 1);
+        sy.reserve(EnergyWindow[3] - EnergyWindow[2] + 1);
         for(unsigned short i=0; i<MULTI_CHANNEL; i++)
         {
             if(i >= EnergyWindow[2] && i <= EnergyWindow[3]) {
@@ -544,6 +546,8 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
             // double FWHM = 2*sqrt(2*log(2))*result[2];
             //4sigma作为能窗
             double fourSigma = 4*result[2];
+            if(fourSigma < 0.0) return;
+            
             changed = true;
             double Left = mean - fourSigma*0.5; // 峰位-0.5*能窗宽度
             double Right = mean + fourSigma*0.5; // 峰位+0.5*能窗宽度

@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-06-26 16:39:47
+ * @LastEditTime: 2025-06-29 20:30:55
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -758,8 +758,8 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
     double Nco0 = Nco / (1 - deathRatioAverage[0]) / (1 - deathRatioAverage[1]);
     //计算出活度乘以探测器几何效率的值。本项目中称之为相对活度
     //反推出0时刻的计数。
-
-    double A0_omiga = N10 * N20 / Nco0 / f;
+    double A0_omiga = 0.0;
+    if(Nc > 0) A0_omiga = N10 * N20 / Nco0 / f; //防止分母为0
 
     //-------------------------------------更新界面
     ui->lineEdit_particleNum->setText(QString::number(detectNum, 'E', 5));

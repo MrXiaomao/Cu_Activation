@@ -1,0 +1,16 @@
+{
+    "DeadTime": 500,
+    "DetectorGain": 5,
+    "TriggerThold1": 200,
+    "TriggerThold2": 200,
+    "TriggerThold3": 0,
+    "TriggerThold4": 0,
+    "WaveformPolarity": 0,
+	"isTrapShaping":true,
+	"TrapShape_risePoint":20,
+	"TrapShape_peakPoint":20,
+	"TrapShape_fallPoint":20,
+	"TrapShape_constTime1":63150,
+	"TrapShape_constTime2":62259,
+	"Threshold_baseLine":20
+}

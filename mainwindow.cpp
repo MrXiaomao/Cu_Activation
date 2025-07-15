@@ -1105,30 +1105,23 @@ void MainWindow::on_pushButton_measure_clicked()
 
             //手动测量
             DetectorParameter detectorParameter;
+            // 测量界面参数
+            detectorParameter.measureRange = ui->comboBox_range->currentIndex()+1; //注意：从1开始计数
+            detectorParameter.coolingTime = ui->spinBox_coolingTime->value();
+            detectorParameter.delayTime = ui->spinBox_delayTime->value();
+            detectorParameter.timeWidth = ui->spinBox_timeWidth->value();
+            detectorParameter.measureModel = mmManual;
+            this->setProperty("measur-model", detectorParameter.measureModel);
+
+            //FPGA硬件参数
             detectorParameter.triggerThold1 = 0x81;
             detectorParameter.triggerThold2 = 0x81;
             detectorParameter.waveformPolarity = 0x00;
             detectorParameter.deadTime = 0x0A;
             detectorParameter.gain = 0x00;
-            detectorParameter.measureRange = ui->comboBox_range->currentIndex()+1; //注意：从1开始计数
-
-            // 默认打开梯形成形
-            detectorParameter.isTrapShaping = true;
-            detectorParameter.TrapShape_risePoint = 20;
-            detectorParameter.TrapShape_peakPoint = 20;
-            detectorParameter.TrapShape_fallPoint = 20;
-            detectorParameter.TrapShape_constTime1 = 63150;
-            detectorParameter.TrapShape_constTime2 = 62259;
-            detectorParameter.TrapShape_baseLine = 20;
-
             detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
-            detectorParameter.measureModel = mmManual;
-            detectorParameter.coolingTime = ui->spinBox_coolingTime->value();
-            detectorParameter.delayTime = ui->spinBox_delayTime->value();
-            detectorParameter.timeWidth = ui->spinBox_timeWidth->value();
-            this->setProperty("measur-model", detectorParameter.measureModel);
 
-            // 打开 JSON 文件
+            // 打开 JSON 文件，更新硬件参数
             QFile file(QApplication::applicationDirPath() + "/config/fpga.json");
             if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
                 // 读取文件内容
@@ -1143,6 +1136,33 @@ void MainWindow::on_pushButton_measure_clicked()
                 detectorParameter.waveformPolarity = jsonObj["WaveformPolarity"].toInt();
                 detectorParameter.deadTime = jsonObj["DeadTime"].toInt();
                 detectorParameter.gain = jsonObj["DetectorGain"].toInt();
+
+                // 默认打开梯形成形
+                if(jsonObj.contains("isTrapShaping")){
+                    detectorParameter.isTrapShaping = jsonObj["isTrapShaping"].toBool();
+                    if(detectorParameter.isTrapShaping)
+                    {
+                        detectorParameter.TrapShape_risePoint = jsonObj["TrapShape_risePoint"].toInt();
+                        detectorParameter.TrapShape_peakPoint = jsonObj["TrapShape_peakPoint"].toInt();
+                        detectorParameter.TrapShape_fallPoint = jsonObj["TrapShape_fallPoint"].toInt();
+                        detectorParameter.TrapShape_constTime1 = jsonObj["TrapShape_constTime1"].toInt();
+                        detectorParameter.TrapShape_constTime2 = jsonObj["TrapShape_constTime2"].toInt();
+                        detectorParameter.Threshold_baseLine = jsonObj["Threshold_baseLine"].toInt();
+                    }
+                    else
+                    {
+                        detectorParameter.Threshold_baseLine = 8140;
+                    }
+                }
+                else{//配置文件中不存在相关关键字，则直接采用默认值
+                    detectorParameter.isTrapShaping = true;
+                    detectorParameter.TrapShape_risePoint = 20;
+                    detectorParameter.TrapShape_peakPoint = 20;
+                    detectorParameter.TrapShape_fallPoint = 20;
+                    detectorParameter.TrapShape_constTime1 = 63150;
+                    detectorParameter.TrapShape_constTime2 = 62259;
+                    detectorParameter.Threshold_baseLine = 20;
+                }
             }
 
             // ui->pushButton_save->setEnabled(false);
@@ -1240,7 +1260,7 @@ void MainWindow::on_pushButton_measure_2_clicked()
         detectorParameter.TrapShape_fallPoint = 20;
         detectorParameter.TrapShape_constTime1 = 63150;
         detectorParameter.TrapShape_constTime2 = 62259;
-        detectorParameter.TrapShape_baseLine = 20;
+        detectorParameter.Threshold_baseLine = 20;
 
         detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
         detectorParameter.measureModel = mmAuto;

@@ -1,0 +1,26 @@
+{
+    "Control": {
+        "Distances": {
+            "01": {
+                "smallRange": "0",
+                "mediumRange": "90",
+                "largeRange": "250"
+            },
+            "02": {
+                "smallRange": "10",
+                "mediumRange": "100",
+                "largeRange": "300"
+            }
+        },
+        "ip": "192.168.10.200",
+        "port": 502
+    },
+    "Detector": {
+        "ip": "192.168.10.3",
+        "port": 5000
+    },
+    "Relay": {
+        "ip": "192.168.10.88",
+        "port": 5000
+    }
+}

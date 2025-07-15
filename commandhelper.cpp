@@ -519,6 +519,7 @@ void CommandHelper::handleManualMeasureNetData()
 {
     QByteArray binaryData = socketDetector->readAll();
 
+    //00:能谱 03:波形 05:粒子
     if (detectorParameter.transferModel == 0x03)
     {
         //波形模式，直接保存原始数据
@@ -554,12 +555,13 @@ void CommandHelper::handleManualMeasureNetData()
 
             if (cmdPool.size() > 0)
             {
+                QThread::msleep(15);  // 延迟 30 毫秒（阻塞线程）
                 socketDetector->write(cmdPool.first());
+                // socketDetector->waitForBytesWritten();
                 qDebug()<<"Send HEX: "<<cmdPool.first().toHex(' ');
             }
             else{
                 //最后指令是软件触发模式
-
                 //测量已经开始了
                 workStatus = Measuring;
                 emit sigMeasureStart(detectorParameter.measureModel, detectorParameter.transferModel);
@@ -598,8 +600,9 @@ void CommandHelper::handleAutoMeasureNetData()
 
             if (cmdPool.size() > 0)
             {
+                QThread::msleep(15);  // 延迟 30 毫秒（阻塞线程）
                 socketDetector->write(cmdPool.first());
-                socketDetector->waitForBytesWritten();
+                // socketDetector->waitForBytesWritten();
                 qDebug()<<"Send HEX: "<<cmdPool.first().toHex(' ');
             }
             else{
@@ -1182,7 +1185,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
             cmdPool.push_back(getCmdDetectorTS_TimePara(detectorParameter.TrapShape_constTime1,
                 detectorParameter.TrapShape_constTime2));
             //基线的噪声下限
-            cmdPool.push_back(getCmdDetectorTS_BaseLine(detectorParameter.TrapShape_baseLine));
+            cmdPool.push_back(getCmdDetectorTS_BaseLine(detectorParameter.Threshold_baseLine));
         }
         else{
             //关闭梯形成形
@@ -1219,7 +1222,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
             cmdPool.push_back(getCmdDetectorTS_TimePara(detectorParameter.TrapShape_constTime1,
                 detectorParameter.TrapShape_constTime2));
             //基线的噪声下限
-            cmdPool.push_back(getCmdDetectorTS_BaseLine(detectorParameter.TrapShape_baseLine));
+            cmdPool.push_back(getCmdDetectorTS_BaseLine(detectorParameter.Threshold_baseLine));
         }
         else{
             //关闭梯形成形
@@ -1254,7 +1257,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
             cmdPool.push_back(getCmdDetectorTS_TimePara(detectorParameter.TrapShape_constTime1,
                 detectorParameter.TrapShape_constTime2));
             //基线的噪声下限
-            cmdPool.push_back(getCmdDetectorTS_BaseLine(detectorParameter.TrapShape_baseLine));
+            cmdPool.push_back(getCmdDetectorTS_BaseLine(detectorParameter.Threshold_baseLine));
         }
         else{
             //关闭梯形成形
@@ -1304,6 +1307,10 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
 
     //连接之前清空缓冲区
     QMutexLocker locker(&mutexCache);
+
+    //先清空TCP发送区
+    socketDetector->flush();  // 强制尝试发送（不阻塞，实际发送由系统调度）
+    socketDetector->waitForBytesWritten();//等待数据发送完成。（阻塞直到数据写入操作系统）
 
     //先清空TCP接收区缓存，以及相应的缓存变量
     socketDetector->readAll();
@@ -1457,6 +1464,7 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
     cmdPool.push_back(cmdHardTrigger);
 
     socketDetector->write(cmdPool.first());
+    qDebug()<<"Send HEX: "<<cmdPool.first().toHex(' ');
 }
 
 void CommandHelper::slotStopAutoMeasure()
@@ -1560,11 +1568,11 @@ void CommandHelper::netFrameWorkThead()
                         
                         //根据网口调试助手，有时候硬件无法停止下来因此这里补发一次停止指令，但是不对返回的指令做处理，下一次开始测量清空缓存
                         //该问题后期需要硬件从根源上解决问题才合适。
-                        socketDetector->write(cmdStopTrigger);
+                        /*socketDetector->write(cmdStopTrigger);
                         socketDetector->flush();  // 强制尝试发送（不阻塞，实际发送由系统调度）
                         socketDetector->waitForBytesWritten();//等待数据发送完成。
-
                         qDebug()<<"Send HEX: "<<cmdStopTrigger.toHex(' ');
+                        */
 
                         QMutexLocker locker(&mutexFile);
 // #ifdef QT_DEBUG

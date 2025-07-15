@@ -2,6 +2,5 @@
 /build
 /debug
 /temp
-/config
 /*.autosave
 /.qtc_clangd

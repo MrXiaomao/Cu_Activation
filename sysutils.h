@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-13 16:08:05
+ * @LastEditTime: 2025-07-15 20:42:20
  * @Description: 请填写简介
  */
 #ifndef SYSUTILS_H
@@ -144,7 +144,7 @@ typedef struct tagDetectorParameter{
     //梯形成形
     bool isTrapShaping;
     //基线下限位置，基线是高斯噪声，这里是指基线下限，无梯形成形的时候必须是8140（十进制）；有梯形成形的时候默认值20（十进制）,可调节
-    int32_t TrapShape_baseLine;
+    int32_t Threshold_baseLine;
     //梯形成形上升沿点数，默认20
     int8_t TrapShape_risePoint;
     //梯形成形平顶点数，默认20

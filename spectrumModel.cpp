@@ -231,7 +231,7 @@ void SpectrumModel::on_pushButton_start_clicked()
         detectorParameter.TrapShape_fallPoint = 20;
         detectorParameter.TrapShape_constTime1 = (int16_t)0.9558*65536;
         detectorParameter.TrapShape_constTime2 = (int16_t)0.9556*65536;
-        detectorParameter.TrapShape_baseLine = 20;
+        detectorParameter.Threshold_baseLine = 20;
 
         // 打开 JSON 文件
         QFile file(QApplication::applicationDirPath() + "/config/spectrum.json");

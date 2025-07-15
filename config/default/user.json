@@ -1,0 +1,65 @@
+{
+    "M1": {
+        "Det1_EnWidth_left": 2452,
+        "Det1_EnWidth_right": 2678,
+        "Det2_EnWidth_left": 2682,
+        "Det2_EnWidth_right": 2931,
+        "coolingTime": 30,
+        "multiChannel_index": 0,
+        "range": 1,
+        "step": 1,
+        "timelength": 3600,
+        "timewidth": 100
+    },
+    "M2": {
+        "Det1_EnWidth_left": 2459,
+        "Det1_EnWidth_right": 2673,
+        "Det2_EnWidth_left": 2692,
+        "Det2_EnWidth_right": 2929,
+        "coolingTime": 10,
+        "multiChannel_index": 0,
+        "range": 1,
+        "step": 1,
+        "timelength": 3600,
+        "timewidth": 100
+    },
+    "Public": {
+        "Gauss_leftE": 2682,
+        "Gauss_rightE": 2931,
+        "safe_exit": false,
+        "select-range": 1
+    },
+    "YieldCalibration": {
+        "Range0": [
+            {
+                "Yield": 10000,
+                "active0": 5000,
+                "backgroundRatesDet1": 0.12,
+                "backgroundRatesDet2": 0.1,
+                "branchingRatio_Cu62": 0.6,
+                "branchingRatio_Cu64": 0.4
+            }
+        ],
+        "Range1": [
+            {
+                "Yield": 10000000,
+                "active0": 6000,
+                "backgroundRatesDet1": 0.12,
+                "backgroundRatesDet2": 0.1,
+                "branchingRatio_Cu62": 0.6,
+                "branchingRatio_Cu64": 0.4
+            }
+        ],
+        "Range2": [
+            {
+                "Yield": 100000000000,
+                "active0": 3333,
+                "backgroundRatesDet1": 0.1,
+                "backgroundRatesDet2": 0.2,
+                "branchingRatio_Cu62": 0.6,
+                "branchingRatio_Cu64": 0.4
+            }
+        ]
+    },
+    "defaultCache": "E:/数据保存默认路径"
+}

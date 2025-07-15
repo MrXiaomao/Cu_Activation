@@ -6,6 +6,7 @@
 #include <QJsonDocument>
 #include <QFile>
 #include <QDir>
+#include <QMessageBox>
 
 FPGASetting::FPGASetting(QWidget *parent)
     : QWidget(parent)
@@ -34,7 +35,14 @@ FPGASetting::~FPGASetting()
 
 void FPGASetting::on_pushButton_save_clicked()
 {
-    this->save();
+    if (this->save()){
+        // CommandHelper* commandHelper =CommandHelper::instance();
+        QMessageBox::information(nullptr, tr("提示"), tr("硬件参数设置保存成功！"));
+    }
+    else{
+        QMessageBox::information(nullptr, tr("提示"), tr("硬件参数设置保存失败,请重新尝试！"));
+        return;
+    }
     this->close();
 }
 

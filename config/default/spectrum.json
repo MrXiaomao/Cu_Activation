@@ -1,0 +1,11 @@
+{
+    "DetectorGain": 4,
+    "FileName": "test.dat",
+    "Path": "C:/Users/Administrator/Desktop",
+    "RefreshTimeLength": 5000,
+    "TriggerThold1": 20,
+    "TriggerThold2": 20,
+    "TriggerThold3": 0,
+    "TriggerThold4": 0,
+    "WaveformPolarity": 0
+}

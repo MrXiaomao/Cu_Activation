@@ -260,7 +260,7 @@ void WaveformModel::on_pushButton_start_clicked()
         detectorParameter.triggerModel = 0x00;
         detectorParameter.measureModel = mmManual;
         detectorParameter.isTrapShaping = false;
-        detectorParameter.TrapShape_baseLine = 8140;
+        detectorParameter.Threshold_baseLine = 8140;
 
         // 打开 JSON 文件
         QFile file(QApplication::applicationDirPath() + "/config/wave.json");

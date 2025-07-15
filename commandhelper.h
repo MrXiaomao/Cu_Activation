@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-06-24 00:19:16
+ * @LastEditTime: 2025-07-15 21:39:43
  * @Description: 用来管理网口的数据发送与接受，管理网口数据的处理相关业务。
  */
 #ifndef COMMANDHELPER_H
@@ -96,6 +96,7 @@ protected:
         Measuring = 2,  // 测量中...
         Waiting = 3,  // 测量中...
         WorkEnd = 4    // 测量结束
+        // WorkSetting = 5 //配置参数中...
     };
 
     enum MeasureModelFlag {

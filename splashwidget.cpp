@@ -40,7 +40,9 @@ SplashWidget::SplashWidget(QWidget *parent) :
         }
     });
     timer->start();
-    this->setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
+    //this->setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool); //此种用法会遮挡第3方应用程序窗口
+    this->setWindowFlags(Qt::FramelessWindowHint | Qt::Tool);
+    this->raise();
 }
 
 SplashWidget::~SplashWidget()

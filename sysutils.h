@@ -12,6 +12,8 @@
 #include <cstdint>  // 添加这行以包含标准整数类型定义
 #include <functional>// std::function
 
+#include <log4qt/logger.h>
+
 // #include "coincidenceanalyzer.h"
 // 前向声明 DetTimeEnergy
 // struct DetTimeEnergy;

@@ -578,7 +578,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
               </sizepolicy>
              </property>
              <property name="currentIndex">
-              <number>1</number>
+              <number>0</number>
              </property>
              <widget class="QWidget" name="tab_3">
               <property name="sizePolicy">
@@ -2247,7 +2247,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
      <height>21</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menu">
+   <widget class="QMenu" name="menu_setup">
     <property name="title">
      <string>设置</string>
     </property>
@@ -2255,7 +2255,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <addaction name="action_cachepath"/>
     <addaction name="action_yieldcalibration"/>
    </widget>
-   <widget class="QMenu" name="menu_3">
+   <widget class="QMenu" name="menu_file">
     <property name="title">
      <string>文件</string>
     </property>
@@ -2263,15 +2263,14 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <addaction name="separator"/>
     <addaction name="action_close"/>
    </widget>
-   <widget class="QMenu" name="menu_4">
+   <widget class="QMenu" name="menu_tool">
     <property name="title">
      <string>工具</string>
     </property>
     <addaction name="action_energycalibration"/>
     <addaction name="action_Moving"/>
-    <addaction name="separator"/>
    </widget>
-   <widget class="QMenu" name="menu_5">
+   <widget class="QMenu" name="menu_help">
     <property name="title">
      <string>帮助</string>
     </property>
@@ -2287,11 +2286,11 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <addaction name="action_SpectrumModel"/>
     <addaction name="action_WaveformModel"/>
    </widget>
-   <addaction name="menu_3"/>
+   <addaction name="menu_file"/>
    <addaction name="menu_view"/>
-   <addaction name="menu"/>
-   <addaction name="menu_4"/>
-   <addaction name="menu_5"/>
+   <addaction name="menu_setup"/>
+   <addaction name="menu_tool"/>
+   <addaction name="menu_help"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="toolBar_online">
@@ -2323,7 +2322,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
    <addaction name="action_move"/>
    <addaction name="action_restore_2"/>
    <addaction name="separator"/>
-   <addaction name="separator"/>
    <addaction name="action_start_measure"/>
    <addaction name="action_close"/>
   </widget>
@@ -2350,6 +2348,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
    <addaction name="action_move"/>
    <addaction name="action_restore_2"/>
    <addaction name="separator"/>
+   <addaction name="action_optLog"/>
    <addaction name="action_close"/>
   </widget>
   <action name="action_devices">
@@ -2692,6 +2691,21 @@ li.checked::marker { content: &quot;\2612&quot;; }
    </property>
    <property name="toolTip">
     <string>清除数据提示</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::NoRole</enum>
+   </property>
+  </action>
+  <action name="action_optLog">
+   <property name="icon">
+    <iconset resource="resource.qrc">
+     <normaloff>:/resource/log.png</normaloff>:/resource/log.png</iconset>
+   </property>
+   <property name="text">
+    <string>操作日志</string>
+   </property>
+   <property name="toolTip">
+    <string>操作日志</string>
    </property>
    <property name="menuRole">
     <enum>QAction::NoRole</enum>

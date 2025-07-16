@@ -97,7 +97,7 @@ private slots:
 
     void on_action_Moving_triggered();
 
-    void on_lineEdit_editingFinished();
+    //void on_lineEdit_editingFinished();
 
     void on_action_start_measure_triggered();
 
@@ -125,6 +125,8 @@ private slots:
     void on_action_restore_2_triggered();
 
     void on_action_clear_triggered();
+
+    void on_action_optLog_triggered();
 
 private:
     Ui::MainWindow *ui = nullptr;

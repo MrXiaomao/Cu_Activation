@@ -10,29 +10,40 @@
 #include <QSplashScreen>
 #include <QMutex>
 #include <QTranslator>
-#include <iostream>
 
-QString QtMsgTypeToString(QtMsgType type)
-{
-    switch (type) {
-    case QtInfoMsg:
-        return "[信息]";     break;
-    case QtDebugMsg:
-        return "[调试]";    break;
-    case QtWarningMsg:
-        return "[警告]";  break;
-    case QtCriticalMsg:
-        return "[严重]"; break;
-    case QtFatalMsg:
-        return "[错误]";    break;
-    default:
-        return "Unknown";
-    }
-}
+#include <log4qt/log4qt.h>
+#include <log4qt/logger.h>
+#include <log4qt/layout.h>
+#include <log4qt/patternlayout.h>
+#include <log4qt/consoleappender.h>
+#include <log4qt/dailyfileappender.h>
+#include <log4qt/logmanager.h>
+#include <log4qt/propertyconfigurator.h>
+#include <log4qt/loggerrepository.h>
+#include <log4qt/fileappender.h>
+
+// QString QtMsgTypeToString(QtMsgType type)
+// {
+//     switch (type) {
+//     case QtInfoMsg:
+//         return "[信息]";     break;
+//     case QtDebugMsg:
+//         return "[调试]";    break;
+//     case QtWarningMsg:
+//         return "[警告]";  break;
+//     case QtCriticalMsg:
+//         return "[严重]"; break;
+//     case QtFatalMsg:
+//         return "[错误]";    break;
+//     default:
+//         return "Unknown";
+//     }
+// }
 
 MainWindow *mw = nullptr;
 QMutex mutexMsg;
-void AppMessageHandler(QtMsgType type, const QMessageLogContext& /*context*/, const QString &msg)
+QtMessageHandler system_default_message_handler = NULL;// 用来保存系统默认的输出接口
+void AppMessageHandler(QtMsgType type, const QMessageLogContext& context, const QString &msg)
 {
     //Release 版本默认不包含context这些信息:文件名、函数名、行数，需要在.pro项目文件加入以下代码，加入后最好重新构建项目使之生效：
     //DEFINES += QT_MESSAGELOGCONTEXT
@@ -49,55 +60,57 @@ void AppMessageHandler(QtMsgType type, const QMessageLogContext& /*context*/, co
     if (type == QtWarningMsg)
         return;
 
-    if (type == QtDebugMsg){
-        std::cout << "[Debug] " << msg.toLocal8Bit().toStdString() << std::endl;;
-        // return;
-    }
+    if (mw && type != QtDebugMsg)
+        emit mw->sigAppengMsg(msg + "\n", type);
 
-    // 确保logs目录存在
-    QDir dir(QDir::currentPath() + "/logs");
-    if (!dir.exists()) {
-        dir.mkpath(".");
-    }
+    // // 确保logs目录存在
+    // QDir dir(QDir::currentPath() + "/logs");
+    // if (!dir.exists()) {
+    //     dir.mkpath(".");
+    // }
 
-    // 获取当前日期，并格式化为YYYY-MM-DD
-    QString currentDate = QDateTime::currentDateTime().toString("yyyy-MM-dd");
+    // // 获取当前日期，并格式化为YYYY-MM-DD
+    // QString currentDate = QDateTime::currentDateTime().toString("yyyy-MM-dd");
 
-    // 创建日志文件路径，例如：logs/2023-10-23.log
-    QString logFilePath = QDir::currentPath() + "/logs/Cu_Activation_" + currentDate + ".log";
+    // // 创建日志文件路径，例如：logs/2023-10-23.log
+    // QString logFilePath = QDir::currentPath() + "/logs/2Cu_Activation_" + currentDate + ".log";
 
-    // 打开文件以追加模式
-    QFile file(logFilePath);
-    if (file.open(QIODevice::Append | QIODevice::Text)) {
-        QTextStream out(&file);
-        QString strMessage = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz ")
-                          + QtMsgTypeToString(type) + ": " + msg + "\n";
-        out << strMessage;
-        file.flush();
-        file.close();
+    // // 打开文件以追加模式
+    // QFile file(logFilePath);
+    // if (file.open(QIODevice::Append | QIODevice::Text)) {
+    //     QTextStream out(&file);
+    //     QString strMessage = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz ")
+    //                          + QtMsgTypeToString(type) + ": " + msg + "\n";
+    //     out << strMessage;
+    //     file.flush();
+    //     file.close();
+    // }
 
-        if (mw && type != QtDebugMsg)
-            emit mw->sigAppengMsg(msg + "\n", type);
+    //这里必须调用，否则消息被拦截，log4qt无法捕获系统日志
+    if (system_default_message_handler){
+        system_default_message_handler(type, context, msg);
     }
 }
 
-// 清理旧的日志文件，只保留最近几次的
-void cleanOldLogs(int refsToKeep)
+void logStartup()
 {
-    QDir dir(QDir::currentPath() + "/logs");
-    QStringList entries = dir.entryList(QStringList() << "Cu_Activation_*.log", QDir::Files);
+    auto logger = Log4Qt::Logger::rootLogger();
 
-    // 按文件名排序
-    entries.sort();
-
-    // 如果文件数量超过限制，则删除最旧的文件
-    while (entries.size() > refsToKeep) {
-        QString oldestFile = entries.first(); // 获取最旧的文件名
-        QFile::remove(dir.filePath(oldestFile)); // 删除文件
-        entries.removeFirst(); // 从列表中移除文件名
-    }
+    logger->info(QStringLiteral("################################################################"));
+    logger->info(QStringLiteral("                           程序启动                               "));
+    logger->info(QStringLiteral("################################################################"));
 }
 
+void shutdownRootLogger()
+{
+    auto logger = Log4Qt::Logger::rootLogger();
+    logger->removeAllAppenders();
+    logger->loggerRepository()->shutdown();
+}
+
+#ifdef WIN32
+#  include "app_dmp.h"
+#endif
 int main(int argc, char *argv[])
 {
     QApplication::setStyle(QStyleFactory::create("fusion"));//WindowsVista fusion windows
@@ -111,6 +124,12 @@ int main(int argc, char *argv[])
         qputenv("QT_FONT_DPI", "96");
         qputenv("QT_SCALE_FACTOR", "1.0");
     }
+
+    //注冊异常捕获函数
+#ifdef WIN32
+    ::SetUnhandledExceptionFilter(MyUnhandledExceptionFilter);
+    qputenv("QT_QPA_PLATFORM", "windows:darkmode=2");
+#endif
 
     qDebug() << APP_VERSION;
     qDebug() << GIT_BRANCH;
@@ -135,10 +154,55 @@ int main(int argc, char *argv[])
     splash.setPixmap(QPixmap(":/resource/splash.png"));
     splash.show();
 
-    // 保留最近3次的日志
-    // cleanOldLogs(3);
-    //安装日志
-    qInstallMessageHandler(AppMessageHandler);
+    // 启用新的日子记录类
+    QString sConfFilename = "./log4qt.conf";
+    QStringList args = QCoreApplication::arguments();
+    if (args.contains("-m") && args.contains("offline"))
+        sConfFilename = "./log4qt2.conf";
+
+    if (QFileInfo::exists(sConfFilename)){
+        Log4Qt::PropertyConfigurator::configure(sConfFilename);
+    } else {
+        Log4Qt::LogManager::setHandleQtMessages(true);
+        Log4Qt::Logger *logger = Log4Qt::Logger::rootLogger();
+        logger->setLevel(Log4Qt::Level::DEBUG_INT); //设置日志输出级别
+
+        /****************PatternLayout配置日志的输出格式****************************/
+        Log4Qt::PatternLayout *layout = new Log4Qt::PatternLayout();
+        layout->setConversionPattern("%d{yyyy-MM-dd HH:mm:ss.zzz} [%p]: %m %n");
+        layout->activateOptions();
+
+        /***************************配置日志的输出位置***********/
+        //输出到控制台
+        Log4Qt::ConsoleAppender *appender = new Log4Qt::ConsoleAppender(layout, Log4Qt::ConsoleAppender::STDOUT_TARGET);
+        appender->activateOptions();
+        logger->addAppender(appender);
+
+        //输出到文件(如果需要把离线处理单独保存日志文件，可以改这里)
+		QStringList args = QCoreApplication::arguments();
+        if (args.contains("-m") && args.contains("offline")) {
+			Log4Qt::DailyFileAppender *dailiAppender = new Log4Qt::DailyFileAppender(layout, "logs/.log", "offline_yyyy-MM-dd");
+	        dailiAppender->setAppendFile(true);
+	        dailiAppender->activateOptions();
+	        logger->addAppender(dailiAppender);
+		} else {
+	        Log4Qt::DailyFileAppender *dailiAppender = new Log4Qt::DailyFileAppender(layout, "logs/.log", "Cu_Activation_yyyy-MM-dd");
+	        dailiAppender->setAppendFile(true);
+	        dailiAppender->activateOptions();
+	        logger->addAppender(dailiAppender);
+		}
+    }
+
+    // 确保logs目录存在
+    QDir dir(QDir::currentPath() + "/logs");
+    if (!dir.exists()) {
+        dir.mkpath(".");
+    }
+
+    //logStartup();
+
+    //安装日志，主要用户主界面刷新日志信息，日志写文件改为log4qt模块来实现了
+    system_default_message_handler = qInstallMessageHandler(AppMessageHandler);
 
     splash.showMessage(QObject::tr("启动中..."), Qt::AlignLeft | Qt::AlignBottom, Qt::white);
     MainWindow w;
@@ -156,5 +220,12 @@ int main(int argc, char *argv[])
     splash.finish(&w);// 关闭启动画面，显示主窗口
     w.show();
 
-    return a.exec();
+    int ret = a.exec();
+
+    //运行运行到这里，此时主窗体析构函数还没触发，所以shutdownRootLogger需要在主窗体销毁以后再做处理
+    QObject::connect(&w, &QObject::destroyed, []{
+        shutdownRootLogger();
+    });
+
+    return ret;
 }

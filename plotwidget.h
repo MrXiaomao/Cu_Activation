@@ -111,9 +111,9 @@ signals:
     void sigPausePlot(bool); //是否暂停图像刷新
     void sigAreaSelected();//拟合区域选择完成
 
-    void sigSwitchToTipMode();//数据提示
-    void sigSwitchToDragMode();//选择拟合区域
-    void sigSwitchToMoveMode();//平移视图
+    void sigSwitchToTipMode(bool checked);//数据提示
+    void sigSwitchToDragMode(bool checked);//选择拟合区域
+    void sigSwitchToMoveMode(bool checked);//平移视图
 
 private:
     unsigned int multiChannel; //多道道数

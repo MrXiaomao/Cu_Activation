@@ -1,8 +1,8 @@
 /*
  * @Author: MaoXiaoqing
  * @Date: 2025-04-22 17:20:42
- * @LastEditors: Please set LastEditors
- * @LastEditTime: 2025-04-22 20:56:13
+ * @LastEditors: Maoxiaoqing
+ * @LastEditTime: 2025-07-16 17:11:22
  * @Description: 请填写简介
  */
 #include <stdlib.h>
@@ -15,6 +15,8 @@
 #include <gsl/gsl_randist.h>
 
 #include <vector>
+
+#define gauss_arr_count_min 10 //高斯拟合数据点数最小值
 
 double gaussian(const double a, const double b, const double c, const double t);
 

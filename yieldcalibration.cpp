@@ -127,6 +127,7 @@ void YieldCalibration::on_pushButton_cancel_clicked()
     this->close();
 }
 
+#include <QThread>
 void YieldCalibration::load()
 {
     // 加载参数
@@ -134,42 +135,48 @@ void YieldCalibration::load()
     QDir dir(path);
     if (!dir.exists())
         dir.mkdir(path);
-    QFile file(QApplication::applicationDirPath() + "/config/user.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
+    for (int i=0; i<10; ++i){
+        QFile file(QApplication::applicationDirPath() + "/config/user.json");
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            // 读取文件内容
+            QByteArray jsonData = file.readAll();
+            file.close(); //释放资源
 
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-        
-        QJsonObject jsonCalibration, jsonYield;
-        if (jsonObj.contains("YieldCalibration")){
-            jsonCalibration = jsonObj["YieldCalibration"].toObject();
-            for(int i=0; i<3; i++)
-            {
-                QString key = QString("Range%1").arg(i);
-                QJsonArray  rangeArray;
-                if (jsonCalibration.contains(key)){
-                    rangeArray = jsonCalibration[key].toArray();
-                    QJsonObject rangeData = rangeArray[0].toObject();
+            QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+            QJsonObject jsonObj = jsonDoc.object();
 
-                    double yield = rangeData["Yield"].toDouble();
-                    double active0 = rangeData["active0"].toDouble();
-                    double ratioCu62 = rangeData["branchingRatio_Cu62"].toDouble();
-                    double ratioCu64 = rangeData["branchingRatio_Cu64"].toDouble();
-                    double backRatesDet1 = rangeData["backgroundRatesDet1"].toDouble();
-                    double backRatesDet2 = rangeData["backgroundRatesDet2"].toDouble();
-                    
-                    calibrationData[i][0] = yield;
-                    calibrationData[i][1] = active0;
-                    calibrationData[i][2] = ratioCu62;
-                    calibrationData[i][3] = ratioCu64;
-                    calibrationData[i][4] = backRatesDet1;
-                    calibrationData[i][5] = backRatesDet2;
+            QJsonObject jsonCalibration, jsonYield;
+            if (jsonObj.contains("YieldCalibration")){
+                jsonCalibration = jsonObj["YieldCalibration"].toObject();
+                for(int i=0; i<3; i++)
+                {
+                    QString key = QString("Range%1").arg(i);
+                    QJsonArray  rangeArray;
+                    if (jsonCalibration.contains(key)){
+                        rangeArray = jsonCalibration[key].toArray();
+                        QJsonObject rangeData = rangeArray[0].toObject();
+
+                        double yield = rangeData["Yield"].toDouble();
+                        double active0 = rangeData["active0"].toDouble();
+                        double ratioCu62 = rangeData["branchingRatio_Cu62"].toDouble();
+                        double ratioCu64 = rangeData["branchingRatio_Cu64"].toDouble();
+                        double backRatesDet1 = rangeData["backgroundRatesDet1"].toDouble();
+                        double backRatesDet2 = rangeData["backgroundRatesDet2"].toDouble();
+
+                        calibrationData[i][0] = yield;
+                        calibrationData[i][1] = active0;
+                        calibrationData[i][2] = ratioCu62;
+                        calibrationData[i][3] = ratioCu64;
+                        calibrationData[i][4] = backRatesDet1;
+                        calibrationData[i][5] = backRatesDet2;
+                    }
                 }
             }
+
+            break;
         }
+
+        QThread::msleep(10);
     }
 }
 

@@ -345,6 +345,10 @@ void OfflineDataAnalysisWidget::slotStart()
 
     QLiteThread *calThread = new QLiteThread();
     calThread->setObjectName("calThread");
+    qDebug() << "创建离线数据处理线程，id=" << calThread->thread()->currentThreadId();
+    connect(calThread, &QThread::destroyed, this, [=]{
+        qDebug() << "离线数据处理线程退出，id=" << calThread->thread()->currentThreadId();
+    });
     calThread->setWorkThreadProc([=](){
         coincidenceAnalyzer->initialize();
 
@@ -492,9 +496,11 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
     }
 
     if (interrupted){
-        SplashWidget::instance()->hide();
-        QMessageBox::information(this, tr("提示"), tr("文件解析意外被终止！"));
-        qInfo().noquote()<<"历史数据解析意外被终止!";
+        QTimer::singleShot(1, this, [=](){
+            SplashWidget::instance()->hide();
+            QMessageBox::information(this, tr("提示"), tr("文件解析意外被终止！"));
+            qInfo().noquote()<<"历史数据解析意外被终止!";
+        });
     }
     else
     {
@@ -506,9 +512,11 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
         // 读取活化测量的数据时刻区间[起始时间，结束时间]
         vector<CoincidenceResult> result = coincidenceAnalyzer->GetCoinResult();
         if(result.size()==0){
-            qCritical().noquote()<<"历史数据解析失败";
-            SplashWidget::instance()->hide();
-            QMessageBox::information(this, tr("提示"), tr("文件解析错误，文件中不存在有效测量数据！"));
+            QTimer::singleShot(1, this, [=](){
+                qCritical().noquote()<<"历史数据解析失败";
+                SplashWidget::instance()->hide();
+                QMessageBox::information(this, tr("提示"), tr("文件解析错误，文件中不存在有效测量数据！"));
+            });
             return;
         }
         unsigned int startTime = result.at(0).time;
@@ -581,9 +589,11 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
             }
         }
 
-        qInfo().noquote()<<"历史数据解析顺利完成";
-        SplashWidget::instance()->hide();
-        QMessageBox::information(this, tr("提示"), tr("文件解析已顺利完成！"));
+        QTimer::singleShot(1, this, [=](){
+            qInfo().noquote()<<"历史数据解析顺利完成";
+            SplashWidget::instance()->hide();
+            QMessageBox::information(this, tr("提示"), tr("文件解析已顺利完成！"));
+        });
     }
 }
 

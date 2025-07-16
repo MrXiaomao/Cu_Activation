@@ -220,7 +220,7 @@ void PlotWidget::initCustomPlot(){
         spPlotWindow->setStretchFactor(0, 1);
         spPlotWindow->setStretchFactor(1, 1);
 
-        pageEnergy->setLayout(new QVBoxLayout(this));
+        //pageEnergy->setLayout(new QVBoxLayout(this));
         pageEnergy->layout()->setContentsMargins(0, 0, 0, 0);
         pageEnergy->layout()->addWidget(spPlotWindow);
     }
@@ -266,7 +266,7 @@ void PlotWidget::initCustomPlot(){
         spPlotWindow->setStretchFactor(1, 1);
         spPlotWindow->setStretchFactor(2, 1);
 
-        pageCount->setLayout(new QVBoxLayout(this));
+        //pageCount->setLayout(new QVBoxLayout(this));
         pageCount->layout()->setContentsMargins(0, 0, 0, 0);
         pageCount->layout()->addWidget(spPlotWindow);
     }
@@ -326,6 +326,7 @@ void PlotWidget::areaSelectFinished()
 {
     this->allowAreaSelected = false;
     this->setProperty("disableAreaSelect", true);//allowSelectAreaAction
+    emit sigSwitchToDragMode(false);
 }
 
 void PlotWidget::slotCountRefreshTimelength()
@@ -573,7 +574,7 @@ void PlotWidget::slotShowTracer(QMouseEvent *event)
     if (this->allowAreaSelected)
         return;
 
-    if (mPlot_Opt_model == pmMove || mPlot_Opt_model == pmDrag)
+    if (mPlot_Opt_model != pmTip)
         return;
 
     if (event->button() != Qt::LeftButton)
@@ -692,7 +693,7 @@ QCustomPlot *PlotWidget::allocCustomPlot(QString objName, bool needGauss, QWidge
     // 坐标背景色
     customPlot->axisRect()->setBackground(clrBackground);
     // 允许拖拽，缩放
-    customPlot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectPlottables);
+    customPlot->setInteractions(/*QCP::iRangeDrag | */QCP::iRangeZoom | QCP::iSelectPlottables);
     // 允许轴自适应大小
     //customPlot->graph(0)->rescaleValueAxis(true);
     customPlot->xAxis->rescale(true);
@@ -1111,14 +1112,14 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                             int fcount = 0;
                             std::vector<double> sx;
                             std::vector<double> sy;
-                            //框选完毕，将选中的点颜色更新
-                            {
-                                double key_from = this->property("area-from-key").toDouble(); //dragRectItem->topLeft->key();
-                                double key_to = this->property("area-to-key").toDouble(); //dragRectItem->bottomRight->key();
-                                double key_temp = key_from;
-                                key_from = qMin(key_from, key_to);
-                                key_to = qMax(key_temp, key_to);
+                            //框选完毕，将选中的点颜色更新                        
+                            double key_from = this->property("area-from-key").toDouble(); //dragRectItem->topLeft->key();
+                            double key_to = this->property("area-to-key").toDouble(); //dragRectItem->bottomRight->key();
+                            double key_temp = key_from;
+                            key_from = qMin(key_from, key_to);
+                            key_to = qMax(key_temp, key_to);
 
+                            {
                                 QVector<double> keys, values, curveKeys;
                                 QVector<QColor> colors;
                                 // bool inArea = false;
@@ -1149,7 +1150,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                             }
 
                             // 高斯拟合
-                            if (fcount > 5){
+                            if (fcount > gauss_arr_count_min){
                                 //显示拟合曲线
                                 double result[3] = {0.0, 0.0, 0.0}; //这个框选之前没有上一次的拟合值
                                 qDebug()<<tr("PlotWidget::eventFilter():框选区域，开始高斯拟合");
@@ -1157,7 +1158,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                 if(status)
                                 {
                                     qDebug()<<tr("框选区域，高斯拟合成功");
-                                    if (!std::isnan(result[1]) && result[2]>0){
+                                    if (!std::isnan(result[1]) && result[2]>0){ //nan-非数字 inf-无穷大
                                         double mean = result[1];
                                         // double FWHM = 2*sqrt(2*log(2))*result[2];
                                         double foursigma = 4.0*result[2];
@@ -1204,6 +1205,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                         QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
                                         if (gaussResultItemText){
                                             gaussResultItemText->setVisible(false);
+                                            customPlot->replot();
                                         }
                                         //打印日志更新拟合状态
                                         if(lastfitStatus)
@@ -1219,6 +1221,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                                     QCPItemText* gaussResultItemText = customPlot->findChild<QCPItemText*>("gaussResultItemText");
                                     if (gaussResultItemText){
                                         gaussResultItemText->setVisible(false);
+                                        customPlot->replot();
                                     }
                                     if(lastfitStatus)
                                     {
@@ -2111,7 +2114,7 @@ void PlotWidget::slotGauss(QCustomPlot* customPlot, int leftE, int rightE)
         }
 
         // 高斯拟合
-        if (fcount > 0){
+        if (fcount > gauss_arr_count_min){
             double lastSigma =
                 lastSigma = (rightE - leftE) * 1.0 / (2*sqrt(2*log(2)));
             double result[3] = {0.0, 0.0, lastSigma};
@@ -2276,7 +2279,7 @@ void PlotWidget::slotShowGaussInfor(bool visible)
 
 void PlotWidget::switchToTipMode()
 {
-    mPlot_Opt_model = pmTip;
+    mPlot_Opt_model = mPlot_Opt_model == pmTip ? pmNone : pmTip;
     this->allowAreaSelected = false;
 
     QList<QCustomPlot*> customPlots = getAllCustomPlot();
@@ -2284,13 +2287,22 @@ void PlotWidget::switchToTipMode()
         customPlot->setInteraction(QCP::iRangeDrag, false);
     }
 
-    emit sigSwitchToTipMode();
+    emit sigSwitchToTipMode(mPlot_Opt_model == pmTip);
 }
 
 void PlotWidget::switchToDragMode()
 {
-    mPlot_Opt_model = pmDrag;
-    this->allowAreaSelected = true;
+    mPlot_Opt_model = mPlot_Opt_model == pmDrag ? pmNone : pmDrag;
+    if (mPlot_Opt_model == pmDrag)
+        this->allowAreaSelected = true;
+    else
+        this->allowAreaSelected = false;
+
+    if (mPlot_Opt_model != pmDrag){
+        emit sigSwitchToDragMode(mPlot_Opt_model == pmDrag);
+        return;
+    }
+
     QWhatsThis::showText(QCursor::pos() + QPoint(0, 50), tr("请长按鼠标左键或Ctrl+鼠标左键，在能谱图上框选出符合能窗范围"), this);
     //图像进入区域选择模式
 
@@ -2322,19 +2334,19 @@ void PlotWidget::switchToDragMode()
         QWhatsThis::hideText();
     });
 
-    emit sigSwitchToDragMode();
+    emit sigSwitchToDragMode(mPlot_Opt_model == pmDrag);
 }
 
 void PlotWidget::switchToMoveMode()
-{
-    mPlot_Opt_model = pmMove;
+{    
+    mPlot_Opt_model = mPlot_Opt_model == pmMove ? pmNone : pmMove;
     this->allowAreaSelected = false;
     QList<QCustomPlot*> customPlots = getAllCustomPlot();
     for (auto customPlot : customPlots){
-        customPlot->setInteraction(QCP::iRangeDrag, true);
+        customPlot->setInteraction(QCP::iRangeDrag, mPlot_Opt_model == pmMove);
     }
 
-    emit sigSwitchToMoveMode();
+    emit sigSwitchToMoveMode(mPlot_Opt_model == pmMove);
 }
 
 void PlotWidget::slotRestoreView()

@@ -200,3 +200,32 @@ win32 {
     # 方法2：将 MSYS2 的 bin 目录加入 PATH
     # (例如 C:\msys64\mingw64\bin)
 }
+
+windows {
+    # MinGW
+    *-g++* {
+        QMAKE_CXXFLAGS += -Wall -Wextra -pedantic
+    }
+    # MSVC
+    *-msvc* {
+        QMAKE_CXXFLAGS += /utf-8
+    }
+}
+
+LOG4QTSRCPATH = $$PWD/3rdParty/log4qt/Include
+INCLUDEPATH += -L $$LOG4QTSRCPATH \
+                $$LOG4QTSRCPATH/helpers \
+                 $$LOG4QTSRCPATH/spi \
+                 $$LOG4QTSRCPATH/varia
+
+DEPENDPATH  +=  $$LOG4QTSRCPATH \
+            $$LOG4QTSRCPATH/helpers \
+            $$LOG4QTSRCPATH/spi \
+            $$LOG4QTSRCPATH/varia
+include($$PWD/3rdParty/log4qt/Include/log4qt/log4qt.pri)
+
+# win32:CONFIG(release, debug|release): LIBS += -L$$PWD/3rdParty/log4qt/lib -llog4qt
+# else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/3rdParty/log4qt/lib -llog4qt
+
+# INCLUDEPATH += $$PWD/3rdParty/log4qt/Include
+# DEPENDPATH += $$PWD/3rdParty/log4qt/include

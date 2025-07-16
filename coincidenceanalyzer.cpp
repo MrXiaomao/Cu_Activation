@@ -464,7 +464,7 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
         }
         
         int fcount = EnergyWindow[1] - EnergyWindow[0] + 1;
-        if(fcount>5){
+        if(fcount > gauss_arr_count_min){
             double lastSigma = 0.0;
             //利用上一次的拟合结果作为本次拟合的初值
             if(GaussFitLog.size()>0) {
@@ -524,44 +524,48 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
         }
         
         int fcount = EnergyWindow[3] - EnergyWindow[2] + 1;
-        
-        double lastSigma = 0.0;
-        //利用上一次的拟合结果作为本次拟合的初值
-        if(GaussFitLog.size()>0) {
-            lastSigma = (GaussFitLog.back().EnRight2 - GaussFitLog.back().EnLeft2) * 1.0 / 4.0;
-        }
-        
-        double result[3] = {0.0, 0.0, lastSigma};
-        qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理,自动高斯拟合,Det2开始高斯拟合";
-        bool status = GaussFit(sx, sy, fcount, result);
-        if(status)
-        {
-            if(lastSigma>0.0 && abs(lastSigma - result[2])/lastSigma > MAX_SIGAMA_CHANGE) {
-                qDebug()<<QString("CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，自动高斯拟合，\
-                    Det2拟合结果与上一次高斯拟合偏差大于%1\%，放弃能窗更新").arg(QString::number(MAX_SIGAMA_CHANGE*100));
-                    return;
+        if (fcount > gauss_arr_count_min){
+            double lastSigma = 0.0;
+            //利用上一次的拟合结果作为本次拟合的初值
+            if(GaussFitLog.size()>0) {
+                lastSigma = (GaussFitLog.back().EnRight2 - GaussFitLog.back().EnLeft2) * 1.0 / 4.0;
             }
 
-            double mean = result[1];
-            // double FWHM = 2*sqrt(2*log(2))*result[2];
-            //4sigma作为能窗
-            double fourSigma = 4*result[2];
-            if(fourSigma < 0.0) return;
-            
-            changed = true;
-            double Left = mean - fourSigma*0.5; // 峰位-0.5*能窗宽度
-            double Right = mean + fourSigma*0.5; // 峰位+0.5*能窗宽度
+            double result[3] = {0.0, 0.0, lastSigma};
+            qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理,自动高斯拟合,Det2开始高斯拟合";
+            bool status = GaussFit(sx, sy, fcount, result);
+            if(status)
+            {
+                if(lastSigma>0.0 && abs(lastSigma - result[2])/lastSigma > MAX_SIGAMA_CHANGE) {
+                    qDebug()<<QString("CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，自动高斯拟合，\
+                        Det2拟合结果与上一次高斯拟合偏差大于%1\%，放弃能窗更新").arg(QString::number(MAX_SIGAMA_CHANGE*100));
+                        return;
+                }
 
-            if(Left >= 1) EnergyWindow[2] = (unsigned short) Left;
-            else EnergyWindow[2] = 1u;
+                double mean = result[1];
+                // double FWHM = 2*sqrt(2*log(2))*result[2];
+                //4sigma作为能窗
+                double fourSigma = 4*result[2];
+                if(fourSigma < 0.0) return;
 
-            if(Right < MULTI_CHANNEL - 1u) EnergyWindow[3] = (unsigned short)Right;
-            else EnergyWindow[3] = MULTI_CHANNEL - 1u;
-            qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，自动高斯拟合，Det2高斯拟合成功";
-        }
-        else{
-            qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，自动高斯拟合，Det2高斯拟合失败";
-            // qDebug().noquote()<<"探测器2 自动高斯拟合发生异常,可能原因，选取的初始峰位不具有高斯形状，无法进行高斯拟合";
+                changed = true;
+                double Left = mean - fourSigma*0.5; // 峰位-0.5*能窗宽度
+                double Right = mean + fourSigma*0.5; // 峰位+0.5*能窗宽度
+
+                if(Left >= 1) EnergyWindow[2] = (unsigned short) Left;
+                else EnergyWindow[2] = 1u;
+
+                if(Right < MULTI_CHANNEL - 1u) EnergyWindow[3] = (unsigned short)Right;
+                else EnergyWindow[3] = MULTI_CHANNEL - 1u;
+                qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，自动高斯拟合，Det2高斯拟合成功";
+            }
+            else{
+                qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，自动高斯拟合，Det2高斯拟合失败";
+                // qDebug().noquote()<<"探测器2 自动高斯拟合发生异常,可能原因，选取的初始峰位不具有高斯形状，无法进行高斯拟合";
+            }
+        } else{
+            qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，Det1自动高斯拟合待拟合的数据点数小于6个，不允许拟合";
+            // qDebug().noquote() <<"探测器1自动高斯拟合发生异常,待拟合的数据点数小于6个，无法拟合";
         }
     }
     if(changed) GaussFitLog.push_back({AllPoint.back().time, EnergyWindow[0], EnergyWindow[1], EnergyWindow[2], EnergyWindow[3]});

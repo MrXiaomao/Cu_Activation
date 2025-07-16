@@ -13,6 +13,9 @@
 #include <QDir>
 #include <iostream>
 
+#include <QNetworkSession>
+#include <QNetworkConfigurationManager>
+
 CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
   , coincidenceAnalyzer(new CoincidenceAnalyzer)
 {
@@ -272,13 +275,16 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
 
     //状态改变
     connect(socketDetector, &QAbstractSocket::stateChanged, this, [=](QAbstractSocket::SocketState state){
-        if (state == QAbstractSocket::SocketState::UnconnectedState)
+        if (socketDetector->property("SocketState").toString() == "ConnectedState" && state == QAbstractSocket::SocketState::UnconnectedState){
             emit sigDetectorStatus(false);
+            socketDetector->setProperty("SocketState", "UnconnectedState");
+        }
     });
 
     //连接成功
     connect(socketDetector, &QTcpSocket::connected, this, [=](){
         //发送位移指令
+        socketDetector->setProperty("SocketState", "ConnectedState");
         emit sigDetectorStatus(true);
     });
 
@@ -289,6 +295,19 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
         else if (detectorParameter.measureModel == mmAuto)
             handleAutoMeasureNetData();
     });
+
+    //更改系统默认超时时长，让网络连接返回能够快点
+    QNetworkConfigurationManager manager;
+    QNetworkConfiguration config = manager.defaultConfiguration();
+    QList<QNetworkConfiguration> cfg_list = manager.allConfigurations();
+    if (cfg_list.size() > 0)
+    {
+        cfg_list[0].setConnectTimeout(1000);
+        config = cfg_list[0];
+    }
+    QSharedPointer<QNetworkSession> spNetworkSession(new QNetworkSession(config));
+    socketRelay->setProperty("_q_networksession", QVariant::fromValue(spNetworkSession));
+    socketDetector->setProperty("_q_networksession", QVariant::fromValue(spNetworkSession));
 }
 
 CommandHelper::~CommandHelper(){
@@ -702,8 +721,8 @@ void CommandHelper::openRelay(bool first)
     }
 
     //断开网络连接
-    if (socketRelay->isOpen())
-        socketRelay->disconnectFromHost();
+    if (socketRelay->isOpen() && socketRelay->state() == QAbstractSocket::ConnectedState)
+        socketRelay->close();
 
     if (first)
         socketRelay->setProperty("relay-status", "query");
@@ -739,6 +758,11 @@ void CommandHelper::closeRelay()
 
 void CommandHelper::openDetector()
 {
+    if (socketDetector->state() == QAbstractSocket::ConnectingState){// 正在连接，请稍后
+        QMessageBox::information(nullptr, tr("提示"), tr("正在连接，请稍后重试！"));
+        return;
+    }
+
     QFile file(QApplication::applicationDirPath() + "/config/ip.json");
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QMessageBox::information(nullptr, tr("提示"), tr("请先配置远程设备信息！"));
@@ -763,8 +787,8 @@ void CommandHelper::openDetector()
     }
 
     //断开网络连接
-    if (socketDetector->isOpen())
-        socketDetector->disconnectFromHost();
+    if (socketDetector->isOpen() && socketDetector->state() == QAbstractSocket::ConnectedState)
+        socketDetector->close();
 
     socketDetector->connectToHost(ip, port);
 }
@@ -773,8 +797,8 @@ void CommandHelper::closeDetector()
 {
     //停止测量
     slotStopManualMeasure();
-    if (socketDetector->isOpen())
-        socketDetector->close();
+    if (socketDetector->isOpen() && socketDetector->state() == QAbstractSocket::ConnectedState)
+        socketDetector->disconnectFromHost();
     // emit sigDetectorStatus(false);
 }
 

@@ -567,7 +567,7 @@ void MainWindow::InitMainWindowUi()
 {
 #ifdef QT_NO_DEBUG
     ui->toolBar_online->removeAction(ui->action_start_measure);
-    ui->menu_4->removeAction(ui->action_Moving); // 屏蔽掉位移平台子界面
+    ui->menu_tool->removeAction(ui->action_Moving); // 屏蔽掉位移平台子界面
     ui->menu_view->removeAction(ui->action_SpectrumModel); //屏蔽掉能谱界面
 #endif
 
@@ -612,7 +612,24 @@ void MainWindow::InitMainWindowUi()
         if (!dir.exists())
             dir.mkdir(cachePath);
         QString cacheDir = QCoreApplication::applicationDirPath() + "/cache";
-        if(jsonObj.contains("defaultCache")) cacheDir = jsonObj["defaultCache"].toString();
+        if(jsonObj.contains("defaultCache")) {
+            QString tempDir = jsonObj["defaultCache"].toString();
+            QDir dir(tempDir);
+            if(dir.exists()) {
+                cacheDir = tempDir;
+                qInfo()<<QString("存储缓存路径:%1").arg(cacheDir);
+            }
+            else{
+                jsonObj["defaultCache"] = cacheDir;
+                qInfo()<<QString("存储缓存路径:%1不存在，已更改为默认缓存路径：%2").arg(tempDir).arg(cacheDir);
+
+                //重新写回文件
+                file.open(QIODevice::WriteOnly | QIODevice::Text);
+                QJsonDocument jsonDocNew(jsonObj);
+                file.write(jsonDocNew.toJson());
+                file.close();
+            }
+        }
         commandHelper->setDefaultCacheDir(cacheDir);
         // ui->lineEdit_path->setText(jsonObj["path"].toString());
         // ui->lineEdit_filename->setText(jsonObj["filename"].toString());
@@ -2010,6 +2027,10 @@ void MainWindow::saveConfigJson(bool bSafeExitFlag)
 
         //公共
         QJsonObject jsonObjPub;
+        //先取出原来的值
+        if (jsonObj.contains("Public")){
+            jsonObjPub = jsonObj["Public"].toObject();
+        }
 
         //保存数据
         jsonObjPub["safe_exit"] = bSafeExitFlag;
@@ -2071,6 +2092,8 @@ bool MainWindow::saveCurrentTConfigJson(bool bSafeExitFlag)
             if (!this->property("test").isNull()){
                 jsonObjPub["test"] = this->property("test").toBool();
             }
+            jsonObjPub["yieldRefreshTime"] = 60;
+            jsonObjPub["yieldRefreshMaxTime"] = 3600;
             jsonObj["Public"] = jsonObjPub;   
         }
 		
@@ -2194,10 +2217,10 @@ void MainWindow::on_pushButton_confirm_clicked()
     if (ui->radioButton_ref->isChecked()){
         plotWidget->slotResetPlot();
     }
-
+    //确认能窗后，开始存储有效数据
+    commandHelper->startSaveValidData = true;
     commandHelper->updateParamter(stepT, EnWin, true);
-
-
+    
     //确认能窗后保存测量参数
     //getsetEnTime必须在commandHelper->updateParamter()调用更新后才能调用，否则返回值为0
     QString prefix_filename = commandHelper->getFilenamePrefix();

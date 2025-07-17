@@ -88,26 +88,38 @@ public:
      * @return {*}
      */
     void doFPGA_lossDATA_correction(std::map<unsigned int, unsigned long long> lossData);
+    
+    //获取未使用的数据1
+    inline vector<TimeEnergy> const GetUnusedData1()
+    {
+        return unusedData1;
+    }
+    
+    //获取未使用的数据2
+    inline vector<TimeEnergy> const GetUnusedData2()
+    {
+        return unusedData2;
+    }
 
     //已经处理的计数率点数，也就是FPGA数据，已经处理了的时间长度，单位:秒
-    inline int GetCountCoin(){return countCoin;}
+    inline int GetCountCoin() const {return countCoin;}
 
     // 读取数据
-    inline vector<CoincidenceResult> GetCoinResult(){
+    inline vector<CoincidenceResult> const GetCoinResult(){
         return coinResult;
     }
 
     //获取累计能谱
-    inline SingleSpectrum GetAccumulateSpectrum()
+    inline SingleSpectrum const GetAccumulateSpectrum()
     {
         return AccumulateSpectrum;
     }
 
-    inline vector<CurrentPoint> GetPointPerSeconds(){
+    inline vector<CurrentPoint> const GetPointPerSeconds(){
         return AllPoint;
     }
 
-    inline vector<AutoGaussFit> GetGaussFitLog(){
+    inline vector<AutoGaussFit> const GetGaussFitLog(){
         return GaussFitLog;
     }
 

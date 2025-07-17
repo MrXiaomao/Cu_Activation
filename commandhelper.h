@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-16 19:17:06
+ * @LastEditTime: 2025-07-17 21:25:56
  * @Description: 用来管理网口的数据发送与接受，管理网口数据的处理相关业务。
  */
 #ifndef COMMANDHELPER_H
@@ -40,6 +40,7 @@ public:
     void startWork();
     void switchToCountMode(bool refModel);
     void updateStepTime(int stepT); //用于响应主界面点击刷新按钮
+    void loadConfig(); //加载配置文件user.json
     
     // 获取有效数据的文件名
     inline const QString getFilenamePrefix(){
@@ -161,6 +162,10 @@ signals:
      */    
     void sigUpdateAutoEnWidth(std::vector<unsigned short>, qint8 mmodel);
 
+public:
+    //手动测量中，确认能窗后，开始存储有效数据文件。
+    bool startSaveValidData = false;
+    
 private:
     QByteArray frame;
     QByteArray cachePool;
@@ -280,6 +285,8 @@ private:
     unsigned short EnWindow[4]; // 探测器1左能窗、右能窗；探测器2左能窗、右能窗
     std::vector<unsigned short> autoEnWindow; // 符合测量自动更新能窗反馈给界面的值：探测器1左能窗、右能窗；探测器2左能窗、右能窗
 
+    int yieldRefreshTime = 60; //中子产额的刷新时间间隔，单位s
+    int yieldRefreshMaxTime = 3600; //中子产额的最后一次刷新对应时间，单位s。超出该时间之后便不再刷新中子产额
     qint64 lastClockT = 0;
     bool refModel = false;
     unsigned int maxEnergy = 8192;

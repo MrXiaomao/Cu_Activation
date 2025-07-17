@@ -13,6 +13,10 @@
 #include <QDir>
 #include <iostream>
 
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QJsonDocument>
+
 #include <QNetworkSession>
 #include <QNetworkConfigurationManager>
 
@@ -30,6 +34,8 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
 
     initCommand();//初始化常用指令
     initSocket(&socketRelay);
+    loadConfig(); //加载配置文件user.json
+
     //网络异常
 #if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
     connect(socketRelay, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error), this, [=](QAbstractSocket::SocketError){
@@ -335,6 +341,33 @@ void CommandHelper::analyzerRealCalback(SingleSpectrum r1, vector<CoincidenceRes
     pThis->doEnWindowData(r1, r3);
 }
 
+void CommandHelper::loadConfig()
+{
+    QFile file(QApplication::applicationDirPath() + "/config/user.json");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // 读取文件内容
+        QByteArray jsonData = file.readAll();
+        file.close(); //释放资源
+
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+        QJsonObject jsonObj = jsonDoc.object();
+        
+        QJsonObject jsonPublic;
+        if (jsonObj.contains("Public")){
+            jsonPublic = jsonObj["Public"].toObject();
+            if (jsonPublic.contains("yieldRefreshTime")){
+                yieldRefreshTime = jsonPublic["yieldRefreshTime"].toInt();
+            }
+            if (jsonPublic.contains("yieldRefreshMaxTime")){
+                yieldRefreshMaxTime = jsonPublic["yieldRefreshMaxTime"].toInt();
+            }
+        }
+    }
+    else{
+        qCritical().noquote()<<"未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
+    }
+}
+
 void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> r3)
 {
     size_t countCoin = r3.size();
@@ -387,10 +420,8 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
         start_pos = r3.size() - countCoin;
     }
 
-    int refreshT_max = 3600; //自动刷新产额结果的最大时间长度，单位s。注意，这个时间是指产生符合计数后开始计数。
-    int refreshT_result = 30; //单位s
-    if(countCoin >0 && countCoin <refreshT_max && countCoin%refreshT_result==0){
-        int start_time = r3.back().time - refreshT_result;
+    if(countCoin >0 && countCoin <yieldRefreshMaxTime && countCoin%yieldRefreshTime==0){
+        int start_time = r3.back().time - yieldRefreshTime;
         int end_time = r3.back().time;
         double At_omiga = coincidenceAnalyzer->getInintialActive(detectorParameter, start_time, end_time);
         emit sigActiveOmiga(At_omiga);
@@ -1106,6 +1137,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     this->autoChangeEnWindow = false;
     this->detectorException = false;
     sendStopCmd = false;
+    startSaveValidData = false;
     autoEnWindow.clear();
 
     //连接之前清空缓冲区
@@ -1975,8 +2007,8 @@ void CommandHelper::detTimeEnergyWorkThread()
                         
                         if (detectorParameter.measureModel == mmAuto){//自动测量，需要获取能宽
                             double time1 = 0.0, time2 = 0.0;
-                            if(data1_2.size() > 0) time1 = data1_2.begin()->time/1e9;
-                            if(data2_2.size() > 0) time2 = data2_2.begin()->time/1e9;
+                            if(data1_2.size() > 0) time1 = data1_2.begin()->time * 1.0 / 1e9;
+                            if(data2_2.size() > 0) time2 = data2_2.begin()->time * 1.0 / 1e9;
                             //在冷却时长之后的数据才进行处理
                             if(time1 >= detectorParameter.coolingTime || time2 >= detectorParameter.coolingTime)
                             {
@@ -1990,6 +2022,14 @@ void CommandHelper::detTimeEnergyWorkThread()
                             //在选定能窗前不进行符合数据处理，也就是不给出计数曲线，只有能谱数据。
                             if (this->autoChangeEnWindow)
                             {
+                                //这里特别需要注意的是，由于此刻coincidenceAnalyzer中还有未处理完的数据unusedData1、unusedData2.
+                                //这部分数据漏存，会导致在线测量给出的计数曲线与离线分析的计数曲线起始两个点不一样                    
+                                if (startSaveValidData){
+                                    // 则记录下计数曲线的起始时刻
+                                    this->time_SetEnWindow = coincidenceAnalyzer->GetPointPerSeconds().back().time;
+                                    saveParticleInfo(coincidenceAnalyzer->GetUnusedData1(), coincidenceAnalyzer->GetUnusedData2());
+                                    startSaveValidData = false;
+                                }
                                 saveParticleInfo(data1_2, data2_2);
                                 coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, \
                                     detectorParameter.timeWidth, detectorParameter.delayTime, true, true);
@@ -2085,9 +2125,6 @@ void CommandHelper::updateParamter(int _stepT, unsigned short _EnWin[4], bool _a
     this->EnWindow[3] = _EnWin[3];
     
     this->autoChangeEnWindow = _autoEnWindow;
-    int count = coincidenceAnalyzer->GetCountCoin();
-    // 如果已经处理了一段数据，或者是当前时刻大于0，则记录下此时的时刻
-    if(count>0) this->time_SetEnWindow = coincidenceAnalyzer->GetPointPerSeconds().back().time;
 }
 
 void CommandHelper::switchToCountMode(bool _refModel)

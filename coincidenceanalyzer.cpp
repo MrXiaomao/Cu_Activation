@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-06-30 09:23:53
+ * @LastEditTime: 2025-07-17 23:28:14
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -688,7 +688,8 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int tim
     //测量的起点时刻（这个时刻以活化物活化后开始计时）
     int start_time = 0;
     //对于手动拟合，选取能窗前的一段数据要舍弃,且放弃前两个点，注意这里是减3，保证时间左端点是减去两个点
-    if(detPara.measureModel == mmManual) start_time = /*detPara.coolingTime + */time_SetEnWindow + 3;
+    // if(detPara.measureModel == mmManual) start_time = /*detPara.coolingTime + */time_SetEnWindow + 3;
+    if(detPara.measureModel == mmManual) start_time = /*detPara.coolingTime + */time_SetEnWindow;
     // if(detPara.measureModel == mmAuto) start_time = detPara.coolingTime;
     if(detPara.measureModel == mmAuto) 
     {
@@ -715,7 +716,7 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int tim
  * @description: 用于离线处理。根据计数曲线，选取合适的时间区间，对这个区间的数据进行积分处理，给出其初始的相对活度
  * 注意：这里的时间以铜活化结束开始计时。
  * @param {DetectorParameter} detPara 测量参数
- * @param {int} startT 起始时间，单位s
+ * @param {int} startT 起始时间，单位s。这里需要注意，比如计数点[t=1,count=220]~[t=30,count=180]这两个点区间。则startT=0,endT=30
  * @param {int} endT 结束时间，单位s
  * @return {*} 相对活度 铜片β+衰变强度乘以近端探测器立体角效率
  */
@@ -772,8 +773,8 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int sta
     size_t num = coinResult.size(); //计数点个数。
 
     //符合时间窗,单位ns
-    int timeWidth_tmp = detPara.timeWidth;
-    timeWidth_tmp = timeWidth_tmp/1e9;
+    double timeWidth_tmp = detPara.timeWidth * 1.0;
+    timeWidth_tmp = timeWidth_tmp /1e9;
 
     if(time_end < start_time) return 0.0; //不允许起始时间小于停止时间
 
@@ -786,16 +787,18 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int sta
     for(auto coin:coinResult)
     {
         //丢弃前两个数据点
-        if(id<2) {
-            id++;
-            continue;
-        }
+        // if(id<2) {
+        //     id++;
+        //     continue;
+        // }
         // 手动测量，在改变能窗之前的数据不处理，注意剔除。现在数据没有保存这一段数据
-        N1 += (coin.CountRate1 - backRatesDet1);
-        N2 += (coin.CountRate2 - backRatesDet2);
-        Nc = Nc + coin.ConCount_single + coin.ConCount_multiple;
-        deathTime_ratio_total[0] += coin.DeathRatio1 * 0.01; //注意将百分比但我转化为小数
-        deathTime_ratio_total[1] += coin.DeathRatio2 * 0.01;
+        if(coin.time>start_time && coin.time <= time_end){
+            N1 += (coin.CountRate1 - backRatesDet1);
+            N2 += (coin.CountRate2 - backRatesDet2);
+            Nc = Nc + coin.ConCount_single + coin.ConCount_multiple;
+            deathTime_ratio_total[0] += coin.DeathRatio1 * 0.01; //注意将百分比但我转化为小数
+            deathTime_ratio_total[1] += coin.DeathRatio2 * 0.01;
+        }
     }
     
     deathTime_ratio_ave[0] = deathTime_ratio_total[0] / num;
@@ -809,8 +812,8 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int sta
     double lamda64 = log(2) / halflife_Cu64;
 
     //注意，起点位置要减一，时间积分的左端点
-    double f = ratioCu62/lamda62*(exp(-lamda62*(start_time-1)) - exp(-lamda62*time_end)) + \
-                ratioCu64/lamda64*(exp(-lamda64*(start_time-1)) - exp(-lamda64*time_end));
+    double f = ratioCu62/lamda62*(exp(-lamda62*start_time) - exp(-lamda62*time_end)) + \
+                ratioCu64/lamda64*(exp(-lamda64*start_time) - exp(-lamda64*time_end));
 
     //对符合计数进行真偶符合修正
     //注意timeWidth_tmp单位为ns，要换为时间s。

@@ -2143,23 +2143,6 @@ void CommandHelper::exportFile(QString dstPath)
 
         //进行文件copy
         if (this->detectorParameter.transferModel == 0x05){
-            //符合测量才需要复制配置文件
-            QFile::copy(validDataFileName + ".配置", dstPath + ".配置");
-            if (this->detectorParameter.transferModel == 0x05){
-                QFile::copy(validDataFileName + ".符合计数", dstPath + ".符合计数");
-            }
-
-            if (QFile::copy(validDataFileName, dstPath))
-                QMessageBox::information(nullptr, tr("提示"), tr("数据保存成功！"), QMessageBox::Ok, QMessageBox::Ok);
-            else
-                QMessageBox::information(nullptr, tr("提示"), tr("数据保存失败！"), QMessageBox::Ok, QMessageBox::Ok);
-        } else {
-            QFile::copy(netDataFileName + ".配置", dstPath + ".配置");
-
-            if (QFile::copy(netDataFileName, dstPath))
-                QMessageBox::information(nullptr, tr("提示"), tr("数据保存成功！"), QMessageBox::Ok, QMessageBox::Ok);
-            else
-                QMessageBox::information(nullptr, tr("提示"), tr("数据保存失败！"), QMessageBox::Ok, QMessageBox::Ok);
         }
     } else if (dstPath.endsWith(".txt")) {
         // 将源文件转换为文本文件

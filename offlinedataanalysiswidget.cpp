@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-16 18:53:02
+ * @LastEditTime: 2025-07-18 00:58:07
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -117,6 +117,42 @@ OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
         }
 
         double result = active * cali_factor;
+
+        //临时测试，保留该代码，后续调参数需要使用。优化maxTime、deltaTime的选取
+        /*
+        //记录到文件中
+        {
+            QStringList parts = validDataFileName.split("_valid"); // 按 "_valid" 分割
+            QString prefix;
+            if (!parts.isEmpty()) {
+                prefix = parts[0]; // 提取第一部分
+            }
+            else{
+                //说明文件不包含_valid。
+                return false;
+            }
+            QString yieldOfflineFile = prefix + "_中子产额offline.txt";
+            {
+                QFile::OpenMode ioFlags = QIODevice::Truncate;
+                if (QFileInfo::exists(yieldOfflineFile))
+                    ioFlags = QIODevice::Append;
+                QFile file(yieldOfflineFile);
+                if (file.open(QIODevice::ReadWrite | QIODevice::Text | ioFlags)) {
+                    QTextStream out(&file);
+                    if (ioFlags == QIODevice::Truncate)
+                    {
+                        out << tr("time(s), 相对活度, 中子产额") << Qt::endl;
+                    }
+                    out << coincidenceAnalyzer->GetCoinResult().back().time << ","
+                        << QString::number(active, 'E', 5) << ","
+                        <<QString::number(result, 'E', 5) << Qt::endl;
+
+                    file.flush();
+                    file.close();
+                }
+            }
+        }
+        */
         ui->lineEdit_neutronYield->setText(QString::number(result, 'E', 5));
     });
 
@@ -303,7 +339,7 @@ bool OfflineDataAnalysisWidget::LoadMeasureParameter(QString filePath)
         if(rangeStr == "大量程") detParameter.measureRange = 3;
 
         this->startTime_absolute = static_cast<unsigned int>(configMap.value("测量开始时间(冷却时间+FPGA时钟)").toInt());
-        if(detParameter.measureModel == mmManual) startFPGA_time = this->startTime_absolute - detParameter.coolingTime +1 ;
+        if(detParameter.measureModel == mmManual) startFPGA_time = this->startTime_absolute - detParameter.coolingTime;
         else startFPGA_time = detParameter.coolingTime + 1;
 
         ui->lineEdit_measuremodel->setText(configMap.value("测量模式"));
@@ -324,7 +360,8 @@ bool OfflineDataAnalysisWidget::LoadMeasureParameter(QString filePath)
         //读取配置参数的时候，默认数据分析参数为全部时间段测量数据。
         ui->spinBox_start->setRange(0, INT_MAX); // 先设置足够大的范围
         ui->spinBox_end->setRange(0, INT_MAX); // 先设置足够大的范围
-        ui->spinBox_start->setValue(minTime+2); //丢弃前两个点的数据，因为前两个点数据经常不完整
+        // ui->spinBox_start->setValue(minTime+2); //丢弃前两个点的数据，因为前两个点数据经常不完整
+        ui->spinBox_start->setValue(minTime); //丢弃前两个点的数据，因为前两个点数据经常不完整
         ui->spinBox_end->setValue(maxTime);
 
         ui->spinBox_1_leftE->setValue(configMap.value("Det1符合能窗左").toInt());
@@ -377,7 +414,7 @@ void OfflineDataAnalysisWidget::slotStart()
             coincidenceAnalyzer->setCoolingTime_Manual(detParameter.coolingTime);
         }
         //注意：手动模式、自动模式都调用这个语句，用来设置前面一段没有保存数据的时长。手动测量在“确认能窗”前不保存数据。
-        coincidenceAnalyzer->setCoolingTime_Auto(startFPGA_time-1);
+        coincidenceAnalyzer->setCoolingTime_Auto(startFPGA_time);
 
         QByteArray aDatas = validDataFileName.toLocal8Bit();
         vector<TimeEnergy> data1_2, data2_2;
@@ -456,6 +493,18 @@ void OfflineDataAnalysisWidget::doEnWindowData(SingleSpectrum r1, vector<Coincid
             totalSingleSpectrum.spectrum[1][i] += r1.spectrum[1][i];
         }
 
+        //临时测试，保留该代码，后续调参数需要使用。优化maxTime、deltaTime的选取
+        //在线测量中，对前maxTime的时间内数据，定时给出中子产额。
+        //为了评估该数值取多少合适，这里对其进行考察，也可以借助matlab代码来优化该数值的选取
+        /*int maxTime = 3600; //单位s
+        int deltaTime = 60; //单位s
+        if(count >0 && count <=maxTime && count%deltaTime==0){
+            int start_time = r3.back().time - deltaTime;
+            int end_time = r3.back().time;
+            double At_omiga = coincidenceAnalyzer->getInintialActive(detParameter, start_time, end_time);
+            emit sigActiveOmiga(At_omiga);
+        }*/
+
         // 先不着急刷新图像和更新计数率，等数据全部处理完了再一次性刷新，避免耗时太久
         return;
     }
@@ -531,8 +580,8 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
         coincidenceAnalyzer->doFPGA_lossDATA_correction(lossData);
         
         // 读取活化测量的数据时刻区间[起始时间，结束时间]
-        vector<CoincidenceResult> result = coincidenceAnalyzer->GetCoinResult();
-        if(result.size()==0){
+        coinResult = coincidenceAnalyzer->GetCoinResult();
+        if(coinResult.size()==0){
             QTimer::singleShot(1, this, [=](){
                 qCritical().noquote()<<"历史数据解析失败";
                 SplashWidget::instance()->hide();
@@ -540,11 +589,8 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
             });
             return;
         }
-        unsigned int startTime = result.at(0).time;
-        // if(detParameter.measureModel == mmManual) startTime = detParameter.coolingTime + startFPGA_time;
-        // else startTime = detParameter.coolingTime;
-
-        unsigned int endTime = result.back().time;
+        unsigned int startTime = coinResult.at(0).time;
+        unsigned int endTime = coinResult.back().time;
 
         //检查界面的起始时刻和结束时刻不超范围，若超范围则调整到范围内。
         startTimeUI = static_cast<unsigned int>(ui->spinBox_start->value());
@@ -568,7 +614,7 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
 
         //在这里一次性更新图像和计数率，可以最大程度减小系统损耗时间
         {
-            size_t count = result.size();
+            size_t count = coinResult.size();
             int _stepT = ui->spinBox_step->value();
 
             //时间步长，求均值
@@ -583,14 +629,14 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
                         CoincidenceResult v;
                         for (int j=0; j<_stepT; ++j){
                             posI = i*_stepT + j;
-                            v.CountRate1 += result[posI].CountRate1;
-                            v.CountRate2 += result[posI].CountRate2;
-                            v.ConCount_single += result[posI].ConCount_single;
-                            v.ConCount_multiple += result[posI].ConCount_multiple;
+                            v.CountRate1 += coinResult[posI].CountRate1;
+                            v.CountRate2 += coinResult[posI].CountRate2;
+                            v.ConCount_single += coinResult[posI].ConCount_single;
+                            v.ConCount_multiple += coinResult[posI].ConCount_multiple;
                         }
 
                         //给出平均计数率cps,注意，这里是整除，当计数率小于1cps时会变成零。
-                        v.time = result[posI].time;
+                        v.time = coinResult[posI].time;
                         v.CountRate1 /= _stepT;
                         v.CountRate2 /= _stepT;
                         v.ConCount_single /= _stepT;
@@ -603,10 +649,10 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
             } else{
                 // vector<CoincidenceResult> rr3;
                 // for (size_t i=0; i < count; i++){
-                //     rr3.push_back(result[i]);
+                //     rr3.push_back(coinResult[i]);
                 // }
 
-                emit sigNewPlot(totalSingleSpectrum, result);
+                emit sigNewPlot(totalSingleSpectrum, coinResult);
             }
         }
 
@@ -624,13 +670,18 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
  * 计算出初始相对活度、中子产额。
  * 参考自CoincidenceAnalyzer::getInintialActive,注意离线处理产生的符合数据包含了冷却时间的零计数。与在线处理有一定区别
  * @param {DetectorParameter} detPara
- * @param {int} start_time
+ * @param {int} start_time 这start_time指曲线上数据点的x值。比如计数点[t=1,count=220]~[t=30,count=180]这两个点区间。则startT=1,endT=30
+                *****特别注意，这里的start_time和在线处理getInintialActive(detPara, int start_time, int time_end)
+ *              中的start_time是不一样的，
  * @param {int} time_end
  * @return {*}
  */
 void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int start_time, unsigned int time_end)
-{
-        // 根据量程，自动获取本量程下对应的中子产额刻度参数——Cu62与Cu64的初始β+活度分支比，本底全能峰位置的4*sigma下计数率，
+{    
+    //如果没有符合计算结果，那么后续计算不能进行
+    if(coinResult.size() == 0) return ;
+
+    // 根据量程，自动获取本量程下对应的中子产额刻度参数——Cu62与Cu64的初始β+活度分支比，本底全能峰位置的4*sigma下计数率，
     // 如果缺失参数则直接采用默认值。
     int measureRange = detPara.measureRange - 1;
     double ratioCu62 = 0.0, ratioCu64 = 1.0;
@@ -670,11 +721,7 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
     else{
         qCritical().noquote()<<"离线数据分析：未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算";
     }
-    
-    vector<CoincidenceResult> coinResult = coincidenceAnalyzer->GetCoinResult();
-    //如果没有前面的calculate的计算，那么后续计算不能进行
-    if(coinResult.size() == 0) return ;
-    
+
     size_t num = time_end - start_time + 1; //计数点个数。
 
     //符合时间窗,单位ns
@@ -848,7 +895,7 @@ void OfflineDataAnalysisWidget::on_pushbutton_save_clicked()
         if (QMessageBox::question(this, tr("提示"), tr("保存文件名已经存在，是否覆盖重写？"), QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) != QMessageBox::Yes)
         return;
     }
-     QFile file(wholepath);
+    QFile file(wholepath);
     if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
         QTextStream out(&file);
         //测量基本信息
@@ -926,7 +973,7 @@ void OfflineDataAnalysisWidget::on_pushbutton_save_clicked()
 
         //保存计数率
         {
-            wholepath += ".符合计数";
+            wholepath = smartAddTxtExtension(path + "/" + filename + "_符合计数");
             file.setFileName(wholepath);
             if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
                 QTextStream out(&file);
@@ -935,8 +982,7 @@ void OfflineDataAnalysisWidget::on_pushbutton_save_clicked()
                 out << "time,CountRate1,CountRate2,ConCount_single,ConCount_multiple,deathRatio1(%),deathRatio2(%)" << Qt::endl;
                 vector<CoincidenceResult> coinResult = coincidenceAnalyzer->GetCoinResult();
                 for (auto coin : coinResult){
-                    if (coin.time > startTimeUI && coin.time <= endTimeUI){
-                        //out << coin.time << "," << coin.CountRate1 << "," << coin.CountRate2  << "," << coin.ConCount_single << Qt::endl;
+                    if (coin.time >= startTimeUI && coin.time <= endTimeUI){
                         out << coin.time << "," << coin.CountRate1 << "," << coin.CountRate2 \
                             << "," << coin.ConCount_single << "," << coin.ConCount_multiple
                             << "," << coin.DeathRatio1 << "," << coin.DeathRatio2

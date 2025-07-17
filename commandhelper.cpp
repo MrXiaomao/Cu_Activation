@@ -141,7 +141,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
         //测量停止，进行符合计算，给出产额结果
         if(detectorParameter.transferModel == 0x05){
             //测量停止保存测量时长，其他测量参数在开始测量时已经保存
-            QString configResultFile = validDataFileName + ".配置";
+            QString configResultFile = ShotDir + "/" + str_start_time + "_配置.txt";
             {
                 QFile file(configResultFile);
                 if (file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Append)) {
@@ -182,7 +182,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
             // qDebug().noquote() << tr("本次测量FPGA丢包时刻及丢失时长已存放在：%1").arg(lossDataFile);
 
             //符合测量模式保存测量能谱文件
-            QString SpecFile = validDataFileName + ".累积能谱";
+            QString SpecFile = ShotDir + "/" + str_start_time + "_累积能谱.txt";
             {
                 vector<CoincidenceResult> coinresult = coincidenceAnalyzer->GetCoinResult();
                 if(coinresult.size()>0) {
@@ -203,7 +203,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
             qInfo().noquote() << tr("本次测量累积能谱已存放在：%1").arg(SpecFile);
         } else if(detectorParameter.transferModel == 0x03){
             //测量停止保存波形测量参数
-            QString configResultFile = netDataFileName + ".配置";
+            QString configResultFile = ShotDir + "/" + str_start_time + "_配置.txt";
             {
                 QFile file(configResultFile);
                 if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
@@ -232,7 +232,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
         //测量停止，进行符合计算，给出产额结果
         if(detectorParameter.transferModel == 0x03){
             //测量停止保存波形测量参数
-            QString configResultFile = netDataFileName + ".配置";
+            QString configResultFile = ShotDir + "/" + str_start_time + "_配置.txt";
             {
                 QFile file(configResultFile);
                 if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
@@ -345,7 +345,7 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
     //保存信息
     if (r1.time != currentFPGATime && r3.size()>0){
         //有新的能谱数据产生
-        QString coincidenceResultFile = validDataFileName + ".符合计数";
+        QString coincidenceResultFile = ShotDir + "/" + str_start_time + "_符合计数.txt";
         {
             QFile::OpenMode ioFlags = QIODevice::Truncate;
             if (QFileInfo::exists(coincidenceResultFile))
@@ -372,6 +372,7 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
         }
 
         currentFPGATime = r1.time;
+        currentTimeToShot = r3.back().time;
     }
 
     vector<CoincidenceResult> rr3;
@@ -384,6 +385,15 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
         start_time = gausslog.begin()->time;
         countCoin = r3.back().time - start_time;
         start_pos = r3.size() - countCoin;
+    }
+
+    int refreshT_max = 3600; //自动刷新产额结果的最大时间长度，单位s。注意，这个时间是指产生符合计数后开始计数。
+    int refreshT_result = 30; //单位s
+    if(countCoin >0 && countCoin <refreshT_max && countCoin%refreshT_result==0){
+        int start_time = r3.back().time - refreshT_result;
+        int end_time = r3.back().time;
+        double At_omiga = coincidenceAnalyzer->getInintialActive(detectorParameter, start_time, end_time);
+        emit sigActiveOmiga(At_omiga);
     }
 
     //时间步长，求均值
@@ -457,7 +467,7 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
             vector<AutoGaussFit> gausslog = coincidenceAnalyzer->GetGaussFitLog();
             if(gausslog.size()>0){
                 //有新的能窗产生
-                QString autoEnChangeFile = validDataFileName + ".能窗自动更新";
+                QString autoEnChangeFile = ShotDir + "/" + str_start_time + "_能窗自动更新.txt";
                 {
                     QFile::OpenMode ioFlags = QIODevice::Truncate;
                     if (QFileInfo::exists(autoEnChangeFile))
@@ -1119,7 +1129,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     lossData.clear();
 
     //文件夹准备
-    QString ShotDir = defaultCacheDir + "/" + shotNum;
+    ShotDir = defaultCacheDir + "/" + shotNum;
     QDir dir(ShotDir);
     if (!dir.exists())
         dir.mkdir(ShotDir);
@@ -1128,7 +1138,8 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     {
         QMutexLocker locker(&mutexFile);
 // #ifdef QT_DEBUG
-        netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_Net.dat");
+        str_start_time = QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss");
+        netDataFileName = QString("%1").arg(ShotDir + "/" + str_start_time + "_Net.dat");
         if (nullptr != pfSaveNet){
             pfSaveNet->close();
             delete pfSaveNet;
@@ -1150,7 +1161,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
         }
 
         //创建缓存文件
-        validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_valid.dat");
+        validDataFileName = QString("%1").arg(ShotDir + "/" + str_start_time + "_valid.dat");
         //有效数据缓存文件。符合模式（也称粒子模式）只存有效数据
         pfSaveVaildData = new QFile(validDataFileName);
         if (pfSaveVaildData->open(QIODevice::WriteOnly)) {
@@ -1166,8 +1177,9 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     }
     else if(detectorParameter.transferModel == 0x03)
     {
+        str_start_time = QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss");
         //创建缓存文件
-        netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_WaveNet.dat");
+        netDataFileName = QString("%1").arg(ShotDir + "/" + str_start_time + "_WaveNet.dat");
         QMutexLocker locker(&mutexFile);
         if (nullptr != pfSaveNet){
             pfSaveNet->close();
@@ -1347,15 +1359,16 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
     lossData.clear();
 
     //文件夹准备
-    QString ShotDir = defaultCacheDir + "/" + shotNum;
+    ShotDir = defaultCacheDir + "/" + shotNum;
     QDir dir(ShotDir);
     if (!dir.exists())
         dir.mkdir(ShotDir);
     //创建缓存文件
-    validDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_valid.dat");
+    str_start_time = QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss");
+    validDataFileName = QString("%1").arg(ShotDir + "/" + str_start_time + "_valid.dat");
     QMutexLocker locker2(&mutexFile);
 // #ifdef QT_DEBUG
-    netDataFileName = QString("%1").arg(ShotDir + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss") + "_Net.dat");
+    netDataFileName = QString("%1").arg(ShotDir + "/" + str_start_time + "_Net.dat");
     if (nullptr != pfSaveNet){
         pfSaveNet->close();
         delete pfSaveNet;
@@ -1388,7 +1401,7 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
     }
 
     //保存测量参数,自动测量一开始就保存参数
-    QString configResultFile = validDataFileName + ".配置";
+    QString configResultFile = ShotDir + "/" + str_start_time + "_配置.txt";
     {
         QFile file(configResultFile);
         if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
@@ -1451,7 +1464,7 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
     qInfo().noquote() << tr("本次测量参数配置已存放在：%1").arg(configResultFile);
 
     //存放自动更新能窗的日志，存放第一次能窗数据，由于第一次能窗不一定是高斯拟合给出，因为不给出峰位
-    QString autoEnChangeFile = validDataFileName + ".能窗自动更新";
+    QString autoEnChangeFile = ShotDir + "/" + str_start_time + "_能窗自动更新.txt";
     {
         QFile::OpenMode ioFlags = QIODevice::Truncate;
         if (QFileInfo::exists(autoEnChangeFile))

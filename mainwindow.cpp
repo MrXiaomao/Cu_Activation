@@ -321,6 +321,29 @@ MainWindow::MainWindow(QWidget *parent)
         double result = a * cali_factor;
         ui->lineEdit_CuActive->setText(QString::number(a, 'E', 5));
         ui->lineEdit_Yield->setText(QString::number(result, 'E', 5));
+
+        //记录到文件中
+        QString prefix = this->commandHelper->getFilenamePrefix();
+        QString autoEnChangeFile = prefix + "_中子产额.txt";
+        {
+            QFile::OpenMode ioFlags = QIODevice::Truncate;
+            if (QFileInfo::exists(autoEnChangeFile))
+                ioFlags = QIODevice::Append;
+            QFile file(autoEnChangeFile);
+            if (file.open(QIODevice::ReadWrite | QIODevice::Text | ioFlags)) {
+                QTextStream out(&file);
+                if (ioFlags == QIODevice::Truncate)
+                {
+                    out << tr("time(s), 相对活度, 中子产额") << Qt::endl;
+                }
+                out << this->commandHelper->getcurrentTimeToShot() << ","
+                    << QString::number(a, 'E', 5) << "," 
+                    <<QString::number(result, 'E', 5) << Qt::endl;
+
+                file.flush();
+                file.close();
+            }
+        }
     });
 
     // 测量停止
@@ -2177,8 +2200,8 @@ void MainWindow::on_pushButton_confirm_clicked()
 
     //确认能窗后保存测量参数
     //getsetEnTime必须在commandHelper->updateParamter()调用更新后才能调用，否则返回值为0
-    QString validDataFileName = commandHelper->getValidFilename();
-    QString configResultFile = validDataFileName + ".配置";
+    QString prefix_filename = commandHelper->getFilenamePrefix();
+    QString configResultFile = prefix_filename + "_配置.txt";
     {
         QFile file(configResultFile);
         if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
@@ -2236,7 +2259,7 @@ void MainWindow::on_pushButton_confirm_clicked()
     qInfo().noquote() << tr("本次测量参数配置已存放在：%1").arg(configResultFile);
 
     //存放自动更新能窗的日志，存放第一次能窗数据，由于第一次能窗不一定是高斯拟合给出，因为不给出峰位
-    QString autoEnChangeFile = validDataFileName + ".能窗自动更新";
+    QString autoEnChangeFile = prefix_filename + "_能窗自动更新.txt";
     {
         QFile::OpenMode ioFlags = QIODevice::Truncate;
         if (QFileInfo::exists(autoEnChangeFile))
@@ -2344,12 +2367,14 @@ void MainWindow::on_tabWidget_client_currentChanged(int /*index*/)
 //工具栏打开文件按钮
 void MainWindow::on_action_openfile_triggered()
 {
-    QString filePath = QFileDialog::getOpenFileName(this, tr("打开文件"),";",tr("符合测量文件 (*.dat)"));
-    if (filePath.isEmpty() || !QFileInfo::exists(filePath))
+    QString fileName = QFileDialog::getOpenFileName(this, tr("打开文件"),";",tr("符合测量文件 (*.dat)"));
+    if (fileName.isEmpty() || !QFileInfo::exists(fileName))
         return;
 
-    this->setProperty("offline-filename", filePath);
-    offlineDataAnalysisWidget->openEnergyFile(filePath);
+    this->setProperty("offline-filename", fileName);
+    if(!offlineDataAnalysisWidget->LoadMeasureParameter(fileName)){
+        QMessageBox::information(nullptr, tr("提示"), QString("无法找到文件：%1的测量配置文件").arg(fileName));
+    };
     this->setWindowTitle(this->property("offline-filename").toString() + " - offline");
     emit offlineDataAnalysisWidget->sigStart();
 }

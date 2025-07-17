@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-06-29 20:30:55
+ * @LastEditTime: 2025-07-16 18:53:02
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -216,7 +216,7 @@ void OfflineDataAnalysisWidget::initCustomPlot()
 #include <QFileInfo>
 #include <QTextStream>
 #include <QTimer>
-void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
+bool OfflineDataAnalysisWidget::LoadMeasureParameter(QString filePath)
 {
     //重新初始化
     for(int i=0; i<3; i++){
@@ -228,90 +228,111 @@ void OfflineDataAnalysisWidget::openEnergyFile(QString filePath)
     ui->textBrowser_filepath->setText(filePath);
     validDataFileName = filePath;
 
-    QString configFile = validDataFileName + tr(".配置");
-    if (QFileInfo::exists(configFile)){
-        //只有选取到有效文件后才允许使用
-        ui->pushButton_start->setEnabled(true);
+    //先对旧版本配置文件命名的兼容 xxx_Net.dat xxx_Net.dat.配置
+    //新版 xxx_Net.dat xxx_配置.txt
+    
+    QStringList parts = filePath.split("_valid"); // 按 "_valid" 分割
+    QString prefix;
+    if (!parts.isEmpty()) {
+        prefix = parts[0]; // 提取第一部分
+    }
+    else{
+        //说明文件不包含_valid。
+        return false;
+    }
 
-        QFile file(configFile);
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            QMap<QString, QString> configMap;
-            QTextStream in(&file);
-            while (!in.atEnd()) {
-                QString line = in.readLine().trimmed();
-                if (line.isEmpty() || line.startsWith('#')) continue; // 跳过空行和注释行
-
-                int separatorIndex = line.indexOf('=');
-                if (separatorIndex != -1) {
-                    QString key = line.left(separatorIndex).trimmed();
-                    QString value = line.mid(separatorIndex + 1).trimmed();
-
-                    // 处理带单位的键和不带单位的键
-                    if(key.endsWith("(ns)") ) {
-                        QString baseKey = key.left(key.length() - 4); // 去掉"(ns)"
-                        if(!configMap.contains(baseKey)) { // 如果基础键不存在，则添加
-                            configMap[baseKey] = value;
-                        }
-                    }
-                    else if(key.endsWith("(s)"))
-                    {
-                        QString baseKey = key.left(key.length() - 3); // 去掉"(s)"
-                        if(!configMap.contains(baseKey)) { // 如果基础键不存在，则添加
-                            configMap[baseKey] = value;
-                        }
-                    }
-                    configMap[key] = value; // 保留原始键值对
-                }
-            }
-            file.close();
-
-            if(configMap.value("测量模式") == "手动") {
-                detParameter.measureModel = mmManual;
-                ui->spinBox_coolingTime->setEnabled(true); //手动模式允许修改冷却时长
-            }
-            else if(configMap.value("测量模式") == "自动") {
-                detParameter.measureModel = mmAuto;
-                ui->spinBox_coolingTime->setEnabled(false);//自动模式不允许修改冷却时长
-            }
-            detParameter.coolingTime = configMap.value("冷却时长").toInt();
-            detParameter.timeWidth = configMap.value("符合分辨时间").toInt();
-            
-            QString rangeStr = configMap.value("量程选取");
-            if(rangeStr == "小量程") detParameter.measureRange = 1;
-            if(rangeStr == "中量程") detParameter.measureRange = 2;
-            if(rangeStr == "大量程") detParameter.measureRange = 3;
-
-            this->startTime_absolute = static_cast<unsigned int>(configMap.value("测量开始时间(冷却时间+FPGA时钟)").toInt());
-            if(detParameter.measureModel == mmManual) startFPGA_time = this->startTime_absolute - detParameter.coolingTime +1 ;
-            else startFPGA_time = detParameter.coolingTime + 1;
-
-            ui->lineEdit_measuremodel->setText(configMap.value("测量模式"));
-            ui->spinBox_step->setValue(configMap.value("时间步长").toInt());
-            ui->spinBox_timeWidth->setValue(configMap.value("符合分辨时间").toInt());
-            ui->spinBox_coolingTime->setValue(configMap.value("冷却时长").toInt());
-            ui->lineEdit_range->setText(rangeStr);
-
-            int minTime = 0;
-            int maxTime = 0;
-            // if(detParameter.measureModel == mmManual) {
-            //     minTime = startTime_absolute + 1;
-            //     maxTime = configMap.value("测量时长").toInt() + detParameter.coolingTime;
-            // }else{
-            minTime = startTime_absolute + 1;
-            maxTime = configMap.value("测量时长").toInt() + detParameter.coolingTime;
-            // }
-            //读取配置参数的时候，默认数据分析参数为全部时间段测量数据。
-            ui->spinBox_start->setRange(0, INT_MAX); // 先设置足够大的范围
-            ui->spinBox_end->setRange(0, INT_MAX); // 先设置足够大的范围
-            ui->spinBox_start->setValue(minTime+2); //丢弃前两个点的数据，因为前两个点数据经常不完整
-            ui->spinBox_end->setValue(maxTime);
-
-            ui->spinBox_1_leftE->setValue(configMap.value("Det1符合能窗左").toInt());
-            ui->spinBox_1_rightE->setValue(configMap.value("Det1符合能窗右").toInt());
-            ui->spinBox_2_leftE->setValue(configMap.value("Det2符合能窗左").toInt());
-            ui->spinBox_2_rightE->setValue(configMap.value("Det2符合能窗右").toInt());
+    QString configFile = prefix + "_配置.txt";
+    if (!QFileInfo::exists(configFile)){
+        //若文件不存在，则考虑是否为软件旧版本的命名风格
+        configFile = filePath + ".配置";
+        if (!QFileInfo::exists(configFile)){
+            //若还是不存在该文件，则说明缺失测量配置文件
+            return false;
         }
     }
+
+    //只有选取到有效文件后才允许使用
+    ui->pushButton_start->setEnabled(true);
+
+    QFile file(configFile);
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QMap<QString, QString> configMap;
+        QTextStream in(&file);
+        while (!in.atEnd()) {
+            QString line = in.readLine().trimmed();
+            if (line.isEmpty() || line.startsWith('#')) continue; // 跳过空行和注释行
+
+            int separatorIndex = line.indexOf('=');
+            if (separatorIndex != -1) {
+                QString key = line.left(separatorIndex).trimmed();
+                QString value = line.mid(separatorIndex + 1).trimmed();
+
+                // 处理带单位的键和不带单位的键
+                if(key.endsWith("(ns)") ) {
+                    QString baseKey = key.left(key.length() - 4); // 去掉"(ns)"
+                    if(!configMap.contains(baseKey)) { // 如果基础键不存在，则添加
+                        configMap[baseKey] = value;
+                    }
+                }
+                else if(key.endsWith("(s)"))
+                {
+                    QString baseKey = key.left(key.length() - 3); // 去掉"(s)"
+                    if(!configMap.contains(baseKey)) { // 如果基础键不存在，则添加
+                        configMap[baseKey] = value;
+                    }
+                }
+                configMap[key] = value; // 保留原始键值对
+            }
+        }
+        file.close();
+
+        if(configMap.value("测量模式") == "手动") {
+            detParameter.measureModel = mmManual;
+            ui->spinBox_coolingTime->setEnabled(true); //手动模式允许修改冷却时长
+        }
+        else if(configMap.value("测量模式") == "自动") {
+            detParameter.measureModel = mmAuto;
+            ui->spinBox_coolingTime->setEnabled(false);//自动模式不允许修改冷却时长
+        }
+        detParameter.coolingTime = configMap.value("冷却时长").toInt();
+        detParameter.timeWidth = configMap.value("符合分辨时间").toInt();
+        
+        QString rangeStr = configMap.value("量程选取");
+        if(rangeStr == "小量程") detParameter.measureRange = 1;
+        if(rangeStr == "中量程") detParameter.measureRange = 2;
+        if(rangeStr == "大量程") detParameter.measureRange = 3;
+
+        this->startTime_absolute = static_cast<unsigned int>(configMap.value("测量开始时间(冷却时间+FPGA时钟)").toInt());
+        if(detParameter.measureModel == mmManual) startFPGA_time = this->startTime_absolute - detParameter.coolingTime +1 ;
+        else startFPGA_time = detParameter.coolingTime + 1;
+
+        ui->lineEdit_measuremodel->setText(configMap.value("测量模式"));
+        ui->spinBox_step->setValue(configMap.value("时间步长").toInt());
+        ui->spinBox_timeWidth->setValue(configMap.value("符合分辨时间").toInt());
+        ui->spinBox_coolingTime->setValue(configMap.value("冷却时长").toInt());
+        ui->lineEdit_range->setText(rangeStr);
+
+        int minTime = 0;
+        int maxTime = 0;
+        // if(detParameter.measureModel == mmManual) {
+        //     minTime = startTime_absolute + 1;
+        //     maxTime = configMap.value("测量时长").toInt() + detParameter.coolingTime;
+        // }else{
+        minTime = startTime_absolute + 1;
+        maxTime = configMap.value("测量时长").toInt() + detParameter.coolingTime;
+        // }
+        //读取配置参数的时候，默认数据分析参数为全部时间段测量数据。
+        ui->spinBox_start->setRange(0, INT_MAX); // 先设置足够大的范围
+        ui->spinBox_end->setRange(0, INT_MAX); // 先设置足够大的范围
+        ui->spinBox_start->setValue(minTime+2); //丢弃前两个点的数据，因为前两个点数据经常不完整
+        ui->spinBox_end->setValue(maxTime);
+
+        ui->spinBox_1_leftE->setValue(configMap.value("Det1符合能窗左").toInt());
+        ui->spinBox_1_rightE->setValue(configMap.value("Det1符合能窗右").toInt());
+        ui->spinBox_2_leftE->setValue(configMap.value("Det2符合能窗左").toInt());
+        ui->spinBox_2_rightE->setValue(configMap.value("Det2符合能窗右").toInt());
+    }
+    return true;
 }
 
 #include <QMessageBox>

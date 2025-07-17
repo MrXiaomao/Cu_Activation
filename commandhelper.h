@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-15 21:39:43
+ * @LastEditTime: 2025-07-16 19:17:06
  * @Description: 用来管理网口的数据发送与接受，管理网口数据的处理相关业务。
  */
 #ifndef COMMANDHELPER_H
@@ -42,8 +42,9 @@ public:
     void updateStepTime(int stepT); //用于响应主界面点击刷新按钮
     
     // 获取有效数据的文件名
-    inline const QString getValidFilename(){
-        return validDataFileName;
+    inline const QString getFilenamePrefix(){
+        QString prefix_name = ShotDir + "/" + str_start_time;
+        return prefix_name;
     }
 
     //获取测量参数
@@ -63,6 +64,11 @@ public:
         return time_SetEnWindow;
     }
 
+    // 距离打靶时刻的时长，单位：s
+    inline const int getcurrentTimeToShot()
+    {
+        return currentTimeToShot;
+    }
     /**
      * @description: 更新能窗和步长，适用于点击开始测量后，将参数传递给命令管理类
      * @param {int} stepT 时间步长，单位s
@@ -172,6 +178,7 @@ private:
     QLiteThread* analyzeNetDataThread;//处理网络数据线程，将数据进行解析成时间能量队
     QLiteThread* plotUpdateThread;//能谱信息处理线程
     quint32 currentFPGATime = 0;// FPGA当前时刻，单位：s
+    quint32 currentTimeToShot = 0;// 距离打靶时刻的时长，单位：s
     bool autoChangeEnWindow = false; //是否自动适应能窗，用以修正温漂
     quint32 time_SetEnWindow = 0;// 记录下手动测量下，用户设置能窗的时间戳，以活化后开始计时(冷却时间+FPGA时钟)，单位：s
 
@@ -251,9 +258,6 @@ private:
 
     WorkStatusFlag workStatus = NoWork;
     DetectorParameter detectorParameter;
-    //QFile *pfSaveInvalid = nullptr;//保存非0有效数据文件
-    QFile *pfSaveNet = nullptr;//保存开始测量之后的所有网口接收数据
-    QFile *pfSaveVaildData = nullptr;//保存开始测量之后的所有有效数据[时间、死时间、能量] [6字节、2字节、2字节]
 
     qint8 prepareStep = 0;
     void initSocket(QTcpSocket** socket);
@@ -262,10 +266,15 @@ private:
     bool detectorException = false;
 
 private:
+    QString ShotDir;
     QString defaultCacheDir;
     QString shotNum; //测量发次，用来作为文件前缀。
+    QString str_start_time; //测量开始时间，作为文件名前缀
     QString netDataFileName; //存储网口接收全部原始数据的文件名
     QString validDataFileName; // 存储有效数据的文件名
+    
+    QFile *pfSaveNet = nullptr;//保存开始测量之后的所有网口接收数据
+    QFile *pfSaveVaildData = nullptr;//保存开始测量之后的所有有效数据[时间、死时间、能量] [6字节、2字节、2字节]
 
     int stepT = 1; //界面图像刷新时间，单位s
     unsigned short EnWindow[4]; // 探测器1左能窗、右能窗；探测器2左能窗、右能窗

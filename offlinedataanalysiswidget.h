@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:32
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-06-23 19:43:13
+ * @LastEditTime: 2025-07-16 18:44:17
  * @Description: 请填写简介
  */
 #ifndef OFFLINEDATAANALYSISWIDGET_H
@@ -26,7 +26,7 @@ public:
 
     void initCustomPlot();
     void doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> r3);
-    void openEnergyFile(QString filePath);
+    bool LoadMeasureParameter(QString filePath);
     void analyse(DetectorParameter detPara, unsigned int start_time, unsigned int time_end);
 
     /**

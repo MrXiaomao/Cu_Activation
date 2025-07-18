@@ -3,7 +3,7 @@
 
 #include <QWidget>
 #include "commandhelper.h"
-
+#include <QReadWriteLock>
 namespace Ui {
 class CacheDirConfigWidget;
 }
@@ -27,6 +27,7 @@ private slots:
 private:
     Ui::CacheDirConfigWidget *ui;
     CommandHelper *commandhelper = nullptr;//网络指令
+    static QReadWriteLock *m_sLock;   //定义静态读写锁（方便所有当前线程类对象使用）
 };
 
 #endif // CACHEDIRCONFIGWIDGET_H

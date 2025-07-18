@@ -20,6 +20,8 @@
 #include <QNetworkSession>
 #include <QNetworkConfigurationManager>
 
+#include <QLockFile>
+
 CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
   , coincidenceAnalyzer(new CoincidenceAnalyzer)
 {
@@ -355,11 +357,11 @@ void CommandHelper::loadConfig()
         QJsonObject jsonPublic;
         if (jsonObj.contains("Public")){
             jsonPublic = jsonObj["Public"].toObject();
-            if (jsonPublic.contains("yieldRefreshTime")){
-                yieldRefreshTime = jsonPublic["yieldRefreshTime"].toInt();
+            if (jsonPublic.contains("deltaTime_updateYield")){
+                deltaTime_updateYield = jsonPublic["deltaTime_updateYield"].toInt();
             }
-            if (jsonPublic.contains("yieldRefreshMaxTime")){
-                yieldRefreshMaxTime = jsonPublic["yieldRefreshMaxTime"].toInt();
+            if (jsonPublic.contains("maxTime_updateYield")){
+                maxTime_updateYield = jsonPublic["maxTime_updateYield"].toInt();
             }
         }
     }
@@ -420,8 +422,8 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
         start_pos = r3.size() - countCoin;
     }
 
-    if(countCoin >0 && countCoin <yieldRefreshMaxTime && countCoin%yieldRefreshTime==0){
-        int start_time = r3.back().time - yieldRefreshTime;
+    if(countCoin >0 && countCoin <=maxTime_updateYield && countCoin%deltaTime_updateYield==0){
+        int start_time = r3.back().time - deltaTime_updateYield;
         int end_time = r3.back().time;
         double At_omiga = coincidenceAnalyzer->getInintialActive(detectorParameter, start_time, end_time);
         emit sigActiveOmiga(At_omiga);
@@ -2027,6 +2029,20 @@ void CommandHelper::detTimeEnergyWorkThread()
                                 if (startSaveValidData){
                                     // 则记录下计数曲线的起始时刻
                                     this->time_SetEnWindow = coincidenceAnalyzer->GetPointPerSeconds().back().time;
+                                    // 记录到配置文件
+                                    QString configResultFile = getFilenamePrefix() + "_配置.txt";
+                                    {
+                                        QFile::OpenMode ioFlags = QIODevice::Truncate;
+                                        if (QFileInfo::exists(configResultFile))
+                                            ioFlags = QIODevice::Append;
+                                        QFile file(configResultFile);
+                                        if (file.open(QIODevice::ReadWrite | QIODevice::Text | ioFlags)) {
+                                            QTextStream out(&file);
+                                            out << tr("测量开始时间(冷却时间+FPGA时钟)=")<< this->time_SetEnWindow <<Qt::endl;
+                                            file.flush();
+                                            file.close();
+                                        }
+                                    }
                                     saveParticleInfo(coincidenceAnalyzer->GetUnusedData1(), coincidenceAnalyzer->GetUnusedData2());
                                     startSaveValidData = false;
                                 }

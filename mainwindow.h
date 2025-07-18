@@ -6,6 +6,8 @@
 #include "commandhelper.h"
 #include "controlhelper.h"
 
+#include <QReadWriteLock>
+
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
@@ -135,6 +137,7 @@ private:
     CommandHelper *commandHelper = nullptr;//网络指令
     ControlHelper *controlHelper = nullptr;//网络指令
 
+    static QReadWriteLock *m_sLock;   //定义静态读写锁（方便所有当前线程类对象使用）
     qint32 currentDetectorIndex = 0;
     unsigned int multi_CHANNEL; //多道道数
     QDateTime lastRecvDataTime;//探测器上一次接收数据时间

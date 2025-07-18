@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-18 00:58:07
+ * @LastEditTime: 2025-07-18 21:47:52
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -117,11 +117,18 @@ OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
         }
 
         double result = active * cali_factor;
+        
+        //保存结果
+        yieldResult oneResult;
+        oneResult.time = coincidenceAnalyzer->GetCoinResult().back().time;
+        oneResult.ActiveOmiga = active;
+        oneResult.Yield = result;
+        activationResult.push_back(oneResult);
 
         //临时测试，保留该代码，后续调参数需要使用。优化maxTime、deltaTime的选取
-        /*
         //记录到文件中
-        {
+        /*{
+            qDebug()<<"path = "<<validDataFileName;
             QStringList parts = validDataFileName.split("_valid"); // 按 "_valid" 分割
             QString prefix;
             if (!parts.isEmpty()) {
@@ -129,7 +136,7 @@ OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
             }
             else{
                 //说明文件不包含_valid。
-                return false;
+                return;
             }
             QString yieldOfflineFile = prefix + "_中子产额offline.txt";
             {
@@ -151,8 +158,8 @@ OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
                     file.close();
                 }
             }
-        }
-        */
+        }*/
+        
         ui->lineEdit_neutronYield->setText(QString::number(result, 'E', 5));
     });
 
@@ -384,8 +391,12 @@ void OfflineDataAnalysisWidget::slotStart()
 
     firstPopup = true;
     reAnalyzer = false;
+    isUpdateYield = false;
     detectNum = 0;
     lossData.clear();
+    activationResult.clear();
+    loadConfig();
+
     memset(&totalSingleSpectrum, 0, sizeof(totalSingleSpectrum));
 
     //读取历史数据重新进行运算
@@ -493,17 +504,18 @@ void OfflineDataAnalysisWidget::doEnWindowData(SingleSpectrum r1, vector<Coincid
             totalSingleSpectrum.spectrum[1][i] += r1.spectrum[1][i];
         }
 
-        //临时测试，保留该代码，后续调参数需要使用。优化maxTime、deltaTime的选取
-        //在线测量中，对前maxTime的时间内数据，定时给出中子产额。
+        //临时测试，保留该代码，后续调参数需要使用。优化maxTime_updateYield、deltaTime_updateYield的选取
+        //在线测量中，对前maxTime_updateYield的时间内数据，定时给出中子产额。
         //为了评估该数值取多少合适，这里对其进行考察，也可以借助matlab代码来优化该数值的选取
-        /*int maxTime = 3600; //单位s
-        int deltaTime = 60; //单位s
-        if(count >0 && count <=maxTime && count%deltaTime==0){
-            int start_time = r3.back().time - deltaTime;
-            int end_time = r3.back().time;
-            double At_omiga = coincidenceAnalyzer->getInintialActive(detParameter, start_time, end_time);
-            emit sigActiveOmiga(At_omiga);
-        }*/
+        if(isUpdateYield)
+        {
+            if(count >0 && count <=maxTime_updateYield && count%deltaTime_updateYield==0){
+                int start_time = r3.back().time - deltaTime_updateYield;
+                int end_time = r3.back().time;
+                double At_omiga = coincidenceAnalyzer->getInintialActive(detParameter, start_time, end_time);
+                emit sigActiveOmiga(At_omiga);
+            }
+        }
 
         // 先不着急刷新图像和更新计数率，等数据全部处理完了再一次性刷新，避免耗时太久
         return;
@@ -968,6 +980,16 @@ void OfflineDataAnalysisWidget::on_pushbutton_save_clicked()
         out << tr("相对初始活度/Bq=") << ui->lineEdit_realativeA0->text() << Qt::endl;
         out << tr("中子产额=") << ui->lineEdit_neutronYield->text() << Qt::endl;
 
+        int yield_num = activationResult.size();
+        if(yield_num>0 && isUpdateYield)
+        {
+            out<<tr("时间(s),相对初始活度,中子产额")<<Qt::endl;
+            for (const auto& oneData : activationResult) {
+                out << oneData.time << ","
+                    << QString::number(oneData.ActiveOmiga, 'E', 5) << ","
+                    <<QString::number(oneData.Yield, 'E', 5) << Qt::endl;
+            }
+        }
         file.flush();
         file.close();
 
@@ -1051,3 +1073,32 @@ void OfflineDataAnalysisWidget::on_checkBox_gauss_stateChanged(int arg1)
     plotWidget->slotShowGaussInfor(arg1 == Qt::CheckState::Checked);
 }
 
+void OfflineDataAnalysisWidget::loadConfig()
+{
+    QFile file(QApplication::applicationDirPath() + "/config/user.json");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // 读取文件内容
+        QByteArray jsonData = file.readAll();
+        file.close(); //释放资源
+
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+        QJsonObject jsonObj = jsonDoc.object();
+        
+        QJsonObject jsonPublic;
+        if (jsonObj.contains("Public")){
+            jsonPublic = jsonObj["Public"].toObject();
+            if (jsonPublic.contains("deltaTime_updateYield")){
+                deltaTime_updateYield = jsonPublic["deltaTime_updateYield"].toInt();
+            }
+            if (jsonPublic.contains("maxTime_updateYield")){
+                maxTime_updateYield = jsonPublic["maxTime_updateYield"].toInt();
+            }
+            if (jsonPublic.contains("updateYield")){
+                isUpdateYield = jsonPublic["updateYield"].toBool();
+            }
+        }
+    }
+    else{
+        qCritical().noquote()<<"未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
+    }
+}

@@ -135,7 +135,7 @@ void YieldCalibration::load()
     QDir dir(path);
     if (!dir.exists())
         dir.mkdir(path);
-    for (int i=0; i<10; ++i){
+    for (int i=0; i<10; ++i){//循环多次，因为文件可能被占用
         QFile file(QApplication::applicationDirPath() + "/config/user.json");
         if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             // 读取文件内容

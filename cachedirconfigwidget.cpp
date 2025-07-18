@@ -9,6 +9,8 @@
 #include <QMessageBox>
 #include "offlinedataanalysiswidget.h"
 
+QReadWriteLock* CacheDirConfigWidget::m_sLock = new QReadWriteLock; //为静态变量new出对象
+
 CacheDirConfigWidget::CacheDirConfigWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::CacheDirConfigWidget)
@@ -87,10 +89,12 @@ void CacheDirConfigWidget::load()
         commandhelper->setDefaultCacheDir(cacheDir);
         
         //重新写回文件
+        m_sLock->lockForWrite();
         file.open(QIODevice::WriteOnly | QIODevice::Text);
         QJsonDocument jsonDocNew(jsonObj);
         file.write(jsonDocNew.toJson());
         file.close();
+        m_sLock->unlock();  //解锁
     }
 }
 
@@ -121,10 +125,13 @@ bool CacheDirConfigWidget::save()
 
         jsonObj["defaultCache"] = cacheDir;
 
+        //写入锁上锁
+        m_sLock->lockForWrite();
         file.open(QIODevice::WriteOnly | QIODevice::Text);
         QJsonDocument jsonDocNew(jsonObj);
         file.write(jsonDocNew.toJson());
         file.close();
+        m_sLock->unlock();  //解锁
 
         commandhelper->setDefaultCacheDir(cacheDir);
         return true;

@@ -1035,7 +1035,7 @@ bool PlotWidget::eventFilter(QObject *watched, QEvent *event)
                     }else {
                         if (this->isDragging) {
                             //拖拽中
-                            QMutexLocker locker(&mutexRefreshPlot);
+                            //QMutexLocker locker(&mutexRefreshPlot);
                             double key, value;
                             QCPGraph *graph = getGraph(this->property("PlotIndex").toUInt());
                             graph->pixelsToCoords(e->pos().x(), e->pos().y(), key, value);

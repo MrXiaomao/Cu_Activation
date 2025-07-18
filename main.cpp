@@ -179,18 +179,18 @@ int main(int argc, char *argv[])
         logger->addAppender(appender);
 
         //输出到文件(如果需要把离线处理单独保存日志文件，可以改这里)
-		QStringList args = QCoreApplication::arguments();
+        QStringList args = QCoreApplication::arguments();
         if (args.contains("-m") && args.contains("offline")) {
-			Log4Qt::DailyFileAppender *dailiAppender = new Log4Qt::DailyFileAppender(layout, "logs/.log", "offline_yyyy-MM-dd");
-	        dailiAppender->setAppendFile(true);
-	        dailiAppender->activateOptions();
-	        logger->addAppender(dailiAppender);
-		} else {
-	        Log4Qt::DailyFileAppender *dailiAppender = new Log4Qt::DailyFileAppender(layout, "logs/.log", "Cu_Activation_yyyy-MM-dd");
-	        dailiAppender->setAppendFile(true);
-	        dailiAppender->activateOptions();
-	        logger->addAppender(dailiAppender);
-		}
+            Log4Qt::DailyFileAppender *dailiAppender = new Log4Qt::DailyFileAppender(layout, "logs/.log", "offline_yyyy-MM-dd");
+            dailiAppender->setAppendFile(true);
+            dailiAppender->activateOptions();
+            logger->addAppender(dailiAppender);
+        } else {
+            Log4Qt::DailyFileAppender *dailiAppender = new Log4Qt::DailyFileAppender(layout, "logs/.log", "Cu_Activation_yyyy-MM-dd");
+            dailiAppender->setAppendFile(true);
+            dailiAppender->activateOptions();
+            logger->addAppender(dailiAppender);
+        }
     }
 
     // 确保logs目录存在

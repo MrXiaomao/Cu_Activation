@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:32
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-17 21:56:33
+ * @LastEditTime: 2025-07-18 21:22:18
  * @Description: 请填写简介
  */
 #ifndef OFFLINEDATAANALYSISWIDGET_H
@@ -28,7 +28,14 @@ public:
     void doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> r3);
     bool LoadMeasureParameter(QString filePath);
     void analyse(DetectorParameter detPara, unsigned int start_time, unsigned int time_end);
-
+    struct yieldResult
+    {
+        int time; //时间s
+        double ActiveOmiga; //初始相对活度
+        double Yield; //中子产额
+        /* data */
+    };
+    
     /**
      * @description: 检测文件路径是否有效
      * @param {QString} &path
@@ -51,6 +58,8 @@ public:
      * @return {*}
      */
     static QString smartAddTxtExtension(const QString &fileName);
+    //读取配置文件
+    void loadConfig();
 
 signals:
     void sigNewPlot(SingleSpectrum, vector<CoincidenceResult>);
@@ -96,6 +105,11 @@ private:
     bool firstPopup = true;//控制弹窗是否首次出现
     SingleSpectrum totalSingleSpectrum; //总能谱
     vector<CoincidenceResult> coinResult; //符合计算结果
+
+    int maxTime_updateYield = 3600; //自动更新中子产额的最大时刻，单位s
+    int deltaTime_updateYield = 60; //自动更新中子产额的时间间隔，单位s
+    bool isUpdateYield = false; //是否定时更新中子产额
+    std::vector<yieldResult> activationResult; //计算结果，当设置为自动更新中子产额时，则会产生多个中子产额。
 
     unsigned int startTimeUI = 0;
     unsigned int endTimeUI = 0;

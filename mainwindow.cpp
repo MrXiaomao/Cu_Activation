@@ -20,13 +20,12 @@
 #include <QFile>
 #include <QDir>
 #include <QMessageBox>
-#include <QJsonArray>
-#include <QJsonObject>
-#include <QJsonDocument>
 #include <QWhatsThis>
 #include <iostream>
 #include <QShortcut>
 #include <windows.h>
+
+QReadWriteLock* MainWindow::m_sLock = new QReadWriteLock; //为静态变量new出对象
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -2047,10 +2046,13 @@ void MainWindow::saveConfigJson(bool bSafeExitFlag)
         }
         jsonObj["Public"] = jsonObjPub;
 
+        //写入锁上锁
+        m_sLock->lockForWrite();
         file.open(QIODevice::WriteOnly | QIODevice::Text);
         QJsonDocument jsonDocNew(jsonObj);
         file.write(jsonDocNew.toJson());
         file.close();
+        m_sLock->unlock();  //解锁
     }
 }
 
@@ -2092,15 +2094,20 @@ bool MainWindow::saveCurrentTConfigJson(bool bSafeExitFlag)
             if (!this->property("test").isNull()){
                 jsonObjPub["test"] = this->property("test").toBool();
             }
-            jsonObjPub["yieldRefreshTime"] = 60;
-            jsonObjPub["yieldRefreshMaxTime"] = 3600;
+            jsonObjPub["deltaTime_updateYield"] = 60;
+            jsonObjPub["maxTime_updateYield"] = 3600;
             jsonObj["Public"] = jsonObjPub;   
         }
 		
+        //创建简化的写入锁对象，创建好并添加读写锁，自动将写入锁锁定，作用域结束时解锁
+        //写入锁上锁
+        m_sLock->lockForWrite();
         file.open(QIODevice::WriteOnly | QIODevice::Text);
         jsonDoc.setObject(jsonObj);
         file.write(jsonDoc.toJson());
         file.close();
+        m_sLock->unlock();  //解锁
+
 		return true;
     }
 	else{
@@ -2217,9 +2224,6 @@ void MainWindow::on_pushButton_confirm_clicked()
     if (ui->radioButton_ref->isChecked()){
         plotWidget->slotResetPlot();
     }
-    //确认能窗后，开始存储有效数据
-    commandHelper->startSaveValidData = true;
-    commandHelper->updateParamter(stepT, EnWin, true);
     
     //确认能窗后保存测量参数
     //getsetEnTime必须在commandHelper->updateParamter()调用更新后才能调用，否则返回值为0
@@ -2258,7 +2262,6 @@ void MainWindow::on_pushButton_confirm_clicked()
             }
             out << tr("冷却时长(s)=") << detParameter.coolingTime << Qt::endl; //单位s
 
-            out << tr("测量开始时间(冷却时间+FPGA时钟)=")<< savetime_FPGA <<Qt::endl;
             out << tr("符合延迟时间(ns))=") << detParameter.delayTime << Qt::endl; //单位ns
             out << tr("符合分辨时间(ns)=") << detParameter.timeWidth << Qt::endl; //单位ns
             out << tr("时间步长(s)=") << 1 << Qt::endl; //注意，存储的数据时间步长恒为1s
@@ -2280,7 +2283,11 @@ void MainWindow::on_pushButton_confirm_clicked()
         }
     }
     qInfo().noquote() << tr("本次测量参数配置已存放在：%1").arg(configResultFile);
-
+    
+    //确认能窗后，开始存储有效数据
+    commandHelper->startSaveValidData = true;
+    commandHelper->updateParamter(stepT, EnWin, true);
+    
     //存放自动更新能窗的日志，存放第一次能窗数据，由于第一次能窗不一定是高斯拟合给出，因为不给出峰位
     QString autoEnChangeFile = prefix_filename + "_能窗自动更新.txt";
     {

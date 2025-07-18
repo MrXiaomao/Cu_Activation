@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-07-16 14:48:52
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-16 17:07:05
+ * @LastEditTime: 2025-07-18 14:50:44
  * @Description: 请填写简介
  */
 #pragma once
@@ -83,7 +83,7 @@ void WriteDump(EXCEPTION_POINTERS *exp, const std::wstring &path) {
 LONG WINAPI MyUnhandledExceptionFilter(EXCEPTION_POINTERS *exp) {
     const QString dumpFileName =
         QString("%1_%2.dmp").arg("Cu_Activation_crash", QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss"));
-    const QString dumpDirPath = QGuiApplication::applicationFilePath() + "/dmp";
+    const QString dumpDirPath = QGuiApplication::applicationDirPath() + "/dmp";
     const QDir dumpDir(dumpDirPath);
     if (!dumpDir.exists()) {
         dumpDir.mkpath(dumpDirPath);
@@ -92,6 +92,6 @@ LONG WINAPI MyUnhandledExceptionFilter(EXCEPTION_POINTERS *exp) {
     WriteDump(exp, dumpFilePath.toStdWString());
     QStringList arguments;
     arguments << "-crashed=" + dumpFilePath;
-    QProcess::startDetached(QGuiApplication::applicationFilePath(), arguments);
+    //QProcess::startDetached(QGuiApplication::applicationFilePath(), arguments);
     return EXCEPTION_EXECUTE_HANDLER;
 }

@@ -704,8 +704,8 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
     size_t num = time_end - start_time + 1; //计数点个数。
 
     //符合时间窗,单位ns
-    int timeWidth_tmp = detPara.timeWidth;
-    timeWidth_tmp = timeWidth_tmp/1e9;
+    double timeWidth_tmp = detPara.timeWidth * 1.0;
+    timeWidth_tmp = timeWidth_tmp / 1e9;
 
     if(time_end < start_time) return ; //不允许起始时间小于停止时间
 
@@ -757,7 +757,7 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
 
             // 死时间修正后各计数率
             double n10 = n1 / (1-ratio1);
-            double n20 = n1 / (1-ratio2);
+            double n20 = n2 / (1-ratio2);
             double nc0 = nc / (1-ratio3);
             minCount_correct[0] = qMin(minCount_correct[0], n10);
             minCount_correct[1] = qMin(minCount_correct[1], n20);
@@ -772,6 +772,10 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
             Nc += nc;
             deathTime_Ratio1 += ratio1;
             deathTime_Ratio2 += ratio2;
+            // int N1_temp = int(N1);
+            // int N2_temp = int(N2);
+            // int Nc_temp = int(Nc);
+            // std::cout<<coin.time<<","<<N1_temp<<","<<N2_temp<<","<<Nc_temp<<std::endl;
         }
     }
     
@@ -806,7 +810,7 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
                 
     //对符合计数进行真偶符合修正
     //注意timeWidth_tmp单位为ns，要换为时间s。
-    double measureTime = (time_end - start_time)*1.0;
+    double measureTime = (time_end - start_time + 1)*1.0;
     double Nco = (Nc*measureTime - 2*timeWidth_tmp*N1*N2)/(measureTime - timeWidth_tmp*(N1 + N2));
 
     //死时间修正

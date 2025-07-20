@@ -781,7 +781,7 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int sta
     double timeWidth_tmp = detPara.timeWidth * 1.0;
     timeWidth_tmp = timeWidth_tmp /1e9;
 
-    if(time_end < start_time) return 0.0; //不允许起始时间小于停止时间
+    if(time_end <= start_time) return 0.0; //不允许起始时间小于停止时间
 
     double N1 = 0;
     double N2 = 0;

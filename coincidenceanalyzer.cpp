@@ -176,6 +176,7 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
                         GaussFitSpec.spectrum[1][i] += tempSpec.spectrum[1][i];
                     }
                 }
+                
                 //距离上次自动高斯拟合的时间间隔，单位：s
                 int currenttime = 0;
                 if(coinResult.size()>0) currenttime = coinResult.back().time;
@@ -184,7 +185,7 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
                 {
                     GapTime = currenttime - GaussFitLog.back().time;
                 }
-                if(GapTime>GaussMinGapTime)  AutoEnergyWidth();
+                if(GapTime >= GaussMinGapTime)  AutoEnergyWidth();
 
                 //若更新了能窗，则重置相关数据
                 if(isChangeEnWindow){

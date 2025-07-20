@@ -283,67 +283,10 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     // 给出测量结果
-    connect(commandHelper, &CommandHelper::sigActiveOmiga, this, [=](double a){
-        //本次测量量程
-        int measureRange = ui->comboBox_range->currentIndex();
-        //读取配置文件，给出该量程下的刻度系数
-        double cali_factor = 0.0;
-        QFile file(QApplication::applicationDirPath() + "/config/user.json");
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            // 读取文件内容
-            QByteArray jsonData = file.readAll();
-            file.close(); //释放资源
-    
-            QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-            QJsonObject jsonObj = jsonDoc.object();
-            
-            QJsonObject jsonCalibration, jsonYield;
-            if (jsonObj.contains("YieldCalibration")){
-                jsonCalibration = jsonObj["YieldCalibration"].toObject();
-                
-                QString key = QString("Range%1").arg(measureRange);
-                QJsonArray rangeArray;
-                if (jsonCalibration.contains(key)){
-                    rangeArray = jsonCalibration[key].toArray();
-                    QJsonObject rangeData = rangeArray[0].toObject();
-
-                    double yield = rangeData["Yield"].toDouble();
-                    double active0 = rangeData["active0"].toDouble();
-                    cali_factor = yield / active0;
-                }
-            }
-        }
-        else{
-            qCritical().noquote()<<"未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
-        }
-
-        double result = a * cali_factor;
-        ui->lineEdit_CuActive->setText(QString::number(a, 'E', 5));
-        ui->lineEdit_Yield->setText(QString::number(result, 'E', 5));
-
-        //记录到文件中
-        QString prefix = this->commandHelper->getFilenamePrefix();
-        QString autoEnChangeFile = prefix + "_中子产额.txt";
-        {
-            QFile::OpenMode ioFlags = QIODevice::Truncate;
-            if (QFileInfo::exists(autoEnChangeFile))
-                ioFlags = QIODevice::Append;
-            QFile file(autoEnChangeFile);
-            if (file.open(QIODevice::ReadWrite | QIODevice::Text | ioFlags)) {
-                QTextStream out(&file);
-                if (ioFlags == QIODevice::Truncate)
-                {
-                    out << tr("time(s), 相对活度, 中子产额") << Qt::endl;
-                }
-                out << this->commandHelper->getcurrentTimeToShot() << ","
-                    << QString::number(a, 'E', 5) << "," 
-                    <<QString::number(result, 'E', 5) << Qt::endl;
-
-                file.flush();
-                file.close();
-            }
-        }
-    });
+    connect(commandHelper, &CommandHelper::sigUpdate_Active_yield, this, [=](double active, double yield){
+        ui->lineEdit_CuActive->setText(QString::number(active, 'g', 9));
+        ui->lineEdit_Yield->setText(QString::number(yield, 'E', 6));
+    }, Qt::QueuedConnection/*防止堵塞*/);
 
     // 测量停止
     connect(commandHelper, &CommandHelper::sigMeasureStop, this, [=](){
@@ -1600,9 +1543,11 @@ void MainWindow::closeEvent(QCloseEvent *event)
     QTimer* currentStatusTimer = this->findChild<QTimer*>("statusTimer");
     if(currentStatusTimer) currentStatusTimer->stop();
 
-    this->saveConfigJson(true);
-    // qInfo().noquote()<<tr("退出软件");
-    // QCoreApplication::processEvents();
+    this->saveCurrentTConfigJson(true);
+    
+    auto logger = Log4Qt::Logger::rootLogger();
+    logger->info("#############################退出界面###################################");
+
     event->accept();
 }
 
@@ -1926,24 +1871,7 @@ void MainWindow::load()
         QJsonObject jsonObjPub;
         if (jsonObj.contains("Public")){
             jsonObjPub = jsonObj["Public"].toObject();
-            //保存数据
-            // ui->lineEdit_path->setText(jsonObjPub["path"].toString());
-            // ui->lineEdit_filename->setText(jsonObjPub["filename"].toString());
             ui->comboBox_range->setCurrentIndex(jsonObjPub["select-range"].toInt());  //量程索引值
-
-            if (this->property("workMode").toString() == "online"){
-                bool bSafeExitFlag = jsonObjPub["safe_exit"].toBool();
-                //如果上一次异常退出，则打印上一次的最后运行时间
-                if(!bSafeExitFlag) {
-                    if(jsonObjPub.contains("lastRunTime")){
-                        QString lastTimeStr = jsonObjPub["lastRunTime"].toString();
-                        QString msg = tr("上一次软件异常退出，最后运行时间为：") + lastTimeStr;
-                        qCritical().noquote()<<msg;
-                        emit sigAppengMsg(msg, QtCriticalMsg);
-                    }
-                }
-                this->setProperty("last_safe_exit", bSafeExitFlag);
-            }
 
             if (!jsonObjPub["test"].isNull()){
                 bool bTestOn = jsonObjPub["test"].toBool();
@@ -1957,9 +1885,37 @@ void MainWindow::load()
             }
         }                        
     }
+
+    QFile file2(QApplication::applicationDirPath() + "/config/run.json");
+    if (file2.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // 读取文件内容
+        QByteArray jsonData = file2.readAll();
+        file2.close();
+
+        // 将 JSON 数据解析为 QJsonDocument
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+        QJsonObject jsonObj = jsonDoc.object();
+
+        if (this->property("workMode").toString() == "online"){
+            bool bSafeExitFlag = jsonObj["safe_exit"].toBool();
+            //如果上一次异常退出，则打印上一次的最后运行时间
+            if(!bSafeExitFlag) {
+                if(jsonObj.contains("lastRunTime")){
+                    QString lastTimeStr = jsonObj["lastRunTime"].toString();
+                    QString msg = tr("上一次软件异常退出，最后运行时间为：") + lastTimeStr;
+                    qCritical().noquote()<<msg;
+                    emit sigAppengMsg(msg, QtCriticalMsg);
+                }
+            }
+            this->setProperty("last_safe_exit", bSafeExitFlag);
+        }
+    }
+    else{//不存在文件，则默认为上次为异常退出，继电器需要先断电再上电。
+        this->setProperty("last_safe_exit", false);
+    }
 }
 
-void MainWindow::saveConfigJson(bool bSafeExitFlag)
+void MainWindow::saveConfigJson()
 {
     QString path = QApplication::applicationDirPath() + "/config";
     QDir dir(path);
@@ -2032,14 +1988,7 @@ void MainWindow::saveConfigJson(bool bSafeExitFlag)
         }
 
         //保存数据
-        jsonObjPub["safe_exit"] = bSafeExitFlag;
-        // jsonObjPub["path"] = ui->lineEdit_path->text();
-        // jsonObjPub["filename"] = ui->lineEdit_filename->text();
         jsonObjPub["select-range"] = ui->comboBox_range->currentIndex();  //量程索引值
-        //记录当前运行时间
-        QDateTime now = QDateTime::currentDateTime();
-        QString timeStr = now.toString("yyyy-MM-dd hh:mm:ss");
-        jsonObjPub["lastRunTime"] = timeStr;
 
         if (!this->property("test").isNull()){
             jsonObjPub["test"] = this->property("test").toBool();
@@ -2064,55 +2013,30 @@ bool MainWindow::saveCurrentTConfigJson(bool bSafeExitFlag)
     if (!dir.exists())
         dir.mkdir(path);
 
-    QFile file(QApplication::applicationDirPath() + "/config/user.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    QFile file(QApplication::applicationDirPath() + "/config/run.json");
+    if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
         // 读取文件内容
         QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
+        file.close();
 
+        // 将 JSON 数据解析为 QJsonDocument
         QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
         QJsonObject jsonObj = jsonDoc.object();
         
-        QJsonObject jsonObjPub;
-        if (jsonObj.contains("Public")){
-            jsonObjPub = jsonObj["Public"].toObject();
-        
-            jsonObjPub["safe_exit"] = bSafeExitFlag;
-            //最后运行的时间
-            QDateTime now = QDateTime::currentDateTime();
-            QString timeStr = now.toString("yyyy-MM-dd hh:mm:ss");
-            jsonObjPub["lastRunTime"] = timeStr;
+        jsonObj["safe_exit"] = bSafeExitFlag;
+        //记录当前运行时间
+        QDateTime now = QDateTime::currentDateTime();
+        QString timeStr = now.toString("yyyy-MM-dd hh:mm:ss");
+        jsonObj["lastRunTime"] = timeStr;
 
-            jsonObj["Public"] = jsonObjPub;            
-        }
-        else{
-            jsonObjPub["safe_exit"] = bSafeExitFlag;
-            //最后运行的时间
-            QDateTime now = QDateTime::currentDateTime();
-            QString timeStr = now.toString("yyyy-MM-dd hh:mm:ss");
-            jsonObjPub["lastRunTime"] = timeStr;
-            if (!this->property("test").isNull()){
-                jsonObjPub["test"] = this->property("test").toBool();
-            }
-            jsonObjPub["deltaTime_updateYield"] = 60;
-            jsonObjPub["maxTime_updateYield"] = 3600;
-            jsonObj["Public"] = jsonObjPub;   
-        }
-		
-        //创建简化的写入锁对象，创建好并添加读写锁，自动将写入锁锁定，作用域结束时解锁
-        //写入锁上锁
-        m_sLock->lockForWrite();
         file.open(QIODevice::WriteOnly | QIODevice::Text);
-        jsonDoc.setObject(jsonObj);
-        file.write(jsonDoc.toJson());
+        QJsonDocument jsonDocNew(jsonObj);
+        file.write(jsonDocNew.toJson());
         file.close();
-        m_sLock->unlock();  //解锁
-
-		return true;
+        return true;
     }
-	else{
-		return false;
-	}
+
+    return false;
 }
 
 void MainWindow::on_pushButton_refresh_2_clicked()

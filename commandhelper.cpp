@@ -340,7 +340,7 @@ CommandHelper::~CommandHelper(){
 void CommandHelper::analyzerRealCalback(SingleSpectrum r1, vector<CoincidenceResult> r3, void *callbackUser)
 {
     CommandHelper *pThis = (CommandHelper*)callbackUser;
-    pThis->doEnWindowData(r1, r3);
+    pThis->updateCoincidenceData(r1, r3);
 }
 
 void CommandHelper::loadConfig()
@@ -370,7 +370,7 @@ void CommandHelper::loadConfig()
     }
 }
 
-void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> r3)
+void CommandHelper::updateCoincidenceData(SingleSpectrum r1, vector<CoincidenceResult> r3)
 {
     size_t countCoin = r3.size();
     int _stepT = this->stepT;
@@ -426,7 +426,7 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
         int start_time = r3.back().time - deltaTime_updateYield;
         int end_time = r3.back().time;
         double At_omiga = coincidenceAnalyzer->getInintialActive(detectorParameter, start_time, end_time);
-        emit sigActiveOmiga(At_omiga);
+        activeOmigaToYield(At_omiga);
     }
 
     //时间步长，求均值
@@ -525,6 +525,70 @@ void CommandHelper::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> 
             emit sigUpdateAutoEnWidth(autoEnWindow, detectorParameter.measureModel);
         }        
     }
+}
+
+void CommandHelper::activeOmigaToYield(double active)
+{
+    //本次测量量程
+    int measureRange = detectorParameter.measureRange - 1; //这里涉及到界面下拉框从0开始计数，而detParameter中从1开始计数。
+    //读取配置文件，给出该量程下的刻度系数
+    double cali_factor = 0.0;
+    QFile file(QApplication::applicationDirPath() + "/config/user.json");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // 读取文件内容
+        QByteArray jsonData = file.readAll();
+        file.close(); //释放资源
+
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+        QJsonObject jsonObj = jsonDoc.object();
+        
+        QJsonObject jsonCalibration, jsonYield;
+        if (jsonObj.contains("YieldCalibration")){
+            jsonCalibration = jsonObj["YieldCalibration"].toObject();
+            
+            QString key = QString("Range%1").arg(measureRange);
+            QJsonArray rangeArray;
+            if (jsonCalibration.contains(key)){
+                rangeArray = jsonCalibration[key].toArray();
+                QJsonObject rangeData = rangeArray[0].toObject();
+
+                double yield = rangeData["Yield"].toDouble();
+                double active0 = rangeData["active0"].toDouble();
+                cali_factor = yield / active0;
+            }
+        }
+    }
+    else{
+        qCritical().noquote()<<"未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
+    }
+
+    double result = active * cali_factor;
+
+    //记录到文件中
+    QString prefix = getFilenamePrefix();
+    QString autoEnChangeFile = prefix + "_中子产额.txt";
+    {
+        QFile::OpenMode ioFlags = QIODevice::Truncate;
+        if (QFileInfo::exists(autoEnChangeFile))
+            ioFlags = QIODevice::Append;
+        QFile file(autoEnChangeFile);
+        if (file.open(QIODevice::ReadWrite | QIODevice::Text | ioFlags)) {
+            QTextStream out(&file);
+            if (ioFlags == QIODevice::Truncate)
+            {
+                out << tr("time(s), 相对活度, 中子产额") << Qt::endl;
+            }
+            out << getcurrentTimeToShot() << ","
+                << QString::number(active, 'g', 9) << "," 
+                <<QString::number(result, 'E', 6) << Qt::endl;
+
+            file.flush();
+            file.close();
+        }
+    }
+
+    //更新界面，注意这里是子线程调用界面
+    sigUpdate_Active_yield(active, result);
 }
 
 void CommandHelper::initCommand()
@@ -1753,7 +1817,7 @@ void CommandHelper::netFrameWorkThead()
                 workStatus = WorkEnd;
                 //计算出初始活度乘以几何效率，这里几何效率是近端探测器几何效率
                 double At_omiga = coincidenceAnalyzer->getInintialActive(detectorParameter, time_SetEnWindow);
-                emit sigActiveOmiga(At_omiga);
+                activeOmigaToYield(At_omiga);
                 emit sigMeasureStop();
             }
 

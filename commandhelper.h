@@ -148,7 +148,7 @@ signals:
     void sigMeasureStop();
     void sigMeasureStopWave();
     void sigMeasureStopSpectrum();
-    void sigActiveOmiga(double a); //计算出初始活度乘以近端探测器几何效率
+    void sigUpdate_Active_yield(double, double); //刷新相对活度、中子产额
 
     //网络包数大小
     void sigRecvDataSize(qint32);
@@ -191,7 +191,10 @@ private:
 
     void saveParticleInfo(const vector<TimeEnergy>& data1_2, const vector<TimeEnergy>& data2_2);
 
-    void doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> r3);
+    void updateCoincidenceData(SingleSpectrum r1, vector<CoincidenceResult> r3);
+    
+    // 将相对活度转化为中子产额
+    void activeOmigaToYield(double active);
  
     static void analyzerRealCalback(SingleSpectrum r1, vector<CoincidenceResult> r3, void *callbackUser);
     

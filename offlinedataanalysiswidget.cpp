@@ -75,93 +75,17 @@ OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
 
     coincidenceAnalyzer = new CoincidenceAnalyzer();
     coincidenceAnalyzer->set_callback([=](SingleSpectrum r1, vector<CoincidenceResult> r3) {
-        this->doEnWindowData(r1, r3);
+        this->updateCoincidenceData(r1, r3);
     });
 
     connect(this, SIGNAL(sigStart()), this, SLOT(slotStart()));
     connect(this, SIGNAL(sigEnd(bool)), this, SLOT(slotEnd(bool)), Qt::QueuedConnection);
 
-    // 给出测量结果
-    connect(this, &OfflineDataAnalysisWidget::sigActiveOmiga, this, [=](double active){
-        //本次测量量程
-        int measureRange = detParameter.measureRange-1; //这里涉及到界面下拉框从0开始计数，而detParameter中从1开始计数。
-        //读取配置文件，给出该量程下的刻度系数
-        double cali_factor = 0.0;
-        QFile file(QApplication::applicationDirPath() + "/config/user.json");
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            // 读取文件内容
-            QByteArray jsonData = file.readAll();
-            file.close(); //释放资源
-    
-            QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-            QJsonObject jsonObj = jsonDoc.object();
-            
-            QJsonObject jsonCalibration, jsonYield;
-            if (jsonObj.contains("YieldCalibration")){
-                jsonCalibration = jsonObj["YieldCalibration"].toObject();
-                
-                QString key = QString("Range%1").arg(measureRange);
-                QJsonArray rangeArray;
-                if (jsonCalibration.contains(key)){
-                    rangeArray = jsonCalibration[key].toArray();
-                    QJsonObject rangeData = rangeArray[0].toObject();
-
-                    double yield = rangeData["Yield"].toDouble();
-                    double active0 = rangeData["active0"].toDouble();
-                    cali_factor = yield / active0;
-                }
-            }
-        }
-        else{
-            qCritical().noquote()<<"未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
-        }
-
-        double result = active * cali_factor;
-        
-        //保存结果
-        yieldResult oneResult;
-        oneResult.time = coincidenceAnalyzer->GetCoinResult().back().time;
-        oneResult.ActiveOmiga = active;
-        oneResult.Yield = result;
-        activationResult.push_back(oneResult);
-
-        //临时测试，保留该代码，后续调参数需要使用。优化maxTime、deltaTime的选取
-        //记录到文件中
-        /*{
-            qDebug()<<"path = "<<validDataFileName;
-            QStringList parts = validDataFileName.split("_valid"); // 按 "_valid" 分割
-            QString prefix;
-            if (!parts.isEmpty()) {
-                prefix = parts[0]; // 提取第一部分
-            }
-            else{
-                //说明文件不包含_valid。
-                return;
-            }
-            QString yieldOfflineFile = prefix + "_中子产额offline.txt";
-            {
-                QFile::OpenMode ioFlags = QIODevice::Truncate;
-                if (QFileInfo::exists(yieldOfflineFile))
-                    ioFlags = QIODevice::Append;
-                QFile file(yieldOfflineFile);
-                if (file.open(QIODevice::ReadWrite | QIODevice::Text | ioFlags)) {
-                    QTextStream out(&file);
-                    if (ioFlags == QIODevice::Truncate)
-                    {
-                        out << tr("time(s), 相对活度, 中子产额") << Qt::endl;
-                    }
-                    out << coincidenceAnalyzer->GetCoinResult().back().time << ","
-                        << QString::number(active, 'E', 5) << ","
-                        <<QString::number(result, 'E', 5) << Qt::endl;
-
-                    file.flush();
-                    file.close();
-                }
-            }
-        }*/
-        
-        ui->lineEdit_neutronYield->setText(QString::number(result, 'E', 5));
-    });
+    // 刷新测量结果
+    connect(this, &OfflineDataAnalysisWidget::sigUpdate_Active_yield, this, [=](double active, double yield){
+        ui->lineEdit_realativeA0->setText(QString::number(active, 'g', 9));
+        ui->lineEdit_neutronYield->setText(QString::number(yield, 'E', 6));
+    }, Qt::QueuedConnection/*防止堵塞*/);
 
     connect(SplashWidget::instance(), &SplashWidget::sigCancel, this, [=](){
         reAnalyzer = true;
@@ -225,7 +149,6 @@ bool OfflineDataAnalysisWidget::eventFilter(QObject *watched, QEvent *event)
 
 void OfflineDataAnalysisWidget::initCustomPlot()
 {
-    //this->setDockNestingEnabled(true);
     {
         PlotWidget *customPlotWidget = new PlotWidget(this);
         customPlotWidget->setObjectName("offline-PlotWidget");
@@ -240,10 +163,6 @@ void OfflineDataAnalysisWidget::initCustomPlot()
             }
 
         });
-
-        // connect(customPlotWidget, &PlotWidget::sigPausePlot, this, [=](bool pause){
-        //     emit sigPausePlot(pause);
-        // });
 
         connect(customPlotWidget, &PlotWidget::sigAreaSelected, this, [=](){
             //勾选高斯拟合
@@ -490,7 +409,7 @@ void OfflineDataAnalysisWidget::slotStart()
     calThread->start();
 }
 
-void OfflineDataAnalysisWidget::doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> r3)
+void OfflineDataAnalysisWidget::updateCoincidenceData(SingleSpectrum r1, vector<CoincidenceResult> r3)
 {
     size_t count = r3.size();
     int _stepT = ui->spinBox_step->value();
@@ -513,7 +432,7 @@ void OfflineDataAnalysisWidget::doEnWindowData(SingleSpectrum r1, vector<Coincid
                 int start_time = r3.back().time - deltaTime_updateYield;
                 int end_time = r3.back().time;
                 double At_omiga = coincidenceAnalyzer->getInintialActive(detParameter, start_time, end_time);
-                emit sigActiveOmiga(At_omiga);
+                activeOmigaToYield(At_omiga);
             }
         }
 
@@ -555,6 +474,54 @@ void OfflineDataAnalysisWidget::doEnWindowData(SingleSpectrum r1, vector<Coincid
         // }
         emit sigNewPlot(r1, r3);
     }
+}
+
+// 将相对活度转化为中子产额
+void OfflineDataAnalysisWidget::activeOmigaToYield(double active)
+{
+    //本次测量量程
+    int measureRange = detParameter.measureRange-1; //这里涉及到界面下拉框从0开始计数，而detParameter中从1开始计数。
+    //读取配置文件，给出该量程下的刻度系数
+    double cali_factor = 0.0;
+    QFile file(QApplication::applicationDirPath() + "/config/user.json");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // 读取文件内容
+        QByteArray jsonData = file.readAll();
+        file.close(); //释放资源
+
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+        QJsonObject jsonObj = jsonDoc.object();
+        
+        QJsonObject jsonCalibration, jsonYield;
+        if (jsonObj.contains("YieldCalibration")){
+            jsonCalibration = jsonObj["YieldCalibration"].toObject();
+            
+            QString key = QString("Range%1").arg(measureRange);
+            QJsonArray rangeArray;
+            if (jsonCalibration.contains(key)){
+                rangeArray = jsonCalibration[key].toArray();
+                QJsonObject rangeData = rangeArray[0].toObject();
+
+                double yield = rangeData["Yield"].toDouble();
+                double active0 = rangeData["active0"].toDouble();
+                cali_factor = yield / active0;
+            }
+        }
+    }
+    else{
+        qCritical().noquote()<<"未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
+    }
+
+    double result = active * cali_factor;
+    
+    //保存结果
+    yieldResult oneResult;
+    oneResult.time = coincidenceAnalyzer->GetCoinResult().back().time;
+    oneResult.ActiveOmiga = active;
+    oneResult.Yield = result;
+    activationResult.push_back(oneResult);
+
+    sigUpdate_Active_yield(active, result);
 }
 
 /**
@@ -884,9 +851,9 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
     ui->lineEdit_totalCount1->setText(QString::number(N10));
     ui->lineEdit_totalCount2->setText(QString::number(N20));
     ui->lineEdit_totalCount3->setText(QString::number(Nco0));
-    ui->lineEdit_realativeA0->setText(QString::number(A0_omiga));
+    ui->lineEdit_realativeA0->setText(QString::number(A0_omiga, 'g', 9));
 
-    emit sigActiveOmiga(A0_omiga);
+    activeOmigaToYield(A0_omiga);
 }
 
 void OfflineDataAnalysisWidget::on_pushbutton_save_clicked()
@@ -986,8 +953,8 @@ void OfflineDataAnalysisWidget::on_pushbutton_save_clicked()
             out<<tr("时间(s),相对初始活度,中子产额")<<Qt::endl;
             for (const auto& oneData : activationResult) {
                 out << oneData.time << ","
-                    << QString::number(oneData.ActiveOmiga, 'E', 5) << ","
-                    <<QString::number(oneData.Yield, 'E', 5) << Qt::endl;
+                    << QString::number(oneData.ActiveOmiga, 'g', 9) << ","
+                    <<QString::number(oneData.Yield, 'E', 6) << Qt::endl;
             }
         }
         file.flush();

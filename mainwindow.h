@@ -26,7 +26,7 @@ public:
     void initCustomPlot();
 
     void load();
-    void saveConfigJson(bool bSafeExitFlag = false);
+    void saveConfigJson();
     
     /**
      * @description: 保存当前的运行时间，便于下次打开软件时打印上次异常退出的时间。

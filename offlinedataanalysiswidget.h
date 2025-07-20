@@ -25,7 +25,11 @@ public:
     ~OfflineDataAnalysisWidget();
 
     void initCustomPlot();
-    void doEnWindowData(SingleSpectrum r1, vector<CoincidenceResult> r3);
+    void updateCoincidenceData(SingleSpectrum r1, vector<CoincidenceResult> r3);
+
+    // 将相对活度转化为中子产额
+    void activeOmigaToYield(double active);
+
     bool LoadMeasureParameter(QString filePath);
     void analyse(DetectorParameter detPara, unsigned int start_time, unsigned int time_end);
     struct yieldResult
@@ -66,7 +70,7 @@ signals:
     void sigStart();
     void sigPausePlot(bool); //是否暂停图像刷新
     void sigEnd(bool);
-    void sigActiveOmiga(double active); //计算出相对活度
+    void sigUpdate_Active_yield(double, double); //刷新相对活度、中子产额
 
 protected:
     virtual bool eventFilter(QObject *watched, QEvent *event) override;

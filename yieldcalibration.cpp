@@ -37,10 +37,20 @@ YieldCalibration::YieldCalibration(QWidget *parent)
     this->load();
 
     for(int i=0; i<3; i++){
-        ui->tableWidget_calibration->item(i, 0)->setText(QString::number(calibrationData[i][0], 'E', 3));
-        for(int j=1; j<6; j++){
-            ui->tableWidget_calibration->item(i, j)->setText(QString::number(calibrationData[i][j]));
-        }
+        //注意合理控制精度，避免丢失精度，第三个参数是小数位数
+        ui->tableWidget_calibration->item(i, 0)->setText(QString::number(calibrationData[i][0], 'E', 6)); //该数值较大，采用科学计数法更佳
+        ui->tableWidget_calibration->item(i, 1)->setText(QString::number(calibrationData[i][1], 'g', 9)); //该数值一般不超过10^6，不用科学计数
+
+        //这两个精度要求非常高,第三个参数是设置有效数字位数，而不是小数位数
+        ui->tableWidget_calibration->item(i, 2)->setText(QString::number(calibrationData[i][2], 'g', 9));
+        ui->tableWidget_calibration->item(i, 3)->setText(QString::number(calibrationData[i][3], 'g', 9));
+
+        ui->tableWidget_calibration->item(i, 4)->setText(QString::number(calibrationData[i][4], 'g', 6));
+        ui->tableWidget_calibration->item(i, 5)->setText(QString::number(calibrationData[i][5], 'g', 6));
+
+        // for(int j=1; j<6; j++){
+        //     ui->tableWidget_calibration->item(i, j)->setText(QString::number(calibrationData[i][j]));
+        // }
     }
 
     // 设置表头换行

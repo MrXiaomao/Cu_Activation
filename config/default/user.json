@@ -24,11 +24,9 @@
         "timewidth": 100
     },
     "Public": {
-        "lastRunTime": "2025-07-17 09:37:14",
         "deltaTime_updateYield":30,
         "maxTime_updateYield":3600,
         "updateYield": true,
-        "safe_exit": false,
         "select-range": 0,
         "test": true
     },

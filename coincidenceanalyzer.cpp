@@ -177,9 +177,13 @@ void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy
                     }
                 }
                 //距离上次自动高斯拟合的时间间隔，单位：s
-                int GapTime = countCoin;
+                int currenttime = 0;
+                if(coinResult.size()>0) currenttime = coinResult.back().time;
+                int GapTime = coinResult.size();
                 if (GaussFitLog.size() > 0)
-                    GapTime -= GaussFitLog.back().time;
+                {
+                    GapTime = currenttime - GaussFitLog.back().time;
+                }
                 if(GapTime>GaussMinGapTime)  AutoEnergyWidth();
 
                 //若更新了能窗，则重置相关数据

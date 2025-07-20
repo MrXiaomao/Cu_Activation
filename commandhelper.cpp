@@ -389,9 +389,8 @@ void CommandHelper::updateCoincidenceData(SingleSpectrum r1, vector<CoincidenceR
             if (file.open(QIODevice::ReadWrite | QIODevice::Text | ioFlags)) {
                 QTextStream out(&file);
                 if (ioFlags == QIODevice::Truncate)
-                {   
+                {
                     QString msg = "开始计数测量";
-                    //qInfo().noquote()<<msg;
                     emit sigAppendMsg2(msg, QtInfoMsg);
                     out << "time,CountRate1,CountRate2,ConCount_single,ConCount_multiple,deathRatio1(%),deathRatio2(%)" << Qt::endl;
                 }
@@ -423,8 +422,12 @@ void CommandHelper::updateCoincidenceData(SingleSpectrum r1, vector<CoincidenceR
     }
 
     if(countCoin >0 && countCoin <=maxTime_updateYield && countCoin%deltaTime_updateYield==0){
-        int start_time = r3.back().time - deltaTime_updateYield;
+        //选取已测的全部数据点给出中子产额
+        int start_time = r3.at(0).time - 1;
         int end_time = r3.back().time;
+        //选取最近的一段时间给出中子产额
+        // int start_time = r3.back().time - deltaTime_updateYield;
+        // int end_time = r3.back().time;
         double At_omiga = coincidenceAnalyzer->getInintialActive(detectorParameter, start_time, end_time);
         activeOmigaToYield(At_omiga);
     }

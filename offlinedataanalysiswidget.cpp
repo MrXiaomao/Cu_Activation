@@ -429,8 +429,12 @@ void OfflineDataAnalysisWidget::updateCoincidenceData(SingleSpectrum r1, vector<
         if(isUpdateYield)
         {
             if(count >0 && count <=maxTime_updateYield && count%deltaTime_updateYield==0){
-                int start_time = r3.back().time - deltaTime_updateYield;
+                //选取已测的全部数据点给出中子产额
+                int start_time = r3.at(0).time - 1;
                 int end_time = r3.back().time;
+                //选取最近的一段时间给出中子产额
+                // int start_time = r3.back().time - deltaTime_updateYield;
+                // int end_time = r3.back().time;
                 double At_omiga = coincidenceAnalyzer->getInintialActive(detParameter, start_time, end_time);
                 activeOmigaToYield(At_omiga);
             }

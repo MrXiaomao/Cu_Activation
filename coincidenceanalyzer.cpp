@@ -788,7 +788,7 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int sta
     double Nc = 0;
     double deathTime_ratio_total[2] = {0.0, 0.0};
     double deathTime_ratio_ave[2] = {0.0, 0.0};
-    int id = 0;
+    // int id = 0;
     for(auto coin:coinResult)
     {
         //丢弃前两个数据点

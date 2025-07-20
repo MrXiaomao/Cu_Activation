@@ -1807,8 +1807,8 @@ void PlotWidget::slotAddPlotDatas(SingleSpectrum r1, CoincidenceResult r3)
         }
 
         {//符合结果
-            minCount[2] = qMin(minCount[2], 1.0*r3.CountRate2);
-            maxCount[2] = qMax(maxCount[2], 1.0*r3.CountRate2);
+            minCount[2] = qMin(minCount[2], 1.0*r3.ConCount_single);
+            maxCount[2] = qMax(maxCount[2], 1.0*r3.ConCount_single);
 
             customPlotCoResult->graph(0)->setData(times, count3, colorsCount);
             double upper = customPlotCoResult->yAxis->range().upper;

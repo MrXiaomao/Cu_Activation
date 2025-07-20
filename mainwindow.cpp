@@ -354,11 +354,11 @@ MainWindow::MainWindow(QWidget *parent)
             ui->lcdNumber_DeathRatio1->display(r3.DeathRatio1);
             ui->lcdNumber_DeathRatio2->display(r3.DeathRatio2);
 
-            ui->lcdNumber_CountRate1->repaint();
-            ui->lcdNumber_CountRate2->repaint();
-            ui->lcdNumber_ConCount_single->repaint();
-            ui->lcdNumber_DeathRatio1->repaint();
-            ui->lcdNumber_DeathRatio2->repaint();
+            // ui->lcdNumber_CountRate1->repaint();
+            // ui->lcdNumber_CountRate2->repaint();
+            // ui->lcdNumber_ConCount_single->repaint();
+            // ui->lcdNumber_DeathRatio1->repaint();
+            // ui->lcdNumber_DeathRatio2->repaint();
         }
     }, Qt::QueuedConnection/*防止堵塞*/);
     

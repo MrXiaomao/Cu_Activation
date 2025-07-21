@@ -1426,7 +1426,8 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
     QMutexLocker locker(&mutexRefreshPlot);
     QCustomPlot::RefreshPriority refreshPriority = QCustomPlot::rpQueuedReplot;
 
-    if(r3.size()>0)
+    int coinCount = r3.size();
+    if(coinCount>0)
     {
         //计数模式
         QCustomPlot* customPlotDet1 = getCustomPlot(amCountDet1);
@@ -1436,12 +1437,17 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
         {//Det1
             double minValue = 0.0;
             double maxValue = 0.0;
+
             QVector<double> keys, values;
             QVector<QColor> colors;
-
-            for (size_t i=0; i<r3.size(); ++i){
+            //提前分配空间，缩短时间
+            keys.reserve(coinCount);
+            values.reserve(coinCount);
+            colors.reserve(coinCount);
+            
+            for (size_t i=0; i<coinCount; ++i){
                 uint32_t key = r3[i].time;
-                keys << key;
+                keys<<key;
                 values << r3[i].CountRate1;
                 colors << clrLine;
                 minValue = qMin(minValue, (double)r3[i].CountRate1);
@@ -1494,10 +1500,15 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
         {//Det2
             double minValue = 0.0;
             double maxValue = 0.0;
+
             QVector<double> keys, values;
             QVector<QColor> colors;
+            //提前分配空间，缩短时间
+            keys.reserve(coinCount);
+            values.reserve(coinCount);
+            colors.reserve(coinCount);
 
-            for (size_t i=0; i<r3.size(); ++i){
+            for (size_t i=0; i<coinCount; ++i){
                 uint32_t key = r3[i].time;
                 keys << key;
                 values << r3[i].CountRate2;
@@ -1550,12 +1561,17 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
         }
 
         {//符合结果
-            QVector<double> keys, values;
-            QVector<QColor> colors;
             double minValue = 0.0;
             double maxValue = 0.0;
 
-            for (size_t i=0; i<r3.size(); ++i){
+            QVector<double> keys, values;
+            QVector<QColor> colors;
+            //提前分配空间，缩短时间
+            keys.reserve(coinCount);
+            values.reserve(coinCount);
+            colors.reserve(coinCount);
+
+            for (size_t i=0; i<coinCount; ++i){
                 uint32_t key = r3[i].time;
                 keys << key;
                 values << r3[i].ConCount_single;

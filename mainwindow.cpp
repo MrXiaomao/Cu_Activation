@@ -771,7 +771,7 @@ void MainWindow::InitMainWindowUi()
         }
     });
 
-    //注意这一条仅仅是当前应付技术规格书中，并没有实际用处。第9条：预设程宇可进行上下电，开关机等硬件操作。
+    //注意这一条仅仅是当前应付技术规格书中，并没有实际用处。第9条：预设程序可进行上下电，开关机等硬件操作。
     QTimer* coolingTimer_auto = new QTimer(this); //用于自动测量的冷却时间
     coolingTimer_auto->setObjectName("coolingTimer_auto");
     connect(coolingTimer_auto, &QTimer::timeout, this, [=](){

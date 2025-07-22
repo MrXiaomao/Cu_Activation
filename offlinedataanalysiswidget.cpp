@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-18 21:47:52
+ * @LastEditTime: 2025-07-22 23:02:02
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -192,14 +192,21 @@ bool OfflineDataAnalysisWidget::LoadMeasureParameter(QString filePath)
 
     //先对旧版本配置文件命名的兼容 xxx_Net.dat xxx_Net.dat.配置
     //新版 xxx_Net.dat xxx_配置.txt
-    
-    QStringList parts = filePath.split("_valid"); // 按 "_valid" 分割
+    //正则表达式
+    QRegularExpression re_valid("^(.*?)_valid\\.dat$");
+    QRegularExpression re_Net("^(.*?)_Net\\.dat$");
+    QRegularExpressionMatch match1 = re_valid.match(filePath);
+    QRegularExpressionMatch match2 = re_Net.match(filePath);
     QString prefix;
-    if (!parts.isEmpty()) {
-        prefix = parts[0]; // 提取第一部分
+    if (match1.hasMatch()) {
+        prefix = match1.captured(1);
     }
-    else{
-        //说明文件不包含_valid。
+    else if(match2.hasMatch())
+    {
+        prefix = match2.captured(1);
+    }
+    else
+    {
         return false;
     }
 
@@ -352,7 +359,8 @@ void OfflineDataAnalysisWidget::slotStart()
         SysUtils::realQuickAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, \
             unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/, bool eof, bool *interrupted){
 // #else
-        // SysUtils::realAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, bool eof, bool *interrupted){
+        // SysUtils::realAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy,
+            // unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/, bool eof, bool *interrupted){
 // #endif
             if (firstPopup && !eof){
                 QTimer::singleShot(1, this, [=](){

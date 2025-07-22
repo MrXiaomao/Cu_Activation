@@ -269,7 +269,8 @@ std::vector<DetTimeEnergy> SysUtils::getDetTimeEnergy(const char* filename)
     return result;
 }
 
-void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy, bool/*结束标识*/, bool */*是否被终止*/)> callback)
+void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy,
+    unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/,bool/*结束标识*/, bool */*是否被终止*/)> callback)
 {
     FILE* input_file = fopen(filename, "rb");
     if (!input_file) {
@@ -277,13 +278,19 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
         return;
     }
 
+    unsigned long long progress = 0/*文件进度*/;//字节数
+    _fseeki64(input_file, 0, SEEK_END);
+    unsigned long long filesize = _ftelli64(input_file)/*文件大小*/;
+    _fseeki64(input_file, 0, SEEK_SET);
+
+    bool interrupted = false;
     uint32_t full_buffer_size = (PARTICLE_NUM_ONE_PAKAGE +1) * 16;
     std::vector<uint8_t> read_buffer(full_buffer_size, 0);
     std::vector<uint8_t> cache_buffer;
-    bool interrupted = false;
     while (!feof(input_file)){
         size_t read_size = fread(reinterpret_cast<char*>(read_buffer.data()), 1, full_buffer_size, input_file);
         cache_buffer.insert(cache_buffer.end(), read_buffer.begin(), read_buffer.begin() + read_size);
+        progress += read_size;
 
         uint32_t buffer_size = cache_buffer.size();
         while (buffer_size >= full_buffer_size){
@@ -296,7 +303,7 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
                     // 分拣数据
                     ptrOffset = cache_buffer.data();
 
-                    //通道号(8字节)
+                    //通道号(4字节)
                     ptrOffset += 4; //包头
                     uint32_t channel = static_cast<uint32_t>(ptrOffset[0]) << 24 |
                                        static_cast<uint32_t>(ptrOffset[1]) << 16 |
@@ -349,12 +356,12 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
                         DetTimeEnergy detTimeEnergy;
                         detTimeEnergy.channel = channel;
                         detTimeEnergy.timeEnergy.swap(temp);
-                        callback(detTimeEnergy, false, &interrupted);
+                        callback(detTimeEnergy, progress, filesize, false, &interrupted);
 
                         if (interrupted){
                             fclose(input_file);
                             input_file = nullptr;
-                            callback(DetTimeEnergy(), true, &interrupted);
+                            callback(DetTimeEnergy(), progress, filesize, true, &interrupted);
                             return;
                         }
                     }
@@ -371,7 +378,7 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
 
     fclose(input_file);
     input_file = nullptr;
-    callback(DetTimeEnergy(), true, nullptr);
+    callback(DetTimeEnergy(), progress, filesize, true, nullptr);
 }
 
 void SysUtils::realQuickAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy, unsigned long long/*文件进度*/, unsigned long long/*文件大小*/, bool, bool*)> callback)

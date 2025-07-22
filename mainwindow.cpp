@@ -508,7 +508,9 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 void MainWindow::InitMainWindowUi()
 {
 #ifdef QT_NO_DEBUG
-    ui->toolBar_online->removeAction(ui->action_start_measure);
+    if(this->property("test").isNull() || !this->property("test").toBool()){
+        ui->toolBar_online->removeAction(ui->action_start_measure);
+    }
     ui->menu_tool->removeAction(ui->action_Moving); // 屏蔽掉位移平台子界面
     ui->menu_view->removeAction(ui->action_SpectrumModel); //屏蔽掉能谱界面
 #endif

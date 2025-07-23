@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-18 20:31:52
+ * @LastEditTime: 2025-07-22 15:42:16
  * @Description: 用来管理网口的数据发送与接受，管理网口数据的处理相关业务。
  */
 #ifndef COMMANDHELPER_H
@@ -13,7 +13,7 @@
 #include <QMutex>
 #include <QFile>
 #include <QElapsedTimer>
-
+#include <QWaitCondition>
 #include "qlitethread.h"
 #include "sysutils.h"
 #include "coincidenceanalyzer.h"
@@ -167,6 +167,8 @@ public:
     bool startSaveValidData = false;
     
 private:
+    bool ready = false;
+    QWaitCondition condition;
     QByteArray frame;
     QByteArray cachePool;
     QByteArray handlerPool;
@@ -293,6 +295,7 @@ private:
     qint64 lastClockT = 0;
     bool refModel = false;
     unsigned int maxEnergy = 8192;
+    int commandDelay = 15;  // 两条指令之间的间隔,ms，默认15ms，但可配置
 
     std::vector<DetTimeEnergy> currentSpectrumFrames;//网络新接收的能谱数据（一般指未处理，未分步长的数据）
     std::vector<DetTimeEnergy> cacheSpectrumFrames;

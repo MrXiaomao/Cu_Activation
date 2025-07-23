@@ -321,6 +321,16 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
 CommandHelper::~CommandHelper(){
     taskFinished = true;
 
+    //确保子线程退出
+    ready = true;
+    condition.wakeAll();
+
+    analyzeNetDataThread->quit();
+    analyzeNetDataThread->wait();
+    
+    plotUpdateThread->quit();
+    plotUpdateThread->wait();
+
     auto closeSocket = [&](QTcpSocket* socket){
         if (socket){
             socket->disconnectFromHost();
@@ -684,7 +694,7 @@ void CommandHelper::handleManualMeasureNetData()
 
             if (cmdPool.size() > 0)
             {
-                QThread::msleep(15);  // 延迟 30 毫秒（阻塞线程）
+                QThread::msleep(commandDelay);  // 延迟，毫秒（阻塞线程）
                 socketDetector->write(cmdPool.first());
                 // socketDetector->waitForBytesWritten();
                 qDebug()<<"Send HEX: "<<cmdPool.first().toHex(' ');
@@ -702,6 +712,9 @@ void CommandHelper::handleManualMeasureNetData()
         {
             QMutexLocker locker(&mutexCache);
             cachePool.push_back(binaryData);
+
+            ready = true;
+            condition.wakeAll();
         }
     }
 }
@@ -1209,20 +1222,26 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     startSaveValidData = false;
     autoEnWindow.clear();
 
-    //连接之前清空缓冲区
-    QMutexLocker locker(&mutexCache);
-
     //先清空TCP发送区
     socketDetector->flush();  // 强制尝试发送（不阻塞，实际发送由系统调度）
     socketDetector->waitForBytesWritten();//等待数据发送完成。（阻塞直到数据写入操作系统）
 
     //再清空TCP接收区缓存，以及相应的缓存变量
     socketDetector->readAll();
-    cachePool.clear();
+
+    //连接之前清空缓冲区
+    {
+        QMutexLocker locker(&mutexCache);
+        cachePool.clear();
+        ready = true;
+        condition.wakeAll();
+    }
     handlerPool.clear();
 
-    QMutexLocker locker2(&mutexReset);
-    currentSpectrumFrames.clear();
+    {
+        QMutexLocker locker2(&mutexReset);
+        currentSpectrumFrames.clear();
+    }
 
     //连接探测器
     prepareStep = 0;
@@ -1237,23 +1256,25 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     
     if(detectorParameter.transferModel == 0x05)
     {
-        QMutexLocker locker(&mutexFile);
-// #ifdef QT_DEBUG
+        {
+            //先确保上一次的文件关闭
+            QMutexLocker locker(&mutexFile);
+            if (nullptr != pfSaveNet){
+                pfSaveNet->close();
+                delete pfSaveNet;
+                pfSaveNet = nullptr;
+            }
+        }
+
+        //创建网口数据缓存文件
         str_start_time = QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss");
         netDataFileName = QString("%1").arg(ShotDir + "/" + str_start_time + "_Net.dat");
-        if (nullptr != pfSaveNet){
-            pfSaveNet->close();
-            delete pfSaveNet;
-            pfSaveNet = nullptr;
-        }
-        //网口数据缓存文件，波形模式、能谱模式直接存网口数据缓存文件
         pfSaveNet = new QFile(netDataFileName);
         if (pfSaveNet->open(QIODevice::WriteOnly)) {
             qDebug().noquote() << tr("创建网口数据缓存文件成功，文件名：%1").arg(netDataFileName);
         } else {
             qDebug().noquote() << tr("创建网口数据缓存文件失败，文件名：%1").arg(netDataFileName);
         }
-// #endif
 
         if (nullptr != pfSaveVaildData){
             pfSaveVaildData->close();
@@ -1278,16 +1299,19 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     }
     else if(detectorParameter.transferModel == 0x03)
     {
-        str_start_time = QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss");
-        //创建缓存文件
-        netDataFileName = QString("%1").arg(ShotDir + "/" + str_start_time + "_WaveNet.dat");
-        QMutexLocker locker(&mutexFile);
-        if (nullptr != pfSaveNet){
-            pfSaveNet->close();
-            delete pfSaveNet;
-            pfSaveNet = nullptr;
+        {
+            //关闭上一次可能未释放的文件
+            QMutexLocker locker(&mutexFile);
+            if (nullptr != pfSaveNet){
+                pfSaveNet->close();
+                delete pfSaveNet;
+                pfSaveNet = nullptr;
+            }
         }
-        //网口数据缓存文件，波形模式、能谱模式直接存网口数据缓存文件
+
+        //创建网口数据缓存文件
+        str_start_time = QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss");
+        netDataFileName = QString("%1").arg(ShotDir + "/" + str_start_time + "_WaveNet.dat");
         pfSaveNet = new QFile(netDataFileName);
         if (pfSaveNet->open(QIODevice::WriteOnly)) {
             qInfo().noquote() << tr("创建网口数据缓存文件成功，文件名：%1").arg(netDataFileName);
@@ -1421,7 +1445,7 @@ void CommandHelper::slotStopManualMeasure()
     if (socketDetector->isWritable() && socketDetector->state() == QAbstractSocket::ConnectedState){
         cmdPool.push_back(cmdStopTrigger);
         {
-            QMutexLocker locker(&mutexCache);
+            //QMutexLocker locker(&mutexCache);
             sendStopCmd = true;
         }
         socketDetector->write(cmdStopTrigger);
@@ -1442,16 +1466,21 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
     sendStopCmd = false;
     this->detectorException = false;
 
-    //连接之前清空缓冲区
-    QMutexLocker locker(&mutexCache);
-
     //先清空TCP发送区
     socketDetector->flush();  // 强制尝试发送（不阻塞，实际发送由系统调度）
     socketDetector->waitForBytesWritten();//等待数据发送完成。（阻塞直到数据写入操作系统）
 
     //先清空TCP接收区缓存，以及相应的缓存变量
     socketDetector->readAll();
-    cachePool.clear();
+
+    //连接之前清空缓冲区
+    {
+        QMutexLocker locker(&mutexCache);
+        cachePool.clear();
+        ready = true;
+        condition.wakeAll();
+    }
+
     handlerPool.clear();
 
     //连接探测器
@@ -1612,7 +1641,7 @@ void CommandHelper::slotStopAutoMeasure()
 
     cmdPool.push_back(cmdStopTrigger);
     {
-        QMutexLocker locker(&mutexCache);
+        //QMutexLocker locker(&mutexCache);
         sendStopCmd = true;
     }
     socketDetector->write(cmdStopTrigger);
@@ -1623,14 +1652,23 @@ void CommandHelper::netFrameWorkThead()
 {
     std::cout << "netFrameWorkThead thread id:" << QThread::currentThreadId() << std::endl;
     while (!taskFinished)
-    {        
+    {
+        //方案一
         {
             QMutexLocker locker(&mutexCache);
             if (cachePool.size() == 0){
                 if (handlerPool.size() < 12){
                     // 数据单位最小值为12（一个指令长度）
-                    QThread::msleep(1);
-                    continue;
+                    // QThread::msleep(1);
+                    // continue;
+                    while(!ready)
+                    {
+                        condition.wait(&mutexCache);
+                    }
+
+                    handlerPool.append(cachePool);
+                    cachePool.clear();
+                    ready = false;
                 }
             } else {
                 handlerPool.append(cachePool);
@@ -2000,11 +2038,13 @@ void CommandHelper::netFrameWorkThead()
                         if (handlerPool.compare(cmdStopTrigger) == 0){                            
                             qDebug()<<"Recv HEX: "<<cmdStopTrigger.toHex(' ');
 
-                            QMutexLocker locker(&mutexFile);
-                            if (nullptr != pfSaveNet){
-                                pfSaveNet->close();
-                                delete pfSaveNet;
-                                pfSaveNet = nullptr;
+                            {
+                                QMutexLocker locker(&mutexFile);
+                                if (nullptr != pfSaveNet){
+                                    pfSaveNet->close();
+                                    delete pfSaveNet;
+                                    pfSaveNet = nullptr;
+                                }
                             }
 
                             //测量停止是否需要清空所有数据
@@ -2026,8 +2066,6 @@ void CommandHelper::netFrameWorkThead()
         } else {
             handlerPool.clear();
         }
-
-        // QThread::msleep(1);
     }
 }
 
@@ -2072,7 +2110,7 @@ void CommandHelper::detTimeEnergyWorkThread()
                     }
 
                     if (data1_2.size() > 0 || data2_2.size() > 0 ){
-                        QDateTime now = QDateTime::currentDateTime();
+                        QDateTime startTime = QDateTime::currentDateTime();
                         
                         if (detectorParameter.measureModel == mmAuto){//自动测量，需要获取能宽
                             double time1 = 0.0, time2 = 0.0;
@@ -2130,7 +2168,7 @@ void CommandHelper::detTimeEnergyWorkThread()
                         double time0 = 0.0;
                         if(data1_2.size() > 0) time0 = data1_2[0].time/1e9;
                         else time0 = data2_2[0].time/1e9;
-                        qDebug()<< "coincidenceAnalyzer->calculate time=" << now.msecsTo(QDateTime::currentDateTime())
+                        qDebug()<< "coincidenceAnalyzer->calculate time=" << startTime.msecsTo(QDateTime::currentDateTime())
                                  <<"ms, time0="<<time0 \
                         << "s, data1.count=" << data1_2.size() \
                         << ", data2.count=" << data2_2.size();

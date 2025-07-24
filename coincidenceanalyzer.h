@@ -82,6 +82,12 @@ public:
         lossData_time_num[key] += value;
     }
 
+    //该方法用于离线分析中，处理Net.dat丢包修正的一个补丁
+    inline void setLossMap(std::map<unsigned int, unsigned long long> lossData)
+    {
+        lossData_time_num = lossData;
+    }
+
     /**
      * @description: 用于离线测量，用于处理完所有数据后，已经存在计数曲线，然后对计数曲线惊醒丢包的修正。由于FPGA存在丢包，因此采用该函数修正计数。
      * @param {map<unsigned int, unsigned long long>} lossData 丢失数据帧的时刻(单位s)、以及丢失时间长度(单位ns)

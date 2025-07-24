@@ -1882,23 +1882,23 @@ void CommandHelper::netFrameWorkThead()
                                   static_cast<quint32>(ptrOffset[1]) << 16 |
                                   static_cast<quint32>(ptrOffset[2]) << 8 |
                                   static_cast<quint32>(ptrOffset[3]);
-                
+
+                //通道值转换
+                channel = (channel == 0xFFF1) ? 0 : 1;
+
                 //序号（4字节）
                 quint32 dataNum = static_cast<quint32>(ptrOffset[4]) << 24 |
                                   static_cast<quint32>(ptrOffset[5]) << 16 |
                                   static_cast<quint32>(ptrOffset[6]) << 8 |
                                   static_cast<quint32>(ptrOffset[7]);
 
-                //通道值转换
-                channel = (channel == 0xFFF1) ? 0 : 1;
-
                 ptrOffset += 8;
                 //粒子模式数据(PARTICLE_NUM_ONE_PAKAGE+1)*16byte,6字节:时间，2字节:死时间，2字节:幅度
-                int ref = 1;
+                int ref = 0;
                 quint64 firsttime_temp = 0;
                 quint64 lasttime_temp = 0;
                 std::vector<TimeEnergy> temp;
-                while (ref <= PARTICLE_NUM_ONE_PAKAGE){
+                while (ref++ < PARTICLE_NUM_ONE_PAKAGE){
                     //空置48bit
                     ptrOffset += 6;
 
@@ -1924,7 +1924,6 @@ void CommandHelper::netFrameWorkThead()
                     if(ref == 1) firsttime_temp = t;
                     if(t>0) lasttime_temp = t; //一直更新最后一个数值，单是要确保t不是空值
 
-                    ref++;
                     if (t != 0x00 && amplitude != 0x00)
                         temp.push_back(TimeEnergy(t, deathtime, amplitude));
                 }
@@ -1970,15 +1969,16 @@ void CommandHelper::netFrameWorkThead()
                 }
 
                 //数据分拣完毕
-                if (temp.size() > 0){
+                // if (temp.size() > 0){
+                DetTimeEnergy detTimeEnergy;
+                detTimeEnergy.channel = channel;
+                detTimeEnergy.timeEnergy.swap(temp);
+                {
                     QMutexLocker locker(&mutexPlot);
-                    DetTimeEnergy detTimeEnergy;
-                    detTimeEnergy.channel = channel;
-                    detTimeEnergy.timeEnergy.swap(temp);
                     currentSpectrumFrames.push_back(detTimeEnergy);
                 }
 
-                QDateTime tmStop = QDateTime::currentDateTime();
+                // QDateTime tmStop = QDateTime::currentDateTime();
                 // qDebug() << "frame analyze time: " << tmStart.msecsTo(tmStop) << "ms";
             }
         } else if (detectorParameter.transferModel == 0x03){

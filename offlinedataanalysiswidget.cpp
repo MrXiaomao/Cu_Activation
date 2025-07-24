@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-22 23:02:02
+ * @LastEditTime: 2025-07-24 17:10:30
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -19,6 +19,8 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <math.h>
+
+// #define IS_VALID_DATA;
 
 OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
     : QWidget(parent)
@@ -355,13 +357,16 @@ void OfflineDataAnalysisWidget::slotStart()
 
         QByteArray aDatas = validDataFileName.toLocal8Bit();
         vector<TimeEnergy> data1_2, data2_2;
-// #ifdef QT_NO_DEBUG
+
+#ifdef IS_VALID_DATA
         SysUtils::realQuickAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, \
             unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/, bool eof, bool *interrupted){
-// #else
-        // SysUtils::realAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy,
-            // unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/, bool eof, bool *interrupted){
-// #endif
+#else
+        coincidenceAnalyzer->setCoolingTime_Auto(0);//网口数据存储的全部测量数据，所以起始时间从0开始。
+        SysUtils::realAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy,
+            unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/, bool eof, bool *interrupted){
+            coincidenceAnalyzer->setLossMap(SysUtils::lossData); //仅仅处理Net.dat需要用该方法。
+#endif
             if (firstPopup && !eof){
                 QTimer::singleShot(1, this, [=](){
                     SplashWidget::instance()->setInfo(tr("文件正在解析中，请等待..."), true, true);
@@ -407,6 +412,7 @@ void OfflineDataAnalysisWidget::slotStart()
             //记录FPGA内的最大时刻，作为符合测量的时间区间右端点。
             if (data1_2.size() > 0 || data2_2.size() > 0 ){
                 coincidenceAnalyzer->calculate(data1_2, data2_2, (unsigned short*)EnWindow, timeWidth, delayTime, true, true);
+                // qDebug().noquote()<<"time = "<<data1_2.begin()->time/1e9<<"s, count1 = "<<data1_2.size()<<", count2 = "<<data2_2.size();
                 data1_2.clear();
                 data2_2.clear();
             }

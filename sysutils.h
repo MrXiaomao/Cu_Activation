@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-15 20:42:20
+ * @LastEditTime: 2025-07-24 10:17:08
  * @Description: 请填写简介
  */
 #ifndef SYSUTILS_H
@@ -190,6 +190,14 @@ public:
     */
     static void realQuickAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy,
         unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/, bool/*结束标识*/, bool */*是否被终止*/)> callback);
+
+    static std::map<unsigned int, unsigned long long> lossData; //记录丢包的时刻（FPGA时钟，单位:s）以及丢失的时间长度(单位：ns)。
+
+private:
+    static quint32 SequenceNumber;// 数据帧序列号
+    static quint64 lastTime; //用来修正FPGA掉包问题,记录正常包的末尾时间,单位ns 
+    static quint64 firstTime; //用来修正FPGA掉包问题，记录丢包之后的第一个有效时间，单位ns
+
 };
 
 #endif // SYSUTILS_H

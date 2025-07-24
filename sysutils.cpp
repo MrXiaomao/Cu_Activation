@@ -1,5 +1,11 @@
 #include "sysutils.h"
 #include <iostream>
+#include <math.h>
+
+quint32 SysUtils::SequenceNumber = 0;
+quint64 SysUtils::lastTime = 0;
+quint64 SysUtils::firstTime = 0;
+std::map<unsigned int, unsigned long long> SysUtils::lossData;
 
 SysUtils::SysUtils()
 {
@@ -272,6 +278,10 @@ std::vector<DetTimeEnergy> SysUtils::getDetTimeEnergy(const char* filename)
 void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy,
     unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/,bool/*结束标识*/, bool */*是否被终止*/)> callback)
 {
+    //连接探测器
+    SequenceNumber = 0;
+    lossData.clear();
+
     FILE* input_file = fopen(filename, "rb");
     if (!input_file) {
         perror("Failed to open file");
@@ -313,7 +323,7 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
                     //通道值转换
                     channel = (channel == 0xFFF1) ? 0 : 1;
                     //序号（4字节）
-                    uint32_t number =   static_cast<uint32_t>(ptrOffset[4]) << 24 |
+                    uint32_t dataNum =   static_cast<uint32_t>(ptrOffset[4]) << 24 |
                                         static_cast<uint32_t>(ptrOffset[5]) << 16 |
                                         static_cast<uint32_t>(ptrOffset[6]) << 8 |
                                         static_cast<uint32_t>(ptrOffset[7]);
@@ -321,10 +331,11 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
                     ptrOffset += 8;
 
                     //粒子模式数据PARTICLE_NUM_ONE_PAKAGE*16byte,前6字节:时间,后2字节:能量
-                    int ref = 1;
-
+                    int ref = 0;
+                    quint64 firsttime_temp = 0;
+                    quint64 lasttime_temp = 0;
                     std::vector<TimeEnergy> temp;
-                    while (ref++ <= PARTICLE_NUM_ONE_PAKAGE){
+                    while (ref++ < PARTICLE_NUM_ONE_PAKAGE){
                         //空置48bit
                         ptrOffset += 6;
 
@@ -339,16 +350,59 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
                         ptrOffset += 6;
 
                         //死时间:16bit
-                        ptrOffset += 2;
                         unsigned short deathtime = static_cast<uint16_t>(ptrOffset[0]) << 8 | static_cast<uint16_t>(ptrOffset[1]);
                         deathtime *= 10;
+                        ptrOffset += 2;
 
                         //幅度:16bit
                         unsigned short amplitude = static_cast<uint16_t>(ptrOffset[0]) << 8 | static_cast<uint16_t>(ptrOffset[1]);
                         ptrOffset += 2;
 
+                        if(ref == 1) firsttime_temp = t;
+                        if(t>0) lasttime_temp = t; //一直更新最后一个数值，单是要确保t不是空值
+
                         if (t != 0x00 && amplitude != 0x00)
                             temp.push_back(TimeEnergy(t, deathtime, amplitude));
+                    }
+
+                    //对丢包情况进行修正处理
+                    //考虑到实际丢包总是在大计数率下，网口传输响应不过来，两个通道的不响应时间长度基本相同，这里直接以探测器1的丢包来修正。
+                    if(channel == 0){
+                        quint32 losspackageNum = dataNum - SequenceNumber - 1; //注意要减一才是丢失的包个数
+                        if(losspackageNum > 0) {
+                            firstTime = firsttime_temp;
+                            quint64 delataT = firstTime - lastTime;//丢包的时间段长度
+                            
+                            //检测丢包跨度是否刚好跨过某一秒的前后，
+                            //经过初步测试，丢包的时候从来没有连续丢失超过1s的数据。
+                            int firstT = static_cast<int>(ceil(firstTime/1e9)); //向上取整
+                            int lastT = static_cast<int>(ceil(lastTime/1e9));
+                            if( firstT - lastT > 0){
+                                long long t1 = 0LL, t2 = 0LL;
+                                t1 = firstTime - lastT*1e9;
+                                t2 = lastT*1e9 - lastTime;
+                                if(t1>0 && t2>0)
+                                {
+                                    lossData[static_cast<unsigned int>(lastT)] += static_cast<unsigned long long>(t1); //注意计时从1开始，因为是向上取整
+                                    lossData[static_cast<unsigned int>(firstT)] += static_cast<unsigned long long>(t2); //注意计时从1开始
+                                    // coincidenceAnalyzer->AddLossMap(static_cast<unsigned int>(lastT), static_cast<unsigned long long>(t1));
+                                    // coincidenceAnalyzer->AddLossMap(static_cast<unsigned int>(firstT), static_cast<unsigned long long>(t2));
+                                }
+                            }
+                            else if((firstT - lastT) == 0){
+                                // 记录丢失的数据点个数，考虑到丢包总是发送在大计数率，因此直接认为每次丢一个包损失64个计数。
+                                lossData[static_cast<unsigned int>(firstT)] += delataT;
+                            }
+                            else{
+                                
+                            }
+                            
+                        }
+
+                        //记录数据帧序号
+                        SequenceNumber = dataNum;
+                        //记录数据帧最后时间
+                        lastTime = lasttime_temp;
                     }
 
                     //数据分拣完毕

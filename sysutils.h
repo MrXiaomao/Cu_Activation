@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-24 10:17:08
+ * @LastEditTime: 2025-07-24 17:21:16
  * @Description: 请填写简介
  */
 #ifndef SYSUTILS_H
@@ -175,6 +175,12 @@ public:
     SysUtils();
 
     static std::vector<DetTimeEnergy> getDetTimeEnergy(const char* filename);
+    
+    // 报文完整性检查
+    static bool isValidPacket(const QByteArray &data);
+
+    // 获取文件大小
+    static qint64 getFileSize(const QString &filePath);
 
     /**
      * @description: 解析网口接收的原始数据
@@ -184,6 +190,15 @@ public:
     */
     static void realAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy,
         unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/, bool/*结束标识*/, bool */*是否被终止*/)> callback);
+
+    /**
+     * @description: 解析网口接收的原始数据,采用QT的数据类型进行处理
+     * @param {char*} filename 文件名，包含路径
+     * @param
+     * @return {*}
+    */
+    static void readNetData(QString filename, std::function<void(DetTimeEnergy,
+        unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/,bool/*结束标识*/, bool */*是否被终止*/)> callback);
 
     /*
      * 快速解析：文件是存放有效数据
@@ -197,7 +212,7 @@ private:
     static quint32 SequenceNumber;// 数据帧序列号
     static quint64 lastTime; //用来修正FPGA掉包问题,记录正常包的末尾时间,单位ns 
     static quint64 firstTime; //用来修正FPGA掉包问题，记录丢包之后的第一个有效时间，单位ns
-
+    // static QList<QByteArray> packets;
 };
 
 #endif // SYSUTILS_H

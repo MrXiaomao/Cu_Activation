@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-24 17:10:30
+ * @LastEditTime: 2025-07-25 12:50:29
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -20,6 +20,7 @@
 #include <QJsonDocument>
 #include <math.h>
 
+#include <iostream>
 // #define IS_VALID_DATA;
 
 OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
@@ -332,8 +333,14 @@ void OfflineDataAnalysisWidget::slotStart()
     plotWidget->switchToMoveMode();
     plotWidget->slotStart();
 
-    unsigned short EnWindow[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
-                               (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
+    // 准备参数
+    unsigned short EnWindow[4] = {
+        (unsigned short)ui->spinBox_1_leftE->value(),
+        (unsigned short)ui->spinBox_1_rightE->value(),
+        (unsigned short)ui->spinBox_2_leftE->value(),
+        (unsigned short)ui->spinBox_2_rightE->value()
+    };
+
     int delayTime = ui->spinBox_delayTime->value();//符合延迟时间,ns
     int timeWidth = ui->spinBox_timeWidth->value();//时间窗宽度，单位ns(符合分辨时间)
     detParameter.timeWidth = timeWidth;
@@ -362,10 +369,15 @@ void OfflineDataAnalysisWidget::slotStart()
         SysUtils::realQuickAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, \
             unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/, bool eof, bool *interrupted){
 #else
+        QDateTime startTime = QDateTime::currentDateTime();
         coincidenceAnalyzer->setCoolingTime_Auto(0);//网口数据存储的全部测量数据，所以起始时间从0开始。
+        // SysUtils::readNetData(validDataFileName, [&](DetTimeEnergy detTimeEnergy,
+            // unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/, bool eof, bool *interrupted){
+            // coincidenceAnalyzer->setLossMap(SysUtils::lossData); //仅仅处理Net.dat需要用该方法。
         SysUtils::realAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy,
             unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/, bool eof, bool *interrupted){
-            coincidenceAnalyzer->setLossMap(SysUtils::lossData); //仅仅处理Net.dat需要用该方法。
+            // coincidenceAnalyzer->setLossMap(SysUtils::lossData); //仅仅处理Net.dat需要用该方法。
+            lossData = SysUtils::lossData;
 #endif
             if (firstPopup && !eof){
                 QTimer::singleShot(1, this, [=](){
@@ -392,10 +404,10 @@ void OfflineDataAnalysisWidget::slotStart()
 
             if (channel == 0x00){
                 detectNum += detTimeEnergy.timeEnergy.size();
-                data1_2 = detTimeEnergy.timeEnergy;
+                data1_2.insert(data1_2.end(), detTimeEnergy.timeEnergy.begin(), detTimeEnergy.timeEnergy.end());
             } else if(channel == 0x01){
                 detectNum += detTimeEnergy.timeEnergy.size();
-                data2_2 = detTimeEnergy.timeEnergy;
+                data2_2.insert(data2_2.end(), detTimeEnergy.timeEnergy.begin(), detTimeEnergy.timeEnergy.end());
             }
             else if(channel == 0x02){ //请注意，这里对于0x02通道其实放的是FPGA修正时刻，具体参见commandhelper中信号sigMeasureStop的关联函数部分
                 //解析还原出数据
@@ -411,10 +423,19 @@ void OfflineDataAnalysisWidget::slotStart()
             
             //记录FPGA内的最大时刻，作为符合测量的时间区间右端点。
             if (data1_2.size() > 0 || data2_2.size() > 0 ){
-                coincidenceAnalyzer->calculate(data1_2, data2_2, (unsigned short*)EnWindow, timeWidth, delayTime, true, true);
-                // qDebug().noquote()<<"time = "<<data1_2.begin()->time/1e9<<"s, count1 = "<<data1_2.size()<<", count2 = "<<data2_2.size();
-                data1_2.clear();
-                data2_2.clear();
+
+                //每秒钟计算一次
+                static int timeNum = 1;
+                if(data1_2.size()>0 && data1_2.back().time / static_cast<quint64>(1e9) == timeNum){
+                    coincidenceAnalyzer->calculate(data1_2, data2_2, (unsigned short*)EnWindow, timeWidth, delayTime, true, true);
+
+                    qDebug().noquote()<<"calculateTime = "<<startTime.msecsTo(QDateTime::currentDateTime())<<"ms, time0 = "
+                        <<data1_2.back().time/1e9<<"s, count1 = "<<data1_2.size()<<", count2 = "<<data2_2.size();
+                    data1_2.clear();
+                    data2_2.clear();
+
+                    timeNum++;
+                }
             }
 
             *interrupted = reAnalyzer;

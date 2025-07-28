@@ -153,7 +153,7 @@ public:
     /// @param int delayTime 符合延迟时间，单位ns。这里特征二通道相对于一通道的延迟。
     /// @param bool countFlag 是否计算计数曲线
     /// @param bool autoEnWidth 是否自动修正能窗
-    void calculate(vector<TimeEnergy> data1, vector<TimeEnergy> data2,
+    void calculate(const vector<TimeEnergy> &data1, const vector<TimeEnergy> &data2,
             unsigned short E_win[4], int windowWidthT, int delayTime=0,
             bool countFlag=true, bool autoEnWidth = false);
 
@@ -182,16 +182,16 @@ private:
     vector<int> GetSingleSpectrum(const vector<int>& data, int maxEnergy, unsigned short ch);
     
     //统计给出当前一秒内的两个探测器各自数据点的个数
-    bool GetDataPoint(vector<TimeEnergy>& data1, vector<TimeEnergy>& data2);
+    bool GetDataPoint(const vector<TimeEnergy>& data1, const vector<TimeEnergy>& data2);
 
     //统计给出直方图分布，类似matlab中的hist。
     vector<int> computeHistogram(const vector<int>& data, const vector<int>& binEdges);
 
     //找到不大于value的最后一个数的下标。返回是否查找到的标记
-    bool find_index_above(vector<TimeEnergy>& data, unsigned long long value, int& index);
+    bool find_index_above(const vector<TimeEnergy>& data, unsigned long long value, int& index);
 
     //找到第一个小于value的下标。返回是否查找到的标记
-    bool find_index_below(vector<TimeEnergy>& data, unsigned long long value, int& index);
+    bool find_index_below(const vector<TimeEnergy>& data, unsigned long long value, int& index);
 
 private:
     int countCoin; //符合计数曲线的数据点个数,一个数据点对应1s.

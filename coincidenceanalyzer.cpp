@@ -66,7 +66,7 @@ void CoincidenceAnalyzer::set_callback(pfRealCallbackFunction func, void *callba
     m_pfuncUser = callbackUser;
 }
 
-void CoincidenceAnalyzer::calculate(vector<TimeEnergy> _data1, vector<TimeEnergy> _data2,
+void CoincidenceAnalyzer::calculate(const vector<TimeEnergy> &_data1, const vector<TimeEnergy> &_data2,
               unsigned short E_win[4], int windowWidthT, int delayTime, 
               bool countFlag, bool autoEnWidth)
 {
@@ -578,7 +578,7 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
 }
 
 //统计给出当前一秒内的两个探测器各自数据点的个数
-bool CoincidenceAnalyzer::GetDataPoint(vector<TimeEnergy>& data1, vector<TimeEnergy>& data2)
+bool CoincidenceAnalyzer::GetDataPoint(const vector<TimeEnergy>& data1, const vector<TimeEnergy>& data2)
 {
     countCoin++;
     CurrentPoint onePoint;
@@ -640,7 +640,7 @@ vector<int> CoincidenceAnalyzer::computeHistogram(const vector<int>& data, const
 }
 
 //找到第一个大于value的下标。返回是否查找到的标记
-bool CoincidenceAnalyzer::find_index_above(vector<TimeEnergy>& data, unsigned long long value, int& index)
+bool CoincidenceAnalyzer::find_index_above(const vector<TimeEnergy>& data, unsigned long long value, int& index)
 {
     if(data.size() ==0 ) return false;
 
@@ -664,7 +664,7 @@ bool CoincidenceAnalyzer::find_index_above(vector<TimeEnergy>& data, unsigned lo
 }
 
 //找到最后一个小于value的下标。返回是否查找到的标记
-bool CoincidenceAnalyzer::find_index_below(vector<TimeEnergy>& data, unsigned long long value, int& index)
+bool CoincidenceAnalyzer::find_index_below(const vector<TimeEnergy>& data, unsigned long long value, int& index)
 {
     if(data.size() ==0 ) return false;
 

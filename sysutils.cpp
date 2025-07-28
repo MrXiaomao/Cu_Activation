@@ -2,10 +2,15 @@
 #include <iostream>
 #include <math.h>
 
+#include <QFile>
+#include <QFileInfo>
+#include <QDebug>
+
 quint32 SysUtils::SequenceNumber = 0;
 quint64 SysUtils::lastTime = 0;
 quint64 SysUtils::firstTime = 0;
 std::map<unsigned int, unsigned long long> SysUtils::lossData;
+// QList<QByteArray> SysUtils::packets;
 
 SysUtils::SysUtils()
 {
@@ -184,21 +189,21 @@ std::vector<DetTimeEnergy> SysUtils::getDetTimeEnergy(const char* filename)
     if (ferror(input_file))
         return result;
 
-    uint32_t full_buffer_size = (PARTICLE_NUM_ONE_PAKAGE +1) * 16;
-    std::vector<uint8_t> read_buffer(full_buffer_size, 0);
+    uint32_t packetSize = (PARTICLE_NUM_ONE_PAKAGE +1) * 16;
+    std::vector<uint8_t> read_buffer(packetSize, 0);
     std::vector<uint8_t> cache_buffer;
 
     while (!feof(input_file)){
         //std::vector<uint8_t>().swap(read_buffer);
-        size_t read_size = fread(reinterpret_cast<char*>(read_buffer.data()), 1, full_buffer_size, input_file);
+        size_t read_size = fread(reinterpret_cast<char*>(read_buffer.data()), 1, packetSize, input_file);
         cache_buffer.insert(cache_buffer.end(), read_buffer.begin(), read_buffer.begin() + read_size);
 
         uint8_t *ptrOffset = cache_buffer.data();
         uint32_t buffer_size = cache_buffer.size();
-        while (buffer_size >= full_buffer_size){
+        while (buffer_size >= packetSize){
             //判断头部
             if ((uint8_t)ptrOffset[0] == 0x00 && (uint8_t)ptrOffset[1] == 0x00 && (uint8_t)ptrOffset[2] == 0xaa && (uint8_t)ptrOffset[3] == 0xb3){
-                ptrOffset = read_buffer.data() + full_buffer_size - 4;
+                ptrOffset = read_buffer.data() + packetSize - 4;
                 //判断尾部
                 if ((uint8_t)ptrOffset[0] == 0x00 && (uint8_t)ptrOffset[1] == 0x00 && (uint8_t)ptrOffset[2] == 0xcc && (uint8_t)ptrOffset[3] == 0xd3){
                     // 分拣数据
@@ -259,7 +264,7 @@ std::vector<DetTimeEnergy> SysUtils::getDetTimeEnergy(const char* filename)
                         result.push_back(detTimeEnergy);
                     }
 
-                    cache_buffer.erase(cache_buffer.begin(), cache_buffer.begin() + full_buffer_size);
+                    cache_buffer.erase(cache_buffer.begin(), cache_buffer.begin() + packetSize);
                 }
             } else {
                 cache_buffer.erase(cache_buffer.begin());
@@ -282,32 +287,35 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
     SequenceNumber = 0;
     lossData.clear();
 
-    FILE* input_file = fopen(filename, "rb");
-    if (!input_file) {
-        perror("Failed to open file");
-        return;
-    }
+    bool interrupted = false;
 
+    FILE* input_file = fopen(filename, "rb");
     unsigned long long progress = 0/*文件进度*/;//字节数
     _fseeki64(input_file, 0, SEEK_END);
     unsigned long long filesize = _ftelli64(input_file)/*文件大小*/;
     _fseeki64(input_file, 0, SEEK_SET);
 
-    bool interrupted = false;
-    uint32_t full_buffer_size = (PARTICLE_NUM_ONE_PAKAGE +1) * 16;
-    std::vector<uint8_t> read_buffer(full_buffer_size, 0);
+    if (!input_file) {
+        perror("Failed to open file");
+        interrupted = true;
+        callback(DetTimeEnergy(), 1, filesize, true, &interrupted);
+        return;
+    }
+
+    uint32_t packetSize = (PARTICLE_NUM_ONE_PAKAGE +1) * 16;
+    std::vector<uint8_t> read_buffer(packetSize, 0);
     std::vector<uint8_t> cache_buffer;
     while (!feof(input_file)){
-        size_t read_size = fread(reinterpret_cast<char*>(read_buffer.data()), 1, full_buffer_size, input_file);
+        size_t read_size = fread(reinterpret_cast<char*>(read_buffer.data()), 1, packetSize, input_file);
         cache_buffer.insert(cache_buffer.end(), read_buffer.begin(), read_buffer.begin() + read_size);
         progress += read_size;
 
         uint32_t buffer_size = cache_buffer.size();
-        while (buffer_size >= full_buffer_size){
+        while (buffer_size >= packetSize){
             //判断头部
             uint8_t *ptrOffset = cache_buffer.data();
             if ((uint8_t)ptrOffset[0] == 0x00 && (uint8_t)ptrOffset[1] == 0x00 && (uint8_t)ptrOffset[2] == 0xaa && (uint8_t)ptrOffset[3] == 0xb3){
-                ptrOffset = cache_buffer.data() + full_buffer_size - 4;
+                ptrOffset = cache_buffer.data() + packetSize - 4;
                 //判断尾部
                 if ((uint8_t)ptrOffset[0] == 0x00 && (uint8_t)ptrOffset[1] == 0x00 && (uint8_t)ptrOffset[2] == 0xcc && (uint8_t)ptrOffset[3] == 0xd3){
                     // 分拣数据
@@ -385,18 +393,12 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
                                 {
                                     lossData[static_cast<unsigned int>(lastT)] += static_cast<unsigned long long>(t1); //注意计时从1开始，因为是向上取整
                                     lossData[static_cast<unsigned int>(firstT)] += static_cast<unsigned long long>(t2); //注意计时从1开始
-                                    // coincidenceAnalyzer->AddLossMap(static_cast<unsigned int>(lastT), static_cast<unsigned long long>(t1));
-                                    // coincidenceAnalyzer->AddLossMap(static_cast<unsigned int>(firstT), static_cast<unsigned long long>(t2));
                                 }
                             }
                             else if((firstT - lastT) == 0){
                                 // 记录丢失的数据点个数，考虑到丢包总是发送在大计数率，因此直接认为每次丢一个包损失64个计数。
                                 lossData[static_cast<unsigned int>(firstT)] += delataT;
                             }
-                            else{
-                                
-                            }
-                            
                         }
 
                         //记录数据帧序号
@@ -420,7 +422,7 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
                         }
                     }
 
-                    cache_buffer.erase(cache_buffer.begin(), cache_buffer.begin() + full_buffer_size);
+                    cache_buffer.erase(cache_buffer.begin(), cache_buffer.begin() + packetSize);
                 }
             } else {
                 cache_buffer.erase(cache_buffer.begin());
@@ -432,6 +434,170 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
 
     fclose(input_file);
     input_file = nullptr;
+    callback(DetTimeEnergy(), progress, filesize, true, nullptr);
+}
+
+void SysUtils::readNetData(QString filename, std::function<void(DetTimeEnergy,
+    unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/,bool/*结束标识*/, bool */*是否被终止*/)> callback)
+{
+    //定义包头包尾
+    const QByteArray header = QByteArray::fromHex("0000aab3");
+    const QByteArray tailer = QByteArray::fromHex("0000ccd3");
+
+    //初始化
+    SequenceNumber = 0;
+    lossData.clear();
+    bool interrupted = false;
+
+    unsigned long long progress = 0/*文件进度*/;//字节数
+    qint64 filesize = getFileSize(filename);/*文件大小*/;
+
+    QFile file(filename);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "无法打开文件:" << file.errorString();
+        interrupted = true;
+        callback(DetTimeEnergy(), 1, filesize, true, &interrupted);
+        return ;
+    }
+
+    uint32_t packetSize = (PARTICLE_NUM_ONE_PAKAGE +1) * 16;; // 每次读取1040字节
+    QByteArray cache_buffer;
+    QByteArray read_buffer;
+    QByteArray onePackage;
+    while (!file.atEnd()) {
+        read_buffer = file.read(packetSize);
+        progress += static_cast<unsigned long long>(read_buffer.size());
+        cache_buffer.append(read_buffer);
+
+        uint32_t buffer_size = cache_buffer.size();
+        while (buffer_size >= packetSize){
+            // 查找包头
+            int headerPos = cache_buffer.indexOf(header);
+            if (headerPos == -1) {
+                cache_buffer.clear();
+                break;
+            }
+            // 查找包尾
+            int tailPos = cache_buffer.indexOf(tailer, headerPos + header.size());
+            if (tailPos == -1) break;
+
+            // 提取完整数据包
+            int packetLength = tailPos + tailer.size() - headerPos;
+            if(packetLength == packetSize){
+                onePackage = cache_buffer.mid(headerPos, packetLength);
+                // packets.append(onePackage);
+            }
+
+            // 移除已处理的数据
+            cache_buffer = cache_buffer.mid(headerPos + packetLength);
+
+            //提取数据
+            const unsigned char *ptrOffset = (const unsigned char *)onePackage.constData();
+
+            //包头4字节
+            ptrOffset += 4;
+
+            //通道号(4字节)
+            quint32 channel = static_cast<quint32>(ptrOffset[0]) << 24 |
+                              static_cast<quint32>(ptrOffset[1]) << 16 |
+                              static_cast<quint32>(ptrOffset[2]) << 8 |
+                              static_cast<quint32>(ptrOffset[3]);
+            //通道值转换
+            channel = (channel == 0xFFF1) ? 0 : 1;
+            ptrOffset += 4;
+
+            //序号（4字节）
+            quint32 dataNum = static_cast<quint32>(ptrOffset[0]) << 24 |
+                              static_cast<quint32>(ptrOffset[1]) << 16 |
+                              static_cast<quint32>(ptrOffset[2]) << 8 |
+                              static_cast<quint32>(ptrOffset[3]);
+            ptrOffset += 4;
+
+            int ref = 0;
+            quint64 firsttime_temp = 0;
+            quint64 lasttime_temp = 0;
+            std::vector<TimeEnergy> temp;
+            while (ref++ < PARTICLE_NUM_ONE_PAKAGE){
+                //空置48bit
+                ptrOffset += 6;
+
+                //时间:48bit
+                uint64_t t =  static_cast<uint64_t>(ptrOffset[0]) << 40 |
+                             static_cast<uint64_t>(ptrOffset[1]) << 32 |
+                             static_cast<uint64_t>(ptrOffset[2]) << 24 |
+                             static_cast<uint64_t>(ptrOffset[3]) << 16 |
+                             static_cast<uint64_t>(ptrOffset[4]) << 8 |
+                             static_cast<uint64_t>(ptrOffset[5]);
+                t *= 10;
+                ptrOffset += 6;
+
+                //死时间:16bit
+                unsigned short deathtime = static_cast<uint16_t>(ptrOffset[0]) << 8 | static_cast<uint16_t>(ptrOffset[1]);
+                deathtime *= 10;
+                ptrOffset += 2;
+
+                //幅度:16bit
+                unsigned short amplitude = static_cast<uint16_t>(ptrOffset[0]) << 8 | static_cast<uint16_t>(ptrOffset[1]);
+                ptrOffset += 2;
+
+                if(ref == 1) firsttime_temp = t;
+                if(t>0) lasttime_temp = t; //一直更新最后一个数值，单是要确保t不是空值
+
+                if (t != 0x00 && amplitude != 0x00)
+                    temp.emplace_back(t, deathtime, amplitude);
+            }
+
+            //对丢包情况进行修正处理
+            //考虑到实际丢包总是在大计数率下，网口传输响应不过来，两个通道的不响应时间长度基本相同，这里直接以探测器1的丢包来修正。
+            if(channel == 0){
+                quint32 losspackageNum = dataNum - SequenceNumber - 1; //注意要减一才是丢失的包个数
+                if(losspackageNum > 0) {
+                    firstTime = firsttime_temp;
+                    quint64 delataT = firstTime - lastTime;//丢包的时间段长度
+
+                    //检测丢包跨度是否刚好跨过某一秒的前后，
+                    //经过初步测试，丢包的时候从来没有连续丢失超过1s的数据。
+                    int firstT = static_cast<int>(ceil(firstTime/1e9)); //向上取整
+                    int lastT = static_cast<int>(ceil(lastTime/1e9));
+                    if( firstT - lastT > 0){
+                        long long t1 = 0LL, t2 = 0LL;
+                        t1 = firstTime - lastT*1e9;
+                        t2 = lastT*1e9 - lastTime;
+                        if(t1>0 && t2>0)
+                        {
+                            lossData[static_cast<unsigned int>(lastT)] += static_cast<unsigned long long>(t1); //注意计时从1开始，因为是向上取整
+                            lossData[static_cast<unsigned int>(firstT)] += static_cast<unsigned long long>(t2); //注意计时从1开始
+                        }
+                    }
+                    else if((firstT - lastT) == 0){
+                        // 记录丢失的数据点个数，考虑到丢包总是发送在大计数率，因此直接认为每次丢一个包损失64个计数。
+                        lossData[static_cast<unsigned int>(firstT)] += delataT;
+                    }
+                }
+
+                //记录数据帧序号
+                SequenceNumber = dataNum;
+                //记录数据帧最后时间
+                lastTime = lasttime_temp;
+            }
+
+            //数据分拣完毕
+            {
+                DetTimeEnergy detTimeEnergy;
+                detTimeEnergy.channel = channel;
+                detTimeEnergy.timeEnergy.swap(temp);
+                callback(detTimeEnergy, progress, filesize, false, &interrupted);
+
+                if (interrupted){
+                    file.close();
+                    callback(DetTimeEnergy(), progress, filesize, true, &interrupted);
+                    return;
+                }
+            }
+        }
+    }
+
+    file.close();
     callback(DetTimeEnergy(), progress, filesize, true, nullptr);
 }
 
@@ -501,4 +667,27 @@ void SysUtils::realQuickAnalyzeTimeEnergy(const char* filename, std::function<vo
     fclose(input_file);
     input_file = nullptr;
     callback(DetTimeEnergy(), progress, filesize, true, nullptr);
+}
+
+// 报文完整性检查
+bool SysUtils::isValidPacket(const QByteArray &packet)
+{
+    // 检查报文是否完整 是否以0x0000AAB3开头 是否以0x0000CCD3 结尾
+    uint32_t packetSize = (PARTICLE_NUM_ONE_PAKAGE +1) * 16;
+    QByteArray header = QByteArray::fromHex("0000aab3");
+    QByteArray tailer = QByteArray::fromHex("0000ccd3");
+
+    return packet.size() == packetSize &&
+           packet.startsWith(header) &&
+           packet.endsWith(tailer);
+}
+
+qint64 SysUtils::getFileSize(const QString &filePath)
+{
+    QFileInfo fileInfo(filePath);
+    if (!fileInfo.exists()) {
+        qWarning() << "File does not exist:" << filePath;
+        return -1;
+    }
+    return fileInfo.size();  // 返回文件大小(字节)
 }

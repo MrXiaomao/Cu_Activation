@@ -11,6 +11,8 @@
 #include <QWidget>
 #include "sysutils.h"
 #include "coincidenceanalyzer.h"
+#include <QThreadPool>
+#include <QWaitCondition>
 
 namespace Ui {
 class OfflineDataAnalysisWidget;

@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-29 16:52:43
+ * @LastEditTime: 2025-07-29 19:32:54
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -746,7 +746,7 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
 
     size_t num = time_end - start_time + 1; //计数点个数。
 
-    //符合时间窗,单位ns
+    //符合时间窗,单位ns,转化为s
     double timeWidth_tmp = detPara.timeWidth * 1.0;
     timeWidth_tmp = timeWidth_tmp / 1e9;
 
@@ -755,6 +755,12 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
     double N1 = 0;
     double N2 = 0;
     double Nc = 0;
+    
+    //死时间修正后总计数
+    double N10 = 0.0;
+    double N20 = 0.0;
+    double Nco0 = 0.0;
+
     double deathTime_Ratio1 = 0.0;
     double deathTime_Ratio2 = 0.0;
     
@@ -780,7 +786,7 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
             int nc = coin.ConCount_single + coin.ConCount_multiple;
             double ratio1 = coin.DeathRatio1 * 0.01;
             double ratio2 = coin.DeathRatio2 * 0.01;
-            double ratio3 = 1.0 - (1.0 - ratio1)*(1 - ratio2);
+            double ratio3 = 1.0 - (1.0 - ratio1) * (1.0 - ratio2);
 
             minCount[0] = qMin(minCount[0], n1);
             minCount[1] = qMin(minCount[1], n2);
@@ -798,27 +804,31 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
             maxDeathRatio[1] = qMax(maxDeathRatio[1], ratio2);
             maxDeathRatio[2] = qMax(maxDeathRatio[2], ratio3);
 
-            // 死时间修正后各计数率
-            double n10 = n1 / (1-ratio1);
-            double n20 = n2 / (1-ratio2);
-            double nc0 = nc / (1-ratio3);
+            //真偶符合修正
+            double nco = (nc * 1.0 - 2.0 * timeWidth_tmp * n1 * n2) / (1.0 - timeWidth_tmp * (n1 + n2));
+
+            //死时间修正后各计数率
+            double n10 = n1 / (1.0 - ratio1);
+            double n20 = n2 / (1.0 - ratio2);
+            double nco0 = nco / (1.0 - ratio3);
             minCount_correct[0] = qMin(minCount_correct[0], n10);
             minCount_correct[1] = qMin(minCount_correct[1], n20);
-            minCount_correct[2] = qMin(minCount_correct[2], nc0);
+            minCount_correct[2] = qMin(minCount_correct[2], nco0);
 
             maxCount_correct[0] = qMax(maxCount_correct[0], n10);
             maxCount_correct[1] = qMax(maxCount_correct[1], n20);
-            maxCount_correct[2] = qMax(maxCount_correct[2], nc0);
+            maxCount_correct[2] = qMax(maxCount_correct[2], nco0);
 
-            N1 += (n1 - backRatesDet1);
-            N2 += (n2 - backRatesDet2);
+            N1 += (n1*1.0 - backRatesDet1);
+            N2 += (n2*1.0 - backRatesDet2);
             Nc += nc;
             deathTime_Ratio1 += ratio1;
             deathTime_Ratio2 += ratio2;
-            // int N1_temp = int(N1);
-            // int N2_temp = int(N2);
-            // int Nc_temp = int(Nc);
-            // std::cout<<coin.time<<","<<N1_temp<<","<<N2_temp<<","<<Nc_temp<<std::endl;
+
+            //死时间修正后总计数
+            N10 += n10;
+            N20 += n20;
+            Nco0 += nco0;
         }
     }
     
@@ -830,16 +840,16 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
     countAverage[2] = Nc*1.0 / num;
     deathRatioAverage[0] = deathTime_Ratio1 / num;
     deathRatioAverage[1] = deathTime_Ratio2 / num;
-    deathRatioAverage[2] = 1.0 - (1.0 - deathRatioAverage[0])*(1 - deathRatioAverage[1]);
+    deathRatioAverage[2] = 1.0 - (1.0 - deathRatioAverage[0])*(1.0 - deathRatioAverage[1]);
     
     // deathTime_Ratio1 = deathTime_Ratio1 / num;
     // deathTime_Ratio2 = deathTime_Ratio2 / num;
     
     //计算修正后平均值
     double countAverage_orrect[3] = {0.0, 0.0, 0.0};
-    countAverage_orrect[0] = N1*1.0 / (1 - deathRatioAverage[0]) / num;
-    countAverage_orrect[1] = N2*1.0 / (1 - deathRatioAverage[1]) / num;
-    countAverage_orrect[2] = Nc*1.0 / (1 - deathRatioAverage[2]) / num;
+    countAverage_orrect[0] = N10 / num;
+    countAverage_orrect[1] = N20 / num;
+    countAverage_orrect[2] = Nco0 / num;
 
     //f因子。暂且称为积分因子
     //这里不考虑Cu62的衰变分支，也就是测量必须时采用冷却时长远大于Cu62半衰期(9.67min = 580s)的数据。
@@ -853,13 +863,13 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
                 
     //对符合计数进行真偶符合修正
     //注意timeWidth_tmp单位为ns，要换为时间s。
-    double measureTime = (time_end - start_time + 1)*1.0;
-    double Nco = (Nc*measureTime - 2*timeWidth_tmp*N1*N2)/(measureTime - timeWidth_tmp*(N1 + N2));
+    // double measureTime = (time_end - start_time + 1)*1.0;
+    // double Nco = (Nc*measureTime - 2*timeWidth_tmp*N1*N2)/(measureTime - timeWidth_tmp*(N1 + N2));
 
-    //死时间修正
-    double N10 = N1 / (1 - deathRatioAverage[0]);
-    double N20 = N2 / (1 - deathRatioAverage[1]);
-    double Nco0 = Nco / (1 - deathRatioAverage[0]) / (1 - deathRatioAverage[1]);
+    // //死时间修正
+    // double N10 = N1 / (1 - deathRatioAverage[0]);
+    // double N20 = N2 / (1 - deathRatioAverage[1]);
+    // double Nco0 = Nco / (1 - deathRatioAverage[0]) / (1 - deathRatioAverage[1]);
     //计算出活度乘以探测器几何效率的值。本项目中称之为相对活度
     //反推出0时刻的计数。
     double A0_omiga = 0.0;

@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-17 23:28:14
+ * @LastEditTime: 2025-07-29 19:18:15
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -761,7 +761,7 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int sta
     
     size_t num = coinResult.size(); //计数点个数。
 
-    //符合时间窗,单位ns
+    //符合时间窗,单位ns，要换为时间s。
     double timeWidth_tmp = detPara.timeWidth * 1.0;
     timeWidth_tmp = timeWidth_tmp /1e9;
 
@@ -770,8 +770,17 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int sta
     double N1 = 0;
     double N2 = 0;
     double Nc = 0;
-    double deathTime_ratio_total[2] = {0.0, 0.0};
-    double deathTime_ratio_ave[2] = {0.0, 0.0};
+
+    //真偶符合修正的计数
+    double Nco = 0;
+    
+    //死时间修正的计数
+    double N10 = 0;
+    double N20 = 0;
+    double Nco0 = 0;
+    
+    // double deathTime_ratio_total[2] = {0.0, 0.0};
+    // double deathTime_ratio_ave[2] = {0.0, 0.0};
     // int id = 0;
     for(auto coin:coinResult)
     {
@@ -783,15 +792,22 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int sta
         // 手动测量，在改变能窗之前的数据不处理，注意剔除。现在数据没有保存这一段数据
         if(coin.time>start_time && coin.time <= time_end){
             N1 += (coin.CountRate1 - backRatesDet1);
-            N2 += (coin.CountRate2 - backRatesDet2);
-            Nc = Nc + coin.ConCount_single + coin.ConCount_multiple;
-            deathTime_ratio_total[0] += coin.DeathRatio1 * 0.01; //注意将百分比但我转化为小数
-            deathTime_ratio_total[1] += coin.DeathRatio2 * 0.01;
+            N2 += (coin.CountRate2 - backRatesDet1);
+            Nc += (coin.ConCount_single +  coin.ConCount_multiple);
+
+            //偶然符合修正
+            double fraction_up = (coin.ConCount_single +  coin.ConCount_multiple) - 
+                2*timeWidth_tmp*(coin.CountRate1 - backRatesDet1)*(coin.CountRate2 - backRatesDet1);
+            double fraction_down = 1.0 - timeWidth_tmp *(coin.CountRate1  + coin.CountRate2 - 2.0*backRatesDet1);
+            double nco = fraction_up / fraction_down;
+
+            //死时间修正
+            N10 += (coin.CountRate1*1.0 / (1-coin.DeathRatio1*0.01) - backRatesDet1);
+            N20 += (coin.CountRate2*1.0 / (1-coin.DeathRatio2*0.01) - backRatesDet2);
+            Nco0 += nco / (1 - coin.DeathRatio1*0.01) / (1 - coin.DeathRatio2*0.01);
         }
     }
-    
-    deathTime_ratio_ave[0] = deathTime_ratio_total[0] / num;
-    deathTime_ratio_ave[1] = deathTime_ratio_total[1] / num;
+
     
     //f因子。暂且称为积分因子
     //这里不考虑Cu62的衰变分支，也就是测量必须时采用冷却时长远大于Cu62半衰期(9.67min = 580s)的数据。
@@ -804,18 +820,8 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int sta
     double f = ratioCu62/lamda62*(exp(-lamda62*start_time) - exp(-lamda62*time_end)) + \
                 ratioCu64/lamda64*(exp(-lamda64*start_time) - exp(-lamda64*time_end));
 
-    //对符合计数进行真偶符合修正
-    //注意timeWidth_tmp单位为ns，要换为时间s。
-    double measureTime = (time_end - start_time)*1.0;
-    double Nco = (Nc*measureTime - 2*timeWidth_tmp*N1*N2)/(measureTime - timeWidth_tmp*(N1 + N2));
-
-    //死时间修正
-    double N10 = N1 / (1 - deathTime_ratio_ave[0]);
-    double N20 = N2 / (1 - deathTime_ratio_ave[1]);
-    double Nco0 = Nco / (1 - deathTime_ratio_ave[0]) / (1 - deathTime_ratio_ave[1]);
     //计算出活度乘以探测器几何效率的值。本项目中称之为相对活度
     //反推出0时刻的计数。
-
     double A0_omiga = N10 * N20 / Nco0 / f;
 
     return A0_omiga;

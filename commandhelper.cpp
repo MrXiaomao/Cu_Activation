@@ -1716,13 +1716,13 @@ void CommandHelper::netFrameWorkThead()
                         */
 
                         QMutexLocker locker(&mutexFile);
-// #ifdef QT_DEBUG
+
                         if (nullptr != pfSaveNet){
                             pfSaveNet->close();
                             delete pfSaveNet;
                             pfSaveNet = nullptr;
                         }
-// #endif
+
                         if (nullptr != pfSaveVaildData){
                             pfSaveVaildData->close();
                             delete pfSaveVaildData;

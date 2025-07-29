@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-28 15:26:09
+ * @LastEditTime: 2025-07-29 16:52:43
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -22,7 +22,7 @@
 #include <math.h>
 
 #include <iostream>
-// #define IS_VALID_DATA;
+#define IS_VALID_DATA;
 
 OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
     : QWidget(parent)
@@ -214,6 +214,22 @@ bool OfflineDataAnalysisWidget::LoadMeasureParameter(QString filePath)
         return false;
     }
 
+/*
+#ifdef IS_VALID_DATA
+    //创建缓存文件
+    savetoFile = prefix + "_valid_offline.dat";    
+    //有效数据缓存文件。符合模式（也称粒子模式）只存有效数据
+    pfSaveVaildData = new QFile(savetoFile);
+    if (pfSaveVaildData->open(QIODevice::WriteOnly)) {
+        unsigned int FileHead = 0xFFFFFFFF; //文件包头，有效数据的识别码
+        qint64 num = pfSaveVaildData->write((char*)&FileHead, sizeof(FileHead));
+        qInfo().noquote() << tr("创建缓存文件成功，文件名：%1").arg(validDataFileName);
+        if(num == -1){
+            qInfo().noquote() << tr("文件包头0xFFFFFFFF写入失败，文件名：%1").arg(validDataFileName);
+        }
+    }
+#endif
+*/
     QString configFile = prefix + "_配置.txt";
     if (!QFileInfo::exists(configFile)){
         //若文件不存在，则考虑是否为软件旧版本的命名风格
@@ -399,6 +415,14 @@ void OfflineDataAnalysisWidget::slotStart()
                 if (interrupted)
                     emit sigEnd(true);
                 else{
+                    //处理最后剩余的数据包，这部分数据包不满1秒，所以没被处理
+                    if(data1_2.size()>0 || data2_2.size()>0)
+                    {
+// #ifdef IS_VALID_DATA
+//                     saveParticleInfo(data1_2,data2_2);
+// #endif
+                        coincidenceAnalyzer->calculate(data1_2, data2_2, (unsigned short*)EnWindow, timeWidth, delayTime, true, true);
+                    }
                     emit sigEnd(false);
                 }
 
@@ -433,6 +457,9 @@ void OfflineDataAnalysisWidget::slotStart()
                 //每秒钟计算一次
                 int timeGap = static_cast<int>((data1_2.back().time - startFPGATime)/1e9);
                 if(timeGap>1){
+// #ifdef IS_VALID_DATA
+//                     saveParticleInfo(data1_2,data2_2);
+// #endif
                     coincidenceAnalyzer->calculate(data1_2, data2_2, (unsigned short*)EnWindow, timeWidth, delayTime, true, true);
 
                     qDebug().noquote()<<"calculateTime = "<<startTime.msecsTo(QDateTime::currentDateTime())<<"ms, time0 = "
@@ -511,10 +538,6 @@ void OfflineDataAnalysisWidget::updateCoincidenceData(SingleSpectrum r1, vector<
             emit sigNewPlot(r1, rr3);
         }
     } else{
-        // vector<CoincidenceResult> rr3;
-        // for (size_t i=0; i < count; i++){
-        //     rr3.push_back(r3[i]);
-        // }
         emit sigNewPlot(r1, r3);
     }
 }
@@ -586,7 +609,14 @@ void OfflineDataAnalysisWidget::slotEnd(bool interrupted)
         
         //进行FPGA丢包的修正
         coincidenceAnalyzer->doFPGA_lossDATA_correction(lossData);
-        
+/*
+#ifdef IS_VALID_DATA
+        pfSaveVaildData->close();
+        delete pfSaveVaildData;
+#else
+        saveLossData(lossData);
+#endif
+*/
         // 读取活化测量的数据时刻区间[起始时间，结束时间]
         coinResult = coincidenceAnalyzer->GetCoinResult();
         if(coinResult.size()==0){
@@ -1085,5 +1115,80 @@ bool OfflineDataAnalysisWidget::loadConfig()
     } else{
         qCritical().noquote()<<"离线数据分析：未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
         return false;
+    }
+}
+
+/**
+ * @description: 保存符合测量的粒子信息，触发时刻、死时间、能量。
+ * @return {*}
+ */
+void OfflineDataAnalysisWidget::saveParticleInfo(const vector<TimeEnergy>& data1_2, const vector<TimeEnergy>& data2_2)
+{
+    //需要注意的是，对于手动测量和自动测量，计数曲线的时间轴处理有差异。
+    //(1)手动测量
+    //在冷却时间之前，放射源已经冷却了一段时间，这个冷却时间是界面的输入值，
+    //然后用户在测量一定时间之后选取能窗进行高斯拟合，给出计数曲线的能窗，此后开始产生计数曲线。这段时间称为能窗选取时间。
+    //因此用户在计数曲线上看到的起始时间应该是两个轴加起来的总时间。
+    //计数起始时刻 = 冷却时间 + 能窗选取时刻FPGA内部时钟）
+    //(2)自动测量
+    //在硬件触发之后，FPGA开始计数并且采集数据上传，界面在冷却时间之前都不保存这段数据，直接解包之后丢弃。
+    //判断时间在冷却时间之后的数据，则开始保存。
+    //计数起始时刻 = 冷却时间
+    if (pfSaveVaildData != nullptr){
+        //探测器1
+        quint32 size1 = data1_2.size();
+        unsigned char channel = 0;
+        if(size1>0)
+        {
+            pfSaveVaildData->write((char*)&size1, sizeof(quint32));
+            //探测器编号0/1:1字节
+            pfSaveVaildData->write((char*)&channel, sizeof(unsigned char));
+            //数据对:12字节对
+            pfSaveVaildData->write((char*)data1_2.data(), sizeof(TimeEnergy)*size1);
+            pfSaveVaildData->flush();
+        }
+
+        //探测器2
+        quint32 size2 = data2_2.size();
+        channel = 1;
+        if(size2>0)
+        {
+            pfSaveVaildData->write((char*)&size2, sizeof(quint32));
+            //探测器编号0/1:1字节
+            pfSaveVaildData->write((char*)&channel, sizeof(unsigned char));
+            //数据对:12字节对
+            pfSaveVaildData->write((char*)data2_2.data(), sizeof(TimeEnergy)*size2);
+            pfSaveVaildData->flush();
+        }
+    }
+}
+
+//记录FPGA丢包的数据，用以离线分析时的修正,该数据放在有效数据文件末尾
+//保存丢包的信息
+void OfflineDataAnalysisWidget::saveLossData(std::map<unsigned int, unsigned long long> lossData){
+
+    if(!lossData.empty()){
+        QFile file(savetoFile);
+        if (file.open(QIODevice::WriteOnly | QIODevice::Append)) { //二进制写入
+            quint32 mapSize = lossData.size();
+            unsigned char channel = 2;
+            vector<TimeEnergy> data3;
+            for (const auto& pair : lossData) {
+                TimeEnergy timeEn;
+                quint32 time = pair.first;
+                unsigned long long deltaTime = pair.second;
+                //这里将[deltaTime,time]转化为结构体TimeEnergy。读取时按照TimeEnergy来读取
+                timeEn.time = deltaTime;
+                timeEn.dietime = static_cast<unsigned short>(time >> 16); // 取高16位
+                timeEn.energy = static_cast<unsigned short>(time); //取低16位
+                data3.push_back(timeEn);
+            }
+
+            file.write((char*)&mapSize, sizeof(quint32));
+            file.write((char*)&channel, sizeof(unsigned char));
+            file.write((char*)data3.data(), sizeof(TimeEnergy)*mapSize);
+
+            file.close();
+        }
     }
 }

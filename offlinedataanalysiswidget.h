@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:32
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-28 15:18:39
+ * @LastEditTime: 2025-07-29 10:29:01
  * @Description: 请填写简介
  */
 #ifndef OFFLINEDATAANALYSISWIDGET_H
@@ -13,6 +13,7 @@
 #include "coincidenceanalyzer.h"
 #include <QThreadPool>
 #include <QWaitCondition>
+#include <QFile>
 
 namespace Ui {
 class OfflineDataAnalysisWidget;
@@ -57,15 +58,22 @@ public:
      * @return {*}true:文件已经存在
      */
     static bool fileExists(const QString &filePath);
-
+    
     /**
      * @description: 实现智能追加文件后缀的功能：如果文件名没有.txt后缀，则自动追加；如果已有则不追加。
      * @param {QString} &fileName
      * @return {*}
      */
     static QString smartAddTxtExtension(const QString &fileName);
+    
     //读取配置文件
     bool loadConfig();
+
+    //保存粒子信息，用于离线分析中存储解析后的粒子数据对。存为_valid.dat类型。
+    void saveParticleInfo(const vector<TimeEnergy>& data1_2, const vector<TimeEnergy>& data2_2);
+
+    //保存丢包的信息
+    void saveLossData(std::map<unsigned int, unsigned long long> lossData);
 
 signals:
     void sigNewPlot(SingleSpectrum, vector<CoincidenceResult>);
@@ -98,6 +106,9 @@ private:
     QString validDataFileName;
     CoincidenceAnalyzer* coincidenceAnalyzer = nullptr;
     DetectorParameter detParameter;
+
+    QFile *pfSaveVaildData = nullptr;//保存测量的有效数据[时间、死时间、能量] [6字节、2字节、2字节]
+    QString savetoFile; //另存为 有效数据的文件名
 
     quint32 stepT = 1;
     unsigned int startTime_absolute; //记录保存数据的起始时刻(冷却时间+FPGA时钟)。单位s，FPGA内部时钟

@@ -7,6 +7,7 @@
 #include <QFile>
 #include <QDir>
 #include <QMessageBox>
+#include "globalsettings.h"
 
 FPGASetting::FPGASetting(QWidget *parent)
     : QWidget(parent)
@@ -49,11 +50,13 @@ void FPGASetting::on_pushButton_save_clicked()
 bool FPGASetting::save()
 {
     // 保存参数
-    QJsonObject jsonObj;
+    JsonSettings* fpgaSettings = GlobalSettings::instance()->mFpgaSettings;
+    fpgaSettings->prepare();
+    fpgaSettings->beginGroup();
 
     //波形极性
     quint8 v = ui->comboBox->currentIndex();
-    jsonObj["WaveformPolarity"] = v;
+    fpgaSettings->setValue("WaveformPolarity", ui->comboBox->currentIndex());
 
     //探测器增益
     {
@@ -78,71 +81,52 @@ bool FPGASetting::save()
         } else {
             ch1 = 0x04;
         }
-        jsonObj["DetectorGain"] = ch1;
+        fpgaSettings->setValue("DetectorGain", ch1);
     }
 
     //探测器1-2阈值
     {
         quint16 ch1 = (quint16)ui->spinBox->value();
         quint16 ch2 = (quint16)ui->spinBox_2->value();
-        jsonObj["TriggerThold1"] = ch1;
-        jsonObj["TriggerThold2"] = ch2;
+        fpgaSettings->setValue("TriggerThold1", ch1);
+        fpgaSettings->setValue("TriggerThold2", ch1);
     }
 
     //探测器3-4阈值
     {
         quint16 ch3 = 0x00;
         quint16 ch4 = 0x00;
-        jsonObj["TriggerThold3"] = ch3;
-        jsonObj["TriggerThold4"] = ch4;
+        fpgaSettings->setValue("TriggerThold3", ch3);
+        fpgaSettings->setValue("TriggerThold4", ch4);
     }
 
     //死时间
     {
         quint16 deadTime = ui->spinBox_3->value();
-        jsonObj["DeadTime"] = deadTime;
+        fpgaSettings->setValue("DeadTime", deadTime);
     }
 
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(path);
-    QFile file(QApplication::applicationDirPath() + "/config/fpga.json");
-    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QJsonDocument jsonDoc(jsonObj);
-        file.write(jsonDoc.toJson());
-        file.close();
-        return true;
-    }
-    return false;
+    fpgaSettings->endGroup();
+    bool result = fpgaSettings->flush();
+    fpgaSettings->finish();
+    return result;
 }
 
 void FPGASetting::load()
 {
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(path);
-    QFile file(QApplication::applicationDirPath() + "/config/fpga.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
+    JsonSettings* fpgaSettings = GlobalSettings::instance()->mFpgaSettings;
+    if (!fpgaSettings->isOpen())
+        return;
 
-        // 将 JSON 数据解析为 QJsonDocument
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-
-        ui->comboBox->setCurrentIndex(jsonObj["WaveformPolarity"].toInt());
-        ui->comboBox_4->setCurrentIndex(jsonObj["DetectorGain"].toInt()-4);//注意，这里增益当前只保留了04 05 06.故下标从04开始。
-
-        ui->spinBox->setValue(jsonObj["TriggerThold1"].toInt());
-        ui->spinBox_2->setValue(jsonObj["TriggerThold2"].toInt());
-
-        ui->spinBox_3->setValue(jsonObj["DeadTime"].toInt());
-    } else {
-
-    }
+    fpgaSettings->prepare();
+    fpgaSettings->beginGroup();
+    ui->comboBox->setCurrentIndex(fpgaSettings->value("WaveformPolarity").toInt());
+    ui->comboBox_4->setCurrentIndex(fpgaSettings->value("DetectorGain").toInt()-4);//注意，这里增益当前只保留了04 05 06.故下标从04开始。
+    ui->spinBox->setValue(fpgaSettings->value("TriggerThold1").toInt());
+    ui->spinBox_2->setValue(fpgaSettings->value("TriggerThold2").toInt());
+    ui->spinBox_3->setValue(fpgaSettings->value("DeadTime").toInt());
+    fpgaSettings->endGroup();
+    fpgaSettings->finish();
 }
 
 void FPGASetting::on_pushButton_close_clicked()

@@ -8,6 +8,7 @@
 #include <QJsonDocument>
 #include <QMessageBox>
 #include "offlinedataanalysiswidget.h"
+#include "globalsettings.h"
 
 QReadWriteLock* CacheDirConfigWidget::m_sLock = new QReadWriteLock; //为静态变量new出对象
 
@@ -50,51 +51,27 @@ void CacheDirConfigWidget::on_pushButton_cancel_clicked()
 
 void CacheDirConfigWidget::load()
 {
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(path);
-    QFile file(QApplication::applicationDirPath() + "/config/user.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
-
-        // 将 JSON 数据解析为 QJsonDocument
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-
-        if (jsonObj.contains("defaultCache")){
-            QString cacheDir = jsonObj["defaultCache"].toString();
-            //判断路径是否有效，
-            if(OfflineDataAnalysisWidget::isValidFilePath(cacheDir)){
-                ui->lineEdit_path->setText(cacheDir);
-                commandhelper->setDefaultCacheDir(cacheDir);
-                return;
-            }
-        }
-
-        //检测不到缓存路径，或者缓存路径是无效路径，则用默认路径
-        QString exePath = QCoreApplication::applicationDirPath();
-
-        //先确保cache存在
-        QString path = exePath + "/cache";
-        QDir dir(path);
+    JsonSettings* userSettings = GlobalSettings::instance()->mUserSettings;
+    if (userSettings->isOpen()){
+        userSettings->prepare();
+        userSettings->beginGroup();
+        QString defaultCache = QCoreApplication::applicationDirPath() + "/cache";
+        QDir dir(defaultCache);
         if (!dir.exists())
-            dir.mkdir(path);
+            dir.mkdir(defaultCache);
 
-        QString cacheDir = exePath + "/cache";
-        jsonObj["defaultCache"] = cacheDir;
-        ui->lineEdit_path->setText(cacheDir);
-        commandhelper->setDefaultCacheDir(cacheDir);
-        
-        //重新写回文件
-        m_sLock->lockForWrite();
-        file.open(QIODevice::WriteOnly | QIODevice::Text);
-        QJsonDocument jsonDocNew(jsonObj);
-        file.write(jsonDocNew.toJson());
-        file.close();
-        m_sLock->unlock();  //解锁
+        QString cacheDir = userSettings->value("defaultCache", defaultCache).toString();
+        //判断路径是否有效，
+        if(OfflineDataAnalysisWidget::isValidFilePath(cacheDir)){
+            ui->lineEdit_path->setText(cacheDir);
+            commandhelper->setDefaultCacheDir(cacheDir);
+        }
+        else{
+            ui->lineEdit_path->setText(defaultCache);
+            commandhelper->setDefaultCacheDir(defaultCache);
+        }
+        userSettings->endGroup();
+        userSettings->finish();
     }
 }
 
@@ -108,31 +85,13 @@ bool CacheDirConfigWidget::save()
         return false;
     }
 
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(path);
-
-    QFile file(QApplication::applicationDirPath() + "/config/user.json");
-    if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close();
-
-        // 将 JSON 数据解析为 QJsonDocument
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-
-        jsonObj["defaultCache"] = cacheDir;
-
-        //写入锁上锁
-        m_sLock->lockForWrite();
-        file.open(QIODevice::WriteOnly | QIODevice::Text);
-        QJsonDocument jsonDocNew(jsonObj);
-        file.write(jsonDocNew.toJson());
-        file.close();
-        m_sLock->unlock();  //解锁
-
+    JsonSettings* userSettings = GlobalSettings::instance()->mUserSettings;
+    if (userSettings->isOpen()){
+        userSettings->prepare();
+        userSettings->beginGroup();
+        userSettings->setValue("defaultCache", cacheDir);
+        userSettings->endGroup();
+        userSettings->finish();
         commandhelper->setDefaultCacheDir(cacheDir);
         return true;
     } else {

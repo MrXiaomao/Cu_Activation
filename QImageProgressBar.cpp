@@ -59,10 +59,7 @@ void QImageProgressBar::paintEvent(QPaintEvent *paintEvent)
 		//设置画刷
 		painter.setBrush(QBrush(tempPixmap));
 		//设置抗锯齿
-		painter.setRenderHints(QPainter::Antialiasing, true);
-		painter.setRenderHints(QPainter::HighQualityAntialiasing
-			| QPainter::SmoothPixmapTransform
-			| QPainter::Antialiasing);
+        painter.setRenderHints(QPainter::SmoothPixmapTransform | QPainter::Antialiasing);
 		//画背景图
 		painter.fillPath(progressPath, QBrush(tempPixmap));
 	}
@@ -88,10 +85,7 @@ void QImageProgressBar::paintEvent(QPaintEvent *paintEvent)
 		//设置画刷
 		painter.setBrush(QBrush(tempPixmap));
 		//设置抗锯齿
-		painter.setRenderHints(QPainter::Antialiasing, true);
-		painter.setRenderHints(QPainter::HighQualityAntialiasing
-			| QPainter::SmoothPixmapTransform
-			| QPainter::Antialiasing);
+        painter.setRenderHints(QPainter::SmoothPixmapTransform | QPainter::Antialiasing);
 		//画背景图
 		painter.fillPath(progressPath, QBrush(tempPixmap));
 	}

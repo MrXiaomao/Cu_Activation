@@ -487,75 +487,47 @@ bool ControlHelper::get_uint16(int axis_no, const int reg_addr, uint16_t* value)
     return fti_get_uint16(mHandle, mAxiaName[axis_no].toStdString().c_str(), reg_addr, value) == FT_SUCCESS;
 }
 
+#include "globalsettings.h"
 void ControlHelper::load()
 {
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(path);
-    QFile file(QApplication::applicationDirPath() + "/config/ip.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
-
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-        QJsonObject jsonControl;
-
-        if (jsonObj.contains("Control")){
-            jsonControl = jsonObj["Control"].toObject();
-            mIp = jsonControl["ip"].toString();
-            mPort = jsonControl["port"].toInt();
-        }
-    }
+    JsonSettings* ipSettings = GlobalSettings::instance()->mIpSettings;
+    ipSettings->prepare();
+    ipSettings->beginGroup("Control");
+    QString mIp = ipSettings->value("ip", "192.168.10.3").toString();
+    qint32 mPort = ipSettings->value("port", 5000).toInt();
+    ipSettings->endGroup();
+    ipSettings->finish();
 }
 
 QPair<float, float> ControlHelper::gotoAbs(int index, float max_speed)
 {
     float pos1 = 0.0, pos2 = 0.0;
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(path);
-    QFile file(QApplication::applicationDirPath() + "/config/ip.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
 
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
+    JsonSettings* ipSettings = GlobalSettings::instance()->mIpSettings;
+    ipSettings->prepare();
+    ipSettings->beginGroup("Control");
 
-        if (jsonObj.contains("Control")){
-            QJsonObject jsonControl = jsonObj["Control"].toObject();
-            QJsonArray jsonDistances = jsonControl["Distances"].toArray();
-
-            if (jsonControl.contains("Distances")){
-                QJsonObject jsonDistance1 = jsonControl["Distances"].toObject()["01"].toObject();
-                QJsonObject jsonDistance2 = jsonControl["Distances"].toObject()["02"].toObject();
-                {
-                    switch (index){
-                        case 0x00: pos1 = jsonDistance1["smallRange"].toString().toDouble(); break;
-                        case 0x01: pos1 = jsonDistance1["mediumRange"].toString().toDouble(); break;
-                        case 0x02: pos1 = jsonDistance1["largeRange"].toString().toDouble(); break;
-                    }
-
-                    single_moveabs(0x01, pos1 * 1000);
-                }
-
-                {
-                    switch (index){
-                        case 0x00: pos2 = jsonDistance2["smallRange"].toString().toDouble(); break;
-                        case 0x01: pos2 = jsonDistance2["mediumRange"].toString().toDouble(); break;
-                        case 0x02: pos2 = jsonDistance2["largeRange"].toString().toDouble(); break;
-                    }
-
-                    single_moveabs(0x02, pos2 * 1000);
-                }
-            }
+    {
+        switch (index){
+        case 0x00: pos1 = ipSettings->childValue("Distances","01","smallRange").toString().toDouble();break;
+        case 0x01: pos1 = ipSettings->childValue("Distances","01","mediumRange").toString().toDouble();break;
+        case 0x02: pos1 = ipSettings->childValue("Distances","01","largeRange").toString().toDouble();break;
         }
+
+        single_moveabs(0x01, pos1 * 1000);
     }
 
+    {
+        switch (index){
+        case 0x00: pos2 = ipSettings->childValue("Distances","02","smallRange").toString().toDouble();break;
+        case 0x01: pos2 = ipSettings->childValue("Distances","02","mediumRange").toString().toDouble();break;
+        case 0x02: pos2 = ipSettings->childValue("Distances","02","largeRange").toString().toDouble();break;
+        }
+
+        single_moveabs(0x02, pos2 * 1000);
+    }
+
+    ipSettings->endGroup();
+    ipSettings->finish();
     return QPair<float, float>(pos1, pos2);
 }

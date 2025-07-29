@@ -254,45 +254,25 @@ void ControlWidget::on_pushButton_setup_clicked()
     controlHelper->save_params_permanently(mAxis_no);
 }
 
+#include "globalsettings.h"
 void ControlWidget::load()
 {
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(path);
-    QFile file(QApplication::applicationDirPath() + "/config/ip.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
-
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-
-        if (jsonObj.contains("Control")){            
-            QJsonObject jsonControl = jsonObj["Control"].toObject();
-            QJsonArray jsonDistances = jsonControl["Distances"].toArray();
-
-            if (jsonControl.contains("max_speed")){
-                float max_speed = jsonControl["max_speed"].toDouble();
-                ui->doubleSpinBox_speed->setMaximum(max_speed);
-            }
-
-            if (jsonControl.contains("Distances")){
-                QJsonObject jsonDistance1 = jsonControl["Distances"].toObject()["01"].toObject();
-                QJsonObject jsonDistance2 = jsonControl["Distances"].toObject()["02"].toObject();
-                if (mAxis_no == 0x01){
-                    ui->tableWidget_position->item(0, 1)->setText(jsonDistance1["smallRange"].toString());
-                    ui->tableWidget_position->item(1, 1)->setText(jsonDistance1["mediumRange"].toString());
-                    ui->tableWidget_position->item(2, 1)->setText(jsonDistance1["largeRange"].toString());
-                } else {
-                    ui->tableWidget_position->item(0, 1)->setText(jsonDistance2["smallRange"].toString());
-                    ui->tableWidget_position->item(1, 1)->setText(jsonDistance2["mediumRange"].toString());
-                    ui->tableWidget_position->item(2, 1)->setText(jsonDistance2["largeRange"].toString());
-                }
-            }
-        }
+    JsonSettings* ipSettings = GlobalSettings::instance()->mIpSettings;
+    ipSettings->prepare();
+    ipSettings->beginGroup("Control");
+    float max_speed = ipSettings->value("max_speed", 0.5).toDouble();
+    ui->doubleSpinBox_speed->setMaximum(max_speed);
+    if (mAxis_no == 0x01){
+        ui->tableWidget_position->item(0, 1)->setText(ipSettings->childValue("Distances","01","smallRange").toString());
+        ui->tableWidget_position->item(1, 1)->setText(ipSettings->childValue("Distances","01","mediumRange").toString());
+        ui->tableWidget_position->item(2, 1)->setText(ipSettings->childValue("Distances","01","largeRange").toString());
+    } else {
+        ui->tableWidget_position->item(0, 1)->setText(ipSettings->childValue("Distances","02","smallRange").toString());
+        ui->tableWidget_position->item(1, 1)->setText(ipSettings->childValue("Distances","02","mediumRange").toString());
+        ui->tableWidget_position->item(2, 1)->setText(ipSettings->childValue("Distances","02","largeRange").toString());
     }
+    ipSettings->endGroup();
+    ipSettings->finish();
 
     float dValue;
     //设定负限位
@@ -335,53 +315,25 @@ bool ControlWidget::eventFilter(QObject *watched, QEvent *event)
 
 void ControlWidget::save()
 {
-    // 保存参数
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(path);
-    QFile file(QApplication::applicationDirPath() + "/config/ip.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
-
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-
-        QJsonObject jsonControl, jsonDistances, jsonDistance1, jsonDistance2;
-
-        if (jsonObj.contains("Control")){
-            jsonControl = jsonObj["Control"].toObject();
-        }
-        if (jsonControl.contains("Distances")){
-            jsonDistances = jsonControl["Distances"].toObject();
-            jsonDistance1 = jsonDistances["01"].toObject();
-            jsonDistance2 = jsonDistances["02"].toObject();
-        }
-
-        if (mAxis_no == 0x01){
-            jsonDistance1["smallRange"] = ui->tableWidget_position->item(0, 1)->text();
-            jsonDistance1["mediumRange"] = ui->tableWidget_position->item(1, 1)->text();
-            jsonDistance1["largeRange"] = ui->tableWidget_position->item(2, 1)->text();
-            jsonDistance1["1E10-1E13"] = ui->tableWidget_position->item(3, 1)->text();
-        } else {
-            jsonDistance2["smallRange"] = ui->tableWidget_position->item(0, 1)->text();
-            jsonDistance2["mediumRange"] = ui->tableWidget_position->item(1, 1)->text();
-            jsonDistance2["largeRange"] = ui->tableWidget_position->item(2, 1)->text();
-            jsonDistance2["1E10-1E13"] = ui->tableWidget_position->item(3, 1)->text();
-        }
-
-        jsonDistances["01"] = jsonDistance1;
-        jsonDistances["02"] = jsonDistance2;
-        jsonControl["Distances"] = jsonDistances;
-        jsonObj["Control"] = jsonControl;
-
-        file.open(QIODevice::WriteOnly | QIODevice::Text);
-        jsonDoc.setObject(jsonObj);
-        file.write(jsonDoc.toJson());
-        file.close();
+    JsonSettings* ipSettings = GlobalSettings::instance()->mIpSettings;
+    ipSettings->prepare();
+    ipSettings->beginGroup("Control");
+    float max_speed = ipSettings->value("max_speed", 0.5).toDouble();
+    ui->doubleSpinBox_speed->setMaximum(max_speed);
+    if (mAxis_no == 0x01){
+        ipSettings->setChildValue("Distances","01","smallRange", ui->tableWidget_position->item(0, 1)->text());
+        ipSettings->setChildValue("Distances","01","mediumRange", ui->tableWidget_position->item(1, 1)->text());
+        ipSettings->setChildValue("Distances","01","largeRange", ui->tableWidget_position->item(2, 1)->text());
+        ipSettings->setChildValue("Distances","01","1E10-1E13", ui->tableWidget_position->item(3, 1)->text());
+    } else {
+        ipSettings->setChildValue("Distances","02","smallRange", ui->tableWidget_position->item(0, 1)->text());
+        ipSettings->setChildValue("Distances","02","mediumRange", ui->tableWidget_position->item(1, 1)->text());
+        ipSettings->setChildValue("Distances","02","largeRange", ui->tableWidget_position->item(2, 1)->text());
+        ipSettings->setChildValue("Distances","02","1E10-1E13", ui->tableWidget_position->item(3, 1)->text());
     }
+    ipSettings->endGroup();
+    ipSettings->flush();
+    ipSettings->finish();
 }
 
 void ControlWidget::closeEvent(QCloseEvent */*event*/)

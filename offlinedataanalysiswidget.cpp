@@ -2,13 +2,14 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-25 12:50:29
+ * @LastEditTime: 2025-07-28 15:26:09
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
 #include "ui_offlinedataanalysiswidget.h"
 #include "plotwidget.h"
 #include "splashwidget.h"
+#include "globalsettings.h"
 
 #include <QButtonGroup>
 #include <QFileDialog>
@@ -324,7 +325,10 @@ void OfflineDataAnalysisWidget::slotStart()
     detectNum = 0;
     lossData.clear();
     activationResult.clear();
-    loadConfig();
+    if(!loadConfig()) {
+        QMessageBox::information(this, tr("提示"), tr("无法找到刻度系数参数！"));
+        return;
+    }
 
     memset(&totalSingleSpectrum, 0, sizeof(totalSingleSpectrum));
 
@@ -365,15 +369,16 @@ void OfflineDataAnalysisWidget::slotStart()
         QByteArray aDatas = validDataFileName.toLocal8Bit();
         vector<TimeEnergy> data1_2, data2_2;
 
+        //统计下一个计数点
+        bool isfirtTime = true;
+        unsigned long long startFPGATime = 0;
+        QDateTime startTime = QDateTime::currentDateTime();
+
 #ifdef IS_VALID_DATA
         SysUtils::realQuickAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy, \
             unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/, bool eof, bool *interrupted){
 #else
-        QDateTime startTime = QDateTime::currentDateTime();
         coincidenceAnalyzer->setCoolingTime_Auto(0);//网口数据存储的全部测量数据，所以起始时间从0开始。
-        // SysUtils::readNetData(validDataFileName, [&](DetTimeEnergy detTimeEnergy,
-            // unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/, bool eof, bool *interrupted){
-            // coincidenceAnalyzer->setLossMap(SysUtils::lossData); //仅仅处理Net.dat需要用该方法。
         SysUtils::realAnalyzeTimeEnergy((const char*)aDatas.data(), [&](DetTimeEnergy detTimeEnergy,
             unsigned long long progress/*文件进度*/, unsigned long long filesize/*文件大小*/, bool eof, bool *interrupted){
             // coincidenceAnalyzer->setLossMap(SysUtils::lossData); //仅仅处理Net.dat需要用该方法。
@@ -422,19 +427,18 @@ void OfflineDataAnalysisWidget::slotStart()
             }
             
             //记录FPGA内的最大时刻，作为符合测量的时间区间右端点。
-            if (data1_2.size() > 0 || data2_2.size() > 0 ){
+            if (data1_2.size() > 0 && data2_2.size() > 0 ){
+                if(isfirtTime) startFPGATime = data1_2.at(0).time;
 
                 //每秒钟计算一次
-                static int timeNum = 1;
-                if(data1_2.size()>0 && data1_2.back().time / static_cast<quint64>(1e9) == timeNum){
+                int timeGap = static_cast<int>((data1_2.back().time - startFPGATime)/1e9);
+                if(timeGap>1){
                     coincidenceAnalyzer->calculate(data1_2, data2_2, (unsigned short*)EnWindow, timeWidth, delayTime, true, true);
 
                     qDebug().noquote()<<"calculateTime = "<<startTime.msecsTo(QDateTime::currentDateTime())<<"ms, time0 = "
-                        <<data1_2.back().time/1e9<<"s, count1 = "<<data1_2.size()<<", count2 = "<<data2_2.size();
+                                       <<data1_2.back().time/1e9<<"s, count1 = "<<data1_2.size()<<", count2 = "<<data2_2.size();
                     data1_2.clear();
                     data2_2.clear();
-
-                    timeNum++;
                 }
             }
 
@@ -522,33 +526,19 @@ void OfflineDataAnalysisWidget::activeOmigaToYield(double active)
     int measureRange = detParameter.measureRange-1; //这里涉及到界面下拉框从0开始计数，而detParameter中从1开始计数。
     //读取配置文件，给出该量程下的刻度系数
     double cali_factor = 0.0;
-    QFile file(QApplication::applicationDirPath() + "/config/user.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
 
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-        
-        QJsonObject jsonCalibration, jsonYield;
-        if (jsonObj.contains("YieldCalibration")){
-            jsonCalibration = jsonObj["YieldCalibration"].toObject();
-            
-            QString key = QString("Range%1").arg(measureRange);
-            QJsonArray rangeArray;
-            if (jsonCalibration.contains(key)){
-                rangeArray = jsonCalibration[key].toArray();
-                QJsonObject rangeData = rangeArray[0].toObject();
-
-                double yield = rangeData["Yield"].toDouble();
-                double active0 = rangeData["active0"].toDouble();
-                cali_factor = yield / active0;
-            }
-        }
-    }
-    else{
-        qCritical().noquote()<<"未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
+    JsonSettings* userSettings = GlobalSettings::instance()->mUserSettings;
+    if (userSettings->isOpen()){
+        userSettings->prepare();
+        userSettings->beginGroup("YieldCalibration");
+        QString key = QString("Range%1").arg(measureRange);
+        double yield = userSettings->arrayValue(key, 0, "Yield", measureRange==0 ? 10000 : (measureRange==1 ? 10000000 : 100000000000)).toDouble();
+        double active0 = userSettings->arrayValue(key, 0, "active0", measureRange==0 ? 5000 : (measureRange==1 ? 6000 : 3333)).toDouble();
+        cali_factor = yield / active0;
+        userSettings->endGroup();
+        userSettings->finish();
+    } else{
+        qCritical().noquote()<<"离线数据分析：未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算";
     }
 
     double result = active * cali_factor;
@@ -704,39 +694,23 @@ void OfflineDataAnalysisWidget::analyse(DetectorParameter detPara, unsigned int 
     int measureRange = detPara.measureRange - 1;
     double ratioCu62 = 0.0, ratioCu64 = 1.0;
     double backRatesDet1 = 0.0, backRatesDet2 = 0.0;
-    QFile file(QApplication::applicationDirPath() + "/config/user.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
 
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-        
-        QJsonObject jsonCalibration, jsonYield;
-        if (jsonObj.contains("YieldCalibration")){
-            jsonCalibration = jsonObj["YieldCalibration"].toObject();
-            
-            QString key = QString("Range%1").arg(measureRange);
-            QJsonArray rangeArray;
-            if (jsonCalibration.contains(key)){
-                rangeArray = jsonCalibration[key].toArray();
-                QJsonObject rangeData = rangeArray[0].toObject();
-                
-                double ratio1 = rangeData["branchingRatio_Cu62"].toDouble();
-                double ratio2 = rangeData["branchingRatio_Cu64"].toDouble();
-                backRatesDet1 = rangeData["backgroundRatesDet1"].toDouble();
-                backRatesDet2 = rangeData["backgroundRatesDet2"].toDouble();
-                //归一化
-                ratioCu62 = ratio1 / (ratio1 + ratio2);
-                ratioCu64 = ratio2 / (ratio1 + ratio2);
-            }
-            else{
-                qCritical().noquote()<<"离线数据分析：未找到对应量程的拟合参数，请检查仪器是否进行了相应量程刻度,请对仪器刻度后重新计算";
-            }
-        }
-    }
-    else{
+    JsonSettings* userSettings = GlobalSettings::instance()->mUserSettings;
+    if (userSettings->isOpen()){
+        userSettings->prepare();
+        userSettings->beginGroup("YieldCalibration");
+        QString key = QString("Range%1").arg(measureRange);
+        double ratio1 = userSettings->arrayValue(key, 0, "branchingRatio_Cu62", measureRange==0 ? 0.12 : (measureRange==1 ? 0.12 : 0.1)).toDouble();
+        double ratio2 = userSettings->arrayValue(key, 0, "branchingRatio_Cu64", measureRange==0 ? 0.1 : (measureRange==1 ? 0.1 : 0.2)).toDouble();
+        backRatesDet1 = userSettings->arrayValue(key, 0, "backgroundRatesDet1", 0.6).toDouble();
+        backRatesDet2 = userSettings->arrayValue(key, 0, "backgroundRatesDet2", 0.4).toDouble();
+
+        //归一化
+        ratioCu62 = ratio1 / (ratio1 + ratio2);
+        ratioCu64 = ratio2 / (ratio1 + ratio2);
+        userSettings->endGroup();
+        userSettings->finish();
+    } else{
         qCritical().noquote()<<"离线数据分析：未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算";
     }
 
@@ -1083,32 +1057,33 @@ void OfflineDataAnalysisWidget::on_checkBox_gauss_stateChanged(int arg1)
     plotWidget->slotShowGaussInfor(arg1 == Qt::CheckState::Checked);
 }
 
-void OfflineDataAnalysisWidget::loadConfig()
+bool OfflineDataAnalysisWidget::loadConfig()
 {
-    QFile file(QApplication::applicationDirPath() + "/config/user.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
+    JsonSettings* userSettings = GlobalSettings::instance()->mUserSettings;
+    if (userSettings->isOpen()){
+        userSettings->prepare();
 
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-        
-        QJsonObject jsonPublic;
-        if (jsonObj.contains("Public")){
-            jsonPublic = jsonObj["Public"].toObject();
-            if (jsonPublic.contains("deltaTime_updateYield")){
-                deltaTime_updateYield = jsonPublic["deltaTime_updateYield"].toInt();
-            }
-            if (jsonPublic.contains("maxTime_updateYield")){
-                maxTime_updateYield = jsonPublic["maxTime_updateYield"].toInt();
-            }
-            if (jsonPublic.contains("updateYield")){
-                isUpdateYield = jsonPublic["updateYield"].toBool();
-            }
-        }
-    }
-    else{
-        qCritical().noquote()<<"未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
+        //确保刻度系数是存在的，这里直接对量程1进行简单判断即可
+        userSettings->beginGroup("YieldCalibration");
+        QString key = QString("Range%1").arg(0);
+        double ratio1 = userSettings->arrayValue(key, 0, "branchingRatio_Cu62", -1).toDouble();
+        double ratio2 = userSettings->arrayValue(key, 0, "branchingRatio_Cu64", -1).toDouble();
+        userSettings->endGroup();
+        if (ratio1<0 || ratio2<0){
+            userSettings->finish();
+            return false;
+        }        
+
+        //读取中子产额刷新的时间间隔以及最大时间
+        userSettings->beginGroup("Public");
+        deltaTime_updateYield = userSettings->value("deltaTime_updateYield", 30).toInt();
+        maxTime_updateYield = userSettings->value("maxTime_updateYield", 3600).toInt();
+        isUpdateYield = userSettings->value("updateYield", true).toBool();
+        userSettings->endGroup();
+        userSettings->finish();
+        return true;
+    } else{
+        qCritical().noquote()<<"离线数据分析：未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
+        return false;
     }
 }

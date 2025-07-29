@@ -367,7 +367,7 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
                         ptrOffset += 2;
 
                         if(ref == 1) firsttime_temp = t;
-                        if(t>0) lasttime_temp = t; //一直更新最后一个数值，单是要确保t不是空值
+                        if(t>0) lasttime_temp = t; //一直更新最后一个数值，但是要确保t不是空值
 
                         if (t != 0x00 && amplitude != 0x00)
                             temp.push_back(TimeEnergy(t, deathtime, amplitude));
@@ -383,21 +383,21 @@ void SysUtils::realAnalyzeTimeEnergy(const char* filename, std::function<void(De
                             
                             //检测丢包跨度是否刚好跨过某一秒的前后，
                             //经过初步测试，丢包的时候从来没有连续丢失超过1s的数据。
-                            int firstT = static_cast<int>(ceil(firstTime/1e9)); //向上取整
-                            int lastT = static_cast<int>(ceil(lastTime/1e9));
-                            if( firstT - lastT > 0){
-                                long long t1 = 0LL, t2 = 0LL;
-                                t1 = firstTime - lastT*1e9;
-                                t2 = lastT*1e9 - lastTime;
+                            unsigned int leftT = static_cast<unsigned int>(ceil(lastTime*1.0/1e9)); //向上取整
+                            unsigned int rightT = static_cast<unsigned int>(ceil(firstTime*1.0/1e9));
+                            if((rightT - leftT) == 0){
+                                // 记录丢失的数据点个数，考虑到丢包总是发送在大计数率，因此直接认为每次丢一个包损失64个计数。
+                                lossData[leftT] += delataT;
+                            }
+                            else if( rightT  - leftT == 1){
+                                unsigned long long t1 = 0LL, t2 = 0LL;
+                                t1 = static_cast<unsigned long long>(leftT)*1e9 - lastTime;
+                                t2 = firstTime - static_cast<unsigned long long>(leftT)*1e9;
                                 if(t1>0 && t2>0)
                                 {
-                                    lossData[static_cast<unsigned int>(lastT)] += static_cast<unsigned long long>(t1); //注意计时从1开始，因为是向上取整
-                                    lossData[static_cast<unsigned int>(firstT)] += static_cast<unsigned long long>(t2); //注意计时从1开始
+                                    lossData[leftT] += t1; //注意计时从1开始，因为是向上取整
+                                    lossData[rightT] += t2; //注意计时从1开始
                                 }
-                            }
-                            else if((firstT - lastT) == 0){
-                                // 记录丢失的数据点个数，考虑到丢包总是发送在大计数率，因此直接认为每次丢一个包损失64个计数。
-                                lossData[static_cast<unsigned int>(firstT)] += delataT;
                             }
                         }
 
@@ -557,21 +557,23 @@ void SysUtils::readNetData(QString filename, std::function<void(DetTimeEnergy,
 
                     //检测丢包跨度是否刚好跨过某一秒的前后，
                     //经过初步测试，丢包的时候从来没有连续丢失超过1s的数据。
-                    int firstT = static_cast<int>(ceil(firstTime/1e9)); //向上取整
-                    int lastT = static_cast<int>(ceil(lastTime/1e9));
-                    if( firstT - lastT > 0){
-                        long long t1 = 0LL, t2 = 0LL;
-                        t1 = firstTime - lastT*1e9;
-                        t2 = lastT*1e9 - lastTime;
+                    unsigned int leftT = static_cast<unsigned int>(ceil(lastTime*1.0/1e9)); //向上取整
+                    unsigned int rightT = static_cast<unsigned int>(ceil(firstTime*1.0/1e9));
+
+                    //暂时不考虑连续多秒丢包的修正问题
+                    if((rightT - leftT) == 0){
+                        // 记录丢失的数据点个数，考虑到丢包总是发送在大计数率，因此直接认为每次丢一个包损失64个计数。
+                        lossData[leftT] += delataT;
+                    }
+                    else if( rightT - leftT == 1){
+                        unsigned long long t1 = 0LL, t2 = 0LL;
+                        t1 = static_cast<unsigned long long>(leftT)*1e9 - lastTime; //左端丢失的时间，单位ns
+                        t2 = firstTime - static_cast<unsigned long long>(leftT)*1e9; //右端丢失的时间，单位ns
                         if(t1>0 && t2>0)
                         {
-                            lossData[static_cast<unsigned int>(lastT)] += static_cast<unsigned long long>(t1); //注意计时从1开始，因为是向上取整
-                            lossData[static_cast<unsigned int>(firstT)] += static_cast<unsigned long long>(t2); //注意计时从1开始
+                            lossData[leftT] += t1; //注意计时从1开始，因为是向上取整
+                            lossData[rightT] += t2; //注意计时从1开始
                         }
-                    }
-                    else if((firstT - lastT) == 0){
-                        // 记录丢失的数据点个数，考虑到丢包总是发送在大计数率，因此直接认为每次丢一个包损失64个计数。
-                        lossData[static_cast<unsigned int>(firstT)] += delataT;
                     }
                 }
 
@@ -603,6 +605,8 @@ void SysUtils::readNetData(QString filename, std::function<void(DetTimeEnergy,
 
 void SysUtils::realQuickAnalyzeTimeEnergy(const char* filename, std::function<void(DetTimeEnergy, unsigned long long/*文件进度*/, unsigned long long/*文件大小*/, bool, bool*)> callback)
 {
+    lossData.clear();
+
     FILE* input_file = fopen(filename, "rb");
     if (ferror(input_file))
         return ;

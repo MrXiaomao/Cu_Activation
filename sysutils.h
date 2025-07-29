@@ -13,6 +13,7 @@
 #include <functional>// std::function
 
 #include <log4qt/logger.h>
+#include <QDateTime>
 
 // #include "coincidenceanalyzer.h"
 // 前向声明 DetTimeEnergy
@@ -157,7 +158,8 @@ typedef struct tagDetectorParameter{
     uint16_t TrapShape_constTime1;
     //梯形成形时间常数t2 （乘以65536后取整）   默认为t1= 0.9558*65536；t2= 0.9556*65536；
     uint16_t TrapShape_constTime2;
-
+    //打靶时刻
+    QDateTime shotTime;
     int32_t coolingTime;//冷却时长,单位s,需要注意的是，对于自动测量与手动测量，这个冷却时间不一样
                         //手动测量与界面上冷却时间输入按钮不一致，自动测量与界面输入时间一致。
     int32_t delayTime;//两个通道电路的相对延迟时间,单位ns

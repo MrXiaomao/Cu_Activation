@@ -10,6 +10,7 @@
 // #include "linearfit.h"
 #include "gaussFit.h"
 #include "sysutils.h"
+#include "globalsettings.h"
 
 #include <QJsonArray>
 #include <QJsonObject>
@@ -55,7 +56,7 @@ GaussMinGapTime(60)
     EnergyWindow[3] = MULTI_CHANNEL - 1;
 }
 
-void CoincidenceAnalyzer::set_callback(std::function<void(SingleSpectrum, vector<CoincidenceResult>)> func)
+void CoincidenceAnalyzer::set_callback(std::function<void(const SingleSpectrum&, const vector<CoincidenceResult>&)> func)
 {
     m_pfunc = func;
 }
@@ -732,43 +733,26 @@ double CoincidenceAnalyzer::getInintialActive(DetectorParameter detPara, int sta
     int measureRange = detPara.measureRange - 1;
     double ratioCu62 = 0.0, ratioCu64 = 1.0;
     double backRatesDet1 = 0.0, backRatesDet2 = 0.0;
-    QFile file(QApplication::applicationDirPath() + "/config/user.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
 
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-        
-        QJsonObject jsonCalibration, jsonYield;
-        if (jsonObj.contains("YieldCalibration")){
-            jsonCalibration = jsonObj["YieldCalibration"].toObject();
-            
-            QString key = QString("Range%1").arg(measureRange);
-            QJsonArray rangeArray;
-            if (jsonCalibration.contains(key)){
-                rangeArray = jsonCalibration[key].toArray();
-                QJsonObject rangeData = rangeArray[0].toObject();
-                
-                double ratio1 = rangeData["branchingRatio_Cu62"].toDouble();
-                double ratio2 = rangeData["branchingRatio_Cu64"].toDouble();
-                backRatesDet1 = rangeData["backgroundRatesDet1"].toDouble();
-                backRatesDet2 = rangeData["backgroundRatesDet2"].toDouble();
-                //归一化
-                ratioCu62 = ratio1 / (ratio1 + ratio2);
-                ratioCu64 = ratio2 / (ratio1 + ratio2);
-            }
-            else{
-                qCritical().noquote()<<"在线数据分析：未找到对应量程的拟合参数，请检查仪器是否进行了相应量程刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
-            }
-        }
-        else{
-            qCritical().noquote()<<"在线数据分析：未找到对应量程的拟合参数，请检查仪器是否进行了相应量程刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
-        }
-    }
-    else{
-        qCritical().noquote()<<"未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
+    JsonSettings* userSettings = GlobalSettings::instance()->mUserSettings;
+    if (userSettings->isOpen()){
+        userSettings->prepare();
+        userSettings->beginGroup("YieldCalibration");
+
+        QString key = QString("Range%1").arg(measureRange);
+        double ratio1 = userSettings->arrayValue(key, 0, "branchingRatio_Cu62", measureRange==0 ? 0.12 : (measureRange==1 ? 0.12 : 0.1)).toDouble();
+        double ratio2 = userSettings->arrayValue(key, 0, "branchingRatio_Cu64", measureRange==0 ? 0.1 : (measureRange==1 ? 0.1 : 0.2)).toDouble();
+        backRatesDet1 = userSettings->arrayValue(key, 0, "backgroundRatesDet1", 0.6).toDouble();
+        backRatesDet2 = userSettings->arrayValue(key, 0, "backgroundRatesDet2", 0.4).toDouble();
+
+        //归一化
+        ratioCu62 = ratio1 / (ratio1 + ratio2);
+        ratioCu64 = ratio2 / (ratio1 + ratio2);
+
+        userSettings->endGroup();
+        userSettings->finish();
+    } else {
+        qCritical().noquote()<<"在线数据分析：未找到对应量程的拟合参数，请检查仪器是否进行了相应量程刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
     }
 
     // vector<CoincidenceResult> coinResult = GetCoinResult();
@@ -851,7 +835,7 @@ void CoincidenceAnalyzer::doFPGA_lossDATA_correction(std::map<unsigned int, unsi
         double value = pair.second * 1.0 /1e9;  // 获取值
         if(value<1.0) {
             double correctRatio = 1.0 / (1.0 - value); //确保异常情况导致
-            unsigned int pos = absolutetime_seconds - 1 - coinResult[0].time; //注意下标索引的时候减一
+            unsigned int pos = absolutetime_seconds - coinResult[0].time; //注意下标索引的时候减一
             if(pos >0 && pos < coinNum){
                 coinResult[pos].CountRate1 =  static_cast<int>(coinResult[pos].CountRate1 * correctRatio);
                 coinResult[pos].CountRate2 =  static_cast<int>(coinResult[pos].CountRate2 * correctRatio);

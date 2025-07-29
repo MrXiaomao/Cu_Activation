@@ -29,6 +29,7 @@ SOURCES += \
     energycalibrationform.cpp \
     equipmentmanagementform.cpp \
     gaussFit.cpp \
+    globalsettings.cpp \
     linearfit.cpp \
     offlinedataanalysiswidget.cpp \
     plotwidget.cpp \
@@ -58,6 +59,7 @@ HEADERS += \
     energycalibrationform.h \
     equipmentmanagementform.h \
     gaussFit.h \
+    globalsettings.h \
     linearfit.h \
     offlinedataanalysiswidget.h \
     pch.h \

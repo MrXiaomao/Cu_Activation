@@ -52,12 +52,12 @@
         <file>resource/circle-green.png</file>
         <file>resource/circle-red.png</file>
         <file>resource/warn.png</file>
-        <file>resource/刻度尺.png</file>
         <file>resource/ProgressBar.png</file>
         <file>resource/ProgressSlider.png</file>
         <file>resource/expand-width-fill.png</file>
         <file>resource/move.png</file>
         <file>resource/tip.png</file>
         <file>resource/resrore.png</file>
+        <file>resource/ruler.png</file>
     </qresource>
 </RCC>

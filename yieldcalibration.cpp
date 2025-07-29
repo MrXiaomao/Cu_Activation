@@ -138,80 +138,46 @@ void YieldCalibration::on_pushButton_cancel_clicked()
 }
 
 #include <QThread>
+#include "globalsettings.h"
 void YieldCalibration::load()
 {
     // 加载参数
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(path);
-    for (int i=0; i<10; ++i){//循环多次，因为文件可能被占用
-        QFile file(QApplication::applicationDirPath() + "/config/user.json");
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            // 读取文件内容
-            QByteArray jsonData = file.readAll();
-            file.close(); //释放资源
+    JsonSettings* userSettings = GlobalSettings::instance()->mUserSettings;
+    if (userSettings->isOpen()){
+        userSettings->prepare();
+        userSettings->beginGroup("YieldCalibration");
+        for(int i=0; i<3; i++)
+        {
+            QString key = QString("Range%1").arg(i);
 
-            QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-            QJsonObject jsonObj = jsonDoc.object();
+            double yield = userSettings->arrayValue(key, 0, "Yield", i==0 ? 10000 : (i==1 ? 10000000 : 100000000000)).toDouble();
+            double active0 = userSettings->arrayValue(key, 0, "active0", i==0 ? 5000 : (i==1 ? 6000 : 3333)).toDouble();
+            double ratioCu62 = userSettings->arrayValue(key, 0, "branchingRatio_Cu62", i==0 ? 0.12 : (i==1 ? 0.12 : 0.1)).toDouble();
+            double ratioCu64 = userSettings->arrayValue(key, 0, "branchingRatio_Cu64", i==0 ? 0.1 : (i==1 ? 0.1 : 0.2)).toDouble();
+            double backRatesDet1 = userSettings->arrayValue(key, 0, "backgroundRatesDet1", 0.6).toDouble();
+            double backRatesDet2 = userSettings->arrayValue(key, 0, "backgroundRatesDet2", 0.4).toDouble();
 
-            QJsonObject jsonCalibration, jsonYield;
-            if (jsonObj.contains("YieldCalibration")){
-                jsonCalibration = jsonObj["YieldCalibration"].toObject();
-                for(int i=0; i<3; i++)
-                {
-                    QString key = QString("Range%1").arg(i);
-                    QJsonArray  rangeArray;
-                    if (jsonCalibration.contains(key)){
-                        rangeArray = jsonCalibration[key].toArray();
-                        QJsonObject rangeData = rangeArray[0].toObject();
-
-                        double yield = rangeData["Yield"].toDouble();
-                        double active0 = rangeData["active0"].toDouble();
-                        double ratioCu62 = rangeData["branchingRatio_Cu62"].toDouble();
-                        double ratioCu64 = rangeData["branchingRatio_Cu64"].toDouble();
-                        double backRatesDet1 = rangeData["backgroundRatesDet1"].toDouble();
-                        double backRatesDet2 = rangeData["backgroundRatesDet2"].toDouble();
-
-                        calibrationData[i][0] = yield;
-                        calibrationData[i][1] = active0;
-                        calibrationData[i][2] = ratioCu62;
-                        calibrationData[i][3] = ratioCu64;
-                        calibrationData[i][4] = backRatesDet1;
-                        calibrationData[i][5] = backRatesDet2;
-                    }
-                }
-            }
-
-            break;
+            calibrationData[i][0] = yield;
+            calibrationData[i][1] = active0;
+            calibrationData[i][2] = ratioCu62;
+            calibrationData[i][3] = ratioCu64;
+            calibrationData[i][4] = backRatesDet1;
+            calibrationData[i][5] = backRatesDet2;
         }
-
-        QThread::msleep(10);
+        userSettings->endGroup();
+        userSettings->finish();
     }
 }
 
 bool YieldCalibration::save()
 {
     // 保存参数
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(path);
-
-    QFile file(QApplication::applicationDirPath() + "/config/user.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
-
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-
-        QJsonObject jsonRange;
+    JsonSettings* userSettings = GlobalSettings::instance()->mUserSettings;
+    if (userSettings->isOpen()){
+        userSettings->prepare();
+        userSettings->beginGroup("YieldCalibration");
         for(int i=0; i<3; i++)
         {
-            QJsonArray items;
-            QJsonObject item;
             QString key = QString("Range%1").arg(i);
 
             bool ok;
@@ -220,7 +186,7 @@ bool YieldCalibration::save()
                 QMessageBox::information(nullptr, tr("提示"), QString("保存失败：存在非法输入！请检查后保存。行：%1,列:%2").arg(i+1).arg(1));
                 return false;
             }
-            
+
             double active = ui->tableWidget_calibration->item(i, 1)->text().toDouble(&ok);
             if(!ok) {
                 QMessageBox::information(nullptr, tr("提示"), QString("保存失败：存在非法输入！请检查后保存。行：%1,列:%2").arg(i+1).arg(2));
@@ -251,12 +217,12 @@ bool YieldCalibration::save()
                 return false;
             }
 
-            item["Yield"] = yield;
-            item["active0"] = active;
-            item["branchingRatio_Cu62"] = ratioCu62;
-            item["branchingRatio_Cu64"] = ratioCu64;
-            item["backgroundRatesDet1"] = backRatesDet1;
-            item["backgroundRatesDet2"] = backRatesDet2;
+            userSettings->setArrayValue(key, 0, "Yield", yield);
+            userSettings->setArrayValue(key, 0, "active0", active);
+            userSettings->setArrayValue(key, 0, "branchingRatio_Cu62", ratioCu62);
+            userSettings->setArrayValue(key, 0, "branchingRatio_Cu64", ratioCu64);
+            userSettings->setArrayValue(key, 0, "backgroundRatesDet1", backRatesDet1);
+            userSettings->setArrayValue(key, 0, "backgroundRatesDet2", backRatesDet2);
 
             // 同步成员变量的数值，方便下次检查table是否变化
             calibrationData[i][0] = yield;
@@ -265,46 +231,19 @@ bool YieldCalibration::save()
             calibrationData[i][3] = ratioCu64;
             calibrationData[i][4] = backRatesDet1;
             calibrationData[i][5] = backRatesDet2;
-            
-            items.append(item);
-            jsonRange[key] = items;
         }
-        jsonObj["YieldCalibration"] = jsonRange;
 
-        file.open(QIODevice::WriteOnly | QIODevice::Text);
-        jsonDoc.setObject(jsonObj);
-        file.write(jsonDoc.toJson());
-        file.close();
-    }
-    else
-    {
-        QJsonObject jsonObj;
-        QJsonObject jsonRange;
-        for(int i=0; i<3; i++)
-        {
-            QJsonArray items;
-            QJsonObject item;
-            QString key = QString("Range%1").arg(i);
-            item["Yield"] = calibrationData[i][0];
-            item["active0"] = calibrationData[i][1];
-            item["branchingRatio_Cu62"] = calibrationData[i][2];
-            item["branchingRatio_Cu64"] = calibrationData[i][3];
-            item["backgroundRatesDet1"] = calibrationData[i][4];
-            item["backgroundRatesDet2"] = calibrationData[i][5];
-
-            items.append(item);
-            jsonRange[key] = items;
+        userSettings->endGroup();
+        bool result = userSettings->flush();
+        userSettings->finish();
+        if (result){
+            QMessageBox::information(nullptr, tr("提示"), tr("产额标定数据保存成功！"));
+            return true;
         }
-        jsonObj["YieldCalibration"] = jsonRange;
-
-        file.open(QIODevice::WriteOnly | QIODevice::Text);
-        QJsonDocument jsonDoc;
-        jsonDoc.setObject(jsonObj);
-        file.write(jsonDoc.toJson());
-        file.close();
     }
-    QMessageBox::information(nullptr, tr("提示"), tr("产额标定数据保存成功！"));
-    return true;
+
+    QMessageBox::information(nullptr, tr("提示"), tr("产额标定数据保存失败！"));
+    return false;
 }
 
 #include <QCloseEvent>

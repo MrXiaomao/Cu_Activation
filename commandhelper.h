@@ -162,6 +162,9 @@ signals:
      */    
     void sigUpdateAutoEnWidth(std::vector<unsigned short>, qint8 mmodel);
 
+    //测量计时开始
+    void sigMeasureTimerStart(qint8 mmode, qint8 tmode, QDateTime);
+
 public:
     //手动测量中，确认能窗后，开始存储有效数据文件。
     bool startSaveValidData = false;
@@ -193,13 +196,15 @@ private:
 
     void saveParticleInfo(const vector<TimeEnergy>& data1_2, const vector<TimeEnergy>& data2_2);
 
-    void updateCoincidenceData(SingleSpectrum r1, vector<CoincidenceResult> r3);
+    void updateCoincidenceData(const SingleSpectrum &r1, const vector<CoincidenceResult>& r3);
     
     // 将相对活度转化为中子产额
     void activeOmigaToYield(double active);
  
-    static void analyzerRealCalback(SingleSpectrum r1, vector<CoincidenceResult> r3, void *callbackUser);
+    static void analyzerRealCalback(const SingleSpectrum &r1, const vector<CoincidenceResult> &r3, void *callbackUser);
     
+    void saveConfigParamter();
+
 public slots:
     void openRelay(bool first = false);
     void closeRelay();

@@ -12,6 +12,7 @@
 #include <QToolButton>
 #include <QFileDialog>
 #include <QElapsedTimer>
+#include "globalsettings.h"
 
 SpectrumModel::SpectrumModel(QWidget *parent)
     : QWidget(parent)
@@ -88,41 +89,39 @@ SpectrumModel::~SpectrumModel()
 
 void SpectrumModel::load()
 {
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(path);
-    QFile file(QApplication::applicationDirPath() + "/config/Spectrum.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
+    JsonSettings* spectrumSettings = GlobalSettings::instance()->mSpectrumSettings;
+    if (!spectrumSettings->isOpen())
+        return;
 
-        // 将 JSON 数据解析为 QJsonDocument
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
+    spectrumSettings->prepare();
+    spectrumSettings->beginGroup();
+    ui->comboBox->setCurrentIndex(spectrumSettings->value("WaveformPolarity").toInt());
+    ui->comboBox_4->setCurrentIndex(spectrumSettings->value("DetectorGain").toInt());
 
-        ui->comboBox->setCurrentIndex(jsonObj["WaveformPolarity"].toInt());
-        ui->comboBox_4->setCurrentIndex(jsonObj["DetectorGain"].toInt());
+    ui->spinBox->setValue(spectrumSettings->value("TriggerThold1").toInt());
+    ui->spinBox_2->setValue(spectrumSettings->value("TriggerThold2").toInt());
 
-        ui->spinBox->setValue(jsonObj["TriggerThold1"].toInt());
-        ui->spinBox_2->setValue(jsonObj["TriggerThold2"].toInt());
+    ui->spinBox_4->setValue(spectrumSettings->value("RefreshTimeLength").toInt());
 
-        ui->spinBox_4->setValue(jsonObj["RefreshTimeLength"].toInt());
-
-        ui->lineEdit_path->setText(jsonObj["Path"].toString());
-        ui->lineEdit_filename->setText(jsonObj["FileName"].toString());
-    }
+    ui->lineEdit_path->setText(spectrumSettings->value("Path").toString());
+    ui->lineEdit_filename->setText(spectrumSettings->value("FileName").toString());
+    spectrumSettings->endGroup();
+    spectrumSettings->finish();
 }
 
 bool SpectrumModel::save()
 {
+    JsonSettings* spectrumSettings = GlobalSettings::instance()->mSpectrumSettings;
+    if (!spectrumSettings->isOpen())
+        return false;
+
     // 保存参数
-    QJsonObject jsonObj;
+    spectrumSettings->prepare();
+    spectrumSettings->beginGroup();
 
     //波形极性
     quint8 v = ui->comboBox->currentIndex();
-    jsonObj["WaveformPolarity"] = v;
+    spectrumSettings->setValue("WaveformPolarity", v);
 
     //探测器增益
     {
@@ -147,62 +146,51 @@ bool SpectrumModel::save()
         } else {
             ch1 = 0x04;
         }
-        jsonObj["DetectorGain"] = ch1;
+        spectrumSettings->setValue("DetectorGain", ch1);
     }
 
     //探测器1-2阈值
     {
         quint16 ch1 = (quint16)ui->spinBox->value();
         quint16 ch2 = (quint16)ui->spinBox_2->value();
-        jsonObj["TriggerThold1"] = ch1;
-        jsonObj["TriggerThold2"] = ch2;
+        spectrumSettings->setValue("TriggerThold1", ch1);
+        spectrumSettings->setValue("TriggerThold2", ch2);
     }
 
     //探测器3-4阈值
     {
         quint16 ch3 = 0x00;
         quint16 ch4 = 0x00;
-        jsonObj["TriggerThold3"] = ch3;
-        jsonObj["TriggerThold4"] = ch4;
+        spectrumSettings->setValue("TriggerThold3", ch3);
+        spectrumSettings->setValue("TriggerThold4", ch4);
     }
 
     //死时间
     {
         quint16 deadTime = ui->spinBox_3->value();
-        jsonObj["DeadTime"] = deadTime;
+        spectrumSettings->setValue("DeadTime", deadTime);
     }
 
     //能谱刷新时间
     {
         quint16 refreshTimeLength = ui->spinBox_4->value();
-        jsonObj["RefreshTimeLength"] = refreshTimeLength;
+        spectrumSettings->setValue("RefreshTimeLength", refreshTimeLength);
     }
 
     //路径
     {
-        jsonObj["Path"] = ui->lineEdit_path->text();
+        spectrumSettings->setValue("Path", ui->lineEdit_path->text());
     }
 
     //文件名
     {
-        jsonObj["FileName"] = ui->lineEdit_filename->text();
+        spectrumSettings->setValue("FileName", ui->lineEdit_filename->text());
     }
 
-
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(path);
-    QFile file(QApplication::applicationDirPath() + "/config/spectrum.json");
-    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QJsonDocument jsonDoc(jsonObj);
-        file.write(jsonDoc.toJson());
-        file.close();
-    } else {
-        return false;
-    }
-
-    return true;
+    spectrumSettings->endGroup();
+    bool result = spectrumSettings->flush();
+    spectrumSettings->finish();
+    return result;
 }
 
 void SpectrumModel::on_pushButton_start_clicked()
@@ -233,21 +221,17 @@ void SpectrumModel::on_pushButton_start_clicked()
         detectorParameter.TrapShape_constTime2 = (int16_t)0.9556*65536;
         detectorParameter.Threshold_baseLine = 20;
 
-        // 打开 JSON 文件
-        QFile file(QApplication::applicationDirPath() + "/config/spectrum.json");
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            // 读取文件内容
-            QByteArray jsonData = file.readAll();
-            file.close(); //释放资源
-
-            // 将 JSON 数据解析为 QJsonDocument
-            QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-            QJsonObject jsonObj = jsonDoc.object();
-            detectorParameter.triggerThold1 = jsonObj["TriggerThold1"].toInt();
-            detectorParameter.triggerThold2 = jsonObj["TriggerThold2"].toInt();
-            detectorParameter.waveformPolarity = jsonObj["WaveformPolarity"].toInt();
-            detectorParameter.refreshTimeLength = jsonObj["RefreshTimeLength"].toInt();
-            detectorParameter.gain = jsonObj["DetectorGain"].toInt();
+        JsonSettings* spectrumSettings = GlobalSettings::instance()->mSpectrumSettings;
+        if (spectrumSettings->isOpen()){
+            spectrumSettings->prepare();
+            spectrumSettings->beginGroup();
+            detectorParameter.triggerThold1 = spectrumSettings->value("TriggerThold1").toInt();
+            detectorParameter.triggerThold2 = spectrumSettings->value("TriggerThold2").toInt();
+            detectorParameter.waveformPolarity = spectrumSettings->value("WaveformPolarity").toInt();
+            detectorParameter.refreshTimeLength = spectrumSettings->value("RefreshTimeLength").toInt();
+            detectorParameter.gain = spectrumSettings->value("DetectorGain").toInt();
+            spectrumSettings->endGroup();
+            spectrumSettings->finish();
         }
 
         commandhelper->slotStartManualMeasure(detectorParameter);
@@ -270,33 +254,29 @@ void SpectrumModel::on_pushButton_save_clicked()
     //存储路径
     //存储文件名
     QString filename = ui->lineEdit_path->text() + "/" + ui->lineEdit_filename->text();
+    if (!filename.endsWith(".dat"))
+        filename += ".dat";
     QFileInfo fInfo(filename);
-    if (fInfo.exists()){
+    if (QFileInfo::exists(filename)){
         if (QMessageBox::question(this, tr("提示"), tr("保存文件名已经存在，是否覆盖重写？"), QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) != QMessageBox::Yes)
             return ;
     }
 
     // 保存参数
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(dir.absolutePath());
-    QFile file(QApplication::applicationDirPath() + "/config/wave.json");
-    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QString path, filename;
-        path = ui->lineEdit_path->text();
-        filename = ui->lineEdit_filename->text();
-        if (!filename.endsWith(".dat"))
-            filename += ".dat";
-
+    JsonSettings* waveSettings = GlobalSettings::instance()->mUserSettings;
+    if (waveSettings->isOpen()){
+        waveSettings->prepare();
+        waveSettings->beginGroup();
         QJsonObject jsonObj;
-        jsonObj["Path"] = path;
-        jsonObj["FileName"] = filename;
-        QJsonDocument jsonDoc(jsonObj);
-        file.write(jsonDoc.toJson());
-        file.close();
+        waveSettings->setValue("Path", ui->lineEdit_path->text());
+        waveSettings->setValue("FileName", filename);
+        waveSettings->endGroup();
+        waveSettings->flush();
+        waveSettings->finish();
 
-        commandhelper->exportFile(path + "/" + filename);
+        commandhelper->exportFile(filename);
+    } else {
+        QMessageBox::warning(this, tr("提示"), tr("数据保存失败！"), QMessageBox::Ok, QMessageBox::Ok);
     }
 }
 

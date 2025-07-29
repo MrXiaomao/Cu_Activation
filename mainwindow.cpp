@@ -8,6 +8,7 @@
 #include "yieldcalibration.h"
 #include "FPGASetting.h"
 #include "splashwidget.h"
+#include "globalsettings.h"
 
 #include <QFileDialog>
 #include <QToolButton>
@@ -54,6 +55,7 @@ MainWindow::MainWindow(QWidget *parent)
     //线性模型
     this->setProperty("ScaleLogarithmicType", false);
 
+    ui->dateTimeEdit_shotTime->setDateTime(QDateTime::currentDateTime());
     ui->spinBox_timeWidth->setToolTip("请输入10的倍数（如10, 20, 30）");
     ui->spinBox_timeWidth->setSingleStep(10);
     connect(ui->spinBox_timeWidth, QOverload<int>::of(&QSpinBox::valueChanged), [=](int value) {
@@ -257,7 +259,7 @@ MainWindow::MainWindow(QWidget *parent)
             // qInfo().noquote()<<"接收到触发信号，仪器内部时钟开始计时";//注意，在sigMeasureStart信号之前已经打印了qInfo().noquote()日志
 
         //开启测量时钟
-        if (mmode == mmManual || mmode == mmAuto){//手动/自动测量
+        if (/*mmode == mmManual || */mmode == mmAuto){//手动/自动测量
             //测量倒计时时钟
 
             //能谱测量不需要开启倒计时
@@ -276,6 +278,22 @@ MainWindow::MainWindow(QWidget *parent)
         // emit sigAppengMsg(msg, QtInfoMsg);
         qInfo().noquote()<<msg;
         emit sigRefreshUi();
+    });
+
+    //测量计时开始
+    connect(commandHelper, &CommandHelper::sigMeasureTimerStart, this, [=](qint8 mmode, qint8 tmode, QDateTime timeStart){
+        if (tmode != 0x00){
+            //测量时长定时器
+            QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
+            measureTimer->start();
+
+            //已测量时长时钟
+            this->measureStartTime = timeStart;//this->lastRecvDataTime;
+            QTimer* measureRefTimer = this->findChild<QTimer*>("measureRefTimer");
+            measureRefTimer->start(500);
+
+            ui->lineEdit_startTime->setText(timeStart.toString("yyyy/MM/dd HH:mm:ss"));
+        }
     });
 
     connect(commandHelper, &CommandHelper::sigMeasureWait, this, [=](){
@@ -343,10 +361,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(commandHelper, &CommandHelper::sigPlot, this, [=](SingleSpectrum r1, CoincidenceResult r3){
         this->lastRecvDataTime = QDateTime::currentDateTime();
         bool pause_plot = this->property("pause_plot").toBool();
-        if (!pause_plot){
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");  
-            plotWidget->slotAddPlotDatas(r1, r3);
- 
+        if (1/*!pause_plot*/){
             // if(r3.size()==0) return;
             ui->lcdNumber_CountRate1->display(r3.CountRate1);
             ui->lcdNumber_CountRate2->display(r3.CountRate2);
@@ -360,16 +375,20 @@ MainWindow::MainWindow(QWidget *parent)
             // ui->lcdNumber_DeathRatio1->repaint();
             // ui->lcdNumber_DeathRatio2->repaint();
         }
-    }, Qt::QueuedConnection/*防止堵塞*/);
-    
+    }, Qt::QueuedConnection/*主线程处理界面信息*/);
+    connect(commandHelper, &CommandHelper::sigPlot, this, [=](SingleSpectrum r1, CoincidenceResult r3){
+        //this->lastRecvDataTime = QDateTime::currentDateTime();
+        //bool pause_plot = this->property("pause_plot").toBool();
+        if (1/*!pause_plot*/){
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
+            plotWidget->slotAddPlotDatas(r1, r3);
+        }
+    }, Qt::DirectConnection/*子线程处理数据*/);
     qRegisterMetaType<vector<CoincidenceResult>>("vector<CoincidenceResult>");
-    connect(commandHelper, &CommandHelper::sigNewPlot, this, [=](SingleSpectrum r1, vector<CoincidenceResult> r3){
+    connect(commandHelper, &CommandHelper::sigNewPlot, this, [=](const SingleSpectrum &r1, const vector<CoincidenceResult> &r3){
         this->lastRecvDataTime = QDateTime::currentDateTime();
         bool pause_plot = this->property("pause_plot").toBool();
-        if (!pause_plot){
-            PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");  
-            plotWidget->slotUpdatePlotDatas(r1, r3);
- 
+        if (1/*!pause_plot*/){
             if(r3.size()==0) return;
             ui->lcdNumber_CountRate1->display(r3.back().CountRate1);
             ui->lcdNumber_CountRate2->display(r3.back().CountRate2);
@@ -378,6 +397,14 @@ MainWindow::MainWindow(QWidget *parent)
             ui->lcdNumber_DeathRatio2->display(r3.back().DeathRatio2);
         }
     }, Qt::QueuedConnection/*防止堵塞*/);
+    connect(commandHelper, &CommandHelper::sigNewPlot, this, [=](const SingleSpectrum &r1, const vector<CoincidenceResult>& r3){
+        //this->lastRecvDataTime = QDateTime::currentDateTime();
+        //bool pause_plot = this->property("pause_plot").toBool();
+        if (1/*!pause_plot*/){
+            PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
+            plotWidget->slotUpdatePlotDatas(r1, r3);
+        }
+    }, Qt::DirectConnection/*防止堵塞*/);
     //DirectConnection replot 子线程操作，不会堵塞，但是会崩溃
     //QueuedConnection replot 主线程操作，刷新慢
 
@@ -521,6 +548,10 @@ void MainWindow::InitMainWindowUi()
     actGroup->addAction(ui->action_drag);
     actGroup->addAction(ui->action_tip);
 
+    //设置拉伸比例
+    ui->splitter->setStretchFactor(0, 5);
+    ui->splitter->setStretchFactor(1, 1);
+
     ui->toolBar_offline->hide();
 
     // 获取当前时间
@@ -536,47 +567,29 @@ void MainWindow::InitMainWindowUi()
     ui->spinBox_2_leftE_2->setMaximum(MULTI_CHANNEL);
     ui->spinBox_2_rightE_2->setMaximum(MULTI_CHANNEL);
 
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(path);
-    QFile file(QApplication::applicationDirPath() + "/config/user.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    JsonSettings* userSettings = GlobalSettings::instance()->mUserSettings;
+    if (userSettings->isOpen()){
+        userSettings->prepare();
+        userSettings->beginGroup();
+        QString tempDir = userSettings->value("defaultCache").toString();
+        QDir dir(tempDir);
+        if (tempDir.isEmpty() || !dir.exists()){
+            QString cacheDir = QCoreApplication::applicationDirPath() + "/cache";
+            dir.setPath(cacheDir);
+            if (!dir.exists())
+                dir.mkdir(cacheDir);
 
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
-
-        // 将 JSON 数据解析为 QJsonDocument
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-
-        QString cachePath = QApplication::applicationDirPath() + "/cache";
-        QDir dir(cachePath);
-        if (!dir.exists())
-            dir.mkdir(cachePath);
-        QString cacheDir = QCoreApplication::applicationDirPath() + "/cache";
-        if(jsonObj.contains("defaultCache")) {
-            QString tempDir = jsonObj["defaultCache"].toString();
-            QDir dir(tempDir);
-            if(dir.exists()) {
-                cacheDir = tempDir;
-                qInfo()<<QString("存储缓存路径:%1").arg(cacheDir);
-            }
-            else{
-                jsonObj["defaultCache"] = cacheDir;
-                qInfo()<<QString("存储缓存路径:%1不存在，已更改为默认缓存路径：%2").arg(tempDir).arg(cacheDir);
-
-                //重新写回文件
-                file.open(QIODevice::WriteOnly | QIODevice::Text);
-                QJsonDocument jsonDocNew(jsonObj);
-                file.write(jsonDocNew.toJson());
-                file.close();
-            }
+            userSettings->setValue("defaultCache", cacheDir);
+            userSettings->endGroup();
+            userSettings->flush();
+            userSettings->finish();
+            commandHelper->setDefaultCacheDir(cacheDir);
+            qInfo()<<QString("存储缓存路径:%1不存在，已更改为默认缓存路径：%2").arg(tempDir).arg(cacheDir);
+        } else {
+            userSettings->endGroup();
+            userSettings->finish();
+            commandHelper->setDefaultCacheDir(tempDir);
         }
-        commandHelper->setDefaultCacheDir(cacheDir);
-        // ui->lineEdit_path->setText(jsonObj["path"].toString());
-        // ui->lineEdit_filename->setText(jsonObj["filename"].toString());
     } else {
         // ui->lineEdit_path->setText("./");
         // ui->lineEdit_filename->setText("test.dat");
@@ -796,10 +809,6 @@ void MainWindow::InitMainWindowUi()
         }
     });
     // exceptionCheckTimer->stop();
-
-    QTimer::singleShot(500, this, [=](){
-       this->showMaximized();
-    });
 
     //每次启动，先默认上次软件是正常退出
     this->setProperty("last_safe_exit", true);
@@ -1039,8 +1048,7 @@ void MainWindow::on_action_displacement_triggered()
         return;
     }
 
-    QFile file(QApplication::applicationDirPath() + "/config/ip.json");
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    if (!QFileInfo::exists("./config/ip.json")) {
         QMessageBox::information(this, tr("提示"), tr("请先配置远程设备信息！"));
         return;
     }
@@ -1079,8 +1087,7 @@ void MainWindow::on_action_power_triggered()
         return;
     }
 
-    QFile file(QApplication::applicationDirPath() + "/config/ip.json");
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    if (!QFileInfo::exists("./config/ip.json")) {
         QMessageBox::information(this, tr("提示"), tr("请先配置远程设备信息！"));
         return;
     }
@@ -1127,6 +1134,11 @@ void MainWindow::on_pushButton_measure_clicked()
 {
     if (this->property("measure-status").toUInt() == msNone
             || this->property("measure-status").toUInt() == msEnd){
+        /*if (ui->dateTimeEdit_shotTime->dateTime() < QDateTime::currentDateTime()){
+            QMessageBox::information(this, tr("提示"), tr("打靶时刻不能早于系统当前时刻，请重设！"));
+            ui->dateTimeEdit_shotTime->setFocus();
+            return;
+        }*/
         this->saveConfigJson();
 
         /*CoolingTimeWidget *w = new CoolingTimeWidget(this);
@@ -1148,7 +1160,8 @@ void MainWindow::on_pushButton_measure_clicked()
             DetectorParameter detectorParameter;
             // 测量界面参数
             detectorParameter.measureRange = ui->comboBox_range->currentIndex()+1; //注意：从1开始计数
-            detectorParameter.coolingTime = ui->spinBox_coolingTime->value();
+            detectorParameter.shotTime = ui->dateTimeEdit_shotTime->dateTime();
+            detectorParameter.coolingTime = -1;//ui->spinBox_coolingTime->value();
             detectorParameter.delayTime = ui->spinBox_delayTime->value();
             detectorParameter.timeWidth = ui->spinBox_timeWidth->value();
             detectorParameter.measureModel = mmManual;
@@ -1163,47 +1176,33 @@ void MainWindow::on_pushButton_measure_clicked()
             detectorParameter.transferModel = 0x05;// 0x00-能谱 0x03-波形 0x05-符合模式
 
             // 打开 JSON 文件，更新硬件参数
-            QFile file(QApplication::applicationDirPath() + "/config/fpga.json");
-            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-                // 读取文件内容
-                QByteArray jsonData = file.readAll();
-                file.close(); //释放资源
-
-                // 将 JSON 数据解析为 QJsonDocument
-                QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-                QJsonObject jsonObj = jsonDoc.object();
-                detectorParameter.triggerThold1 = jsonObj["TriggerThold1"].toInt();
-                detectorParameter.triggerThold2 = jsonObj["TriggerThold2"].toInt();
-                detectorParameter.waveformPolarity = jsonObj["WaveformPolarity"].toInt();
-                detectorParameter.deadTime = jsonObj["DeadTime"].toInt();
-                detectorParameter.gain = jsonObj["DetectorGain"].toInt();
+            JsonSettings* fpgaSettings = GlobalSettings::instance()->mFpgaSettings;
+            if (fpgaSettings->isOpen()){
+                fpgaSettings->prepare();
+                fpgaSettings->beginGroup();
+                detectorParameter.triggerThold1 = fpgaSettings->value("TriggerThold1").toInt();
+                detectorParameter.triggerThold2 = fpgaSettings->value("TriggerThold2").toInt();
+                detectorParameter.waveformPolarity = fpgaSettings->value("WaveformPolarity").toInt();
+                detectorParameter.deadTime = fpgaSettings->value("DeadTime").toInt();
+                detectorParameter.gain = fpgaSettings->value("DetectorGain").toInt();
 
                 // 默认打开梯形成形
-                if(jsonObj.contains("isTrapShaping")){
-                    detectorParameter.isTrapShaping = jsonObj["isTrapShaping"].toBool();
-                    if(detectorParameter.isTrapShaping)
-                    {
-                        detectorParameter.TrapShape_risePoint = jsonObj["TrapShape_risePoint"].toInt();
-                        detectorParameter.TrapShape_peakPoint = jsonObj["TrapShape_peakPoint"].toInt();
-                        detectorParameter.TrapShape_fallPoint = jsonObj["TrapShape_fallPoint"].toInt();
-                        detectorParameter.TrapShape_constTime1 = jsonObj["TrapShape_constTime1"].toInt();
-                        detectorParameter.TrapShape_constTime2 = jsonObj["TrapShape_constTime2"].toInt();
-                        detectorParameter.Threshold_baseLine = jsonObj["Threshold_baseLine"].toInt();
-                    }
-                    else
-                    {
-                        detectorParameter.Threshold_baseLine = 8140;
-                    }
+                detectorParameter.isTrapShaping = fpgaSettings->value("isTrapShaping", false).toBool();
+                if(detectorParameter.isTrapShaping)
+                {
+                    detectorParameter.TrapShape_risePoint = fpgaSettings->value("TrapShape_risePoint", 20).toInt();
+                    detectorParameter.TrapShape_peakPoint = fpgaSettings->value("TrapShape_peakPoint", 20).toInt();
+                    detectorParameter.TrapShape_fallPoint = fpgaSettings->value("TrapShape_fallPoint", 20).toInt();
+                    detectorParameter.TrapShape_constTime1 = fpgaSettings->value("TrapShape_constTime1", 63150).toInt();
+                    detectorParameter.TrapShape_constTime2 = fpgaSettings->value("TrapShape_constTime2", 62259).toInt();
+                    detectorParameter.Threshold_baseLine = fpgaSettings->value("Threshold_baseLine", 20).toInt();
                 }
-                else{//配置文件中不存在相关关键字，则直接采用默认值
-                    detectorParameter.isTrapShaping = true;
-                    detectorParameter.TrapShape_risePoint = 20;
-                    detectorParameter.TrapShape_peakPoint = 20;
-                    detectorParameter.TrapShape_fallPoint = 20;
-                    detectorParameter.TrapShape_constTime1 = 63150;
-                    detectorParameter.TrapShape_constTime2 = 62259;
-                    detectorParameter.Threshold_baseLine = 20;
+                else
+                {
+                    detectorParameter.Threshold_baseLine = 8140;
                 }
+                fpgaSettings->endGroup();
+                fpgaSettings->finish();
             }
 
             // ui->pushButton_save->setEnabled(false);
@@ -1243,6 +1242,9 @@ void MainWindow::on_pushButton_measure_clicked()
             commandHelper->setShotNumber(ui->lineEdit_ShotNum->text()); //设置测量发次，QString类型
             commandHelper->updateParamter(stepT, EnWin, false);
             commandHelper->slotStartManualMeasure(detectorParameter);
+
+            QString msg = tr("测量准备...");
+            qInfo().noquote()<<msg;
 
             QTimer::singleShot(1000, this, [=](){
                 //指定时间未收到开始测量指令，则按钮恢复初始状态
@@ -1308,21 +1310,17 @@ void MainWindow::on_pushButton_measure_2_clicked()
 
         this->setProperty("measur-model", detectorParameter.measureModel);
 
-        // 打开 JSON 文件
-        QFile file(QApplication::applicationDirPath() + "/config/fpga.json");
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            // 读取文件内容
-            QByteArray jsonData = file.readAll();
-            file.close(); //释放资源
-
-            // 将 JSON 数据解析为 QJsonDocument
-            QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-            QJsonObject jsonObj = jsonDoc.object();
-            detectorParameter.triggerThold1 = jsonObj["TriggerThold1"].toInt();
-            detectorParameter.triggerThold2 = jsonObj["TriggerThold2"].toInt();
-            detectorParameter.waveformPolarity = jsonObj["WaveformPolarity"].toInt();
-            detectorParameter.deadTime = jsonObj["DeadTime"].toInt();
-            detectorParameter.gain = jsonObj["DetectorGain"].toInt();
+        JsonSettings* fpgaSettings = GlobalSettings::instance()->mFpgaSettings;
+        if (fpgaSettings->isOpen()){
+            fpgaSettings->prepare();
+            fpgaSettings->beginGroup();
+            detectorParameter.triggerThold1 = fpgaSettings->value("TriggerThold1").toInt();
+            detectorParameter.triggerThold2 = fpgaSettings->value("TriggerThold2").toInt();
+            detectorParameter.waveformPolarity = fpgaSettings->value("WaveformPolarity").toInt();
+            detectorParameter.deadTime = fpgaSettings->value("DeadTime").toInt();
+            detectorParameter.gain = fpgaSettings->value("DetectorGain").toInt();
+            fpgaSettings->endGroup();
+            fpgaSettings->finish();
         }
 
         ui->action_refresh->setEnabled(true);
@@ -1672,7 +1670,8 @@ void MainWindow::slotRefreshUi()
 
             ui->spinBox_timelength->setEnabled(false);
             ui->comboBox_channel->setEnabled(false);
-            ui->spinBox_coolingTime->setEnabled(false);
+            ui->dateTimeEdit_shotTime->setEnabled(false);
+            //ui->spinBox_coolingTime->setEnabled(false);
             ui->lineEdit_ShotNum->setEnabled(false);
 
             ui->action_power->setEnabled(false);
@@ -1749,7 +1748,8 @@ void MainWindow::slotRefreshUi()
         ui->spinBox_timelength->setEnabled(true);
         // ui->comboBox_channel->setEnabled(true);
         ui->comboBox_range->setEnabled(true);
-        ui->spinBox_coolingTime->setEnabled(true);
+        ui->dateTimeEdit_shotTime->setEnabled(true);
+        //ui->spinBox_coolingTime->setEnabled(true);
         ui->lineEdit_ShotNum->setEnabled(true);
         ui->spinBox_1_leftE->setEnabled(true);
         ui->spinBox_1_rightE->setEnabled(true);
@@ -1801,109 +1801,79 @@ void MainWindow::slotRefreshUi()
 
 void MainWindow::load()
 {
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(path);
+    JsonSettings* userSettings = GlobalSettings::instance()->mUserSettings;
+    if (userSettings->isOpen()){
+        userSettings->prepare();
+        userSettings->beginGroup("M1");
+        //测量时长
+        ui->spinBox_timelength->setValue(userSettings->value("timelength").toInt());
+        //多道道数
+        ui->comboBox_channel->setCurrentIndex(userSettings->value("multiChannel_index").toInt());
+        //量程选取
+        ui->comboBox_range->setCurrentIndex(userSettings->value("range").toInt());
+        //冷却时长
+        //ui->spinBox_coolingTime->setValue(userSettings->value("coolingTime").toInt());
+        //时间步长
+        ui->spinBox_step->setValue(userSettings->value("step").toInt());
+        //符合分辨时间
+        ui->spinBox_timeWidth->setValue(userSettings->value("timewidth").toInt());
 
-    QFile file(QApplication::applicationDirPath() + "/config/user.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close();
+        //探测器1能窗左侧
+        ui->spinBox_1_leftE->setValue(userSettings->value("Det1_EnWidth_left").toInt());
+        //探测器1能窗右侧
+        ui->spinBox_1_rightE->setValue(userSettings->value("Det1_EnWidth_right").toInt());
+        //探测器2能窗左侧
+        ui->spinBox_2_leftE->setValue(userSettings->value("Det2_EnWidth_left").toInt());
+        //探测器2能窗右侧
+        ui->spinBox_2_rightE->setValue(userSettings->value("Det2_EnWidth_right").toInt());
+        userSettings->endGroup();
 
-        // 将 JSON 数据解析为 QJsonDocument
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
+        userSettings->beginGroup("M2");
+        //测量时长
+        ui->spinBox_timelength_2->setValue(userSettings->value("timelength").toInt());
+        //多道道数
+        ui->comboBox_channel2->setCurrentIndex(userSettings->value("multiChannel_index").toInt());
+        //量程选取
+        ui->comboBox_range_2->setCurrentIndex(userSettings->value("range").toInt());
+        //冷却时长
+        ui->spinBox_coolingTime_2->setValue(userSettings->value("coolingTime").toInt());
+        //时间步长
+        ui->spinBox_step_2->setValue(userSettings->value("step").toInt());
+        //符合分辨时间
+        ui->spinBox_timeWidth_2->setValue(userSettings->value("timewidth").toInt());
+        //探测器1能窗左侧
+        ui->spinBox_1_leftE_2->setValue(userSettings->value("Det1_EnWidth_left").toInt());
+        //探测器1能窗右侧
+        ui->spinBox_1_rightE_2->setValue(userSettings->value("Det1_EnWidth_right").toInt());
+        //探测器2能窗左侧
+        ui->spinBox_2_leftE_2->setValue(userSettings->value("Det2_EnWidth_left").toInt());
+        //探测器2能窗右侧
+        ui->spinBox_2_rightE_2->setValue(userSettings->value("Det2_EnWidth_right").toInt());
+        userSettings->endGroup();
 
-        //手动
-        QJsonObject jsonObjM1;
-        if (jsonObj.contains("M1")){
-            jsonObjM1 = jsonObj["M1"].toObject();
-            //测量时长
-            ui->spinBox_timelength->setValue(jsonObjM1["timelength"].toInt());
-            //多道道数
-            ui->comboBox_channel->setCurrentIndex(jsonObjM1["multiChannel_index"].toInt());
-            //量程选取
-            ui->comboBox_range->setCurrentIndex(jsonObjM1["range"].toInt());
-            //冷却时长
-            ui->spinBox_coolingTime->setValue(jsonObjM1["coolingTime"].toInt());
-            //时间步长
-            ui->spinBox_step->setValue(jsonObjM1["step"].toInt());
-            //符合分辨时间
-            ui->spinBox_timeWidth->setValue(jsonObjM1["timewidth"].toInt());
-
-            //探测器1能窗左侧
-            ui->spinBox_1_leftE->setValue(jsonObjM1["Det1_EnWidth_left"].toInt());
-            //探测器1能窗右侧
-            ui->spinBox_1_rightE->setValue(jsonObjM1["Det1_EnWidth_right"].toInt());
-            //探测器2能窗左侧
-            ui->spinBox_2_leftE->setValue(jsonObjM1["Det2_EnWidth_left"].toInt());
-            //探测器2能窗右侧
-            ui->spinBox_2_rightE->setValue(jsonObjM1["Det2_EnWidth_right"].toInt());
+        userSettings->beginGroup("Public");
+        ui->comboBox_range->setCurrentIndex(userSettings->value("select-range").toInt());  //量程索引值
+        bool bTestOn = userSettings->value("test", false).toBool();
+        this->setProperty("test", bTestOn);
+        if (bTestOn){
+            ui->action_start_measure->setIcon(QIcon(":/resource/circle-green.png"));
+            ui->action_start_measure->setText(tr("退出离线测试模式"));
+            ui->action_start_measure->setIconText(tr("退出离线测试模式"));
         }
-
-        //自动
-        QJsonObject jsonObjM2;
-        if (jsonObj.contains("M2")){
-            jsonObjM2 = jsonObj["M2"].toObject();
-            //测量时长
-            ui->spinBox_timelength_2->setValue(jsonObjM2["timelength"].toInt());
-            //多道道数
-            ui->comboBox_channel2->setCurrentIndex(jsonObjM2["multiChannel_index"].toInt());
-            //量程选取
-            ui->comboBox_range_2->setCurrentIndex(jsonObjM2["range"].toInt());
-            //冷却时长
-            ui->spinBox_coolingTime_2->setValue(jsonObjM2["coolingTime"].toInt());            
-            //时间步长
-            ui->spinBox_step_2->setValue(jsonObjM2["step"].toInt());
-            //符合分辨时间
-            ui->spinBox_timeWidth_2->setValue(jsonObjM2["timewidth"].toInt());
-            //探测器1能窗左侧
-            ui->spinBox_1_leftE_2->setValue(jsonObjM2["Det1_EnWidth_left"].toInt());
-            //探测器1能窗右侧
-            ui->spinBox_1_rightE_2->setValue(jsonObjM2["Det1_EnWidth_right"].toInt());
-            //探测器2能窗左侧
-            ui->spinBox_2_leftE_2->setValue(jsonObjM2["Det2_EnWidth_left"].toInt());
-            //探测器2能窗右侧
-            ui->spinBox_2_rightE_2->setValue(jsonObjM2["Det2_EnWidth_right"].toInt());
-        }
-
-        //公共
-        QJsonObject jsonObjPub;
-        if (jsonObj.contains("Public")){
-            jsonObjPub = jsonObj["Public"].toObject();
-            ui->comboBox_range->setCurrentIndex(jsonObjPub["select-range"].toInt());  //量程索引值
-
-            if (!jsonObjPub["test"].isNull()){
-                bool bTestOn = jsonObjPub["test"].toBool();
-                this->setProperty("test", bTestOn);
-
-                if (this->property("test").toBool()){
-                    ui->action_start_measure->setIcon(QIcon(":/resource/circle-green.png"));
-                    ui->action_start_measure->setText(tr("退出离线测试模式"));
-                    ui->action_start_measure->setIconText(tr("退出离线测试模式"));
-                }
-            }
-        }                        
+        userSettings->endGroup();
+        userSettings->finish();
     }
 
-    QFile file2(QApplication::applicationDirPath() + "/config/run.json");
-    if (file2.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file2.readAll();
-        file2.close();
-
-        // 将 JSON 数据解析为 QJsonDocument
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-
+    JsonSettings* runSettings = GlobalSettings::instance()->mRunSettings;
+    if (runSettings->isOpen()){
+        runSettings->prepare();
+        runSettings->beginGroup();
         if (this->property("workMode").toString() == "online"){
-            bool bSafeExitFlag = jsonObj["safe_exit"].toBool();
+            bool bSafeExitFlag = runSettings->value("safe_exit", true).toBool();
             //如果上一次异常退出，则打印上一次的最后运行时间
             if(!bSafeExitFlag) {
-                if(jsonObj.contains("lastRunTime")){
-                    QString lastTimeStr = jsonObj["lastRunTime"].toString();
+                QString lastTimeStr = runSettings->value("lastRunTime").toString();
+                if (!lastTimeStr.isEmpty()){
                     QString msg = tr("上一次软件异常退出，最后运行时间为：") + lastTimeStr;
                     qCritical().noquote()<<msg;
                     emit sigAppengMsg(msg, QtCriticalMsg);
@@ -1911,134 +1881,92 @@ void MainWindow::load()
             }
             this->setProperty("last_safe_exit", bSafeExitFlag);
         }
-    }
-    else{//不存在文件，则默认为上次为异常退出，继电器需要先断电再上电。
+        runSettings->endGroup();
+        runSettings->finish();
+    }  else{//不存在文件，则默认为上次为异常退出，继电器需要先断电再上电。
         this->setProperty("last_safe_exit", false);
     }
 }
 
 void MainWindow::saveConfigJson()
 {
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(path);
-
-    QFile file(QApplication::applicationDirPath() + "/config/user.json");
-    if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close();
-
-        // 将 JSON 数据解析为 QJsonDocument
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-
-        //手动
-        QJsonObject jsonObjM1;
+    JsonSettings* userSettings = GlobalSettings::instance()->mUserSettings;
+    if (userSettings->isOpen()){
+        userSettings->prepare();
+        userSettings->beginGroup("M1");
         //测量时长
-        jsonObjM1["timelength"] = ui->spinBox_timelength->value();
+        userSettings->setValue("timelength", ui->spinBox_timelength->value());
         //多道道数
-        jsonObjM1["multiChannel_index"] = ui->comboBox_channel->currentIndex();
+        userSettings->setValue("multiChannel_index", ui->comboBox_channel->currentIndex());
         //量程选取
-        jsonObjM1["range"] = ui->comboBox_range->currentIndex();
+        userSettings->setValue("range", ui->comboBox_range->currentIndex());
         //冷却时长
-        jsonObjM1["coolingTime"] = ui->spinBox_coolingTime->value();
+        //userSettings->setValue("coolingTime", ui->spinBox_coolingTime->value());
         //时间步长
-        jsonObjM1["step"] = ui->spinBox_step->value();
+        userSettings->setValue("step", ui->spinBox_step->value());
         //符合分辨时间
-        jsonObjM1["timewidth"] = ui->spinBox_timeWidth->value();
+        userSettings->setValue("timewidth", ui->spinBox_timeWidth->value());
         //探测器1能窗左侧
-        jsonObjM1["Det1_EnWidth_left"] = ui->spinBox_1_leftE->value();
+        userSettings->setValue("Det1_EnWidth_left", ui->spinBox_1_leftE->value());
         //探测器1能窗右侧
-        jsonObjM1["Det1_EnWidth_right"] = ui->spinBox_1_rightE->value();
+        userSettings->setValue("Det1_EnWidth_right", ui->spinBox_1_rightE->value());
         //探测器2能窗左侧
-        jsonObjM1["Det2_EnWidth_left"] = ui->spinBox_2_leftE->value();
+        userSettings->setValue("Det2_EnWidth_left", ui->spinBox_2_leftE->value());
         //探测器2能窗右侧
-        jsonObjM1["Det2_EnWidth_right"] = ui->spinBox_2_rightE->value();
-        jsonObj["M1"] = jsonObjM1;
+        userSettings->setValue("Det2_EnWidth_right", ui->spinBox_2_rightE->value());
+        userSettings->endGroup();
 
-        //自动
-        QJsonObject jsonObjM2;
+        userSettings->beginGroup("M2");
         //测量时长
-        jsonObjM2["timelength"] = ui->spinBox_timelength_2->value();
+        userSettings->setValue("timelength", ui->spinBox_timelength_2->value());
         //多道道数
-        jsonObjM2["multiChannel_index"] = ui->comboBox_channel2->currentIndex();
+        userSettings->setValue("multiChannel_index", ui->comboBox_channel2->currentIndex());
         //量程选取
-        jsonObjM2["range"] = ui->comboBox_range_2->currentIndex();
+        userSettings->setValue("range", ui->comboBox_range_2->currentIndex());
         //冷却时长
-        jsonObjM2["coolingTime"] = ui->spinBox_coolingTime_2->value();
+        userSettings->setValue("coolingTime", ui->spinBox_coolingTime_2->value());
         //时间步长
-        jsonObjM2["step"] = ui->spinBox_step_2->value();
+        userSettings->setValue("step", ui->spinBox_step_2->value());
         //符合分辨时间
-        jsonObjM2["timewidth"] = ui->spinBox_timeWidth_2->value();
+        userSettings->setValue("timewidth", ui->spinBox_timeWidth_2->value());
         //探测器1能窗左侧
-        jsonObjM2["Det1_EnWidth_left"] = ui->spinBox_1_leftE_2->value();
+        userSettings->setValue("Det1_EnWidth_left", ui->spinBox_1_leftE_2->value());
         //探测器1能窗右侧
-        jsonObjM2["Det1_EnWidth_right"] = ui->spinBox_1_rightE_2->value();
+        userSettings->setValue("Det1_EnWidth_right", ui->spinBox_1_rightE_2->value());
         //探测器2能窗左侧
-        jsonObjM2["Det2_EnWidth_left"] = ui->spinBox_2_leftE_2->value();
+        userSettings->setValue("Det2_EnWidth_left", ui->spinBox_2_leftE_2->value());
         //探测器2能窗右侧
-        jsonObjM2["Det2_EnWidth_right"] = ui->spinBox_2_rightE_2->value();
-        jsonObj["M2"] = jsonObjM2;
+        userSettings->setValue("Det2_EnWidth_right", ui->spinBox_2_rightE_2->value());
+        userSettings->endGroup();
 
-        //公共
-        QJsonObject jsonObjPub;
-        //先取出原来的值
-        if (jsonObj.contains("Public")){
-            jsonObjPub = jsonObj["Public"].toObject();
-        }
+        userSettings->beginGroup("Public");
+        userSettings->setValue("select-range", ui->comboBox_range->currentIndex());  //量程索引值
+        userSettings->endGroup();
 
-        //保存数据
-        jsonObjPub["select-range"] = ui->comboBox_range->currentIndex();  //量程索引值
-
-        if (!this->property("test").isNull()){
-            jsonObjPub["test"] = this->property("test").toBool();
-        }
-        jsonObj["Public"] = jsonObjPub;
-
-        //写入锁上锁
-        m_sLock->lockForWrite();
-        file.open(QIODevice::WriteOnly | QIODevice::Text);
-        QJsonDocument jsonDocNew(jsonObj);
-        file.write(jsonDocNew.toJson());
-        file.close();
-        m_sLock->unlock();  //解锁
+        userSettings->flush();
+        userSettings->finish();
     }
 }
 
 bool MainWindow::saveCurrentTConfigJson(bool bSafeExitFlag)
 {
     // 保存参数
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(path);
-
-    QFile file(QApplication::applicationDirPath() + "/config/run.json");
-    if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close();
-
-        // 将 JSON 数据解析为 QJsonDocument
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-        
-        jsonObj["safe_exit"] = bSafeExitFlag;
+    JsonSettings* runSettings = GlobalSettings::instance()->mRunSettings;
+    if (runSettings->isOpen()){
+        runSettings->prepare();
+        runSettings->beginGroup();
+        runSettings->setValue("safe_exit", bSafeExitFlag);
         //记录当前运行时间
         QDateTime now = QDateTime::currentDateTime();
         QString timeStr = now.toString("yyyy-MM-dd hh:mm:ss");
-        jsonObj["lastRunTime"] = timeStr;
-
-        file.open(QIODevice::WriteOnly | QIODevice::Text);
-        QJsonDocument jsonDocNew(jsonObj);
-        file.write(jsonDocNew.toJson());
-        file.close();
-        return true;
+        runSettings->setValue("lastRunTime", timeStr);
+        runSettings->endGroup();
+        bool result = runSettings->flush();
+        runSettings->finish();
+        return result;
+    } else {
+        return false;
     }
-
-    return false;
 }
 
 void MainWindow::on_pushButton_refresh_2_clicked()

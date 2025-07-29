@@ -21,6 +21,7 @@
 #include <QNetworkConfigurationManager>
 
 #include <QLockFile>
+#include "globalsettings.h"
 
 CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
   , coincidenceAnalyzer(new CoincidenceAnalyzer)
@@ -104,8 +105,8 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
 
         // 判断指令只开关返回指令还是查询返回指令
         if (binaryData.size() == 15){
-            if ((quint8)binaryData[0] == 0x48 && (quint8)binaryData[1] == 0x3a && (quint8)binaryData[2] == 0x01 && (quint8)binaryData[3] == 0x54){
-                if ((quint8)binaryData[4] == 0x00 || (quint8)binaryData[5] == 0x00){
+            if ((quint8)binaryData.at(0) == 0x48 && (quint8)binaryData.at(1) == 0x3a && (quint8)binaryData.at(2) == 0x01 && (quint8)binaryData.at(3) == 0x54){
+                if ((quint8)binaryData.at(4) == 0x00 || (quint8)binaryData.at(5) == 0x00){
                     //继电器未开启
                     if (socketRelay->property("relay-status").toString() == "query"){
                         //socketRelay->setProperty("relay-status", "none");
@@ -133,7 +134,7 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
                         // 如果已经发送过开启指令，则直接上报状态即可
                         emit sigRelayStatus(false);
                     }
-                } else if ((quint8)binaryData[4] == 0x01 || (quint8)binaryData[5] == 0x01){
+                } else if ((quint8)binaryData.at(4) == 0x01 || (quint8)binaryData.at(5) == 0x01){
                     //已经开启
                     emit sigRelayStatus(true);
                 }
@@ -310,8 +311,8 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
     QList<QNetworkConfiguration> cfg_list = manager.allConfigurations();
     if (cfg_list.size() > 0)
     {
-        cfg_list[0].setConnectTimeout(1000);
-        config = cfg_list[0];
+        cfg_list.first().setConnectTimeout(1000);
+        config = cfg_list.first();
     }
     QSharedPointer<QNetworkSession> spNetworkSession(new QNetworkSession(config));
     socketRelay->setProperty("_q_networksession", QVariant::fromValue(spNetworkSession));
@@ -347,7 +348,7 @@ CommandHelper::~CommandHelper(){
     coincidenceAnalyzer = nullptr;
 }
 
-void CommandHelper::analyzerRealCalback(SingleSpectrum r1, vector<CoincidenceResult> r3, void *callbackUser)
+void CommandHelper::analyzerRealCalback(const SingleSpectrum &r1, const vector<CoincidenceResult> &r3, void *callbackUser)
 {
     CommandHelper *pThis = (CommandHelper*)callbackUser;
     pThis->updateCoincidenceData(r1, r3);
@@ -355,32 +356,20 @@ void CommandHelper::analyzerRealCalback(SingleSpectrum r1, vector<CoincidenceRes
 
 void CommandHelper::loadConfig()
 {
-    QFile file(QApplication::applicationDirPath() + "/config/user.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
-
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-        
-        QJsonObject jsonPublic;
-        if (jsonObj.contains("Public")){
-            jsonPublic = jsonObj["Public"].toObject();
-            if (jsonPublic.contains("deltaTime_updateYield")){
-                deltaTime_updateYield = jsonPublic["deltaTime_updateYield"].toInt();
-            }
-            if (jsonPublic.contains("maxTime_updateYield")){
-                maxTime_updateYield = jsonPublic["maxTime_updateYield"].toInt();
-            }
-        }
-    }
-    else{
+    JsonSettings* userSettings = GlobalSettings::instance()->mUserSettings;
+    if (userSettings->isOpen()){
+        userSettings->prepare();
+        userSettings->beginGroup("Public");
+        deltaTime_updateYield = userSettings->value("deltaTime_updateYield", 30).toInt();
+        maxTime_updateYield = userSettings->value("maxTime_updateYield", 3600).toInt();
+        userSettings->endGroup();
+        userSettings->finish();
+    } else{
         qCritical().noquote()<<"未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
     }
 }
 
-void CommandHelper::updateCoincidenceData(SingleSpectrum r1, vector<CoincidenceResult> r3)
+void CommandHelper::updateCoincidenceData(const SingleSpectrum &r1, const vector<CoincidenceResult> &r3)
 {
     size_t countCoin = r3.size();
     int _stepT = this->stepT;
@@ -450,14 +439,14 @@ void CommandHelper::updateCoincidenceData(SingleSpectrum r1, vector<CoincidenceR
             CoincidenceResult v;
             size_t posI = r3.size() - _stepT - 1;
             for (size_t i=0; i < _stepT; i++){
-                v.CountRate1 += r3[posI].CountRate1;
-                v.CountRate2 += r3[posI].CountRate2;
-                v.ConCount_single += r3[posI].ConCount_single;
-                v.ConCount_multiple += r3[posI].ConCount_multiple;
+                v.CountRate1 += r3.at(posI).CountRate1;
+                v.CountRate2 += r3.at(posI).CountRate2;
+                v.ConCount_single += r3.at(posI).ConCount_single;
+                v.ConCount_multiple += r3.at(posI).ConCount_multiple;
                 posI++;  
             }
             //给出平均计数率cps,注意，这里是整除，当计数率小于1cps时会变成零。
-            v.time = r3[posI-1].time;
+            v.time = r3.at(posI-1).time;
             v.CountRate1 /= _stepT;
             v.CountRate2 /= _stepT;
             v.ConCount_single /= _stepT;
@@ -540,38 +529,26 @@ void CommandHelper::updateCoincidenceData(SingleSpectrum r1, vector<CoincidenceR
     }
 }
 
+#include <QSaveFile>
 void CommandHelper::activeOmigaToYield(double active)
 {
     //本次测量量程
     int measureRange = detectorParameter.measureRange - 1; //这里涉及到界面下拉框从0开始计数，而detParameter中从1开始计数。
     //读取配置文件，给出该量程下的刻度系数
     double cali_factor = 0.0;
-    QFile file(QApplication::applicationDirPath() + "/config/user.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
 
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
-        
-        QJsonObject jsonCalibration, jsonYield;
-        if (jsonObj.contains("YieldCalibration")){
-            jsonCalibration = jsonObj["YieldCalibration"].toObject();
-            
-            QString key = QString("Range%1").arg(measureRange);
-            QJsonArray rangeArray;
-            if (jsonCalibration.contains(key)){
-                rangeArray = jsonCalibration[key].toArray();
-                QJsonObject rangeData = rangeArray[0].toObject();
+    JsonSettings* userSettings = GlobalSettings::instance()->mUserSettings;
+    if (userSettings->isOpen()){
+        userSettings->prepare();
+        userSettings->beginGroup("YieldCalibration");
+        QString key = QString("Range%1").arg(measureRange);
+        double yield = userSettings->arrayValue(key, 0, "Yield", measureRange==0 ? 10000 : (measureRange==1 ? 10000000 : 100000000000)).toDouble();
+        double active0 = userSettings->arrayValue(key, 0, "active0", measureRange==0 ? 5000 : (measureRange==1 ? 6000 : 3333)).toDouble();
 
-                double yield = rangeData["Yield"].toDouble();
-                double active0 = rangeData["active0"].toDouble();
-                cali_factor = yield / active0;
-            }
-        }
-    }
-    else{
+        cali_factor = yield / active0;
+        userSettings->endGroup();
+        userSettings->finish();
+    } else{
         qCritical().noquote()<<"未找到拟合参数，请检查仪器是否进行了刻度,请对仪器刻度后重新计算（采用‘数据查看和分析’子界面分析）";
     }
 
@@ -713,6 +690,17 @@ void CommandHelper::handleManualMeasureNetData()
             QMutexLocker locker(&mutexCache);
             cachePool.push_back(binaryData);
 
+            if (detectorParameter.measureModel == mmManual && detectorParameter.coolingTime == -1){
+                QDateTime dtStart = QDateTime::currentDateTime();
+                detectorParameter.coolingTime = detectorParameter.shotTime.secsTo(dtStart);
+                coincidenceAnalyzer->setCoolingTime_Manual(detectorParameter.coolingTime);
+
+                //收到第一帧有效数据再保存，保存测量参数
+                saveConfigParamter();
+
+                emit sigMeasureTimerStart(detectorParameter.measureModel, detectorParameter.transferModel, dtStart);
+            }
+
             ready = true;
             condition.wakeAll();
         }
@@ -821,27 +809,13 @@ void CommandHelper::initSocket(QTcpSocket** _socket)
 
 void CommandHelper::openRelay(bool first)
 {
-    QFile file(QApplication::applicationDirPath() + "/config/ip.json");
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QMessageBox::information(nullptr, tr("提示"), tr("请先配置远程设备信息！"));
-        return;
-    }
-
-    QString ip;
-    qint32 port;
-    // 读取文件内容
-    QByteArray jsonData = file.readAll();
-    file.close(); //释放资源
-
-    // 将 JSON 数据解析为 QJsonDocument
-    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-    QJsonObject jsonObj = jsonDoc.object();
-    QJsonObject jsonDetector;
-    if (jsonObj.contains("Relay")){
-        jsonDetector = jsonObj["Relay"].toObject();
-        ip = jsonDetector["ip"].toString();
-        port = jsonDetector["port"].toInt();
-    }
+    JsonSettings* ipSettings = GlobalSettings::instance()->mIpSettings;
+    ipSettings->prepare();
+    ipSettings->beginGroup("Relay");
+    QString ip = ipSettings->value("ip").toString();
+    qint32 port = ipSettings->value("port").toInt();
+    ipSettings->endGroup();
+    ipSettings->finish();
 
     //断开网络连接
     if (socketRelay->isOpen() && socketRelay->state() == QAbstractSocket::ConnectedState)
@@ -881,32 +855,17 @@ void CommandHelper::closeRelay()
 
 void CommandHelper::openDetector()
 {
+    JsonSettings* ipSettings = GlobalSettings::instance()->mIpSettings;
+    ipSettings->prepare();
+    ipSettings->beginGroup("Detector");
+    QString ip = ipSettings->value("ip", "192.168.10.3").toString();
+    qint32 port = ipSettings->value("port", 5000).toInt();
+    ipSettings->endGroup();
+    ipSettings->finish();
+
     if (socketDetector->state() == QAbstractSocket::ConnectingState){// 正在连接，请稍后
         QMessageBox::information(nullptr, tr("提示"), tr("正在连接，请稍后重试！"));
         return;
-    }
-
-    QFile file(QApplication::applicationDirPath() + "/config/ip.json");
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QMessageBox::information(nullptr, tr("提示"), tr("请先配置远程设备信息！"));
-        return;
-    }
-
-    // 读取文件内容
-    QByteArray jsonData = file.readAll();
-    file.close(); //释放资源
-
-    // 将 JSON 数据解析为 QJsonDocument
-    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-    QJsonObject jsonObj = jsonDoc.object();
-
-    QString ip = "192.168.10.3";
-    qint32 port = 5000;
-    QJsonObject jsonDetector;
-    if (jsonObj.contains("Detector")){
-        jsonDetector = jsonObj["Detector"].toObject();
-        ip = jsonDetector["ip"].toString();
-        port = jsonDetector["port"].toInt();
     }
 
     //断开网络连接
@@ -1213,9 +1172,10 @@ QByteArray CommandHelper::getCmdTransferModel(quint8 mode)
 void CommandHelper::slotStartManualMeasure(DetectorParameter p)
 {
     coincidenceAnalyzer->initialize();
-    coincidenceAnalyzer->setCoolingTime_Manual(p.coolingTime);
+    //coincidenceAnalyzer->setCoolingTime_Manual(p.coolingTime);//此时冷却时间还未计算出来呢
     workStatus = Preparing;
     detectorParameter = p;
+	detectorParameter.coolingTime = -1;
     this->autoChangeEnWindow = false;
     this->detectorException = false;
     sendStopCmd = false;
@@ -1531,6 +1491,27 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
     }
 
     //保存测量参数,自动测量一开始就保存参数
+    //saveConfigParamter();//这个时候冷却时间还没计算出来，等收到第一帧有效数据再保存
+
+    cmdPool.clear();
+    //阈值
+    cmdPool.push_back(getCmdTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2));
+    // 波形极性
+    cmdPool.push_back(getCmdWaveformPolarity(detectorParameter.waveformPolarity));
+    // 死时间
+    cmdPool.push_back(getCmdDeadTime(detectorParameter.deadTime));
+    // 探测器增益
+    cmdPool.push_back(getCmdDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00));
+    // 传输模式
+    cmdPool.push_back(getCmdTransferModel(detectorParameter.transferModel));
+    // 开始测量，硬触发模式
+    cmdPool.push_back(cmdHardTrigger);
+
+    socketDetector->write(cmdPool.first());
+    qDebug()<<"Send HEX: "<<cmdPool.first().toHex(' ');
+}
+
+void CommandHelper::saveConfigParamter(){
     QString configResultFile = ShotDir + "/" + str_start_time + "_配置.txt";
     {
         QFile file(configResultFile);
@@ -1538,6 +1519,7 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
             QTextStream out(&file);
 
             // 保存粒子测量参数
+            out << tr("软件版本号=") << tr("Commit: %1").arg(APP_VERSION)<< Qt::endl;
             out << tr("测量开始时刻=") << QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz ")<< Qt::endl;
             out << tr("阈值1=") << detectorParameter.triggerThold1 << Qt::endl;
             out << tr("阈值2=") << detectorParameter.triggerThold2 << Qt::endl;
@@ -1614,24 +1596,7 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
             file.close();
         }
     }
-    qInfo().noquote() << tr("本次测量中，自动更新能窗的参数日志存放在：%1").arg(autoEnChangeFile);
-
-    cmdPool.clear();
-    //阈值
-    cmdPool.push_back(getCmdTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2));
-    // 波形极性
-    cmdPool.push_back(getCmdWaveformPolarity(detectorParameter.waveformPolarity));
-    // 死时间
-    cmdPool.push_back(getCmdDeadTime(detectorParameter.deadTime));
-    // 探测器增益
-    cmdPool.push_back(getCmdDetectorGain(detectorParameter.gain, detectorParameter.gain, 0x00, 0x00));
-    // 传输模式
-    cmdPool.push_back(getCmdTransferModel(detectorParameter.transferModel));
-    // 开始测量，硬触发模式
-    cmdPool.push_back(cmdHardTrigger);
-
-    socketDetector->write(cmdPool.first());
-    qDebug()<<"Send HEX: "<<cmdPool.first().toHex(' ');
+    qInfo().noquote() << tr("本次测量自动更新能窗的日志存放在：%1").arg(autoEnChangeFile);
 }
 
 void CommandHelper::slotStopAutoMeasure()
@@ -1694,9 +1659,9 @@ void CommandHelper::netFrameWorkThead()
                 while (true){
                     if (handlerPool.size() >= minPkgSize){
                         // 寻找包头
-                        if ((quint8)handlerPool[0] == 0x00 && (quint8)handlerPool[1] == 0x00 && (quint8)handlerPool[2] == 0xaa && (quint8)handlerPool[3] == 0xb3){
+                        if ((quint8)handlerPool.at(0) == 0x00 && (quint8)handlerPool.at(1) == 0x00 && (quint8)handlerPool.at(2) == 0xaa && (quint8)handlerPool.at(3) == 0xb3){
                             // 寻找包尾(正常情况包尾正确)
-                            if ((quint8)handlerPool[minPkgSize-4] == 0x00 && (quint8)handlerPool[minPkgSize-3] == 0x00 && (quint8)handlerPool[minPkgSize-2] == 0xcc && (quint8)handlerPool[minPkgSize-1] == 0xd3){
+                            if ((quint8)handlerPool.at(minPkgSize-4) == 0x00 && (quint8)handlerPool.at(minPkgSize-3) == 0x00 && (quint8)handlerPool.at(minPkgSize-2) == 0xcc && (quint8)handlerPool.at(minPkgSize-1) == 0xd3){
                                 isNual = true;
                             }
                         } else {
@@ -1786,8 +1751,8 @@ void CommandHelper::netFrameWorkThead()
                     // DataHead 寻找包头 00 00 aa b3 
                     for (int i = 0; i < handlerPool.size() - 1; i++)
                     {
-                        if ((quint8)handlerPool[i] == 0x00 && (quint8)handlerPool[i + 1] == 0x00
-                            && (quint8)handlerPool[i + 2] == 0xaa && (quint8)handlerPool[i + 3] == 0xb3)
+                        if ((quint8)handlerPool.at(i) == 0x00 && (quint8)handlerPool.at(i + 1) == 0x00
+                            && (quint8)handlerPool.at(i + 2) == 0xaa && (quint8)handlerPool.at(i + 3) == 0xb3)
                         {
                             HeadIndex = i;
                             break;
@@ -1799,8 +1764,8 @@ void CommandHelper::netFrameWorkThead()
                     if(HeadIndex>=0){
                         int posTail = HeadIndex + minPkgSize - 4;
                         // 直接尝试找到包尾
-                        if ((quint8)handlerPool[posTail] == 0x00 && (quint8)handlerPool[posTail + 1] == 0x00
-                            && (quint8)handlerPool[posTail + 2] == 0xcc && (quint8)handlerPool[posTail + 3] == 0xd3)
+                        if ((quint8)handlerPool.at(posTail) == 0x00 && (quint8)handlerPool.at(posTail + 1) == 0x00
+                            && (quint8)handlerPool.at(posTail + 2) == 0xcc && (quint8)handlerPool.at(posTail + 3) == 0xd3)
                         {
                             TailIndex = posTail;
                         }
@@ -1808,8 +1773,8 @@ void CommandHelper::netFrameWorkThead()
                         {
                             for (int i = 0; i < handlerPool.size() - 1; i++)
                             {
-                                if ((quint8)handlerPool[i] == 0x00 && (quint8)handlerPool[i + 1] == 0x00
-                                    && (quint8)handlerPool[i + 2] == 0xaa && (quint8)handlerPool[i + 3] == 0xb3)
+                                if ((quint8)handlerPool.at(i) == 0x00 && (quint8)handlerPool.at(i + 1) == 0x00
+                                    && (quint8)handlerPool.at(i + 2) == 0xaa && (quint8)handlerPool.at(i + 3) == 0xb3)
                                 {
                                     HeadIndex = i;
                                     break;
@@ -1938,25 +1903,27 @@ void CommandHelper::netFrameWorkThead()
                         
                         //检测丢包跨度是否刚好跨过某一秒的前后，
                         //经过初步测试，丢包的时候从来没有连续丢失超过1s的数据。
-                        int firstT = static_cast<int>(ceil(firstTime/1e9)); //向上取整
-                        int lastT = static_cast<int>(ceil(lastTime/1e9));
-                        if( firstT - lastT > 0){
-                            long long t1 = 0LL, t2 = 0LL;
-                            t1 = firstTime - lastT*1e9;
-                            t2 = lastT*1e9 - lastTime;
+                        unsigned int leftT = static_cast<unsigned int>(ceil(lastTime*1.0/1e9)); //向上取整
+                        unsigned int rightT = static_cast<unsigned int>(ceil(firstTime*1.0/1e9));
+
+                        //对时间跨度刚好为一秒，则修复
+                        if( rightT - leftT == 1){
+                            unsigned long long t1 = 0LL, t2 = 0LL;
+                            t1 = static_cast<unsigned long long>(leftT)*1e9 - lastTime;
+                            t2 = firstTime - static_cast<unsigned long long>(leftT)*1e9;
                             if(t1>0 && t2>0)
                             {
-                                lossData[static_cast<unsigned int>(lastT)] += static_cast<unsigned long long>(t1); //注意计时从1开始，因为是向上取整
-                                lossData[static_cast<unsigned int>(firstT)] += static_cast<unsigned long long>(t2); //注意计时从1开始
-                                coincidenceAnalyzer->AddLossMap(static_cast<unsigned int>(lastT), static_cast<unsigned long long>(t1));
-                                coincidenceAnalyzer->AddLossMap(static_cast<unsigned int>(firstT), static_cast<unsigned long long>(t2));
+                                lossData[leftT] += t1; //注意计时从1开始，因为是向上取整
+                                lossData[rightT] += t2; //注意计时从1开始
+                                coincidenceAnalyzer->AddLossMap(leftT, t1);
+                                coincidenceAnalyzer->AddLossMap(rightT, t2);
                             }
                         }
-                        else if((firstT - lastT) == 0){
-                            // 记录丢失的数据点个数，考虑到丢包总是发送在大计数率，因此直接认为每次丢一个包损失64个计数。
-                            lossData[static_cast<unsigned int>(firstT)] += delataT;
+                        else if((rightT - leftT) == 0){
+                            // 记录丢失的时间长度
+                            lossData[leftT] += delataT;
                         }
-                        else{
+                        else{//暂时不考虑丢包超过两秒时长的修复
                             
                         }
                         
@@ -1999,9 +1966,9 @@ void CommandHelper::netFrameWorkThead()
                     quint32 minPkgSize = (4096+5) * 2;
                     if (size >= minPkgSize){
                         // 寻找包头
-                        if ((quint8)handlerPool[0] == 0x00 && (quint8)handlerPool[1] == 0x00 && (quint8)handlerPool[2] == 0xaa && (quint8)handlerPool[3] == 0xb1){
+                        if ((quint8)handlerPool.at(0) == 0x00 && (quint8)handlerPool.at(1) == 0x00 && (quint8)handlerPool.at(2) == 0xaa && (quint8)handlerPool.at(3) == 0xb1){
                             // 寻找包尾(正常情况包尾正确)
-                            if ((quint8)handlerPool[minPkgSize-4] == 0x00 && (quint8)handlerPool[minPkgSize-3] == 0x00 && (quint8)handlerPool[minPkgSize-2] == 0xcc && (quint8)handlerPool[minPkgSize-1] == 0xd1){
+                            if ((quint8)handlerPool.at(minPkgSize-4) == 0x00 && (quint8)handlerPool.at(minPkgSize-3) == 0x00 && (quint8)handlerPool.at(minPkgSize-2) == 0xcc && (quint8)handlerPool.at(minPkgSize-1) == 0xd1){
                                 handlerPool.remove(0, minPkgSize);
                                 count++;
                                 continue;
@@ -2090,7 +2057,7 @@ void CommandHelper::detTimeEnergyWorkThread()
                 //2、处理缓存区数据
                 if (swapFrames.size() > 0){
                     for (size_t i=0; i<swapFrames.size(); ++i){
-                        DetTimeEnergy detTimeEnergy = swapFrames[i];
+                        DetTimeEnergy detTimeEnergy = swapFrames.at(i);
 
                         // 根据步长，将数据添加到当前处理缓存
                         quint8 channel = detTimeEnergy.channel;
@@ -2099,7 +2066,7 @@ void CommandHelper::detTimeEnergyWorkThread()
                         }
 
                         for (size_t i=0; i<detTimeEnergy.timeEnergy.size(); ++i){
-                            TimeEnergy timeEnergy = detTimeEnergy.timeEnergy[i];
+                            TimeEnergy timeEnergy = detTimeEnergy.timeEnergy.at(i);
 
                             if (channel == 0x00){
                                 data1_2.push_back(timeEnergy);

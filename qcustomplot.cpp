@@ -677,6 +677,10 @@ QCPPaintBufferPixmap::~QCPPaintBufferPixmap()
 /* inherits documentation from base class */
 QCPPainter *QCPPaintBufferPixmap::startPainting()
 {
+  if(mBuffer.height() <=0){ /* fixed: void QCPLayer::drawToPaintBuffer() paint buffer returned inactive painter*/
+    mBuffer = QPixmap(1,1);
+  }
+
   QCPPainter *result = new QCPPainter(&mBuffer);
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   result->setRenderHint(QPainter::HighQualityAntialiasing);

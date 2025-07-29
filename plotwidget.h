@@ -83,7 +83,7 @@ public slots:
     void slotRestoreView();
 
     //批量刷新
-    void slotUpdatePlotDatas(SingleSpectrum, vector<CoincidenceResult>);
+    void slotUpdatePlotDatas(const SingleSpectrum&, const vector<CoincidenceResult> &);
     
     //能谱刷新整个数据，计数曲线增加一个数据点。
     void slotAddPlotDatas(SingleSpectrum r1, CoincidenceResult r3);
@@ -164,7 +164,7 @@ private:
     QAction *moveViewAction;//平移视图
     QAction *resetPlotAction;//恢复图像状态
 
-    Plot_Opt_model mPlot_Opt_model = pmMove;
+    Plot_Opt_model mPlot_Opt_model = pmNone;
 };
 
 #endif // PLOTWIDGET_H

@@ -158,10 +158,10 @@ public:
             bool countFlag=true, bool autoEnWidth = false);
 
     //这里加入回调函数，后期做成SDK会出现问题，SDK不存在回调，只存在返回值。
-    void set_callback(std::function<void(SingleSpectrum, vector<CoincidenceResult>)> func);
+    void set_callback(std::function<void(const SingleSpectrum&, const vector<CoincidenceResult>&)> func);
 
     //C/C++标准回调导出
-    typedef void (*pfRealCallbackFunction)(SingleSpectrum, vector<CoincidenceResult>, void *callbackUser);
+    typedef void (*pfRealCallbackFunction)(const SingleSpectrum&, const vector<CoincidenceResult>&, void *callbackUser);
     void set_callback(pfRealCallbackFunction func, void *callbackUser);
 private:
     // 统计给出两个探测器各自当前一秒钟测量数据的能谱，当前一秒钟没有测量信号，则能谱全为零

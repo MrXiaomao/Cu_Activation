@@ -790,6 +790,7 @@ QCustomPlot *PlotWidget::allocCustomPlot(QString objName, bool needGauss, QWidge
     connect(customPlot->xAxis, SIGNAL(rangeChanged(const QCPRange &)), customPlot->xAxis2, SLOT(setRange(const QCPRange &)));
     connect(customPlot->yAxis, SIGNAL(rangeChanged(const QCPRange &)), customPlot->yAxis2, SLOT(setRange(const QCPRange &)));
     connect(customPlot->xAxis, QOverload<const QCPRange &, const QCPRange &>::of(&QCPAxis::rangeChanged), this, [=](const QCPRange &range, const QCPRange &oldRange){
+        customPlot->xAxis->blockSignals(true);
         if (!this->property("isCountModel").toBool()){
             //能谱模式显示能窗范围
             if (range.lower < 0)
@@ -806,8 +807,10 @@ QCustomPlot *PlotWidget::allocCustomPlot(QString objName, bool needGauss, QWidge
             if (range.size() < 60)//最少显示60个点
                 customPlot->xAxis->setRange(range.lower, range.lower + 60);//0.01~1000
         }
+        customPlot->xAxis->blockSignals(false);
     });
     connect(customPlot->yAxis, QOverload<const QCPRange &>::of(&QCPAxis::rangeChanged), this, [=](const QCPRange &range){
+        customPlot->yAxis->blockSignals(true);
         qint32 maxRange = range.upper - range.lower;
         if (this->property("isLogarithmic").toBool()){//对数坐标
             if (maxRange < 10){
@@ -817,7 +820,8 @@ QCustomPlot *PlotWidget::allocCustomPlot(QString objName, bool needGauss, QWidge
             customPlot->yAxis->setRange(range.lower, range.lower + 10);//0.01~1000
         } else if (range.lower < Y_AXIS_LOWER){
             customPlot->yAxis->setRange(Y_AXIS_LOWER, maxRange + 10);//0.01~1000
-        }
+        }        
+        customPlot->yAxis->blockSignals(false);
 
         QCPItemStraightLine* itemStraightLineLeft = customPlot->findChild<QCPItemStraightLine*>("itemStraightLineLeft");
         if (itemStraightLineLeft){
@@ -1421,10 +1425,14 @@ void PlotWidget::slotUpdatePlotNullData(int /*refreshTime*/)
 
 #include <QtMath>
 #include <math.h>
-void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult> r3)
+void PlotWidget::slotUpdatePlotDatas(const SingleSpectrum &r1, const vector<CoincidenceResult> &r3)
 {
     QMutexLocker locker(&mutexRefreshPlot);
     QCustomPlot::RefreshPriority refreshPriority = QCustomPlot::rpQueuedReplot;
+
+    if (!this->property("autoRefreshModel").toBool()){
+        return;
+    }
 
     int coinCount = r3.size();
     if(coinCount>0)
@@ -1491,10 +1499,10 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
                         customPlotDet1->xAxis2->setRange(0, timeRange/*keys.back()*/);
                     }
                 }
-            }
 
-            if (this->property("isCountModel").toBool())
-                customPlotDet1->replot(refreshPriority);
+                if (this->property("isCountModel").toBool())
+                    customPlotDet1->replot(refreshPriority);
+            }        
         }
 
         {//Det2
@@ -1554,10 +1562,10 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
                         customPlotDet2->xAxis2->setRange(0, timeRange/*keys.back()*/);
                     }
                 }
-            }
 
-            if (this->property("isCountModel").toBool())
-                customPlotDet2->replot(refreshPriority);
+                if (this->property("isCountModel").toBool())
+                    customPlotDet2->replot(refreshPriority);
+            }
         }
 
         {//符合结果
@@ -1600,7 +1608,6 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
             customPlotCoResult->yAxis->setRange(lower, upper);
             customPlotCoResult->yAxis2->setRange(lower, upper);
 
-
             if (this->property("autoRefreshModel").toBool()){
                 qint32 timeRange = this->property("refresh-time-range").toInt();
                 if (keys.back() > customPlotCoResult->xAxis->range().upper){
@@ -1617,10 +1624,10 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
                         customPlotCoResult->xAxis2->setRange(0, timeRange/*keys.back()*/);
                     }
                 }
-            }
 
-            if (this->property("isCountModel").toBool())
-                customPlotCoResult->replot(refreshPriority);
+                if (this->property("isCountModel").toBool())
+                    customPlotCoResult->replot(refreshPriority);
+            }
         }
     }
     if(1){//能谱
@@ -1663,6 +1670,7 @@ void PlotWidget::slotUpdatePlotDatas(SingleSpectrum r1, vector<CoincidenceResult
             if (this->property("showGaussInfo").toBool()){
                 this->slotGauss(customPlotDet1, leftWindow, rightWindow);
             }
+
 
             if (!this->property("isCountModel").toBool())
                 customPlotDet1->replot(refreshPriority);
@@ -1720,6 +1728,10 @@ void PlotWidget::slotAddPlotDatas(SingleSpectrum r1, CoincidenceResult r3)
     count2.append(r3.CountRate2);
     count3.append(r3.ConCount_single);
     colorsCount.append(clrLine);
+
+    /*暂停退出*/
+    if (!this->property("autoRefreshModel").toBool())
+        return;
 
     if(times.size()>0)
     {

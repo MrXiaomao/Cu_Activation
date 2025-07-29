@@ -102,43 +102,41 @@ WaveformModel::~WaveformModel()
     delete ui;   
 }
 
+#include "globalsettings.h"
 void WaveformModel::load()
 {
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(path);
-    QFile file(QApplication::applicationDirPath() + "/config/wave.json");
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // 读取文件内容
-        QByteArray jsonData = file.readAll();
-        file.close(); //释放资源
+    JsonSettings* waveSettings = GlobalSettings::instance()->mUserSettings;
+    if (waveSettings->isOpen()){
+        waveSettings->prepare();
+        waveSettings->beginGroup();
+        ui->comboBox->setCurrentIndex(waveSettings->value("WaveformPolarity").toInt());
+        ui->comboBox_4->setCurrentIndex(waveSettings->value("DetectorGain").toInt());
 
-        // 将 JSON 数据解析为 QJsonDocument
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-        QJsonObject jsonObj = jsonDoc.object();
+        ui->spinBox->setValue(waveSettings->value("TriggerThold1").toInt());
+        ui->spinBox_2->setValue(waveSettings->value("TriggerThold2").toInt());
 
-        ui->comboBox->setCurrentIndex(jsonObj["WaveformPolarity"].toInt());
-        ui->comboBox_4->setCurrentIndex(jsonObj["DetectorGain"].toInt());
+        ui->lineEdit_path->setText(waveSettings->value("Path").toString());
+        ui->lineEdit_filename->setText(waveSettings->value("FileName").toString());
 
-        ui->spinBox->setValue(jsonObj["TriggerThold1"].toInt());
-        ui->spinBox_2->setValue(jsonObj["TriggerThold2"].toInt());
-
-        ui->lineEdit_path->setText(jsonObj["Path"].toString());
-        ui->lineEdit_filename->setText(jsonObj["FileName"].toString());
-
-        ui->comboBox_3->setCurrentIndex(jsonObj["WaveLength"].toInt());
+        ui->comboBox_3->setCurrentIndex(waveSettings->value("WaveLength").toInt());
+        waveSettings->endGroup();
+        waveSettings->finish();
     }
 }
 
 bool WaveformModel::save()
 {
     // 保存参数
-    QJsonObject jsonObj;
+    JsonSettings* waveSettings = GlobalSettings::instance()->mUserSettings;
+    if (!waveSettings->isOpen())
+        return false;
+
+    waveSettings->prepare();
+    waveSettings->beginGroup();
 
     //波形极性
     quint8 v = ui->comboBox->currentIndex();
-    jsonObj["WaveformPolarity"] = v;
+    waveSettings->setValue("WaveformPolarity", v);
 
     //探测器增益
     {
@@ -173,23 +171,23 @@ bool WaveformModel::save()
         } else {
             ch1 = 0x04;
         }
-        jsonObj["DetectorGain"] = ch1;
+        waveSettings->setValue("DetectorGain", ch1);
     }
 
     //探测器1-2阈值
     {
         quint16 ch1 = (quint16)ui->spinBox->value();
         quint16 ch2 = (quint16)ui->spinBox_2->value();
-        jsonObj["TriggerThold1"] = ch1;
-        jsonObj["TriggerThold2"] = ch2;
+        waveSettings->setValue("TriggerThold1", ch1);
+        waveSettings->setValue("TriggerThold2", ch2);
     }
 
     //探测器3-4阈值
     {
         quint16 ch3 = 0x00;
         quint16 ch4 = 0x00;
-        jsonObj["TriggerThold3"] = ch3;
-        jsonObj["TriggerThold4"] = ch4;
+        waveSettings->setValue("TriggerThold3", ch3);
+        waveSettings->setValue("TriggerThold4", ch4);
     }
 
     //波形长度
@@ -208,34 +206,23 @@ bool WaveformModel::save()
         } else{
             waveLength = 0x04;
         }
-        jsonObj["WaveLength"] = waveLength;
+        waveSettings->setValue("WaveLength", waveLength);
     }
 
     //路径
     {
-        jsonObj["Path"] = ui->lineEdit_path->text();
+        waveSettings->setValue("Path", ui->lineEdit_path->text());
     }
 
     //文件名
     {
-        jsonObj["FileName"] = ui->lineEdit_filename->text();
+        waveSettings->setValue("FileName", ui->lineEdit_filename->text());
     }
 
-
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(path);
-    QFile file(QApplication::applicationDirPath() + "/config/wave.json");
-    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QJsonDocument jsonDoc(jsonObj);
-        file.write(jsonDoc.toJson());
-        file.close();
-    } else {
-        return false;
-    }
-
-    return true;
+    waveSettings->endGroup();
+    bool result = waveSettings->flush();
+    waveSettings->finish();
+    return result;
 }
 
 void WaveformModel::on_pushButton_start_clicked()
@@ -263,22 +250,19 @@ void WaveformModel::on_pushButton_start_clicked()
         detectorParameter.Threshold_baseLine = 8140;
 
         // 打开 JSON 文件
-        QFile file(QApplication::applicationDirPath() + "/config/wave.json");
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            // 读取文件内容
-            QByteArray jsonData = file.readAll();
-            file.close(); //释放资源
-
-            // 将 JSON 数据解析为 QJsonDocument
-            QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-            QJsonObject jsonObj = jsonDoc.object();
-            detectorParameter.triggerThold1 = jsonObj["TriggerThold1"].toInt();
-            detectorParameter.triggerThold2 = jsonObj["TriggerThold2"].toInt();
-            detectorParameter.waveformPolarity = jsonObj["WaveformPolarity"].toInt();
-            detectorParameter.deadTime = jsonObj["DeadTime"].toInt();
-            detectorParameter.waveLength = jsonObj["WaveLength"].toInt();
-            detectorParameter.triggerModel = jsonObj["TriggerModel"].toInt();
-            detectorParameter.gain = jsonObj["DetectorGain"].toInt();
+        JsonSettings* waveSettings = GlobalSettings::instance()->mUserSettings;
+        if (waveSettings->isOpen()){
+            waveSettings->prepare();
+            waveSettings->beginGroup();
+            detectorParameter.triggerThold1 = waveSettings->value("TriggerThold1").toInt();
+            detectorParameter.triggerThold2 = waveSettings->value("TriggerThold2").toInt();
+            detectorParameter.waveformPolarity = waveSettings->value("WaveformPolarity").toInt();
+            detectorParameter.deadTime = waveSettings->value("DeadTime").toInt();
+            detectorParameter.waveLength = waveSettings->value("WaveLength").toInt();
+            detectorParameter.triggerModel = waveSettings->value("TriggerModel").toInt();
+            detectorParameter.gain = waveSettings->value("DetectorGain").toInt();
+            waveSettings->endGroup();
+            waveSettings->finish();
         }
 
         total_filesize = 0;
@@ -302,36 +286,27 @@ void WaveformModel::on_pushButton_start_clicked()
 
 void WaveformModel::on_pushButton_save_clicked()
 {
-    //存储路径
     //存储文件名
     QString filename = ui->lineEdit_path->text() + "/" + ui->lineEdit_filename->text();
-    QFileInfo fInfo(filename);
-    if (fInfo.exists()){
+    if (!filename.endsWith(".dat"))
+        filename += ".dat";
+    if (QFileInfo::exists(filename)){
         if (QMessageBox::question(this, tr("提示"), tr("保存文件名已经存在，是否覆盖重写？"), QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) != QMessageBox::Yes)
             return ;
     }
 
     // 保存参数
-    QString path = QApplication::applicationDirPath() + "/config";
-    QDir dir(path);
-    if (!dir.exists())
-        dir.mkdir(dir.absolutePath());
-    QFile file(QApplication::applicationDirPath() + "/config/wave.json");
-    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QString path, filename;
-        path = ui->lineEdit_path->text();
-        filename = ui->lineEdit_filename->text();
-        if (!filename.endsWith(".dat"))
-            filename += ".dat";
+    JsonSettings* waveSettings = GlobalSettings::instance()->mUserSettings;
+    if (waveSettings->isOpen()){
+        waveSettings->prepare();
+        waveSettings->beginGroup();
+        waveSettings->setValue("Path", ui->lineEdit_path->text());
+        waveSettings->setValue("FileName", filename);
+        waveSettings->endGroup();
+        waveSettings->flush();
+        waveSettings->finish();
 
-        QJsonObject jsonObj;
-        jsonObj["Path"] = path;
-        jsonObj["FileName"] = filename;
-        QJsonDocument jsonDoc(jsonObj);
-        file.write(jsonDoc.toJson());
-        file.close();
-
-        commandhelper->exportFile(path + "/" + filename);
+        commandhelper->exportFile(filename);
     }
 }
 

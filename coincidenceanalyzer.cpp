@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-29 19:18:15
+ * @LastEditTime: 2025-07-29 21:56:21
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -845,6 +845,8 @@ void CoincidenceAnalyzer::doFPGA_lossDATA_correction(std::map<unsigned int, unsi
             if(pos >0 && pos < coinNum){
                 coinResult[pos].CountRate1 =  static_cast<int>(coinResult[pos].CountRate1 * correctRatio);
                 coinResult[pos].CountRate2 =  static_cast<int>(coinResult[pos].CountRate2 * correctRatio);
+                coinResult[pos].DeathRatio1 = coinResult[pos].DeathRatio1 * correctRatio;
+                coinResult[pos].DeathRatio2 = coinResult[pos].DeathRatio1 * correctRatio;
                 coinResult[pos].ConCount_single =  static_cast<int>(coinResult[pos].ConCount_single * correctRatio);
                 coinResult[pos].ConCount_multiple =  static_cast<int>(coinResult[pos].ConCount_multiple * correctRatio);
             }

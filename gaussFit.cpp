@@ -2,7 +2,7 @@
  * @Author: 程梓芸
  * @Date: 2025-04-22 17:21:41
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-05-19 01:45:29
+ * @LastEditTime: 2025-08-01 14:52:49
  * @Description: 改自程梓芸的高斯拟合程序，需要用到GSL库。在原有程序的基础上增加了一个拟合是否成功的判断。
  */
 
@@ -108,7 +108,7 @@ void callback(const size_t iter, void* params,
     /* compute reciprocal condition number of J(x) */
     gsl_multifit_nlinear_rcond(&rcond, w);
 
-    fprintf(stderr, "iter %2zu: a = %.4f, b = %.4f, c = %.4f, |a|/|v| = %.4f cond(J) = %8.4f, |f(x)| = %.4f\n",
+    /*fprintf(stderr, "iter %2zu: a = %.4f, b = %.4f, c = %.4f, |a|/|v| = %.4f cond(J) = %8.4f, |f(x)| = %.4f\n",
         iter,
         gsl_vector_get(x, 0),
         gsl_vector_get(x, 1),
@@ -116,6 +116,7 @@ void callback(const size_t iter, void* params,
         avratio,
         1.0 / rcond,
         gsl_blas_dnrm2(f));
+    */
  }
  
 int solve_system(gsl_vector* x, gsl_multifit_nlinear_fdf* fdf,
@@ -224,6 +225,13 @@ int testFun(void)
     int status = solve_system(x, &fdf, &fdf_params);
      
     if(status != GSL_SUCCESS){
+        
+        gsl_vector_free(f);
+        gsl_vector_free(x);
+        gsl_rng_free(r);
+
+        free(fit_data.x);
+        free(fit_data.y);
         return false;
     }
 
@@ -247,6 +255,8 @@ int testFun(void)
     gsl_vector_free(x);
     gsl_rng_free(r);
 
+    free(fit_data.x);
+    free(fit_data.y);
     return true;
  }
 
@@ -316,6 +326,8 @@ bool GaussFit(std::vector<double> sx, std::vector<double> sy, int n, double* res
 	int status = solve_system(x, &fdf, &fdf_params);
     
     if(status != GSL_SUCCESS){
+        delete[] fitX;
+        delete[] fitY;
         return false;
     }
 
@@ -341,5 +353,8 @@ bool GaussFit(std::vector<double> sx, std::vector<double> sy, int n, double* res
 	gsl_vector_free(f);
 	gsl_vector_free(x);
 	gsl_rng_free(r);
+    
+    delete[] fitX;
+    delete[] fitY;
     return true;
 }

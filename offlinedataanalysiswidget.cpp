@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-20 09:21:28
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-29 19:32:54
+ * @LastEditTime: 2025-08-01 16:50:56
  * @Description: 离线数据分析
  */
 #include "offlinedataanalysiswidget.h"
@@ -413,7 +413,9 @@ void OfflineDataAnalysisWidget::slotStart()
 
             if (eof){
                 if (interrupted)
+                {
                     emit sigEnd(true);
+                }
                 else{
                     //处理最后剩余的数据包，这部分数据包不满1秒，所以没被处理
                     if(data1_2.size()>0 || data2_2.size()>0)
@@ -422,10 +424,11 @@ void OfflineDataAnalysisWidget::slotStart()
 //                     saveParticleInfo(data1_2,data2_2);
 // #endif
                         coincidenceAnalyzer->calculate(data1_2, data2_2, (unsigned short*)EnWindow, timeWidth, delayTime, true, true);
+                        qDebug().noquote()<<"endTime = "<<startTime.msecsTo(QDateTime::currentDateTime())<<"ms,  time0 = "
+                            <<data1_2.back().time/1e9<<"s, count1 = "<<data1_2.size()<<", count2 = "<<data2_2.size();
                     }
                     emit sigEnd(false);
                 }
-
                 return;
             }
 
@@ -460,9 +463,11 @@ void OfflineDataAnalysisWidget::slotStart()
 // #ifdef IS_VALID_DATA
 //                     saveParticleInfo(data1_2,data2_2);
 // #endif
+                    QDateTime start2Time = QDateTime::currentDateTime();
                     coincidenceAnalyzer->calculate(data1_2, data2_2, (unsigned short*)EnWindow, timeWidth, delayTime, true, true);
 
-                    qDebug().noquote()<<"calculateTime = "<<startTime.msecsTo(QDateTime::currentDateTime())<<"ms, time0 = "
+                    qDebug().noquote()<<"totalTime = "<<startTime.msecsTo(QDateTime::currentDateTime())<<"ms, "
+                                       <<start2Time.msecsTo(QDateTime::currentDateTime())<<"ms, time0 = "
                                        <<data1_2.back().time/1e9<<"s, count1 = "<<data1_2.size()<<", count2 = "<<data2_2.size();
                     data1_2.clear();
                     data2_2.clear();

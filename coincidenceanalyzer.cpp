@@ -2,7 +2,7 @@
  * @Author: MaoXiaoqing
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-29 21:56:21
+ * @LastEditTime: 2025-08-01 15:08:23
  * @Description: 符合计算算法
  */
 #include "coincidenceanalyzer.h"
@@ -18,6 +18,8 @@
 #include <QFile>
 #include <QtWidgets/QApplication>
 
+#include <algorithm>
+
 using namespace std;
 
 struct particle_data
@@ -27,13 +29,7 @@ struct particle_data
     unsigned char detectorID;
     particle_data(){}
     particle_data(long long t, unsigned short en, unsigned char id):time(t),energy(en),detectorID(id){}
-    friend bool operator<(particle_data a, particle_data b)
-    {
-        return a.time > b.time; //按x升序,要升序的话，改这里的大于小于号就行
-    }
 };
-
-//priority_queue<particle_data> q;//此时创建的优先队列是按x大小升序排列的
 
 CoincidenceAnalyzer::CoincidenceAnalyzer():
 countCoin(0), coolingTime_Manual(0), coolingTime_Auto(0), isChangeEnWindow(false),autoFirst(true),
@@ -108,7 +104,7 @@ void CoincidenceAnalyzer::calculate(const vector<TimeEnergy> &_data1, const vect
     if(unusedData2.size()>0) 
         time2_elapseFPGA = unusedData2.back().time/NANOSECONDS - (countCoin + coolingTime_Auto);//计算FPGA当前最大时间与上一时刻的时间差
 
-    int deltaT = 1; //单位秒
+    const int deltaT = 1; //单位秒
     //都存够1秒的数据才进行处理
     while(time1_elapseFPGA >= deltaT && time2_elapseFPGA >= deltaT)
     // while((time1_elapseFPGA >= deltaT && time2_elapseFPGA >= deltaT) || time1_elapseFPGA>1 || time2_elapseFPGA>1) //或者其中某一个存满2s数据。
@@ -390,53 +386,67 @@ void CoincidenceAnalyzer::Coincidence(vector<TimeEnergy> &data1, vector<TimeEner
     //优化2: 使用批量构建优先队列
     vector<particle_data> tempVec;
     tempVec.reserve(data_temp1.size() + data_temp2.size());
-    for(auto& data : data_temp1) {
-        tempVec.emplace_back(data.time, data.energy, 0b01);
-    }
-    for(auto& data : data_temp2) {
-        tempVec.emplace_back(data.time, data.energy, 0b10);
+
+    //采用归并排序
+    // 双指针归并
+    auto it1 = data_temp1.begin();
+    auto it2 = data_temp2.begin();
+
+    while (it1 != data_temp1.end() && it2 != data_temp2.end()) {
+        if (it1->time < it2->time) {
+            tempVec.emplace_back(it1->time, it1->energy, 0b01);
+            ++it1;
+        } else {
+            tempVec.emplace_back(it2->time, it2->energy, 0b10);
+            ++it2;
+        }
     }
 
-    priority_queue<particle_data> orderTimeEn(std::less<particle_data>(), std::move(tempVec));
+    // 处理剩余元素
+    while (it1 != data_temp1.end()) {
+        tempVec.emplace_back(it1->time, it1->energy, 0b01);
+        ++it1;
+    }
+    while (it2 != data_temp2.end()) {
+        tempVec.emplace_back(it2->time, it2->energy, 0b10);
+        ++it2;
+    }
 
-    // 使用临时队列遍历
-    priority_queue<particle_data> temp(orderTimeEn); // 复制原队列到临时队列
     long long startTime = 0; //符合事件的起始时刻
     unsigned char type = 0b00; //用来判断是否存在不同探头的符合事件
     int count = 0; //符合事件中的信号个数
 
-    while (!temp.empty()) {
-       particle_data temp_data = temp.top(); // 返回堆顶元素的引用
-       temp.pop(); // 弹出元素以遍历下一个元素
-
+    auto it_total = tempVec.begin();
+    while (it_total != tempVec.end()) {
        // 判断时间窗内有没有新的事件产生
-       if (temp_data.time - startTime > windowWidthT)
+       if (it_total->time - startTime > windowWidthT)
        {
           //先处理上一事件
-          if(type==0b11){
+          if(type == 0b11){
             if(count == 2) tmpCoinResult.ConCount_single++; //单符合事件
             if(count > 2) tmpCoinResult.ConCount_multiple++; //多符合事件，单独记录
           }
 
           //更新起始时间、探测器类型、和符合事件中的信号的个数。
-          startTime = temp_data.time;
-          type = temp_data.detectorID;
+          startTime = it_total->time;
+          type = it_total->detectorID;
           count = 1;
        }
        else
        {
-          startTime = temp_data.time; //扩展型事件，起始时间发生扩展。
-          type |= temp_data.detectorID;
+          startTime = it_total->time; //扩展型事件，起始时间发生扩展。
+          type |= it_total->detectorID;
           count++;
         }
 
        //处理最后一次事件
-       if(temp.empty()){
-            if(type==0b11){
+       if(it_total == tempVec.end()){
+            if(type == 0b11){
                 if(count == 2) tmpCoinResult.ConCount_single++; //单符合事件
                 if(count > 2) tmpCoinResult.ConCount_multiple++; //多符合事件，单独记录
             }
        }
+       ++it_total;
     }
     
     //对FPGA丢包进行修正
@@ -478,13 +488,12 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
             }
             
             double result[3] = {0.0, 0.0, lastSigma};
-            qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理,自动高斯拟合,Det1开始高斯拟合";
+            qDebug()<<"准备更新能窗,Det1开始高斯拟合";
             bool status = GaussFit(sx, sy, fcount, result);
             if(status)
             {
                 if(lastSigma>0.0 && abs(lastSigma - result[2])/lastSigma > MAX_SIGAMA_CHANGE) {
-                    qDebug()<<QString("CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，自动高斯拟合，\
-                        Det1拟合结果与上一次高斯拟合偏差大于%1\%，放弃能窗更新").arg(QString::number(MAX_SIGAMA_CHANGE*100));
+                    qDebug()<<QString("更新能窗失败，Det1拟合结果与上一次高斯拟合偏差大于%1\%，放弃能窗更新").arg(QString::number(MAX_SIGAMA_CHANGE*100));
                         return;
                 }
                 double mean = result[1];
@@ -501,16 +510,16 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
 
                 if(Right < MULTI_CHANNEL - 1u) EnergyWindow[1] = (unsigned short)Right;
                 else EnergyWindow[1] = MULTI_CHANNEL-1u;
-                qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，自动高斯拟合，Det1高斯拟合成功";
+                qDebug()<<"更新能窗，Det1高斯拟合成功";
             }
             else
             {
-                qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，自动高斯拟合，Det1高斯拟合失败";
+                qDebug()<<"更新能窗，Det1高斯拟合失败";
                 // qDebug().noquote() <<"探测器1自动高斯拟合发生异常,可能原因，选取的初始峰位不具有高斯形状，无法进行高斯拟合";
             }
         }
         else{
-            qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，Det1自动高斯拟合待拟合的数据点数小于6个，不允许拟合";
+            qDebug()<<"自动更新能窗失败，Det1自动高斯拟合待拟合的数据点数小于6个，不允许拟合";
             // qDebug().noquote() <<"探测器1自动高斯拟合发生异常,待拟合的数据点数小于6个，无法拟合";
         }
     }
@@ -538,13 +547,12 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
             }
 
             double result[3] = {0.0, 0.0, lastSigma};
-            qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理,自动高斯拟合,Det2开始高斯拟合";
+            qDebug()<<"准备更新能窗,Det2开始高斯拟合";
             bool status = GaussFit(sx, sy, fcount, result);
             if(status)
             {
                 if(lastSigma>0.0 && abs(lastSigma - result[2])/lastSigma > MAX_SIGAMA_CHANGE) {
-                    qDebug()<<QString("CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，自动高斯拟合，\
-                        Det2拟合结果与上一次高斯拟合偏差大于%1\%，放弃能窗更新").arg(QString::number(MAX_SIGAMA_CHANGE*100));
+                    qDebug()<<QString("更新能窗失败，Det2拟合结果与上一次高斯拟合偏差大于%1\%，放弃能窗更新").arg(QString::number(MAX_SIGAMA_CHANGE*100));
                         return;
                 }
 
@@ -563,15 +571,13 @@ void CoincidenceAnalyzer::AutoEnergyWidth()
 
                 if(Right < MULTI_CHANNEL - 1u) EnergyWindow[3] = (unsigned short)Right;
                 else EnergyWindow[3] = MULTI_CHANNEL - 1u;
-                qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，自动高斯拟合，Det2高斯拟合成功";
+                qDebug()<<"更新能窗，Det2高斯拟合成功";
             }
             else{
-                qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，自动高斯拟合，Det2高斯拟合失败";
-                // qDebug().noquote()<<"探测器2 自动高斯拟合发生异常,可能原因，选取的初始峰位不具有高斯形状，无法进行高斯拟合";
+                qDebug()<<"更新能窗，Det2高斯拟合失败";
             }
         } else{
-            qDebug()<<"CoincidenceAnalyzer::AutoEnergyWidth:符合数据处理，Det1自动高斯拟合待拟合的数据点数小于6个，不允许拟合";
-            // qDebug().noquote() <<"探测器1自动高斯拟合发生异常,待拟合的数据点数小于6个，无法拟合";
+            qDebug()<<QString("自动更新能窗失败，Det2自动高斯拟合待拟合的数据点数小于%1个，不允许拟合").arg(gauss_arr_count_min);
         }
     }
     if(changed) GaussFitLog.push_back({AllPoint.back().time, EnergyWindow[0], EnergyWindow[1], EnergyWindow[2], EnergyWindow[3]});

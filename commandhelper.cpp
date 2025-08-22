@@ -237,6 +237,16 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
         }
     });
 
+    //异常终止，停止测量
+    connect(this, &CommandHelper::sigAbonormalStop, this, [=](){
+        if (nullptr != pfSaveNet){
+            pfSaveNet->close();
+            delete pfSaveNet;
+            pfSaveNet = nullptr;
+        }
+    });
+
+
     connect(this, &CommandHelper::sigMeasureStopWave, this, [=](){
         //测量停止，进行符合计算，给出产额结果
         if(detectorParameter.transferModel == 0x03){
@@ -642,7 +652,10 @@ void CommandHelper::handleManualMeasureNetData()
         QMutexLocker locker(&mutexFile);
         if (nullptr != pfSaveNet && binaryData.size() > 0){
             pfSaveNet->write(binaryData);
-            pfSaveNet->flush();
+            if(NetDataTimer.elapsed() > 1000) { // 每秒自动flush一次
+                pfSaveNet->flush();
+                NetDataTimer.restart();
+            }
         }
         if(binaryData.size() > 0)
         {
@@ -651,14 +664,25 @@ void CommandHelper::handleManualMeasureNetData()
     }
     else if(detectorParameter.transferModel == 0x05)
     {
-// #ifdef QT_DEBUG
+        
+        // 缓冲写入代替直接write
+        m_netBuffer.append(binaryData);
+
         //粒子模式，DEBUG模式下保存原始数据查找问题
-        QMutexLocker locker(&mutexFile);
-        if (nullptr != pfSaveNet && binaryData.size() > 0){
-            pfSaveNet->write(binaryData);
-            pfSaveNet->flush();
+        // QMutexLocker locker(&mutexFile);
+        if (nullptr != pfSaveNet){
+            // 满足以下任一条件时flush:
+            // 1. 缓冲区超过2MB
+            // 2. 上次flush超过1秒
+            if(m_netBuffer.size() > 2*1024*1024 || NetDataTimer.elapsed() > 1000)
+            {
+                pfSaveNet->write(m_netBuffer);
+                pfSaveNet->flush();
+                m_netBuffer.clear();
+                NetDataTimer.restart();
+                // qDebug().noquote()<<"Write net data";
+            }
         }
-// #endif
     }
 
     //00:能谱 03:波形 05:粒子
@@ -668,6 +692,13 @@ void CommandHelper::handleManualMeasureNetData()
             qDebug()<<"Recv HEX: "<<binaryData.toHex(' ');
             binaryData.remove(0, command.size());
             cmdPool.erase(cmdPool.begin());
+
+            //还没收到数据，停止测量
+            if(sendStopCmd && binaryData.compare(cmdStopTrigger)){
+                workStatus = WorkEnd;
+                sigAbonormalStop();
+                return;
+            }
 
             if (cmdPool.size() > 0)
             {
@@ -682,6 +713,10 @@ void CommandHelper::handleManualMeasureNetData()
                 workStatus = Measuring;
                 emit sigMeasureStart(detectorParameter.measureModel, detectorParameter.transferModel);
             }
+        }
+        else
+        {
+            qDebug()<<"warning Recv HEX: "<<binaryData.toHex(' ');
         }
     }
 
@@ -758,7 +793,7 @@ void CommandHelper::handleAutoMeasureNetData()
         }
         // 还没等到触发但是直接停止了
         if (binaryData.compare(cmdStopTrigger) == 0){
-            sigMeasureStop();
+            sigAbonormalStop();
         }
     }
 
@@ -1181,6 +1216,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     sendStopCmd = false;
     startSaveValidData = false;
     autoEnWindow.clear();
+    NetDataTimer.start();
 
     //先清空TCP发送区
     socketDetector->flush();  // 强制尝试发送（不阻塞，实际发送由系统调度）
@@ -1403,12 +1439,15 @@ void CommandHelper::slotStopManualMeasure()
         return;
 
     if (socketDetector->isWritable() && socketDetector->state() == QAbstractSocket::ConnectedState){
+        cmdPool.clear();
         cmdPool.push_back(cmdStopTrigger);
         {
             //QMutexLocker locker(&mutexCache);
             sendStopCmd = true;
         }
         socketDetector->write(cmdStopTrigger);
+        socketDetector->flush();
+        socketDetector->waitForBytesWritten();
         qDebug()<<"Send HEX: "<<cmdStopTrigger.toHex(' ');
     } else {
         emit sigDetectorFault();
@@ -1604,12 +1643,15 @@ void CommandHelper::slotStopAutoMeasure()
     if (nullptr == socketDetector)
         return;
 
+    cmdPool.clear();
     cmdPool.push_back(cmdStopTrigger);
     {
         //QMutexLocker locker(&mutexCache);
         sendStopCmd = true;
     }
     socketDetector->write(cmdStopTrigger);
+    socketDetector->flush();
+    socketDetector->waitForBytesWritten();
     qDebug()<<"Send HEX: "<<cmdStopTrigger.toHex(' ');
 }
 
@@ -1624,8 +1666,6 @@ void CommandHelper::netFrameWorkThead()
             if (cachePool.size() == 0){
                 if (handlerPool.size() < 12){
                     // 数据单位最小值为12（一个指令长度）
-                    // QThread::msleep(1);
-                    // continue;
                     while(!ready)
                     {
                         condition.wait(&mutexCache);
@@ -1643,8 +1683,6 @@ void CommandHelper::netFrameWorkThead()
 
         if (handlerPool.size() == 0)
             continue;
-
-        QByteArray validFrame;
 
         //00:能谱 03:波形 05:粒子
         if (detectorParameter.transferModel == 0x00){
@@ -1674,7 +1712,7 @@ void CommandHelper::netFrameWorkThead()
 
                 if (isNual){
                     //复制有效数据
-                    validFrame.append(handlerPool.data(), minPkgSize);
+                    QByteArray validFrame(handlerPool.constData(), minPkgSize);
                     handlerPool.remove(0, minPkgSize);
 
                     //处理数据
@@ -1695,9 +1733,13 @@ void CommandHelper::netFrameWorkThead()
             QDateTime tmStart = QDateTime::currentDateTime();
 
             //----------------------------------寻找包头包尾---------------------------------//
-            int HeadIndex = -1; // 赋初值在0-258之外
-            int TailIndex = -1;
+            
+            //对于大计数率下，网口数据非常大，处理不过来，直接清空缓存池，但是由于担心清空掉停止指令，所以补发一次停止指令。
+            checkAndClearQByteArray(handlerPool);
+            int startPos = 0; 
             while (true){
+                int HeadIndex = -1; // 赋初值在0-258之外
+                int TailIndex = -1;
                 if(sendStopCmd) //且识别到已经发送停止指令，则可以检查是否读取到停止指令的返回。//当数据包小于minPkgSize，
                 {
                     //12 34 00 0F FF 10 00 11 00 00 AB CD
@@ -1706,17 +1748,8 @@ void CommandHelper::netFrameWorkThead()
                     {
                         foundStop = true;
                         qDebug()<<"Recv HEX: "<<cmdStopTrigger.toHex(' ');
-                        
-                        //根据网口调试助手，有时候硬件无法停止下来因此这里补发一次停止指令，但是不对返回的指令做处理，下一次开始测量清空缓存
-                        //该问题后期需要硬件从根源上解决问题才合适。
-                        /*socketDetector->write(cmdStopTrigger);
-                        socketDetector->flush();  // 强制尝试发送（不阻塞，实际发送由系统调度）
-                        socketDetector->waitForBytesWritten();//等待数据发送完成。
-                        qDebug()<<"Send HEX: "<<cmdStopTrigger.toHex(' ');
-                        */
 
                         QMutexLocker locker(&mutexFile);
-
                         if (nullptr != pfSaveNet){
                             pfSaveNet->close();
                             delete pfSaveNet;
@@ -1729,225 +1762,192 @@ void CommandHelper::netFrameWorkThead()
                             pfSaveVaildData = nullptr;
                         }
                     } else {
-                        // handlerPool.clear();
-                        // 因为有重新发送一次停止测量
-                        // slotStopManualMeasure();
-                        if(handlerPool.size()>12)  
+                        // DataHead 寻找包头 12 34
+                        for (startPos; startPos < handlerPool.size() - 2; startPos++)
                         {
-                            int removeSize = handlerPool.size() - 12;
-                            handlerPool = QByteArray(handlerPool.constData() + removeSize, handlerPool.size() - removeSize);
-                        }
-                        // sigMeasureStop();
-                    }
-                    break;
-                }
-                
-                //对于大计数率下，网口数据非常大，处理不过来，直接清空缓存池，但是由于担心清空掉停止指令，所以补发一次停止指令。
-                checkAndClearQByteArray(handlerPool);
-                
-                // 先尝试寻找完整数据包（数据包、指令包两类）
-                quint32 size = handlerPool.size();
-                if (size >= minPkgSize){
-                    // DataHead 寻找包头 00 00 aa b3 
-                    for (int i = 0; i < handlerPool.size() - 1; i++)
-                    {
-                        if ((quint8)handlerPool.at(i) == 0x00 && (quint8)handlerPool.at(i + 1) == 0x00
-                            && (quint8)handlerPool.at(i + 2) == 0xaa && (quint8)handlerPool.at(i + 3) == 0xb3)
-                        {
-                            HeadIndex = i;
-                            break;
-                        }
-                    }
-
-                    // DataTail 寻找包尾 00 00 cc d3
-                    // 有包头的情况下，才找包尾
-                    if(HeadIndex>=0){
-                        int posTail = HeadIndex + minPkgSize - 4;
-                        // 直接尝试找到包尾
-                        if ((quint8)handlerPool.at(posTail) == 0x00 && (quint8)handlerPool.at(posTail + 1) == 0x00
-                            && (quint8)handlerPool.at(posTail + 2) == 0xcc && (quint8)handlerPool.at(posTail + 3) == 0xd3)
-                        {
-                            TailIndex = posTail;
-                        }
-                        else //标准位置不见包尾，找下一个头，说明这个数据包破损或者说异常
-                        {
-                            for (int i = 0; i < handlerPool.size() - 1; i++)
+                            if ((quint8)handlerPool.at(startPos) == 0x12 && (quint8)handlerPool.at(startPos + 1) == 0x34)
                             {
-                                if ((quint8)handlerPool.at(i) == 0x00 && (quint8)handlerPool.at(i + 1) == 0x00
-                                    && (quint8)handlerPool.at(i + 2) == 0xaa && (quint8)handlerPool.at(i + 3) == 0xb3)
-                                {
-                                    HeadIndex = i;
-                                    break;
-                                }
+                                break;
                             }
                         }
+                        break;
                     }
-                }
-                else{
-                    break;
-                }
 
-                if ((HeadIndex == -1) || (TailIndex == -1)){ // 没找到包头包尾,并且包长度满足一包数据的最小值
-                    if(!foundStop) //也没有找到停止指令
-                    {                                                
+                    //发现停止指令
+                    if(foundStop) {
                         //清空所有数据
                         handlerPool.clear();
+                        workStatus = WorkEnd;
+                        //计算出初始活度乘以几何效率，这里几何效率是近端探测器几何效率
+                        double At_omiga = coincidenceAnalyzer->getInintialActive(detectorParameter, time_SetEnWindow);
+                        activeOmigaToYield(At_omiga);
+                        emit sigMeasureStop();
+                        break;
                     }
-
-                    break;
                 }
+                else{ //查找有效数据包
+                    // 先尝试寻找完整数据包（数据包、指令包两类）
+                    quint32 size = handlerPool.size();
 
-                if (HeadIndex>-1 && HeadIndex > TailIndex) // 如果找到包头，且包头大于包尾则清除包头之前的数据
-                {
-                    //清空包头之前的数据
-                    // handlerPool.remove(0, HeadIndex);
-                    //使用指针重构（最高效但需谨慎）, 不移动数据，时间复杂度 O(1)
-                    //handlerPool = QByteArray(handlerPool.constData() + HeadIndex, handlerPool.size() - HeadIndex);
-                    char* data = handlerPool.data();
-                    memmove(data, data + HeadIndex, handlerPool.size() - HeadIndex);
-                    handlerPool.resize(handlerPool.size() - HeadIndex);
-                    qDebug() << "发现坏包，数据长度:" << HeadIndex;
-                    break;
-                }
+                    if(startPos >= size) break;
 
-                if((TailIndex-HeadIndex) == (minPkgSize-4)){
-                    isNual = true;
-                    break;
-                }
-            }
-
-            //发现停止指令
-            if(foundStop) {
-                //清空所有数据
-                handlerPool.clear();
-                workStatus = WorkEnd;
-                //计算出初始活度乘以几何效率，这里几何效率是近端探测器几何效率
-                double At_omiga = coincidenceAnalyzer->getInintialActive(detectorParameter, time_SetEnWindow);
-                activeOmigaToYield(At_omiga);
-                emit sigMeasureStop();
-            }
-
-            //没有停止指令，且发现一个有效数据包
-            if (isNual && (!foundStop)){
-                //复制有效数据
-                validFrame.append(handlerPool.data()+HeadIndex, minPkgSize);
-
-                //使用指针重构（最高效但需谨慎）, 不移动数据，时间复杂度 O(1)
-                //handlerPool = QByteArray(handlerPool.constData() + minPkgSize, handlerPool.size() - minPkgSize);
-                char* data = handlerPool.data();
-                memmove(data, data + minPkgSize, handlerPool.size() - minPkgSize);
-                handlerPool.resize(handlerPool.size() - minPkgSize);
-
-                //处理数据
-                const unsigned char *ptrOffset = (const unsigned char *)validFrame.constData();
-
-                //通道号(4字节)
-                ptrOffset += 4; //包头4字节
-                quint32 channel = static_cast<quint32>(ptrOffset[0]) << 24 |
-                                  static_cast<quint32>(ptrOffset[1]) << 16 |
-                                  static_cast<quint32>(ptrOffset[2]) << 8 |
-                                  static_cast<quint32>(ptrOffset[3]);
-
-                //通道值转换
-                channel = (channel == 0xFFF1) ? 0 : 1;
-
-                //序号（4字节）
-                quint32 dataNum = static_cast<quint32>(ptrOffset[4]) << 24 |
-                                  static_cast<quint32>(ptrOffset[5]) << 16 |
-                                  static_cast<quint32>(ptrOffset[6]) << 8 |
-                                  static_cast<quint32>(ptrOffset[7]);
-
-                ptrOffset += 8;
-                //粒子模式数据(PARTICLE_NUM_ONE_PAKAGE+1)*16byte,6字节:时间，2字节:死时间，2字节:幅度
-                int ref = 0;
-                quint64 firsttime_temp = 0;
-                quint64 lasttime_temp = 0;
-                std::vector<TimeEnergy> temp;
-                while (ref++ < PARTICLE_NUM_ONE_PAKAGE){
-                    //空置48bit
-                    ptrOffset += 6;
-
-                    //时间:48bit
-                    quint64 t = static_cast<quint64>(ptrOffset[0]) << 40 |
-                                  static_cast<quint64>(ptrOffset[1]) << 32 |
-                                  static_cast<quint64>(ptrOffset[2]) << 24 |
-                                  static_cast<quint64>(ptrOffset[3]) << 16 |
-                                  static_cast<quint64>(ptrOffset[4]) << 8 |
-                                  static_cast<quint64>(ptrOffset[5]);
-                    t *= 10;
-                    ptrOffset += 6;
-
-                    //死时间:16bit
-                    unsigned short deathtime = static_cast<quint16>(ptrOffset[0]) << 8 | static_cast<quint16>(ptrOffset[1]);
-                    deathtime *=10;
-                    ptrOffset += 2;
-
-                    //幅度:16bit
-                    unsigned short amplitude = static_cast<quint16>(ptrOffset[0]) << 8 | static_cast<quint16>(ptrOffset[1]);
-                    ptrOffset += 2;
-
-                    if(ref == 1) firsttime_temp = t;
-                    if(t>0) lasttime_temp = t; //一直更新最后一个数值，单是要确保t不是空值
-
-                    if (t != 0x00 && amplitude != 0x00)
-                        temp.push_back(TimeEnergy(t, deathtime, amplitude));
-                }
-
-                //对丢包情况进行修正处理
-                //考虑到实际丢包总是在大计数率下，网口传输响应不过来，两个通道的不响应时间长度基本相同，这里直接以探测器1的丢包来修正。
-                if(channel == 0){
-                    quint32 losspackageNum = dataNum - SequenceNumber - 1; //注意要减一才是丢失的包个数
-                    if(losspackageNum > 0) {
-                        firstTime = firsttime_temp;
-                        quint64 delataT = firstTime - lastTime;//丢包的时间段长度
-                        
-                        //检测丢包跨度是否刚好跨过某一秒的前后，
-                        //经过初步测试，丢包的时候从来没有连续丢失超过1s的数据。
-                        unsigned int leftT = static_cast<unsigned int>(ceil(lastTime*1.0/1e9)); //向上取整
-                        unsigned int rightT = static_cast<unsigned int>(ceil(firstTime*1.0/1e9));
-
-                        //对时间跨度刚好为一秒，则修复
-                        if( rightT - leftT == 1){
-                            unsigned long long t1 = 0LL, t2 = 0LL;
-                            t1 = static_cast<unsigned long long>(leftT)*1e9 - lastTime;
-                            t2 = firstTime - static_cast<unsigned long long>(leftT)*1e9;
-                            if(t1>0 && t2>0)
+                    if (size >= minPkgSize){
+                        // DataHead 寻找包头 00 00 aa b3 
+                        for (startPos; startPos < handlerPool.size() - 3; startPos++)
+                        {
+                            if ((quint8)handlerPool.at(startPos) == 0x00 && (quint8)handlerPool.at(startPos + 1) == 0x00
+                                && (quint8)handlerPool.at(startPos + 2) == 0xaa && (quint8)handlerPool.at(startPos + 3) == 0xb3)
                             {
-                                lossData[leftT] += t1; //注意计时从1开始，因为是向上取整
-                                lossData[rightT] += t2; //注意计时从1开始
-                                coincidenceAnalyzer->AddLossMap(leftT, t1);
-                                coincidenceAnalyzer->AddLossMap(rightT, t2);
+                                HeadIndex = startPos;
+                                break;
                             }
                         }
-                        else if((rightT - leftT) == 0){
-                            // 记录丢失的时间长度
-                            lossData[leftT] += delataT;
+
+                        // DataTail 寻找包尾 00 00 cc d3
+                        // 有包头的情况下，才找包尾
+                        if(HeadIndex >= 0){
+                            int posTail = HeadIndex + minPkgSize - 4;
+                            if(posTail >= size -3) break;
+
+                            // 直接尝试找到包尾
+                            if ((quint8)handlerPool.at(posTail) == 0x00 && (quint8)handlerPool.at(posTail + 1) == 0x00
+                                && (quint8)handlerPool.at(posTail + 2) == 0xcc && (quint8)handlerPool.at(posTail + 3) == 0xd3)
+                            {
+                                TailIndex = posTail;
+                                startPos = TailIndex + 4;
+                                isNual = true;
+                            }
                         }
-                        else{//暂时不考虑丢包超过两秒时长的修复
-                            
-                        }
-                        
+                    }
+                    else{
+                        break;
                     }
 
-                    //记录数据帧序号
-                    SequenceNumber = dataNum;
-                    //记录数据帧最后时间
-                    lastTime = lasttime_temp;
-                }
+                    if ((HeadIndex == -1) || (TailIndex == -1)){ // 没找到包头包尾,并且包长度满足一包数据的最小值
+                        continue;
+                    }
+                
+                    //找到一个有效数据包
+                    if (isNual){
+                        //复制有效数据
+                        // QByteArray validFrame(handlerPool.constData()+HeadIndex, minPkgSize);
 
-                //数据分拣完毕
-                // if (temp.size() > 0){
-                DetTimeEnergy detTimeEnergy;
-                detTimeEnergy.channel = channel;
-                detTimeEnergy.timeEnergy.swap(temp);
-                {
-                    QMutexLocker locker(&mutexPlot);
-                    currentSpectrumFrames.push_back(detTimeEnergy);
-                }
+                        //使用指针重构（最高效但需谨慎）, 不移动数据，时间复杂度 O(1)
+                        //handlerPool = QByteArray(handlerPool.constData() + minPkgSize, handlerPool.size() - minPkgSize);
+                        // char* data = handlerPool.data();
+                        // memmove(data, data + minPkgSize, handlerPool.size() - minPkgSize);
+                        // handlerPool.resize(handlerPool.size() - minPkgSize);
 
-                // QDateTime tmStop = QDateTime::currentDateTime();
-                // qDebug() << "frame analyze time: " << tmStart.msecsTo(tmStop) << "ms";
+                        //处理数据
+                        const unsigned char *ptrOffset = (const unsigned char *)handlerPool.constData();
+                        ptrOffset += HeadIndex;
+
+                        //通道号(4字节)
+                        ptrOffset += 4; //包头4字节
+                        quint32 channel = static_cast<quint32>(ptrOffset[0]) << 24 |
+                                        static_cast<quint32>(ptrOffset[1]) << 16 |
+                                        static_cast<quint32>(ptrOffset[2]) << 8 |
+                                        static_cast<quint32>(ptrOffset[3]);
+
+                        //通道值转换
+                        channel = (channel == 0xFFF1) ? 0 : 1;
+
+                        //序号（4字节）
+                        quint32 dataNum = static_cast<quint32>(ptrOffset[4]) << 24 |
+                                        static_cast<quint32>(ptrOffset[5]) << 16 |
+                                        static_cast<quint32>(ptrOffset[6]) << 8 |
+                                        static_cast<quint32>(ptrOffset[7]);
+
+                        ptrOffset += 8;
+                        //粒子模式数据(PARTICLE_NUM_ONE_PAKAGE+1)*16byte,6字节:时间，2字节:死时间，2字节:幅度
+                        int ref = 0;
+                        quint64 firsttime_temp = 0;
+                        quint64 lasttime_temp = 0;
+                        std::vector<TimeEnergy> temp;
+                        while (ref++ < PARTICLE_NUM_ONE_PAKAGE){
+                            //空置48bit
+                            ptrOffset += 6;
+
+                            //时间:48bit
+                            quint64 t = static_cast<quint64>(ptrOffset[0]) << 40 |
+                                        static_cast<quint64>(ptrOffset[1]) << 32 |
+                                        static_cast<quint64>(ptrOffset[2]) << 24 |
+                                        static_cast<quint64>(ptrOffset[3]) << 16 |
+                                        static_cast<quint64>(ptrOffset[4]) << 8 |
+                                        static_cast<quint64>(ptrOffset[5]);
+                            t *= 10;
+                            ptrOffset += 6;
+
+                            //死时间:16bit
+                            unsigned short deathtime = static_cast<quint16>(ptrOffset[0]) << 8 | static_cast<quint16>(ptrOffset[1]);
+                            deathtime *=10;
+                            ptrOffset += 2;
+
+                            //幅度:16bit
+                            unsigned short amplitude = static_cast<quint16>(ptrOffset[0]) << 8 | static_cast<quint16>(ptrOffset[1]);
+                            ptrOffset += 2;
+
+                            if(ref == 1) firsttime_temp = t;
+                            if(t>0) lasttime_temp = t; //一直更新最后一个数值，单是要确保t不是空值
+
+                            if (t != 0x00 && amplitude != 0x00)
+                                temp.push_back(TimeEnergy(t, deathtime, amplitude));
+                        }
+
+                        //对丢包情况进行修正处理
+                        //考虑到实际丢包总是在大计数率下，网口传输响应不过来，两个通道的不响应时间长度基本相同，这里直接以探测器1的丢包来修正。
+                        if(channel == 0){
+                            quint32 losspackageNum = dataNum - SequenceNumber - 1; //注意要减一才是丢失的包个数
+                            if(losspackageNum > 0) {
+                                firstTime = firsttime_temp;
+                                quint64 delataT = firstTime - lastTime;//丢包的时间段长度
+                                
+                                //检测丢包跨度是否刚好跨过某一秒的前后，
+                                //经过初步测试，丢包的时候从来没有连续丢失超过1s的数据。
+                                unsigned int leftT = static_cast<unsigned int>(ceil(lastTime*1.0/1e9)); //向上取整
+                                unsigned int rightT = static_cast<unsigned int>(ceil(firstTime*1.0/1e9));
+
+                                //对时间跨度刚好为一秒，则修复
+                                if( rightT - leftT == 1){
+                                    unsigned long long t1 = 0LL, t2 = 0LL;
+                                    t1 = static_cast<unsigned long long>(leftT)*1e9 - lastTime;
+                                    t2 = firstTime - static_cast<unsigned long long>(leftT)*1e9;
+                                    if(t1>0 && t2>0)
+                                    {
+                                        lossData[leftT] += t1; //注意计时从1开始，因为是向上取整
+                                        lossData[rightT] += t2; //注意计时从1开始
+                                        coincidenceAnalyzer->AddLossMap(leftT, t1);
+                                        coincidenceAnalyzer->AddLossMap(rightT, t2);
+                                    }
+                                }
+                                else if((rightT - leftT) == 0){
+                                    // 记录丢失的时间长度
+                                    lossData[leftT] += delataT;
+                                }
+                                else{//暂时不考虑丢包超过两秒时长的修复
+                                    
+                                }
+                                
+                            }
+
+                            //记录数据帧序号
+                            SequenceNumber = dataNum;
+                            //记录数据帧最后时间
+                            lastTime = lasttime_temp;
+                        }
+
+                        //数据分拣完毕
+                        DetTimeEnergy detTimeEnergy;
+                        detTimeEnergy.channel = channel;
+                        detTimeEnergy.timeEnergy.swap(temp);
+                        {
+                            QMutexLocker locker(&mutexPlot);
+                            currentSpectrumFrames.push_back(detTimeEnergy);
+                        }
+                    }
+                }
             }
+            handlerPool.remove(0, startPos);
         } else if (detectorParameter.transferModel == 0x03){
             // 波形个数
             //包头0x0000AAB1 + 通道号（16bit） + 波形数据（4096*16bit） + 包尾0x0000CCD1
@@ -2053,7 +2053,6 @@ void CommandHelper::detTimeEnergyWorkThread()
                     swapFrames.swap(currentSpectrumFrames);
                 }
 
-                QMutexLocker locker(&mutexReset);
                 //2、处理缓存区数据
                 if (swapFrames.size() > 0){
                     for (size_t i=0; i<swapFrames.size(); ++i){

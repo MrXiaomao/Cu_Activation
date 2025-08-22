@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-07-22 15:42:16
+ * @LastEditTime: 2025-08-21 18:53:24
  * @Description: 用来管理网口的数据发送与接受，管理网口数据的处理相关业务。
  */
 #ifndef COMMANDHELPER_H
@@ -146,6 +146,7 @@ signals:
     void sigMeasureStart(qint8 mmode, qint8 tmode); //测量模式（手动、自动、标定），传输模式（能谱、波形、符合测量）
     void sigMeasureWait();
     void sigMeasureStop();
+    void sigAbonormalStop();
     void sigMeasureStopWave();
     void sigMeasureStopSpectrum();
     void sigUpdate_Active_yield(double, double); //刷新相对活度、中子产额
@@ -291,6 +292,9 @@ private:
     QFile *pfSaveNet = nullptr;//保存开始测量之后的所有网口接收数据
     QFile *pfSaveVaildData = nullptr;//保存开始测量之后的所有有效数据[时间、死时间、能量] [6字节、2字节、2字节]
 
+    QByteArray m_netBuffer; //缓存网口数据，仅仅用于写文件
+    QElapsedTimer NetDataTimer; //定时器，用于定时缓存网口数据，这意味着意外崩溃会丢失最后那一段数据。
+    
     int stepT = 1; //界面图像刷新时间，单位s
     unsigned short EnWindow[4]; // 探测器1左能窗、右能窗；探测器2左能窗、右能窗
     std::vector<unsigned short> autoEnWindow; // 符合测量自动更新能窗反馈给界面的值：探测器1左能窗、右能窗；探测器2左能窗、右能窗

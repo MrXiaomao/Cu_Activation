@@ -324,6 +324,23 @@ MainWindow::MainWindow(QWidget *parent)
         emit sigRefreshUi();
     });
 
+    // 异常终止，测量停止
+    connect(commandHelper, &CommandHelper::sigAbonormalStop, this, [=](){
+        QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
+        measureTimer->stop();
+
+        QTimer* measureRefTimer = this->findChild<QTimer*>("measureRefTimer");
+        measureRefTimer->stop();
+
+        QTimer* exceptionCheckTimer = this->findChild<QTimer*>("exceptionCheckTimer");
+        exceptionCheckTimer->stop();
+
+        this->setProperty("measure-status", msEnd);
+        QString msg = tr("测量已停止\n");
+        qInfo().noquote()<<msg;
+        emit sigRefreshUi();
+    });
+
     // 禁用连接探测器按钮
     ui->action_detector_connect->setEnabled(false);
     connect(commandHelper, &CommandHelper::sigDetectorFault, this, [=](){
@@ -1251,6 +1268,7 @@ void MainWindow::on_pushButton_measure_clicked()
                 if (this->property("measure-status").toUInt() == msPrepare){
                     qCritical().noquote()<<"1s内未收到开始测量反馈指令，系统异常";
                     commandHelper->slotStopManualMeasure();
+                    ui->pushButton_measure->setText(tr("停止测量"));
                     ui->pushButton_measure->setEnabled(true);
                 }
             });

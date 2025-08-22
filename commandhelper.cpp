@@ -687,36 +687,51 @@ void CommandHelper::handleManualMeasureNetData()
 
     //00:能谱 03:波形 05:粒子
     if (workStatus == Preparing){
+        dataBuffer.append(binaryData);
         QByteArray command = cmdPool.first();
-        if (binaryData.compare(command) == 0){
-            qDebug()<<"Recv HEX: "<<binaryData.toHex(' ');
-            binaryData.remove(0, command.size());
-            cmdPool.erase(cmdPool.begin());
-
+        bool found = false;
+        
+        // 检测接收数据中是否存在已发送的指令
+        if (dataBuffer.size() >= 12) {
             //还没收到数据，停止测量
-            if(sendStopCmd && binaryData.compare(cmdStopTrigger)){
+            if(sendStopCmd && binaryData.contains(cmdStopTrigger)){
                 workStatus = WorkEnd;
                 sigAbonormalStop();
                 return;
             }
 
+            // 查找目标数据包
+            int pos = dataBuffer.indexOf(command);
+            if (pos != -1) {
+                found = true;
+            }
+        }
+
+        if (found){
+            qDebug()<<"Recv HEX: "<<dataBuffer.toHex(' ');
+            
+            // 从缓冲区移除已处理的数据
+            dataBuffer.remove(0, command.size());
+            cmdPool.erase(cmdPool.begin());
+
             if (cmdPool.size() > 0)
             {
                 QThread::msleep(commandDelay);  // 延迟，毫秒（阻塞线程）
                 socketDetector->write(cmdPool.first());
-                // socketDetector->waitForBytesWritten();
                 qDebug()<<"Send HEX: "<<cmdPool.first().toHex(' ');
             }
             else{
                 //最后指令是软件触发模式
                 //测量已经开始了
                 workStatus = Measuring;
+                //将剩余的数据丢给后续处理
+                if(dataBuffer.size()>0) cachePool.push_back(dataBuffer);
                 emit sigMeasureStart(detectorParameter.measureModel, detectorParameter.transferModel);
             }
         }
         else
         {
-            qDebug()<<"warning Recv HEX: "<<binaryData.toHex(' ');
+            qDebug()<<"warning Recv HEX: "<<dataBuffer.toHex(' ');
         }
     }
 
@@ -1226,6 +1241,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     socketDetector->readAll();
 
     //连接之前清空缓冲区
+    dataBuffer.clear();
     {
         QMutexLocker locker(&mutexCache);
         cachePool.clear();

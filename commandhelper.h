@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-08-21 18:53:24
+ * @LastEditTime: 2025-08-22 17:26:03
  * @Description: 用来管理网口的数据发送与接受，管理网口数据的处理相关业务。
  */
 #ifndef COMMANDHELPER_H
@@ -174,6 +174,7 @@ private:
     bool ready = false;
     QWaitCondition condition;
     QByteArray frame;
+    QByteArray dataBuffer; //网口接收数据
     QByteArray cachePool;
     QByteArray handlerPool;
     QMutex mutexCache;//缓冲池交换网络数据所用 cachePool

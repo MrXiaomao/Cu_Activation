@@ -103,6 +103,8 @@ public:
                 mPrefix = prefix;
             } else {
                 mJsonGroup = QJsonObject();
+                mJsonRoot[prefix] = mJsonGroup;
+                mPrefix = prefix;
             }
         }
     };

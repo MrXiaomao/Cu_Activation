@@ -142,5 +142,10 @@ private:
     unsigned int multi_CHANNEL; //多道道数
     QDateTime lastRecvDataTime;//探测器上一次接收数据时间
     QDateTime measureStartTime;//探测器测量开始时间
+
+    //自动测量
+    bool enableAutoMeasure = false;
+    QDateTime autoMeasurePowerOnTime;//探测器测量开始时间
+    QDateTime autoMeasurePowerOffTime;//探测器测量开始时间
 };
 #endif // MAINWINDOW_H

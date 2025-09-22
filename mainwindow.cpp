@@ -618,7 +618,7 @@ void MainWindow::InitMainWindowUi()
         QTimer* currentStatusTimer = new QTimer(this);
         currentStatusTimer->setObjectName("statusTimer");
         connect(currentStatusTimer, &QTimer::timeout, this, [=](){
-            saveCurrentTConfigJson(false);
+            //saveCurrentTConfigJson(false);
         });
         currentStatusTimer->start(1000);
     }
@@ -770,6 +770,41 @@ void MainWindow::InitMainWindowUi()
         // 根据数字获取中文名称
         QString dayOfWeekString = dayNames.at(dayOfWeekNumber);
         this->findChild<QLabel*>("label_systemtime")->setText(QString(QObject::tr("系统时间：")) + currentDateTime.toString("yyyy/MM/dd hh:mm:ss ") + dayOfWeekString);
+
+        if (enableAutoMeasure){
+            // 启用自动测量
+            if (currentDateTime.secsTo(autoMeasurePowerOnTime) >=0 && currentDateTime.secsTo(autoMeasurePowerOnTime) <=1){
+                // 上电
+                if (this->property("test").isValid() && this->property("test").toBool()){
+                    this->setProperty("relay_on", true);
+                    this->setProperty("relay_fault", false);
+                    this->setProperty("measure-status", msStart);
+                    sigRefreshUi();
+                }
+                else{
+                    commandHelper->openRelay();
+                }
+                QApplication::processEvents();
+
+                // 等待上电成功
+                commandHelper->openDetector();
+                QApplication::processEvents();
+
+                // 等待探测器打开成功
+                commandHelper->slotStartAutoMeasure();
+            }
+            else if (currentDateTime.secsTo(autoMeasurePowerOffTime) >=0 && currentDateTime.secsTo(autoMeasurePowerOffTime) <=1){
+                qInfo().noquote()<<"探测器下电时间已到";
+                ui->action_refresh->setEnabled(false);
+                ui->pushButton_measure->setEnabled(true);
+                ui->pushButton_measure_2->setText(tr("开始测量"));
+                ui->lineEdit_autoStatus->setText("已停止测量");
+                commandHelper->slotStopAutoMeasure();
+                commandHelper->closeDetector();
+                commandHelper->closeRelay();
+                enableAutoMeasure = false;
+            }
+        }
     });
     systemClockTimer->start(900);
 
@@ -1374,27 +1409,36 @@ void MainWindow::on_pushButton_measure_2_clicked()
         int value = ui->comboBox_channel2->currentText().toInt(&ok);
         multi_CHANNEL = static_cast<unsigned int>(value);
         
+
+        autoMeasurePowerOnTime = QDateTime(QDateTime::currentDateTime().date(), ui->timeEdit_powerOn->time());
+        autoMeasurePowerOffTime = QDateTime(QDateTime::currentDateTime().date(), ui->timeEdit_powerOff->time());
+
         commandHelper->setShotNumber(ui->lineEdit_ShotNum_2->text()); //设置测量序号，QString类型
         commandHelper->updateParamter(stepT, EnWin, true);
-        commandHelper->slotStartAutoMeasure(detectorParameter);
+        //commandHelper->slotStartAutoMeasure(detectorParameter);
+        commandHelper->setAutoMeasureParameter(detectorParameter);
+        enableAutoMeasure = true;
 
-        // ui->pushButton_measure_2_tip->setText(tr("等待触发..."));
-        // qInfo().noquote()<<"等待触发...";
-        QTimer::singleShot(1000, this, [=](){
-            //指定时间未收到开始测量指令，则按钮恢复初始状态
-            if (this->property("measure-status").toUInt() == msPrepare){
-                commandHelper->slotStopAutoMeasure();
-                ui->pushButton_measure_2->setEnabled(true);
-            }
-        });
+        // QTimer::singleShot(1000, this, [=](){
+        //     // 指定时间未收到开始测量指令，则按钮恢复初始状态
+        //     if (this->property("measure-status").toUInt() == msPrepare){
+        //         commandHelper->slotStopAutoMeasure();
+        //         ui->pushButton_measure_2->setEnabled(true);
+        //     }
+        // });
     } else {
-        ui->pushButton_measure_2->setEnabled(false);
+        ui->pushButton_measure_2->setEnabled(true);
         commandHelper->slotStopAutoMeasure();
+        enableAutoMeasure = false;
 
         QTimer::singleShot(3000, this, [=](){
             //指定时间未收到停止测量指令，则按钮恢复初始状态
             if (this->property("measure-status").toUInt() != msEnd){
                 ui->pushButton_measure_2->setEnabled(true);
+                ui->pushButton_measure_2->setText("开始测量");
+                ui->lineEdit_autoStatus->setText("");
+                this->setProperty("measure-status", msEnd);
+                sigRefreshUi();
             }
         });
     }
@@ -1790,27 +1834,18 @@ void MainWindow::slotRefreshUi()
         // ui->spinBox_delayTime_2->setEnabled(true);
 
         //位移平台到位才允许开始测量
-        if (this->property("detector_on").toBool() && this->property("axis-prepared").toBool()){
-//            ui->action_power->setEnabled(true);
-//            ui->action_detector_connect->setEnabled(true);
-//            ui->action_refresh->setEnabled(false);
-
-            //公共
-            // ui->pushButton_save->setEnabled(true);            
-
-            ui->pushButton_measure->setEnabled(true);
+        if (this->property("axis-prepared").toBool()){
             ui->pushButton_measure_2->setEnabled(true);
-        } else {
-//            ui->action_power->setEnabled(true);
-//            ui->action_detector_connect->setEnabled(true);
-//            ui->action_refresh->setEnabled(false);
-
-            //公共
-            // ui->pushButton_save->setEnabled(false);
+            if (this->property("detector_on").toBool() && this->property("axis-prepared").toBool()){
+                ui->pushButton_measure->setEnabled(true);
+            } else {
+                ui->pushButton_measure->setEnabled(false);
+            }
+        }
+        else{
             ui->pushButton_measure->setEnabled(false);
             ui->pushButton_measure_2->setEnabled(false);
         }
-
         ui->pushButton_refresh->setEnabled(false);
         ui->pushButton_confirm->setEnabled(false);
         ui->pushButton_refresh_2->setEnabled(false);

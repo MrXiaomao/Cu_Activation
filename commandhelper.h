@@ -257,11 +257,13 @@ public slots:
 
     //开始自动测量
     void slotStartAutoMeasure(DetectorParameter p);
+    void slotStartAutoMeasure();
     void slotStopAutoMeasure();
 
 public:
     void netFrameWorkThead();
     void detTimeEnergyWorkThread();
+    void setAutoMeasureParameter(DetectorParameter p); // 设置自动测量参数
 
 private:
     QTcpSocket *socketRelay;    //继电器

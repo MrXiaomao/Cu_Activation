@@ -54,7 +54,7 @@
    <item row="1" column="1">
     <widget class="QComboBox" name="comboBox_4">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="currentIndex">
       <number>1</number>
@@ -89,7 +89,7 @@
    <item row="2" column="1">
     <widget class="QSpinBox" name="spinBox">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="minimum">
       <number>1</number>
@@ -115,7 +115,7 @@
    <item row="3" column="1">
     <widget class="QSpinBox" name="spinBox_2">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="minimum">
       <number>1</number>

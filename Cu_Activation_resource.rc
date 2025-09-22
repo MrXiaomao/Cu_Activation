@@ -1,6 +1,6 @@
 #include <windows.h>
 
-IDI_ICON1	ICON	DISCARDABLE	"C:\\Users\\DELL\\Desktop\\QT_Study\\Cu_Activation\\resource\\logo.ico"
+IDI_ICON1	ICON	DISCARDABLE	"D:\\Examples\\Qt\\MicroDetector\\Cu_Activation\\resource\\logo.ico"
 
 VS_VERSION_INFO VERSIONINFO
 	FILEVERSION 0,0,0,0

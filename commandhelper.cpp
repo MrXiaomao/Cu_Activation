@@ -817,6 +817,9 @@ void CommandHelper::handleAutoMeasureNetData()
         if (detectorParameter.transferModel == 0x05){
             QMutexLocker locker(&mutexCache);
             cachePool.push_back(binaryData);
+
+            ready = true;
+            condition.wakeAll();
         }
     }
 }
@@ -868,8 +871,12 @@ void CommandHelper::openRelay(bool first)
     ipSettings->finish();
 
     //断开网络连接
-    if (socketRelay->isOpen() && socketRelay->state() == QAbstractSocket::ConnectedState)
-        socketRelay->close();
+    if (socketRelay->isOpen() && socketRelay->state() == QAbstractSocket::ConnectedState){
+        if (socketRelay->peerAddress().toString() != ip || socketRelay->peerPort() != port)
+            socketRelay->close();
+        else
+            return;
+    }
 
     if (first)
         socketRelay->setProperty("relay-status", "query");
@@ -919,8 +926,12 @@ void CommandHelper::openDetector()
     }
 
     //断开网络连接
-    if (socketDetector->isOpen() && socketDetector->state() == QAbstractSocket::ConnectedState)
-        socketDetector->close();
+    if (socketDetector->isOpen() && socketDetector->state() == QAbstractSocket::ConnectedState){
+        if (socketDetector->peerAddress().toString() != ip || socketDetector->peerPort() != port)
+            socketDetector->close();
+        else
+            return;
+    }
 
     socketDetector->connectToHost(ip, port);
 }
@@ -1471,6 +1482,17 @@ void CommandHelper::slotStopManualMeasure()
 }
 
 //开始自动测量
+void CommandHelper::setAutoMeasureParameter(DetectorParameter p)
+{
+    // 设置自动测量参数
+    detectorParameter = p;
+}
+
+void CommandHelper::slotStartAutoMeasure()
+{
+    slotStartAutoMeasure(detectorParameter);
+}
+
 void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
 {
     coincidenceAnalyzer->initialize();
@@ -2112,8 +2134,8 @@ void CommandHelper::detTimeEnergyWorkThread()
                             if (this->autoChangeEnWindow)
                             {
                                 //这里特别需要注意的是，由于此刻coincidenceAnalyzer中还有未处理完的数据unusedData1、unusedData2.
-                                //这部分数据漏存，会导致在线测量给出的计数曲线与离线分析的计数曲线起始两个点不一样                    
-                                if (startSaveValidData){
+                                //这部分数据漏存，会导致在线测量给出的计数曲线与离线分析的计数曲线起始两个点不一样
+                                if (startSaveValidData && coincidenceAnalyzer->GetPointPerSeconds().size() > 0){
                                     // 则记录下计数曲线的起始时刻
                                     this->time_SetEnWindow = coincidenceAnalyzer->GetPointPerSeconds().back().time;
                                     // 记录到配置文件

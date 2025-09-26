@@ -89,7 +89,7 @@ bool FPGASetting::save()
         quint16 ch1 = (quint16)ui->spinBox->value();
         quint16 ch2 = (quint16)ui->spinBox_2->value();
         fpgaSettings->setValue("TriggerThold1", ch1);
-        fpgaSettings->setValue("TriggerThold2", ch1);
+        fpgaSettings->setValue("TriggerThold2", ch2);
     }
 
     //探测器3-4阈值

@@ -493,8 +493,8 @@ void ControlHelper::load()
     JsonSettings* ipSettings = GlobalSettings::instance()->mIpSettings;
     ipSettings->prepare();
     ipSettings->beginGroup("Control");
-    QString mIp = ipSettings->value("ip", "192.168.10.3").toString();
-    qint32 mPort = ipSettings->value("port", 5000).toInt();
+    mIp = ipSettings->value("ip", "192.168.10.3").toString();
+    mPort = ipSettings->value("port", 5000).toInt();
     ipSettings->endGroup();
     ipSettings->finish();
 }

@@ -138,11 +138,12 @@ MainWindow::MainWindow(QWidget *parent)
                 if(!this->property("axis-prepared").toBool()){
                     SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待...\n正在移动位移平台至目标位置..."));
                     SplashWidget::instance()->exec();
-                }
-                QPair<float, float> pair = controlHelper->gotoAbs(ui->comboBox_range->currentIndex());
-                this->setProperty("axis01-target-position", pair.first);
-                this->setProperty("axis02-target-position", pair.second);
+                }                
             });
+
+            QPair<float, float> pair = controlHelper->gotoAbs(ui->comboBox_range->currentIndex());
+            this->setProperty("axis01-target-position", pair.first);
+            this->setProperty("axis02-target-position", pair.second);
         }
     });
 
@@ -197,26 +198,42 @@ MainWindow::MainWindow(QWidget *parent)
         if (!on){
             //电源关闭，设备断电，测量强制停止
             this->setProperty("measure-status", msEnd);
-        }else{
-            if (!this->property("last_safe_exit").toBool()){
-                //如果上次是异常退出，这次先关闭继电器，再开继电器
-                commandHelper->closeRelay();
+            QString msg = QString(tr("探测器电源状态：%1")).arg(on ? tr("开") : tr("关"));
+            // emit sigAppengMsg(msg, QtInfoMsg);
+            qInfo().noquote()<<msg;
 
-                QTimer::singleShot(500, this, [=](){
-                    this->setProperty("last_safe_exit", true);
-                    commandHelper->openRelay(true);
-                    // if(!this->property("axis-prepared").toBool()){
-                    SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待...\n正在移动位移平台至目标位置..."));
-                    SplashWidget::instance()->exec();
-                    // }
-                    QPair<float, float> pair = controlHelper->gotoAbs(ui->comboBox_range->currentIndex());
-                    this->setProperty("axis01-target-position", pair.first);
-                    this->setProperty("axis02-target-position", pair.second);                    
-                });
+            //emit sigRefreshUi();
+        }else{
+            if(this->property("measur-model").toInt() == mmAuto && enableAutoMeasure){
+                ui->lineEdit_autoStatus->setText(tr("等待打靶信号"));
+            }
+
+            if (!this->property("last_safe_exit").toBool()){
+                QString msg = QString(tr("探测器电源状态：%1")).arg(on ? tr("开") : tr("关"));
+                // emit sigAppengMsg(msg, QtInfoMsg);
+                qInfo().noquote()<<msg;
+                //emit sigRefreshUi();
+
+                //如果上次是异常退出，这次先关闭继电器，再开继电器
+                //commandHelper->closeRelay();
+
+                // QTimer::singleShot(500, this, [=](){
+                //     this->setProperty("last_safe_exit", true);
+                //     commandHelper->openRelay(true);
+                //     // if(!this->property("axis-prepared").toBool()){
+                //     SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待...\n正在移动位移平台至目标位置..."));
+                //     SplashWidget::instance()->exec();
+                //     // }
+                //     QPair<float, float> pair = controlHelper->gotoAbs(ui->comboBox_range->currentIndex());
+                //     this->setProperty("axis01-target-position", pair.first);
+                //     this->setProperty("axis02-target-position", pair.second);
+                // });
             } else {
                 if(!this->property("axis-prepared").toBool()){
-                SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待...\n正在移动位移平台至目标位置..."));
-                SplashWidget::instance()->exec();
+                    QTimer::singleShot(500, this, [=](){
+                        SplashWidget::instance()->setInfo(tr("量程正在设置中，请等待...\n正在移动位移平台至目标位置..."));
+                        SplashWidget::instance()->exec();
+                    });
                 }
                 QPair<float, float> pair = controlHelper->gotoAbs(ui->comboBox_range->currentIndex());
                 this->setProperty("axis01-target-position", pair.first);
@@ -224,14 +241,15 @@ MainWindow::MainWindow(QWidget *parent)
             }
         }
 
-        if (this->property("last_safe_exit").toBool()){
-            //异常退出先不要恢复继电器状态，等重启继电器之后再说吧
+        emit sigRefreshUi();
+        // if (this->property("last_safe_exit").toBool()){
+        //     //异常退出先不要恢复继电器状态，等重启继电器之后再说吧
 
-            QString msg = QString(tr("探测器电源状态：%1")).arg(on ? tr("开") : tr("关"));
-            // emit sigAppengMsg(msg, QtInfoMsg);
-            qInfo().noquote()<<msg;
-            emit sigRefreshUi();
-        }
+        //     QString msg = QString(tr("探测器电源状态：%1")).arg(on ? tr("开") : tr("关"));
+        //     // emit sigAppengMsg(msg, QtInfoMsg);
+        //     qInfo().noquote()<<msg;
+        //     emit sigRefreshUi();
+        // }
     });
 
     // 测量开始
@@ -318,6 +336,12 @@ MainWindow::MainWindow(QWidget *parent)
         exceptionCheckTimer->stop();
 
         this->setProperty("measure-status", msEnd);
+        if(this->property("measur-model").toInt() == mmAuto){
+            ui->pushButton_measure->setText(tr("开始测量"));
+            ui->pushButton_measure_2->setText(tr("开始测量"));
+            ui->lineEdit_autoStatus->setText(tr("已停止测量"));
+        }
+
         QString msg = tr("测量已停止\n");
         // emit sigAppengMsg(msg, QtInfoMsg);
         qInfo().noquote()<<msg;
@@ -336,6 +360,13 @@ MainWindow::MainWindow(QWidget *parent)
         exceptionCheckTimer->stop();
 
         this->setProperty("measure-status", msEnd);
+
+        if(this->property("measur-model").toInt() == mmAuto){
+            ui->pushButton_measure->setText(tr("开始测量"));
+            ui->pushButton_measure_2->setText(tr("开始测量"));
+            ui->lineEdit_autoStatus->setText(tr("已停止测量"));
+        }
+
         QString msg = tr("测量已停止\n");
         qInfo().noquote()<<msg;
         emit sigRefreshUi();
@@ -618,7 +649,7 @@ void MainWindow::InitMainWindowUi()
         QTimer* currentStatusTimer = new QTimer(this);
         currentStatusTimer->setObjectName("statusTimer");
         connect(currentStatusTimer, &QTimer::timeout, this, [=](){
-            //saveCurrentTConfigJson(false);
+            saveCurrentTConfigJson(false);
         });
         currentStatusTimer->start(1000);
     }
@@ -773,8 +804,12 @@ void MainWindow::InitMainWindowUi()
 
         if (enableAutoMeasure){
             // 启用自动测量
-            if (currentDateTime.secsTo(autoMeasurePowerOnTime) >=0 && currentDateTime.secsTo(autoMeasurePowerOnTime) <=1){
+            if (currentDateTime.time().hour() == autoMeasurePowerOnTime.time().hour() &&
+                currentDateTime.time().minute() == autoMeasurePowerOnTime.time().minute() &&
+                currentDateTime.time().second() == autoMeasurePowerOnTime.time().second()){// && currentDateTime.secsTo(autoMeasurePowerOnTime) <1){
                 // 上电
+                qDebug() << "............." << currentDateTime << "," << autoMeasurePowerOnTime;
+
                 if (this->property("test").isValid() && this->property("test").toBool()){
                     this->setProperty("relay_on", true);
                     this->setProperty("relay_fault", false);
@@ -787,11 +822,13 @@ void MainWindow::InitMainWindowUi()
                 QApplication::processEvents();
 
                 // 等待上电成功
-                commandHelper->openDetector();
-                QApplication::processEvents();
+                QTimer::singleShot(3000, this, [=](){
+                    commandHelper->openDetector();
+                    QApplication::processEvents();
 
-                // 等待探测器打开成功
-                commandHelper->slotStartAutoMeasure();
+                    // 等待探测器打开成功
+                    commandHelper->slotStartAutoMeasure();
+                });
             }
             else if (currentDateTime.secsTo(autoMeasurePowerOffTime) >=0 && currentDateTime.secsTo(autoMeasurePowerOffTime) <=1){
                 qInfo().noquote()<<"探测器下电时间已到";
@@ -806,7 +843,7 @@ void MainWindow::InitMainWindowUi()
             }
         }
     });
-    systemClockTimer->start(900);
+    systemClockTimer->start(1000);
 
     QTimer* measureTimer = new QTimer(this);
     measureTimer->setObjectName("measureTimer");
@@ -843,7 +880,7 @@ void MainWindow::InitMainWindowUi()
     coolingTimer_auto->setObjectName("coolingTimer_auto");
     connect(coolingTimer_auto, &QTimer::timeout, this, [=](){
         coolingTimer_auto->stop();
-        qInfo().noquote()<<"探测器已经上电开机";
+        //qInfo().noquote()<<"探测器已经上电开机";
         ui->lineEdit_autoStatus->setText("测量中...");
     });
 
@@ -1379,8 +1416,8 @@ void MainWindow::on_pushButton_measure_2_clicked()
         ui->action_refresh->setEnabled(true);
         ui->pushButton_measure->setEnabled(false);
         ui->pushButton_measure_2->setText(tr("停止测量"));
-        ui->lineEdit_autoStatus->setText("等待触发");
-        qInfo().noquote()<<"等待触发";
+        ui->lineEdit_autoStatus->setText("等待上电");
+        qInfo().noquote()<<"等待上电";
 
         PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
         // 开始测量时取消勾选高斯拟合，因为刚开始统计涨落大，无法拟合。
@@ -1793,36 +1830,36 @@ void MainWindow::slotRefreshUi()
             ui->pushButton_confirm->setEnabled(false);
         }
     } else {
-        ui->pushButton_measure->setText(tr("开始测量"));
-        ui->pushButton_measure_2->setText(tr("开始测量"));
-        
-        ui->lineEdit_autoStatus->setText(tr("已停止测量"));
-        
+        if(this->property("measur-model").toInt() != mmAuto){
+            ui->pushButton_measure->setText(tr("开始测量"));
+            ui->pushButton_measure_2->setText(tr("开始测量"));
+            ui->lineEdit_autoStatus->setText(tr("已停止测量"));
+        }
+
         if(this->property("measur-model").toInt() == mmAuto) //自动测量
         {
             //如果提前点击停止测量，则直接停止冷却时长的定时器
             QTimer* coolingTimer_auto = this->findChild<QTimer*>("coolingTimer_auto");
             coolingTimer_auto->stop();
-            qInfo().noquote()<<"探测器已断电，并关机";
+            //qInfo().noquote()<<"探测器已断电，并关机";
         }
 
         // 手动测量
         ui->spinBox_timelength->setEnabled(true);
-        // ui->comboBox_channel->setEnabled(true);
+        ui->comboBox_channel->setEnabled(true);
         ui->comboBox_range->setEnabled(true);
         ui->dateTimeEdit_shotTime->setEnabled(true);
-        //ui->spinBox_coolingTime->setEnabled(true);
         ui->lineEdit_ShotNum->setEnabled(true);
         ui->spinBox_1_leftE->setEnabled(true);
         ui->spinBox_1_rightE->setEnabled(true);
         ui->spinBox_2_leftE->setEnabled(true);
         ui->spinBox_2_rightE->setEnabled(true);        
         ui->spinBox_timeWidth->setEnabled(true);
-        // ui->spinBox_delayTime->setEnabled(true);
+        ui->spinBox_delayTime->setEnabled(true);
 
         // 自动测量
         ui->spinBox_timelength_2->setEnabled(true);
-        // ui->comboBox_channel2->setEnabled(true);
+        ui->comboBox_channel2->setEnabled(true);
         ui->comboBox_range_2->setEnabled(true);
         ui->spinBox_coolingTime_2->setEnabled(true);
         ui->lineEdit_ShotNum_2->setEnabled(true);
@@ -1831,7 +1868,7 @@ void MainWindow::slotRefreshUi()
         ui->spinBox_2_leftE_2->setEnabled(true);
         ui->spinBox_2_rightE_2->setEnabled(true);
         ui->spinBox_timeWidth_2->setEnabled(true);
-        // ui->spinBox_delayTime_2->setEnabled(true);
+        ui->spinBox_delayTime_2->setEnabled(true);
 
         //位移平台到位才允许开始测量
         if (this->property("axis-prepared").toBool()){

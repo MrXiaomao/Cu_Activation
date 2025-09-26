@@ -108,32 +108,33 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
             if ((quint8)binaryData.at(0) == 0x48 && (quint8)binaryData.at(1) == 0x3a && (quint8)binaryData.at(2) == 0x01 && (quint8)binaryData.at(3) == 0x54){
                 if ((quint8)binaryData.at(4) == 0x00 || (quint8)binaryData.at(5) == 0x00){
                     //继电器未开启
-                    if (socketRelay->property("relay-status").toString() == "query"){
-                        //socketRelay->setProperty("relay-status", "none");
+                    // if (socketRelay->property("relay-status").toString() == "query"){
+                    //     //socketRelay->setProperty("relay-status", "none");
 
-                        //发送开启指令
-                        QByteArray command;
-                        QDataStream dataStream(&command, QIODevice::WriteOnly);
-                        dataStream << (quint8)0x48;
-                        dataStream << (quint8)0x3a;
-                        dataStream << (quint8)0x01;
-                        dataStream << (quint8)0x57;
-                        dataStream << (quint8)0x01;
-                        dataStream << (quint8)0x01;
-                        dataStream << (quint8)0x00;
-                        dataStream << (quint8)0x00;
-                        dataStream << (quint8)0x00;
-                        dataStream << (quint8)0x00;
-                        dataStream << (quint8)0x00;
-                        dataStream << (quint8)0x00;
-                        dataStream << (quint8)0xdc;
-                        dataStream << (quint8)0x45;
-                        dataStream << (quint8)0x44;
-                        socketRelay->write(command);
-                    } else{
-                        // 如果已经发送过开启指令，则直接上报状态即可
-                        emit sigRelayStatus(false);
-                    }
+                    //     //发送开启指令
+                    //     QByteArray command;
+                    //     QDataStream dataStream(&command, QIODevice::WriteOnly);
+                    //     dataStream << (quint8)0x48;
+                    //     dataStream << (quint8)0x3a;
+                    //     dataStream << (quint8)0x01;
+                    //     dataStream << (quint8)0x57;
+                    //     dataStream << (quint8)0x01;
+                    //     dataStream << (quint8)0x01;
+                    //     dataStream << (quint8)0x00;
+                    //     dataStream << (quint8)0x00;
+                    //     dataStream << (quint8)0x00;
+                    //     dataStream << (quint8)0x00;
+                    //     dataStream << (quint8)0x00;
+                    //     dataStream << (quint8)0x00;
+                    //     dataStream << (quint8)0xdc;
+                    //     dataStream << (quint8)0x45;
+                    //     dataStream << (quint8)0x44;
+                    //     socketRelay->write(command);
+                    // } else{
+                    //     // 如果已经发送过开启指令，则直接上报状态即可
+                    //     emit sigRelayStatus(false);
+                    // }
+                    emit sigRelayStatus(false);
                 } else if ((quint8)binaryData.at(4) == 0x01 || (quint8)binaryData.at(5) == 0x01){
                     //已经开启
                     emit sigRelayStatus(true);
@@ -285,10 +286,12 @@ CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
         emit sigDetectorFault();});
 #else
     // Qt 5.15 及之后版本
-    connect(socketDetector, &QAbstractSocket::errorOccurred, this, [=](QAbstractSocket::SocketError) {
+    connect(socketDetector, &QAbstractSocket::errorOccurred, this, [=](QAbstractSocket::SocketError error) {
         // 网络故障，停止一切数据处理操作
-        this->detectorException = true;
-        emit sigDetectorFault();
+        if (error == QAbstractSocket::RemoteHostClosedError || error == QAbstractSocket::SocketTimeoutError){
+            this->detectorException = true;
+            emit sigDetectorFault();
+        }
     });
 #endif
 
@@ -444,13 +447,16 @@ void CommandHelper::updateCoincidenceData(const SingleSpectrum &r1, const vector
     //时间步长，求均值
     //size_t posI = start_pos;
     if (_stepT > 1){
-        if (countCoin>1 && (countCoin % _stepT == 0)){
+        if (countCoin>1 && (countCoin % _stepT == 0))
+        {
             //对最近一个步长的计数数据求均值
             CoincidenceResult v;
-            size_t posI = r3.size() - _stepT - 1;
+            size_t posI = r3.size() - _stepT;
             for (size_t i=0; i < _stepT; i++){
                 v.CountRate1 += r3.at(posI).CountRate1;
                 v.CountRate2 += r3.at(posI).CountRate2;
+                v.DeathRatio1 += r3.at(posI).DeathRatio1;
+                v.DeathRatio2 += r3.at(posI).DeathRatio2;
                 v.ConCount_single += r3.at(posI).ConCount_single;
                 v.ConCount_multiple += r3.at(posI).ConCount_multiple;
                 posI++;  
@@ -462,7 +468,9 @@ void CommandHelper::updateCoincidenceData(const SingleSpectrum &r1, const vector
             v.ConCount_single /= _stepT;
             v.ConCount_multiple /= _stepT;
             emit sigPlot(r1, v);
-            /*for (size_t i=0; i < countCoin/_stepT; i++){
+
+            /*
+                for (size_t i=0; i < countCoin/_stepT; i++){
                 CoincidenceResult v;
                 for (int j=0; j<_stepT; ++j){
                     v.CountRate1 += r3[posI].CountRate1;
@@ -481,9 +489,10 @@ void CommandHelper::updateCoincidenceData(const SingleSpectrum &r1, const vector
                 
                 rr3.push_back(v);
                 emit sigPlot(r1, rr3);
-            }*/
+            }
+            */
         }
-        else{//只绘制能谱
+        else if(countCoin==0){//只绘制能谱
             sigNewPlot(r1, r3);
         }
     } else{
@@ -874,8 +883,29 @@ void CommandHelper::openRelay(bool first)
     if (socketRelay->isOpen() && socketRelay->state() == QAbstractSocket::ConnectedState){
         if (socketRelay->peerAddress().toString() != ip || socketRelay->peerPort() != port)
             socketRelay->close();
-        else
+        else{
+            //发送开启指令
+            QByteArray command;
+            QDataStream dataStream(&command, QIODevice::WriteOnly);
+            dataStream << (quint8)0x48;
+            dataStream << (quint8)0x3a;
+            dataStream << (quint8)0x01;
+            dataStream << (quint8)0x57;
+            dataStream << (quint8)0x01;
+            dataStream << (quint8)0x01;
+            dataStream << (quint8)0x00;
+            dataStream << (quint8)0x00;
+            dataStream << (quint8)0x00;
+            dataStream << (quint8)0x00;
+            dataStream << (quint8)0x00;
+            dataStream << (quint8)0x00;
+            dataStream << (quint8)0xdc;
+            dataStream << (quint8)0x45;
+            dataStream << (quint8)0x44;
+            socketRelay->write(command);
+            //emit sigRelayStatus(true);
             return;
+        }
     }
 
     if (first)
@@ -883,6 +913,7 @@ void CommandHelper::openRelay(bool first)
     else
         socketRelay->setProperty("relay-status", "open");
     socketRelay->connectToHost(ip, port);
+    socketRelay->waitForConnected();
 }
 
 void CommandHelper::closeRelay()
@@ -929,11 +960,14 @@ void CommandHelper::openDetector()
     if (socketDetector->isOpen() && socketDetector->state() == QAbstractSocket::ConnectedState){
         if (socketDetector->peerAddress().toString() != ip || socketDetector->peerPort() != port)
             socketDetector->close();
-        else
+        else{
+            sigDetectorStatus(true);
             return;
+        }
     }
 
     socketDetector->connectToHost(ip, port);
+    socketDetector->waitForConnected();
 }
 
 void CommandHelper::closeDetector()
@@ -1618,7 +1652,6 @@ void CommandHelper::saveConfigParamter(){
                 default:
                 break;
             }
-            // out << tr("量程选取=")<<detectorParameter.measureRange<< Qt::endl;
             out << tr("冷却时长(s)=") << detectorParameter.coolingTime << Qt::endl; //单位s
             
             //开始保存FPGA数据的时刻，单位s，以活化后开始计时(冷却时间+FPGA时钟)。
@@ -2135,7 +2168,7 @@ void CommandHelper::detTimeEnergyWorkThread()
                             {
                                 //这里特别需要注意的是，由于此刻coincidenceAnalyzer中还有未处理完的数据unusedData1、unusedData2.
                                 //这部分数据漏存，会导致在线测量给出的计数曲线与离线分析的计数曲线起始两个点不一样
-                                if (startSaveValidData && coincidenceAnalyzer->GetPointPerSeconds().size() > 0){
+                                if (startSaveValidData && coincidenceAnalyzer->GetPointPerSeconds().size()>0){
                                     // 则记录下计数曲线的起始时刻
                                     this->time_SetEnWindow = coincidenceAnalyzer->GetPointPerSeconds().back().time;
                                     // 记录到配置文件

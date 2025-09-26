@@ -69,7 +69,9 @@ GlobalSettings::~GlobalSettings() {
     delete mSpectrumSettings;
     delete mUserSettings;
     delete mWaveSettings;
-
-    delete mConfigurationFileWatch;
-    mConfigurationFileWatch = nullptr;
+    if (mConfigurationFileWatch)
+    {
+        delete mConfigurationFileWatch;
+        mConfigurationFileWatch = nullptr;
+    }
 }

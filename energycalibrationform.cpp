@@ -298,7 +298,7 @@ void EnergyCalibrationForm::calculate(int no)
 
         //绘制点
     {
-        QVector<double> keys, values;
+        QVector<double> keys, values;        
         for (int i = 0; i < points.size(); i++)
         {
             qreal x = points[i].x(), y = points[i].y();
@@ -348,8 +348,8 @@ void EnergyCalibrationForm::calculate(int no)
         customPlot->graph(1)->setData(keys, values);
     }
 
-    customPlot->xAxis->setRange(xRangLower, xRangUpper);
-    customPlot->yAxis->setRange(yRangLower, yRangUpper);
+    customPlot->xAxis->rescale(true);// setRange(xRangLower, xRangUpper);
+    customPlot->yAxis->rescale(true);// setRange(yRangLower, yRangUpper);
 //    customPlot->xAxis->rescale(true);
 //    customPlot->yAxis->rescale(true);
     customPlot->replot();
@@ -431,3 +431,19 @@ void EnergyCalibrationForm::on_pushButton_clear_clicked()
     ui->tableWidget->clearContents();
     ui->tableWidget->setRowCount(0);
 }
+
+#include "globalsettings.h"
+void EnergyCalibrationForm::on_pushButton_clicked()
+{
+    JsonSettings* mUserSettings = GlobalSettings::instance()->mUserSettings;
+    if (!mUserSettings->isOpen())
+        return;
+
+    mUserSettings->prepare();
+    mUserSettings->beginGroup();
+    mUserSettings->setValue("EnCalibrration_k", C[0]);
+    mUserSettings->setValue("EnCalibrration_b", C[1]);
+    mUserSettings->endGroup();
+    mUserSettings->finish();
+}
+

@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "globalsettings.h"
 
 #include <QApplication>
 #include <QStyleFactory>
@@ -22,24 +23,6 @@
 #include <log4qt/loggerrepository.h>
 #include <log4qt/fileappender.h>
 
-// QString QtMsgTypeToString(QtMsgType type)
-// {
-//     switch (type) {
-//     case QtInfoMsg:
-//         return "[信息]";     break;
-//     case QtDebugMsg:
-//         return "[调试]";    break;
-//     case QtWarningMsg:
-//         return "[警告]";  break;
-//     case QtCriticalMsg:
-//         return "[严重]"; break;
-//     case QtFatalMsg:
-//         return "[错误]";    break;
-//     default:
-//         return "Unknown";
-//     }
-// }
-
 MainWindow *mw = nullptr;
 QMutex mutexMsg;
 QtMessageHandler system_default_message_handler = NULL;// 用来保存系统默认的输出接口
@@ -62,29 +45,6 @@ void AppMessageHandler(QtMsgType type, const QMessageLogContext& context, const 
 
     if (mw && type != QtDebugMsg)
         emit mw->sigAppengMsg(msg + "\n", type);
-
-    // // 确保logs目录存在
-    // QDir dir(QDir::currentPath() + "/logs");
-    // if (!dir.exists()) {
-    //     dir.mkpath(".");
-    // }
-
-    // // 获取当前日期，并格式化为YYYY-MM-DD
-    // QString currentDate = QDateTime::currentDateTime().toString("yyyy-MM-dd");
-
-    // // 创建日志文件路径，例如：logs/2023-10-23.log
-    // QString logFilePath = QDir::currentPath() + "/logs/2Cu_Activation_" + currentDate + ".log";
-
-    // // 打开文件以追加模式
-    // QFile file(logFilePath);
-    // if (file.open(QIODevice::Append | QIODevice::Text)) {
-    //     QTextStream out(&file);
-    //     QString strMessage = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss.zzz ")
-    //                          + QtMsgTypeToString(type) + ": " + msg + "\n";
-    //     out << strMessage;
-    //     file.flush();
-    //     file.close();
-    // }
 
     //这里必须调用，否则消息被拦截，log4qt无法捕获系统日志
     if (system_default_message_handler){
@@ -131,8 +91,25 @@ int main(int argc, char *argv[])
     qputenv("QT_QPA_PLATFORM", "windows:darkmode=2");
 #endif
 
-    qDebug() << APP_VERSION;
-    qDebug() << GIT_BRANCH;
+    // JsonSettings* ipSettings = GlobalSettings::instance()->mIpSettings;
+    // ipSettings->setGroupValue("Control", "Distances", "01", "largeRange", "2500");
+    // ipSettings->setGroupValue("Control", "Distances", "01", "mediumRange", "90");
+    // ipSettings->setGroupValue("Control", "Distances", "01", "smallRange", "0");
+    // ipSettings->setGroupValue("Control", "Distances", "02", "largeRange", "300");
+    // ipSettings->setGroupValue("Control", "Distances", "02", "mediumRange", "100");
+    // ipSettings->setGroupValue("Control", "Distances", "02", "smallRange", "90");
+    // ipSettings->setGroupValue("Control", "ip", "192.168.10.200");
+    // ipSettings->setGroupValue("Control", "port", "5020");
+    // ipSettings->setGroupValue("Detector", "ip", "192.168.0.114");
+    // ipSettings->setGroupValue("Detector", "port", "5000");
+    // ipSettings->setGroupValue("Relay", "ip", "192.168.10.253");
+    // ipSettings->setGroupValue("Relay", "port", "1030");
+
+    // ipSettings->appendArrayValue("YieldCalibration", 10000);
+    // ipSettings->appendArrayValue("YieldCalibration", "active0");
+    // ipSettings->setArrayValue("YieldCalibration",0, 0.12);
+
+    // ipSettings->flush();
 
     QTranslator translator;
     if (translator.load(QLocale(), QLatin1String("Cu_Activation"), QLatin1String("_zh_CN.qm"), QLatin1String(":/i18n"))){

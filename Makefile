@@ -14,7 +14,7 @@ EQ            = =
 
 CC            = gcc
 CXX           = g++
-DEFINES       = -DUNICODE -D_UNICODE -DWIN32 -DMINGW_HAS_SECURE_API=1 -DQT_DEPRECATED_WARNINGS -DGIT_BRANCH="\"plot\"" -DGIT_TIME="\"2025-09-22 -D11:28:04 -D+0800e2e8ba976994b43cc0b1c71ddae85af3aed5d1bd\"" -DAPP_VERSION="\"Git: plot: 2025-09-22 11:28:04 +0800e2e8ba976994b43cc0b1c71ddae85af3aed5d1bd\"" -DLOG4QT_STATIC -DLOG4QT_VERSION_MAJOR=1 -DLOG4QT_VERSION_MINOR=6 -DLOG4QT_VERSION_PATCH=0 -DLOG4QT_VERSION_STR=\"1.6.0\" -DQT_NO_DEBUG -DQT_PRINTSUPPORT_LIB -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_NETWORK_LIB -DQT_SERIALPORT_LIB -DQT_CONCURRENT_LIB -DQT_CORE_LIB -DQT_NEEDS_QMAIN
+DEFINES       = -DUNICODE -D_UNICODE -DWIN32 -DMINGW_HAS_SECURE_API=1 -DQT_DEPRECATED_WARNINGS -DGIT_BRANCH="\"plot\"" -DGIT_TIME="\"2025-09-26 -D16:28:56 -D+0800cec3c4905d2b7ede94cec5e81fd88b52ce5b4651\"" -DAPP_VERSION="\"Git: plot: 2025-09-26 16:28:56 +0800cec3c4905d2b7ede94cec5e81fd88b52ce5b4651\"" -DLOG4QT_STATIC -DLOG4QT_VERSION_MAJOR=1 -DLOG4QT_VERSION_MINOR=6 -DLOG4QT_VERSION_PATCH=0 -DLOG4QT_VERSION_STR=\"1.6.0\" -DQT_NO_DEBUG -DQT_PRINTSUPPORT_LIB -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_NETWORK_LIB -DQT_SERIALPORT_LIB -DQT_CONCURRENT_LIB -DQT_CORE_LIB -DQT_NEEDS_QMAIN
 CFLAGS        = -fno-keep-inline-dllexport -O2 -w $(DEFINES)
 CXXFLAGS      = -fno-keep-inline-dllexport -Wall -Wextra -pedantic -O2 -std=gnu++11 -w -fexceptions -mthreads $(DEFINES)
 INCPATH       = -I. -I3rdParty\ftcoreimc_win_v1.4.0.0\inc -I3rdParty\gsl\include -I-L -I3rdParty\log4qt\Include -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/helpers -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/spi -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/varia -I-L -I3rdParty\log4qt\Include\log4qt -I3rdParty\log4qt\Include\log4qt\helpers -I3rdParty\log4qt\Include\log4qt\spi -I3rdParty\log4qt\Include\log4qt\varia -IC:\Qt6\5.15.2\mingw81_64\include -IC:\Qt6\5.15.2\mingw81_64\include\QtPrintSupport -IC:\Qt6\5.15.2\mingw81_64\include\QtWidgets -IC:\Qt6\5.15.2\mingw81_64\include\QtGui -IC:\Qt6\5.15.2\mingw81_64\include\QtANGLE -IC:\Qt6\5.15.2\mingw81_64\include\QtNetwork -IC:\Qt6\5.15.2\mingw81_64\include\QtSerialPort -IC:\Qt6\5.15.2\mingw81_64\include\QtConcurrent -IC:\Qt6\5.15.2\mingw81_64\include\QtCore -Itemp\moc -Itemp\ui -I/include -IC:\Qt6\5.15.2\mingw81_64\mkspecs\win32-g++ 
@@ -1119,6 +1119,24 @@ temp/moc/moc_cachedirconfigwidget.cpp: cachedirconfigwidget.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QDateTime \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdatetime.h \
 		coincidenceanalyzer.h \
+		globalsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonArray \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonarray.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborcommon.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qregularexpression.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/quuid.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonObject \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonobject.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonDocument \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsondocument.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
 		temp/moc/moc_predefs.h \
 		C:/Qt6/5.15.2/mingw81_64/bin/moc.exe
 	C:\Qt6\5.15.2\mingw81_64\bin\moc.exe $(DEFINES) --include D:/Examples/Qt/MicroDetector/Cu_Activation/temp/moc/moc_predefs.h -IC:/Qt6/5.15.2/mingw81_64/mkspecs/win32-g++ -ID:/Examples/Qt/MicroDetector/Cu_Activation -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/ftcoreimc_win_v1.4.0.0/inc -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/gsl/include -ID:/Examples/Qt/MicroDetector/Cu_Activation/-L -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/helpers -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/spi -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/varia -ID:/Examples/Qt/MicroDetector/Cu_Activation/-L -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt/helpers -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt/spi -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt/varia -IC:/Qt6/5.15.2/mingw81_64/include -IC:/Qt6/5.15.2/mingw81_64/include/QtPrintSupport -IC:/Qt6/5.15.2/mingw81_64/include/QtWidgets -IC:/Qt6/5.15.2/mingw81_64/include/QtGui -IC:/Qt6/5.15.2/mingw81_64/include/QtANGLE -IC:/Qt6/5.15.2/mingw81_64/include/QtNetwork -IC:/Qt6/5.15.2/mingw81_64/include/QtSerialPort -IC:/Qt6/5.15.2/mingw81_64/include/QtConcurrent -IC:/Qt6/5.15.2/mingw81_64/include/QtCore -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include/c++ -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include/c++/x86_64-w64-mingw32 -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include/c++/backward -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include-fixed -IC:/Qt5.14.2/Tools/mingw730_64/x86_64-w64-mingw32/include cachedirconfigwidget.h -o temp\moc\moc_cachedirconfigwidget.cpp
@@ -1530,6 +1548,26 @@ temp/moc/moc_commandhelper.cpp: commandhelper.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QDateTime \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdatetime.h \
 		coincidenceanalyzer.h \
+		globalsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonArray \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonarray.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborcommon.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qregularexpression.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qurl.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qurlquery.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/quuid.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonObject \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonobject.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonDocument \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsondocument.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
 		temp/moc/moc_predefs.h \
 		C:/Qt6/5.15.2/mingw81_64/bin/moc.exe
 	C:\Qt6\5.15.2\mingw81_64\bin\moc.exe $(DEFINES) --include D:/Examples/Qt/MicroDetector/Cu_Activation/temp/moc/moc_predefs.h -IC:/Qt6/5.15.2/mingw81_64/mkspecs/win32-g++ -ID:/Examples/Qt/MicroDetector/Cu_Activation -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/ftcoreimc_win_v1.4.0.0/inc -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/gsl/include -ID:/Examples/Qt/MicroDetector/Cu_Activation/-L -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/helpers -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/spi -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/varia -ID:/Examples/Qt/MicroDetector/Cu_Activation/-L -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt/helpers -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt/spi -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt/varia -IC:/Qt6/5.15.2/mingw81_64/include -IC:/Qt6/5.15.2/mingw81_64/include/QtPrintSupport -IC:/Qt6/5.15.2/mingw81_64/include/QtWidgets -IC:/Qt6/5.15.2/mingw81_64/include/QtGui -IC:/Qt6/5.15.2/mingw81_64/include/QtANGLE -IC:/Qt6/5.15.2/mingw81_64/include/QtNetwork -IC:/Qt6/5.15.2/mingw81_64/include/QtSerialPort -IC:/Qt6/5.15.2/mingw81_64/include/QtConcurrent -IC:/Qt6/5.15.2/mingw81_64/include/QtCore -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include/c++ -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include/c++/x86_64-w64-mingw32 -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include/c++/backward -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include-fixed -IC:/Qt5.14.2/Tools/mingw730_64/x86_64-w64-mingw32/include commandhelper.h -o temp\moc\moc_commandhelper.cpp
@@ -2093,6 +2131,25 @@ temp/moc/moc_offlinedataanalysiswidget.cpp: offlinedataanalysiswidget.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdatetime.h \
 		coincidenceanalyzer.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QMutex \
+		globalsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFile \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonArray \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonarray.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborcommon.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qregularexpression.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/quuid.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonObject \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonobject.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonDocument \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsondocument.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QThreadPool \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qthreadpool.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qthread.h \
@@ -2102,7 +2159,6 @@ temp/moc/moc_offlinedataanalysiswidget.cpp: offlinedataanalysiswidget.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QWaitCondition \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qwaitcondition.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QDeadlineTimer \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFile \
 		temp/moc/moc_predefs.h \
 		C:/Qt6/5.15.2/mingw81_64/bin/moc.exe
 	C:\Qt6\5.15.2\mingw81_64\bin\moc.exe $(DEFINES) --include D:/Examples/Qt/MicroDetector/Cu_Activation/temp/moc/moc_predefs.h -IC:/Qt6/5.15.2/mingw81_64/mkspecs/win32-g++ -ID:/Examples/Qt/MicroDetector/Cu_Activation -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/ftcoreimc_win_v1.4.0.0/inc -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/gsl/include -ID:/Examples/Qt/MicroDetector/Cu_Activation/-L -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/helpers -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/spi -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/varia -ID:/Examples/Qt/MicroDetector/Cu_Activation/-L -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt/helpers -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt/spi -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt/varia -IC:/Qt6/5.15.2/mingw81_64/include -IC:/Qt6/5.15.2/mingw81_64/include/QtPrintSupport -IC:/Qt6/5.15.2/mingw81_64/include/QtWidgets -IC:/Qt6/5.15.2/mingw81_64/include/QtGui -IC:/Qt6/5.15.2/mingw81_64/include/QtANGLE -IC:/Qt6/5.15.2/mingw81_64/include/QtNetwork -IC:/Qt6/5.15.2/mingw81_64/include/QtSerialPort -IC:/Qt6/5.15.2/mingw81_64/include/QtConcurrent -IC:/Qt6/5.15.2/mingw81_64/include/QtCore -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include/c++ -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include/c++/x86_64-w64-mingw32 -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include/c++/backward -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include-fixed -IC:/Qt5.14.2/Tools/mingw730_64/x86_64-w64-mingw32/include offlinedataanalysiswidget.h -o temp\moc\moc_offlinedataanalysiswidget.cpp
@@ -2248,6 +2304,25 @@ temp/moc/moc_plotwidget.cpp: plotwidget.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QEvent \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QDateTime \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdatetime.h \
+		globalsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFile \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonArray \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonarray.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborcommon.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qregularexpression.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/quuid.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonObject \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonobject.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonDocument \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsondocument.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
 		temp/moc/moc_predefs.h \
 		C:/Qt6/5.15.2/mingw81_64/bin/moc.exe
 	C:\Qt6\5.15.2\mingw81_64\bin\moc.exe $(DEFINES) --include D:/Examples/Qt/MicroDetector/Cu_Activation/temp/moc/moc_predefs.h -IC:/Qt6/5.15.2/mingw81_64/mkspecs/win32-g++ -ID:/Examples/Qt/MicroDetector/Cu_Activation -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/ftcoreimc_win_v1.4.0.0/inc -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/gsl/include -ID:/Examples/Qt/MicroDetector/Cu_Activation/-L -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/helpers -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/spi -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/varia -ID:/Examples/Qt/MicroDetector/Cu_Activation/-L -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt/helpers -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt/spi -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt/varia -IC:/Qt6/5.15.2/mingw81_64/include -IC:/Qt6/5.15.2/mingw81_64/include/QtPrintSupport -IC:/Qt6/5.15.2/mingw81_64/include/QtWidgets -IC:/Qt6/5.15.2/mingw81_64/include/QtGui -IC:/Qt6/5.15.2/mingw81_64/include/QtANGLE -IC:/Qt6/5.15.2/mingw81_64/include/QtNetwork -IC:/Qt6/5.15.2/mingw81_64/include/QtSerialPort -IC:/Qt6/5.15.2/mingw81_64/include/QtConcurrent -IC:/Qt6/5.15.2/mingw81_64/include/QtCore -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include/c++ -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include/c++/x86_64-w64-mingw32 -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include/c++/backward -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include-fixed -IC:/Qt5.14.2/Tools/mingw730_64/x86_64-w64-mingw32/include plotwidget.h -o temp\moc\moc_plotwidget.cpp
@@ -2930,6 +3005,24 @@ temp/moc/moc_mainwindow.cpp: mainwindow.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QStringList \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QEvent \
 		coincidenceanalyzer.h \
+		globalsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonArray \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonarray.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborcommon.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qregularexpression.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/quuid.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonObject \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonobject.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonDocument \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsondocument.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
 		controlhelper.h \
 		3rdParty/ftcoreimc_win_v1.4.0.0/inc/ftcoreimc.h \
 		temp/moc/moc_predefs.h \
@@ -3156,6 +3249,24 @@ temp/moc/moc_spectrumModel.cpp: spectrumModel.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QStringList \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QEvent \
 		coincidenceanalyzer.h \
+		globalsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonArray \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonarray.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborcommon.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qregularexpression.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/quuid.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonObject \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonobject.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonDocument \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsondocument.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
 		temp/moc/moc_predefs.h \
 		C:/Qt6/5.15.2/mingw81_64/bin/moc.exe
 	C:\Qt6\5.15.2\mingw81_64\bin\moc.exe $(DEFINES) --include D:/Examples/Qt/MicroDetector/Cu_Activation/temp/moc/moc_predefs.h -IC:/Qt6/5.15.2/mingw81_64/mkspecs/win32-g++ -ID:/Examples/Qt/MicroDetector/Cu_Activation -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/ftcoreimc_win_v1.4.0.0/inc -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/gsl/include -ID:/Examples/Qt/MicroDetector/Cu_Activation/-L -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/helpers -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/spi -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/varia -ID:/Examples/Qt/MicroDetector/Cu_Activation/-L -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt/helpers -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt/spi -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt/varia -IC:/Qt6/5.15.2/mingw81_64/include -IC:/Qt6/5.15.2/mingw81_64/include/QtPrintSupport -IC:/Qt6/5.15.2/mingw81_64/include/QtWidgets -IC:/Qt6/5.15.2/mingw81_64/include/QtGui -IC:/Qt6/5.15.2/mingw81_64/include/QtANGLE -IC:/Qt6/5.15.2/mingw81_64/include/QtNetwork -IC:/Qt6/5.15.2/mingw81_64/include/QtSerialPort -IC:/Qt6/5.15.2/mingw81_64/include/QtConcurrent -IC:/Qt6/5.15.2/mingw81_64/include/QtCore -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include/c++ -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include/c++/x86_64-w64-mingw32 -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include/c++/backward -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include-fixed -IC:/Qt5.14.2/Tools/mingw730_64/x86_64-w64-mingw32/include spectrumModel.h -o temp\moc\moc_spectrumModel.cpp
@@ -3428,6 +3539,24 @@ temp/moc/moc_waveformmodel.cpp: waveformmodel.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QStringList \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QEvent \
 		coincidenceanalyzer.h \
+		globalsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonArray \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonarray.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborcommon.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qregularexpression.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/quuid.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonObject \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonobject.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonDocument \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsondocument.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
 		temp/moc/moc_predefs.h \
 		C:/Qt6/5.15.2/mingw81_64/bin/moc.exe
 	C:\Qt6\5.15.2\mingw81_64\bin\moc.exe $(DEFINES) --include D:/Examples/Qt/MicroDetector/Cu_Activation/temp/moc/moc_predefs.h -IC:/Qt6/5.15.2/mingw81_64/mkspecs/win32-g++ -ID:/Examples/Qt/MicroDetector/Cu_Activation -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/ftcoreimc_win_v1.4.0.0/inc -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/gsl/include -ID:/Examples/Qt/MicroDetector/Cu_Activation/-L -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/helpers -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/spi -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/varia -ID:/Examples/Qt/MicroDetector/Cu_Activation/-L -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt/helpers -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt/spi -ID:/Examples/Qt/MicroDetector/Cu_Activation/3rdParty/log4qt/Include/log4qt/varia -IC:/Qt6/5.15.2/mingw81_64/include -IC:/Qt6/5.15.2/mingw81_64/include/QtPrintSupport -IC:/Qt6/5.15.2/mingw81_64/include/QtWidgets -IC:/Qt6/5.15.2/mingw81_64/include/QtGui -IC:/Qt6/5.15.2/mingw81_64/include/QtANGLE -IC:/Qt6/5.15.2/mingw81_64/include/QtNetwork -IC:/Qt6/5.15.2/mingw81_64/include/QtSerialPort -IC:/Qt6/5.15.2/mingw81_64/include/QtConcurrent -IC:/Qt6/5.15.2/mingw81_64/include/QtCore -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include/c++ -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include/c++/x86_64-w64-mingw32 -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include/c++/backward -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include -IC:/Qt5.14.2/Tools/mingw730_64/lib/gcc/x86_64-w64-mingw32/7.3.0/include-fixed -IC:/Qt5.14.2/Tools/mingw730_64/x86_64-w64-mingw32/include waveformmodel.h -o temp\moc\moc_waveformmodel.cpp
@@ -7439,19 +7568,9 @@ temp/obj/cachedirconfigwidget.o: cachedirconfigwidget.cpp cachedirconfigwidget.h
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QDateTime \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdatetime.h \
 		coincidenceanalyzer.h \
-		temp/ui/ui_cachedirconfigwidget.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QFileDialog \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qfiledialog.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdir.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qdialog.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QToolButton \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qtoolbutton.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qabstractbutton.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtGui/qicon.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QAction \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qaction.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qactiongroup.h \
+		globalsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonArray \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonarray.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonvalue.h \
@@ -7463,18 +7582,28 @@ temp/obj/cachedirconfigwidget.o: cachedirconfigwidget.cpp cachedirconfigwidget.h
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonobject.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonDocument \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsondocument.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
+		temp/ui/ui_cachedirconfigwidget.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QFileDialog \
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qfiledialog.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdir.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qdialog.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QToolButton \
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qtoolbutton.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qabstractbutton.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtGui/qicon.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QAction \
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qaction.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qactiongroup.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QMessageBox \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qmessagebox.h \
 		offlinedataanalysiswidget.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QThreadPool \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qthreadpool.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qrunnable.h \
-		globalsettings.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qrunnable.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o temp\obj\cachedirconfigwidget.o cachedirconfigwidget.cpp
 
 temp/obj/coincidenceanalyzer.o: coincidenceanalyzer.cpp coincidenceanalyzer.h \
@@ -7576,6 +7705,29 @@ temp/obj/coincidenceanalyzer.o: coincidenceanalyzer.cpp coincidenceanalyzer.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QEvent \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QDateTime \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdatetime.h \
+		globalsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFile \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfile.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfiledevice.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonArray \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonarray.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborcommon.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qregularexpression.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qurl.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qurlquery.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/quuid.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonObject \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonobject.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonDocument \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsondocument.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
 		gaussFit.h \
 		3rdParty/gsl/include/gsl/gsl_vector.h \
 		3rdParty/gsl/include/gsl/gsl_vector_complex_long_double.h \
@@ -7641,29 +7793,6 @@ temp/obj/coincidenceanalyzer.o: coincidenceanalyzer.cpp coincidenceanalyzer.h \
 		3rdParty/gsl/include/gsl/gsl_permutation.h \
 		3rdParty/gsl/include/gsl/gsl_rng.h \
 		3rdParty/gsl/include/gsl/gsl_randist.h \
-		globalsettings.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFile \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfile.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfiledevice.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonArray \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonarray.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonvalue.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborvalue.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborcommon.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qregularexpression.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qurl.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qurlquery.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/quuid.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonObject \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonobject.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonDocument \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsondocument.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QApplication \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qapplication.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qtwidgetsglobal.h \
@@ -7704,7 +7833,22 @@ temp/obj/coincidenceanalyzer.o: coincidenceanalyzer.cpp coincidenceanalyzer.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtGui/qvector2d.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtGui/qtouchdevice.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtGui/qguiapplication.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtGui/qinputmethod.h
+		C:/Qt6/5.15.2/mingw81_64/include/QtGui/qinputmethod.h \
+		commandhelper.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtNetwork/QTcpSocket \
+		C:/Qt6/5.15.2/mingw81_64/include/QtNetwork/qtcpsocket.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtNetwork/qtnetworkglobal.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtNetwork/qtnetwork-config.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtNetwork/qabstractsocket.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QElapsedTimer \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qelapsedtimer.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QWaitCondition \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qwaitcondition.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QDeadlineTimer \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdeadlinetimer.h \
+		qlitethread.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QThread \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qthread.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o temp\obj\coincidenceanalyzer.o coincidenceanalyzer.cpp
 
 temp/obj/controlhelper.o: controlhelper.cpp controlhelper.h \
@@ -8241,6 +8385,26 @@ temp/obj/commandhelper.o: commandhelper.cpp commandhelper.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QDateTime \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdatetime.h \
 		coincidenceanalyzer.h \
+		globalsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonArray \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonarray.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborcommon.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qregularexpression.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qurl.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qurlquery.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/quuid.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonObject \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonobject.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonDocument \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsondocument.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QDataStream \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdatastream.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QApplication \
@@ -8279,29 +8443,15 @@ temp/obj/commandhelper.o: commandhelper.cpp commandhelper.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qsizepolicy.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtGui/qkeysequence.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtGui/qevent.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qurl.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qurlquery.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtGui/qvector2d.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtGui/qtouchdevice.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtGui/qguiapplication.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtGui/qinputmethod.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonArray \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonarray.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonvalue.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborvalue.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborcommon.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qregularexpression.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/quuid.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonObject \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonobject.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonDocument \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsondocument.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QMessageBox \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qmessagebox.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qdialog.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QDir \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdir.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtNetwork/QNetworkSession \
 		C:/Qt6/5.15.2/mingw81_64/include/QtNetwork/qnetworksession.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtNetwork/qnetworkinterface.h \
@@ -8311,12 +8461,6 @@ temp/obj/commandhelper.o: commandhelper.cpp commandhelper.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtNetwork/qnetworkconfigmanager.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QLockFile \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qlockfile.h \
-		globalsettings.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSaveFile \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsavefile.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o temp\obj\commandhelper.o commandhelper.cpp
@@ -8946,7 +9090,17 @@ temp/obj/energycalibrationform.o: energycalibrationform.cpp energycalibrationfor
 		C:/Qt6/5.15.2/mingw81_64/include/QtPrintSupport/qtprintsupportversion.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QElapsedTimer \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QTimeZone \
-		function.h
+		function.h \
+		globalsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFile \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonArray \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonObject \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonDocument \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QMutex \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QReadWriteLock \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o temp\obj\energycalibrationform.o energycalibrationform.cpp
 
 temp/obj/equipmentmanagementform.o: equipmentmanagementform.cpp equipmentmanagementform.h \
@@ -9388,27 +9542,10 @@ temp/obj/offlinedataanalysiswidget.o: offlinedataanalysiswidget.cpp offlinedataa
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdatetime.h \
 		coincidenceanalyzer.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QMutex \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QThreadPool \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qthreadpool.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qthread.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdeadlinetimer.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qelapsedtimer.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qrunnable.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QWaitCondition \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qwaitcondition.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QDeadlineTimer \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFile \
-		temp/ui/ui_offlinedataanalysiswidget.h \
-		plotwidget.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QStackedWidget \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qstackedwidget.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qframe.h \
-		splashwidget.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QDialog \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qdialog.h \
 		globalsettings.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFile \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonArray \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonarray.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonvalue.h \
@@ -9424,6 +9561,23 @@ temp/obj/offlinedataanalysiswidget.o: offlinedataanalysiswidget.cpp offlinedataa
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QThreadPool \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qthreadpool.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qthread.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdeadlinetimer.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qelapsedtimer.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qrunnable.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QWaitCondition \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qwaitcondition.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QDeadlineTimer \
+		temp/ui/ui_offlinedataanalysiswidget.h \
+		plotwidget.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QStackedWidget \
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qstackedwidget.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qframe.h \
+		splashwidget.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QDialog \
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qdialog.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QButtonGroup \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qbuttongroup.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QFileDialog \
@@ -9587,6 +9741,25 @@ temp/obj/plotwidget.o: plotwidget.cpp plotwidget.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QEvent \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QDateTime \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdatetime.h \
+		globalsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFile \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonArray \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonarray.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborcommon.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qregularexpression.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/quuid.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonObject \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonobject.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonDocument \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsondocument.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
 		qcustomplot.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QTimer \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qtimer.h \
@@ -9665,10 +9838,6 @@ temp/obj/plotwidget.o: plotwidget.cpp plotwidget.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qbytearraymatcher.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcalendar.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborarray.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborvalue.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborcommon.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qregularexpression.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/quuid.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcbormap.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborstream.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborstreamreader.h \
@@ -9683,7 +9852,6 @@ temp/obj/plotwidget.o: plotwidget.cpp plotwidget.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdeadlinetimer.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qelapsedtimer.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdir.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdiriterator.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qeasingcurve.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qendian.h \
@@ -9691,7 +9859,6 @@ temp/obj/plotwidget.o: plotwidget.cpp plotwidget.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qexception.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfactoryinterface.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileselector.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfinalstate.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfuture.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfutureinterface.h \
@@ -9703,10 +9870,6 @@ temp/obj/plotwidget.o: plotwidget.cpp plotwidget.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qidentityproxymodel.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qisenum.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qitemselectionmodel.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonarray.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonvalue.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsondocument.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonobject.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qlibrary.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qlibraryinfo.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qversionnumber.h \
@@ -9735,7 +9898,6 @@ temp/obj/plotwidget.o: plotwidget.cpp plotwidget.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qscopeguard.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsemaphore.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsequentialanimationgroup.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsharedmemory.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsignalmapper.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsignaltransition.h \
@@ -10052,7 +10214,16 @@ temp/obj/plotwidget.o: plotwidget.cpp plotwidget.h \
 		3rdParty/gsl/include/gsl/gsl_minmax.h \
 		3rdParty/gsl/include/gsl/gsl_permutation.h \
 		3rdParty/gsl/include/gsl/gsl_rng.h \
-		3rdParty/gsl/include/gsl/gsl_randist.h
+		3rdParty/gsl/include/gsl/gsl_randist.h \
+		commandhelper.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtNetwork/QTcpSocket \
+		C:/Qt6/5.15.2/mingw81_64/include/QtNetwork/qtcpsocket.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtNetwork/qtnetworkglobal.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtNetwork/qtnetwork-config.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtNetwork/qabstractsocket.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QWaitCondition \
+		qlitethread.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QThread
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o temp\obj\plotwidget.o plotwidget.cpp
 
 temp/obj/polynomialfit.o: polynomialfit.cpp polynomialfit.h \
@@ -10735,8 +10906,6 @@ temp/obj/main.o: main.cpp mainwindow.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QStringList \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QEvent \
 		coincidenceanalyzer.h \
-		controlhelper.h \
-		3rdParty/ftcoreimc_win_v1.4.0.0/inc/ftcoreimc.h \
 		globalsettings.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
@@ -10755,6 +10924,8 @@ temp/obj/main.o: main.cpp mainwindow.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
+		controlhelper.h \
+		3rdParty/ftcoreimc_win_v1.4.0.0/inc/ftcoreimc.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QApplication \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qapplication.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcoreapplication.h \
@@ -10964,6 +11135,24 @@ temp/obj/mainwindow.o: mainwindow.cpp mainwindow.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QStringList \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QEvent \
 		coincidenceanalyzer.h \
+		globalsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonArray \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonarray.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborvalue.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborcommon.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qregularexpression.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/quuid.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonObject \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonobject.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonDocument \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsondocument.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
 		controlhelper.h \
 		3rdParty/ftcoreimc_win_v1.4.0.0/inc/ftcoreimc.h \
 		temp/ui/ui_mainwindow.h \
@@ -10996,7 +11185,6 @@ temp/obj/mainwindow.o: mainwindow.cpp mainwindow.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qstyleoption.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qabstractspinbox.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtGui/qvalidator.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qregularexpression.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qslider.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qabstractslider.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qstyle.h \
@@ -11006,23 +11194,6 @@ temp/obj/mainwindow.o: mainwindow.cpp mainwindow.h \
 		splashwidget.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QDialog \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qdialog.h \
-		globalsettings.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonArray \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonarray.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonvalue.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborvalue.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qcborcommon.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/quuid.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonObject \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonobject.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonDocument \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsondocument.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QFileDialog \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qfiledialog.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdir.h \
@@ -11277,12 +11448,9 @@ temp/obj/spectrumModel.o: spectrumModel.cpp spectrumModel.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QStringList \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QEvent \
 		coincidenceanalyzer.h \
-		temp/ui/ui_spectrumModel.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QFileDialog \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qfiledialog.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdir.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qdialog.h \
+		globalsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonArray \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonarray.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonvalue.h \
@@ -11294,6 +11462,15 @@ temp/obj/spectrumModel.o: spectrumModel.cpp spectrumModel.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonobject.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonDocument \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsondocument.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
+		temp/ui/ui_spectrumModel.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QFileDialog \
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qfiledialog.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdir.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qdialog.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QDir \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QMessageBox \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qmessagebox.h \
@@ -11303,13 +11480,7 @@ temp/obj/spectrumModel.o: spectrumModel.cpp spectrumModel.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qactiongroup.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QToolButton \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qtoolbutton.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qabstractbutton.h \
-		globalsettings.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qabstractbutton.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o temp\obj\spectrumModel.o spectrumModel.cpp
 
 temp/obj/splashwidget.o: splashwidget.cpp splashwidget.h \
@@ -11703,12 +11874,9 @@ temp/obj/waveformmodel.o: waveformmodel.cpp waveformmodel.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QStringList \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QEvent \
 		coincidenceanalyzer.h \
-		temp/ui/ui_waveformmodel.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QFileDialog \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qfiledialog.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdir.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qdialog.h \
+		globalsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonArray \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonarray.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonvalue.h \
@@ -11720,6 +11888,15 @@ temp/obj/waveformmodel.o: waveformmodel.cpp waveformmodel.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonobject.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonDocument \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsondocument.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
+		temp/ui/ui_waveformmodel.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QFileDialog \
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qfiledialog.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdir.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qdialog.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QDir \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QMessageBox \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qmessagebox.h \
@@ -11729,13 +11906,7 @@ temp/obj/waveformmodel.o: waveformmodel.cpp waveformmodel.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qactiongroup.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QToolButton \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qtoolbutton.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qabstractbutton.h \
-		globalsettings.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qabstractbutton.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o temp\obj\waveformmodel.o waveformmodel.cpp
 
 temp/obj/FPGASetting.o: FPGASetting.cpp FPGASetting.h \
@@ -11894,6 +12065,9 @@ temp/obj/FPGASetting.o: FPGASetting.cpp FPGASetting.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QDateTime \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdatetime.h \
 		coincidenceanalyzer.h \
+		globalsettings.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonArray \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonarray.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonvalue.h \
@@ -11905,18 +12079,15 @@ temp/obj/FPGASetting.o: FPGASetting.cpp FPGASetting.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsonobject.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QJsonDocument \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qjsondocument.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
+		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QDir \
 		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qdir.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfileinfo.h \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/QMessageBox \
 		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qmessagebox.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qdialog.h \
-		globalsettings.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QSettings \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qsettings.h \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileInfo \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/QFileSystemWatcher \
-		C:/Qt6/5.15.2/mingw81_64/include/QtCore/qfilesystemwatcher.h
+		C:/Qt6/5.15.2/mingw81_64/include/QtWidgets/qdialog.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o temp\obj\FPGASetting.o FPGASetting.cpp
 
 temp/obj/yieldcalibration.o: yieldcalibration.cpp yieldcalibration.h \

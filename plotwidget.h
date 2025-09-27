@@ -79,7 +79,7 @@ public:
 public slots:
     void slotBeforeReplot();
     void slotRestorePlot(QMouseEvent*);
-    void slotUpdateEnWindow(unsigned short* EnWindow);
+    void slotUpdateEnWindow(double* EnWindow);
     void slotRestoreView();
 
     //批量刷新
@@ -116,7 +116,7 @@ signals:
     void sigSwitchToMoveMode(bool checked);//平移视图
 
 private:
-    unsigned int multiChannel; //多道道数
+//    unsigned int multiChannel; //多道道数
     unsigned int max_UIChannel; //图像上最大道址，比多道道址略多一点，采用取整得到。
     bool showAxis = false;//是否显示轴线
     bool isDragging = false;

@@ -63,25 +63,27 @@ void CoincidenceAnalyzer::set_callback(pfRealCallbackFunction func, void *callba
     m_pfuncUser = callbackUser;
 }
 
+#include "commandhelper.h"
 void CoincidenceAnalyzer::calculate(const vector<TimeEnergy> &_data1, const vector<TimeEnergy> &_data2,
-              unsigned short E_win[4], int windowWidthT, int delayTime, 
+              unsigned short E_win[4], int windowWidthT, int delayTime,
               bool countFlag, bool autoEnWidth)
 {
     // 如果是自动调整窗宽，则只在测量开始的首次读取窗宽，后续都自动更新窗宽
+    unsigned short am = MULTI_CHANNEL / multiChannel;
     if(autoEnWidth) {
-        if (autoFirst){
-            EnergyWindow[0] = E_win[0];
-            EnergyWindow[1] = E_win[1];
-            EnergyWindow[2] = E_win[2];
-            EnergyWindow[3] = E_win[3];
+        if (autoFirst){            
+            EnergyWindow[0] = E_win[0] * am; //多道道数;
+            EnergyWindow[1] = E_win[1] * am;
+            EnergyWindow[2] = E_win[2] * am;
+            EnergyWindow[3] = E_win[3] * am;
             autoFirst = false;
         }
     }
     else {
-        EnergyWindow[0] = E_win[0];
-        EnergyWindow[1] = E_win[1];
-        EnergyWindow[2] = E_win[2];
-        EnergyWindow[3] = E_win[3];
+        EnergyWindow[0] = E_win[0] * am;
+        EnergyWindow[1] = E_win[1] * am;
+        EnergyWindow[2] = E_win[2] * am;
+        EnergyWindow[3] = E_win[3] * am;
     }
 
     //合并上次没处理完的数据与新数据

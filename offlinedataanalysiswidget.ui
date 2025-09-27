@@ -793,32 +793,6 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="1" column="2">
-                   <widget class="QSpinBox" name="spinBox_2_leftE">
-                    <property name="minimum">
-                     <number>1</number>
-                    </property>
-                    <property name="maximum">
-                     <number>8192</number>
-                    </property>
-                    <property name="singleStep">
-                     <number>100</number>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="2">
-                   <widget class="QSpinBox" name="spinBox_1_leftE">
-                    <property name="minimum">
-                     <number>1</number>
-                    </property>
-                    <property name="maximum">
-                     <number>8192</number>
-                    </property>
-                    <property name="singleStep">
-                     <number>100</number>
-                    </property>
-                   </widget>
-                  </item>
                   <item row="1" column="3">
                    <widget class="QLabel" name="label_63">
                     <property name="sizePolicy">
@@ -832,35 +806,31 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="1" column="4">
-                   <widget class="QSpinBox" name="spinBox_2_rightE">
-                    <property name="minimum">
-                     <number>1</number>
-                    </property>
+                  <item row="0" column="2">
+                   <widget class="QDoubleSpinBox" name="spinBox_1_leftE">
                     <property name="maximum">
-                     <number>8192</number>
-                    </property>
-                    <property name="singleStep">
-                     <number>100</number>
-                    </property>
-                    <property name="value">
-                     <number>8192</number>
+                     <double>999999.989999999990687</double>
                     </property>
                    </widget>
                   </item>
                   <item row="0" column="4">
-                   <widget class="QSpinBox" name="spinBox_1_rightE">
-                    <property name="minimum">
-                     <number>1</number>
-                    </property>
+                   <widget class="QDoubleSpinBox" name="spinBox_1_rightE">
                     <property name="maximum">
-                     <number>8192</number>
+                     <double>999999.989999999990687</double>
                     </property>
-                    <property name="singleStep">
-                     <number>100</number>
+                   </widget>
+                  </item>
+                  <item row="1" column="4">
+                   <widget class="QDoubleSpinBox" name="spinBox_2_rightE">
+                    <property name="maximum">
+                     <double>999999.989999999990687</double>
                     </property>
-                    <property name="value">
-                     <number>8192</number>
+                   </widget>
+                  </item>
+                  <item row="1" column="2">
+                   <widget class="QDoubleSpinBox" name="spinBox_2_leftE">
+                    <property name="maximum">
+                     <double>999999.989999999990687</double>
                     </property>
                    </widget>
                   </item>

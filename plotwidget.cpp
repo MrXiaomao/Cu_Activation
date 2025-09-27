@@ -6,6 +6,7 @@
 // #include "linearfit.h"
 #include "gaussFit.h"
 #include "sysutils.h"
+#include "commandhelper.h"
 
 #define RANGE_SCARRE_UPPER 1.0
 #define RANGE_SCARRE_LOWER 0.5 //用于能谱
@@ -1642,7 +1643,7 @@ void PlotWidget::slotUpdatePlotDatas(const SingleSpectrum &r1, const vector<Coin
             int ch = 0;
             int mersize = MULTI_CHANNEL / multiChannel;
             for (unsigned int i=0; i<multiChannel; ++i){
-                keys << i+1;
+                keys << double(i+1) * enCalibration[0] + enCalibration[1];
 
                 //合并道址
                 int mergechannel = 0;
@@ -1684,7 +1685,7 @@ void PlotWidget::slotUpdatePlotDatas(const SingleSpectrum &r1, const vector<Coin
             int ch = 0;
             int mersize = MULTI_CHANNEL / multiChannel;
             for (unsigned int i=0; i<multiChannel; ++i){
-                keys << i+1;
+                keys << double(i+1) * enCalibration[0] + enCalibration[1];
 
                 //合并道址
                 int mergechannel = 0;
@@ -1893,7 +1894,7 @@ void PlotWidget::slotAddPlotDatas(SingleSpectrum r1, CoincidenceResult r3)
             int ch = 0;
             int mersize = MULTI_CHANNEL / multiChannel;
             for (unsigned int i=0; i<multiChannel; ++i){
-                keys << i+1;
+                keys << (i+1) * enCalibration[0] + enCalibration[1];
 
                 //合并道址
                 int mergechannel = 0;
@@ -1934,7 +1935,7 @@ void PlotWidget::slotAddPlotDatas(SingleSpectrum r1, CoincidenceResult r3)
             int ch = 0;
             int mersize = MULTI_CHANNEL / multiChannel;
             for (unsigned int i=0; i<multiChannel; ++i){
-                keys << i+1;
+                keys << (i+1) * enCalibration[0] + enCalibration[1];
 
                 //合并道址
                 int mergechannel = 0;
@@ -1981,7 +1982,7 @@ void PlotWidget::slotStart(unsigned int channel)
         maxCount[i] = 0.0; //这里特意取0.，因为计数器计数总是比该数大
     }
 
-    this->multiChannel = channel;
+    multiChannel = channel;
     max_UIChannel = (channel/100 + 1)*100;
     SPECTRUM_X_AXIS_UPPER = max_UIChannel;
 
@@ -2194,7 +2195,7 @@ void PlotWidget::slotGauss(QCustomPlot* customPlot, int leftE, int rightE)
     }
 }
 
-void PlotWidget::slotUpdateEnWindow(unsigned short* EnWindow)
+void PlotWidget::slotUpdateEnWindow(double* EnWindow)
 {
     if (this->property("isMergeMode").toBool()){
         QCustomPlot* customPlotDet12 = this->findChild<QCustomPlot*>("Det12");
@@ -2233,15 +2234,15 @@ void PlotWidget::slotUpdateEnWindow(unsigned short* EnWindow)
             //更新拟合曲线信息
             customPlotDet1->setProperty("leftEnWindow", EnWindow[0]);
             customPlotDet1->setProperty("rightEnWindow", EnWindow[1]);
-            float mean = (float)(EnWindow[1] + EnWindow[0]) / 2;
-            float fourSigma = EnWindow[1] - EnWindow[0];
+            double mean = (double)(EnWindow[1] + EnWindow[0]) / 2;
+            double fourSigma = EnWindow[1] - EnWindow[0];
             QCPItemText* gaussResultItemText = customPlotDet1->findChild<QCPItemText*>("gaussResultItemText");
             if (gaussResultItemText && mean > 0 && fourSigma > 0){
                 QString info = QString("峰  位: %1\n4sigma: %2\n左能窗: %3\n右能窗: %4")
                                    .arg(QString::number(mean, 'f', 0))
                                    .arg(QString::number(fourSigma, 'f', 3))
-                                   .arg(QString::number(EnWindow[0], 10))//十进制输出整数
-                                   .arg(QString::number(EnWindow[1], 10));
+                                   .arg(QString::number(EnWindow[0], 'f', 2))//十进制输出整数
+                                   .arg(QString::number(EnWindow[1], 'f', 2));
 
                 gaussResultItemText->setText(info);
                 // gaussResultItemText->position->setCoords(mean, customPlotDet1->yAxis->range().upper);//以峰值坐标为显示位置
@@ -2264,15 +2265,15 @@ void PlotWidget::slotUpdateEnWindow(unsigned short* EnWindow)
             //更新拟合曲线信息
             customPlotDet2->setProperty("leftEnWindow", EnWindow[2]);
             customPlotDet2->setProperty("rightEnWindow", EnWindow[3]);
-            float mean = (float)(EnWindow[3] + EnWindow[2]) / 2;
-            float fourSigma = EnWindow[3] - EnWindow[2];
+            double mean = (double)(EnWindow[3] + EnWindow[2]) / 2;
+            double fourSigma = EnWindow[3] - EnWindow[2];
             QCPItemText* gaussResultItemText = customPlotDet2->findChild<QCPItemText*>("gaussResultItemText");
             if (gaussResultItemText){
                 QString info = QString("峰  位: %1\n4sigma: %2\n左能窗: %3\n右能窗: %4")
                                    .arg(QString::number(mean, 'f', 0))
                                    .arg(QString::number(fourSigma, 'f', 3))
-                                   .arg(QString::number(EnWindow[2], 10))//十进制输出整数
-                                   .arg(QString::number(EnWindow[3], 10));
+                                   .arg(QString::number(EnWindow[2], 'f', 2))//十进制输出整数
+                                   .arg(QString::number(EnWindow[3], 'f', 2));
 
                 gaussResultItemText->setText(info);
                 // gaussResultItemText->position->setCoords(mean, customPlotDet2->yAxis->range().upper);//以峰值坐标为显示位置

@@ -22,7 +22,8 @@
 
 #include <QLockFile>
 #include "globalsettings.h"
-
+double enCalibration[2]; //能量刻度参数
+unsigned int multiChannel = 8192; //多道道数
 CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
   , coincidenceAnalyzer(new CoincidenceAnalyzer)
 {
@@ -516,10 +517,20 @@ void CommandHelper::updateCoincidenceData(const SingleSpectrum &r1, const vector
         }
         else{
             autoEnWindow = newEnWindow;
+            std::vector<double> newAutoEnWindow;
+            for (auto a : newEnWindow){
+                newAutoEnWindow.push_back((double)a * enCalibration[0] + enCalibration[1]);
+            }
 
             //打印能窗自动更新的日志
             vector<AutoGaussFit> gausslog = coincidenceAnalyzer->GetGaussFitLog();
             if(gausslog.size()>0){
+                AutoGaussFit resultAutoGaussFit = gausslog.back();
+                resultAutoGaussFit.EnLeft1 = resultAutoGaussFit.EnLeft1 * enCalibration[0] + enCalibration[1];
+                resultAutoGaussFit.EnRight1 = resultAutoGaussFit.EnRight1 * enCalibration[0] + enCalibration[1];
+                resultAutoGaussFit.EnLeft2 = resultAutoGaussFit.EnLeft2 * enCalibration[0] + enCalibration[1];
+                resultAutoGaussFit.EnRight2 = resultAutoGaussFit.EnRight2 * enCalibration[0] + enCalibration[1];
+
                 //有新的能窗产生
                 QString autoEnChangeFile = ShotDir + "/" + str_start_time + "_能窗自动更新.txt";
                 {
@@ -533,9 +544,9 @@ void CommandHelper::updateCoincidenceData(const SingleSpectrum &r1, const vector
                         // {
                         //     out << "time, Det1左能窗, Det1右能窗, Det2左能窗, Det2右能窗, Det1峰位, Det2峰位" << Qt::endl;
                         // }
-                        out << gausslog.back().time << "," << gausslog.back().EnLeft1 << "," << gausslog.back().EnRight1 \
-                            << "," << gausslog.back().EnLeft2 << "," << gausslog.back().EnRight2
-                            << "," << gausslog.back().EnRight1 - gausslog.back().EnLeft1 << "," << gausslog.back().EnRight2 - gausslog.back().EnLeft2
+                        out << resultAutoGaussFit.time << "," << resultAutoGaussFit.EnLeft1 << "," << resultAutoGaussFit.EnRight1 \
+                            << "," << resultAutoGaussFit.EnLeft2 << "," << resultAutoGaussFit.EnRight2
+                            << "," << resultAutoGaussFit.EnRight1 - resultAutoGaussFit.EnLeft1 << "," << resultAutoGaussFit.EnRight2 - resultAutoGaussFit.EnLeft2
                             << Qt::endl;
 
                         file.flush();
@@ -543,7 +554,7 @@ void CommandHelper::updateCoincidenceData(const SingleSpectrum &r1, const vector
                     }
                 }
             }
-            emit sigUpdateAutoEnWidth(autoEnWindow, detectorParameter.measureModel);
+            emit sigUpdateAutoEnWidth(newAutoEnWindow, detectorParameter.measureModel);
         }        
     }
 }
@@ -939,6 +950,18 @@ void CommandHelper::closeRelay()
     dataStream << (quint8)0x44;
 
     socketRelay->write(command);
+
+    if (pfSaveNet){
+        pfSaveNet->close();
+        pfSaveNet->deleteLater();
+        pfSaveNet = nullptr;
+    }
+
+    if (pfSaveVaildData){
+        pfSaveVaildData->close();
+        pfSaveVaildData->deleteLater();
+        pfSaveVaildData = nullptr;
+    }
 }
 
 void CommandHelper::openDetector()
@@ -1266,6 +1289,20 @@ QByteArray CommandHelper::getCmdTransferModel(quint8 mode)
 //开始手动测量
 void CommandHelper::slotStartManualMeasure(DetectorParameter p)
 {
+    JsonSettings* mUserSettings = GlobalSettings::instance()->mUserSettings;
+    if (mUserSettings->isOpen())
+    {
+        mUserSettings->prepare();
+        mUserSettings->beginGroup();
+        enCalibration[0] = mUserSettings->value("EnCalibrration_k", 1.0).toDouble();
+        enCalibration[1] = mUserSettings->value("EnCalibrration_b", 0.0).toDouble();
+        mUserSettings->endGroup();
+        mUserSettings->finish();
+
+        if (enCalibration[0] < 0.0001)
+            enCalibration[0] = 1.0;
+    }
+
     coincidenceAnalyzer->initialize();
     //coincidenceAnalyzer->setCoolingTime_Manual(p.coolingTime);//此时冷却时间还未计算出来呢
     workStatus = Preparing;
@@ -1529,6 +1566,20 @@ void CommandHelper::slotStartAutoMeasure()
 
 void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
 {
+    JsonSettings* mUserSettings = GlobalSettings::instance()->mUserSettings;
+    if (mUserSettings->isOpen())
+    {
+        mUserSettings->prepare();
+        mUserSettings->beginGroup();
+        enCalibration[0] = mUserSettings->value("EnCalibrration_k", 1.0).toDouble();
+        enCalibration[1] = mUserSettings->value("EnCalibrration_b", 0.0).toDouble();
+        mUserSettings->endGroup();
+        mUserSettings->finish();
+
+        if (enCalibration[0] < 0.0001)
+            enCalibration[0] = 1.0;
+    }
+
     coincidenceAnalyzer->initialize();
     coincidenceAnalyzer->setCoolingTime_Auto(p.coolingTime);
 
@@ -2157,7 +2208,12 @@ void CommandHelper::detTimeEnergyWorkThread()
                             if(time1 >= detectorParameter.coolingTime || time2 >= detectorParameter.coolingTime)
                             {
                                 saveParticleInfo(data1_2, data2_2);
-                                coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, \
+                                unsigned short uEnWindow[4];
+                                uEnWindow[0] = (unsigned short)((EnWindow[0] - enCalibration[1]) / enCalibration[0]);
+                                uEnWindow[1] = (unsigned short)((EnWindow[1] - enCalibration[1]) / enCalibration[0]);
+                                uEnWindow[2] = (unsigned short)((EnWindow[2] - enCalibration[1]) / enCalibration[0]);
+                                uEnWindow[3] = (unsigned short)((EnWindow[3] - enCalibration[1]) / enCalibration[0]);
+                                coincidenceAnalyzer->calculate(data1_2, data2_2, uEnWindow, \
                                     detectorParameter.timeWidth, detectorParameter.delayTime, true, true);
                             }
                         }
@@ -2189,14 +2245,24 @@ void CommandHelper::detTimeEnergyWorkThread()
                                     startSaveValidData = false;
                                 }
                                 saveParticleInfo(data1_2, data2_2);
-                                coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, \
+                                unsigned short uEnWindow[4];
+                                uEnWindow[0] = (unsigned short)((EnWindow[0] - enCalibration[1]) / enCalibration[0]);
+                                uEnWindow[1] = (unsigned short)((EnWindow[1] - enCalibration[1]) / enCalibration[0]);
+                                uEnWindow[2] = (unsigned short)((EnWindow[2] - enCalibration[1]) / enCalibration[0]);
+                                uEnWindow[3] = (unsigned short)((EnWindow[3] - enCalibration[1]) / enCalibration[0]);
+                                coincidenceAnalyzer->calculate(data1_2, data2_2, uEnWindow, \
                                     detectorParameter.timeWidth, detectorParameter.delayTime, true, true);
                             }
                             else
                             {
                                 //只计算能谱数据，不进行符合计数
                                 // qDebug().noquote()<<"Into Size1 = "<<data1_2.size()<<", Size2 = "<<data2_2.size();
-                                coincidenceAnalyzer->calculate(data1_2, data2_2, EnWindow, \
+                                unsigned short uEnWindow[4];
+                                uEnWindow[0] = (unsigned short)((EnWindow[0] - enCalibration[1]) / enCalibration[0]);
+                                uEnWindow[1] = (unsigned short)((EnWindow[1] - enCalibration[1]) / enCalibration[0]);
+                                uEnWindow[2] = (unsigned short)((EnWindow[2] - enCalibration[1]) / enCalibration[0]);
+                                uEnWindow[3] = (unsigned short)((EnWindow[3] - enCalibration[1]) / enCalibration[0]);
+                                coincidenceAnalyzer->calculate(data1_2, data2_2, uEnWindow, \
                                     detectorParameter.timeWidth, detectorParameter.delayTime, false, false);
                                 // qDebug().noquote()<<"Out";
                             }
@@ -2272,7 +2338,7 @@ void CommandHelper::updateStepTime(int _stepT)
     this->stepT = _stepT;
 }
 
-void CommandHelper::updateParamter(int _stepT, unsigned short _EnWin[4], bool _autoEnWindow)
+void CommandHelper::updateParamter(int _stepT, double _EnWin[4], bool _autoEnWindow)
 {
     QMutexLocker locker(&mutexReset);
 

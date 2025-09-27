@@ -76,8 +76,8 @@ public:
      * @param {unsigned short} EnWin 能窗。无单位
      * @param {bool} autoEnWindow 是否自动更新能窗，用于修正峰位漂移，比如常见的温漂。自动采用上一次的能窗进行高斯拟合，拟合后给出新的能创。
      * @return {*}
-     */    
-    void updateParamter(int stepT, unsigned short EnWin[4], bool _autoEnWindow);
+     */
+    void updateParamter(int stepT, double EnWin[4], bool _autoEnWindow);
     
     void exportFile(QString);
     void setDefaultCacheDir(QString dir);
@@ -160,8 +160,8 @@ signals:
      * @param {unsigned} short 能窗
      * @param {qint8} mmodel 测量模式，自动、手动
      * @return {*}
-     */    
-    void sigUpdateAutoEnWidth(std::vector<unsigned short>, qint8 mmodel);
+     */
+    void sigUpdateAutoEnWidth(std::vector<double>, qint8 mmodel);
 
     //测量计时开始
     void sigMeasureTimerStart(qint8 mmode, qint8 tmode, QDateTime);
@@ -299,7 +299,7 @@ private:
     QElapsedTimer NetDataTimer; //定时器，用于定时缓存网口数据，这意味着意外崩溃会丢失最后那一段数据。
     
     int stepT = 1; //界面图像刷新时间，单位s
-    unsigned short EnWindow[4]; // 探测器1左能窗、右能窗；探测器2左能窗、右能窗
+    double EnWindow[4]; // 探测器1左能窗、右能窗；探测器2左能窗、右能窗
     std::vector<unsigned short> autoEnWindow; // 符合测量自动更新能窗反馈给界面的值：探测器1左能窗、右能窗；探测器2左能窗、右能窗
 
     int deltaTime_updateYield = 60; //中子产额的刷新时间间隔，单位s
@@ -313,5 +313,6 @@ private:
     std::vector<DetTimeEnergy> cacheSpectrumFrames;
 };
 
-
+extern double enCalibration[2]; //能量刻度参数
+extern unsigned int multiChannel; //多道道数
 #endif // COMMANDHELPER_H

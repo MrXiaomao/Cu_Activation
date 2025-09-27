@@ -456,7 +456,7 @@ MainWindow::MainWindow(QWidget *parent)
     //DirectConnection replot 子线程操作，不会堵塞，但是会崩溃
     //QueuedConnection replot 主线程操作，刷新慢
 
-    connect(commandHelper, &CommandHelper::sigUpdateAutoEnWidth, this, [=](std::vector<unsigned short> EnWidth, qint8 mmode){
+    connect(commandHelper, &CommandHelper::sigUpdateAutoEnWidth, this, [=](std::vector<double> EnWidth, qint8 mmode){
         if (mmode == mmManual )
         {
             ui->spinBox_1_leftE->setValue(EnWidth[0]);
@@ -605,15 +605,15 @@ void MainWindow::InitMainWindowUi()
     // 获取当前时间
     ui->textEdit_log->clear();
 
-    ui->spinBox_1_leftE->setMaximum(MULTI_CHANNEL);
-    ui->spinBox_1_rightE->setMaximum(MULTI_CHANNEL);
-    ui->spinBox_2_leftE->setMaximum(MULTI_CHANNEL);
-    ui->spinBox_2_rightE->setMaximum(MULTI_CHANNEL);
+    // ui->spinBox_1_leftE->setMaximum(MULTI_CHANNEL);
+    // ui->spinBox_1_rightE->setMaximum(MULTI_CHANNEL);
+    // ui->spinBox_2_leftE->setMaximum(MULTI_CHANNEL);
+    // ui->spinBox_2_rightE->setMaximum(MULTI_CHANNEL);
 
-    ui->spinBox_1_leftE_2->setMaximum(MULTI_CHANNEL);
-    ui->spinBox_1_rightE_2->setMaximum(MULTI_CHANNEL);
-    ui->spinBox_2_leftE_2->setMaximum(MULTI_CHANNEL);
-    ui->spinBox_2_rightE_2->setMaximum(MULTI_CHANNEL);
+    // ui->spinBox_1_leftE_2->setMaximum(MULTI_CHANNEL);
+    // ui->spinBox_1_rightE_2->setMaximum(MULTI_CHANNEL);
+    // ui->spinBox_2_leftE_2->setMaximum(MULTI_CHANNEL);
+    // ui->spinBox_2_rightE_2->setMaximum(MULTI_CHANNEL);
 
     JsonSettings* userSettings = GlobalSettings::instance()->mUserSettings;
     if (userSettings->isOpen()){
@@ -923,18 +923,18 @@ void MainWindow::InitMainWindowUi()
 
 void MainWindow::slotUpdateEnWindow()
 {
-    unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
-                               (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
+    double EnWin[4] = {(double)ui->spinBox_1_leftE->value(), (double)ui->spinBox_1_rightE->value(),
+                               (double)ui->spinBox_2_leftE->value(), (double)ui->spinBox_2_rightE->value()};
     if (ui->tabWidget_measure->currentIndex() == 0){
-        EnWin[0] = (unsigned short)ui->spinBox_1_leftE->value();
-        EnWin[1] = (unsigned short)ui->spinBox_1_rightE->value();
-        EnWin[2] = (unsigned short)ui->spinBox_2_leftE->value();
-        EnWin[3] = (unsigned short)ui->spinBox_2_rightE->value();
+        EnWin[0] = (double)ui->spinBox_1_leftE->value();
+        EnWin[1] = (double)ui->spinBox_1_rightE->value();
+        EnWin[2] = (double)ui->spinBox_2_leftE->value();
+        EnWin[3] = (double)ui->spinBox_2_rightE->value();
     } else if (ui->tabWidget_measure->currentIndex() == 1){
-        EnWin[0] = (unsigned short)ui->spinBox_1_leftE_2->value();
-        EnWin[1] = (unsigned short)ui->spinBox_1_rightE_2->value();
-        EnWin[2] = (unsigned short)ui->spinBox_2_leftE_2->value();
-        EnWin[3] = (unsigned short)ui->spinBox_2_rightE_2->value();
+        EnWin[0] = (double)ui->spinBox_1_leftE_2->value();
+        EnWin[1] = (double)ui->spinBox_1_rightE_2->value();
+        EnWin[2] = (double)ui->spinBox_2_leftE_2->value();
+        EnWin[3] = (double)ui->spinBox_2_rightE_2->value();
     }
 
     PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
@@ -1300,8 +1300,8 @@ void MainWindow::on_pushButton_measure_clicked()
 
             ui->pushButton_measure_2->setEnabled(false);
             int stepT = ui->spinBox_step->value();
-            unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
-                                       (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
+            double EnWin[4] = {(double)ui->spinBox_1_leftE->value(), (double)ui->spinBox_1_rightE->value(),
+                                       (double)ui->spinBox_2_leftE->value(), (double)ui->spinBox_2_rightE->value()};
 
             QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
             measureTimer->setInterval(ui->spinBox_timelength->value() * 1000);
@@ -1436,8 +1436,8 @@ void MainWindow::on_pushButton_measure_2_clicked()
         ui->action_drag->setEnabled(false);
 
         int stepT = ui->spinBox_step_2->value();
-        unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE_2->value(), (unsigned short)ui->spinBox_1_rightE_2->value(),
-                                   (unsigned short)ui->spinBox_2_leftE_2->value(), (unsigned short)ui->spinBox_2_rightE_2->value()};
+        double EnWin[4] = {(double)ui->spinBox_1_leftE_2->value(), (double)ui->spinBox_1_rightE_2->value(),
+                                   (double)ui->spinBox_2_leftE_2->value(), (double)ui->spinBox_2_rightE_2->value()};
 
         QTimer* measureTimer = this->findChild<QTimer*>("measureTimer");
         measureTimer->setInterval(ui->spinBox_timelength_2->value() * 1000);
@@ -2161,8 +2161,8 @@ void MainWindow::on_pushButton_confirm_clicked()
     this->saveConfigJson();
 
     int stepT = ui->spinBox_step->value();
-    unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
-                               (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
+    double EnWin[4] = {(double)ui->spinBox_1_leftE->value(), (double)ui->spinBox_1_rightE->value(),
+                               (double)ui->spinBox_2_leftE->value(), (double)ui->spinBox_2_rightE->value()};
 
     PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
     if (ui->radioButton_ref->isChecked()){

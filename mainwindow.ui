@@ -583,7 +583,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                </sizepolicy>
               </property>
               <property name="currentIndex">
-               <number>1</number>
+               <number>0</number>
               </property>
               <widget class="QWidget" name="tab_3">
                <property name="sizePolicy">
@@ -995,24 +995,15 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        <number>0</number>
                       </property>
                       <item>
-                       <widget class="QSpinBox" name="spinBox_2_leftE">
+                       <widget class="QDoubleSpinBox" name="spinBox_2_leftE">
                         <property name="sizePolicy">
                          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                           <horstretch>0</horstretch>
                           <verstretch>0</verstretch>
                          </sizepolicy>
                         </property>
-                        <property name="minimum">
-                         <number>0</number>
-                        </property>
                         <property name="maximum">
-                         <number>8192</number>
-                        </property>
-                        <property name="singleStep">
-                         <number>100</number>
-                        </property>
-                        <property name="value">
-                         <number>3000</number>
+                         <double>99999.990000000005239</double>
                         </property>
                        </widget>
                       </item>
@@ -1030,24 +1021,15 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        </widget>
                       </item>
                       <item>
-                       <widget class="QSpinBox" name="spinBox_2_rightE">
+                       <widget class="QDoubleSpinBox" name="spinBox_2_rightE">
                         <property name="sizePolicy">
                          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                           <horstretch>0</horstretch>
                           <verstretch>0</verstretch>
                          </sizepolicy>
                         </property>
-                        <property name="minimum">
-                         <number>1</number>
-                        </property>
                         <property name="maximum">
-                         <number>8192</number>
-                        </property>
-                        <property name="singleStep">
-                         <number>100</number>
-                        </property>
-                        <property name="value">
-                         <number>4000</number>
+                         <double>99999.990000000005239</double>
                         </property>
                        </widget>
                       </item>
@@ -1076,24 +1058,15 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        <number>0</number>
                       </property>
                       <item>
-                       <widget class="QSpinBox" name="spinBox_1_leftE">
+                       <widget class="QDoubleSpinBox" name="spinBox_1_leftE">
                         <property name="sizePolicy">
                          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                           <horstretch>0</horstretch>
                           <verstretch>0</verstretch>
                          </sizepolicy>
                         </property>
-                        <property name="minimum">
-                         <number>0</number>
-                        </property>
                         <property name="maximum">
-                         <number>8192</number>
-                        </property>
-                        <property name="singleStep">
-                         <number>100</number>
-                        </property>
-                        <property name="value">
-                         <number>3000</number>
+                         <double>99999.990000000005239</double>
                         </property>
                        </widget>
                       </item>
@@ -1114,24 +1087,15 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        </widget>
                       </item>
                       <item>
-                       <widget class="QSpinBox" name="spinBox_1_rightE">
+                       <widget class="QDoubleSpinBox" name="spinBox_1_rightE">
                         <property name="sizePolicy">
                          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                           <horstretch>0</horstretch>
                           <verstretch>0</verstretch>
                          </sizepolicy>
                         </property>
-                        <property name="minimum">
-                         <number>1</number>
-                        </property>
                         <property name="maximum">
-                         <number>8192</number>
-                        </property>
-                        <property name="singleStep">
-                         <number>100</number>
-                        </property>
-                        <property name="value">
-                         <number>4000</number>
+                         <double>99999.990000000005239</double>
                         </property>
                        </widget>
                       </item>
@@ -1380,24 +1344,15 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        <number>0</number>
                       </property>
                       <item>
-                       <widget class="QSpinBox" name="spinBox_1_leftE_2">
+                       <widget class="QDoubleSpinBox" name="spinBox_1_leftE_2">
                         <property name="sizePolicy">
                          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                           <horstretch>0</horstretch>
                           <verstretch>0</verstretch>
                          </sizepolicy>
                         </property>
-                        <property name="minimum">
-                         <number>0</number>
-                        </property>
                         <property name="maximum">
-                         <number>8192</number>
-                        </property>
-                        <property name="singleStep">
-                         <number>100</number>
-                        </property>
-                        <property name="value">
-                         <number>400</number>
+                         <double>99999.990000000005239</double>
                         </property>
                        </widget>
                       </item>
@@ -1415,24 +1370,15 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        </widget>
                       </item>
                       <item>
-                       <widget class="QSpinBox" name="spinBox_1_rightE_2">
+                       <widget class="QDoubleSpinBox" name="spinBox_1_rightE_2">
                         <property name="sizePolicy">
                          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                           <horstretch>0</horstretch>
                           <verstretch>0</verstretch>
                          </sizepolicy>
                         </property>
-                        <property name="minimum">
-                         <number>1</number>
-                        </property>
                         <property name="maximum">
-                         <number>8192</number>
-                        </property>
-                        <property name="singleStep">
-                         <number>100</number>
-                        </property>
-                        <property name="value">
-                         <number>600</number>
+                         <double>99999.990000000005239</double>
                         </property>
                        </widget>
                       </item>
@@ -1678,24 +1624,15 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        <number>0</number>
                       </property>
                       <item>
-                       <widget class="QSpinBox" name="spinBox_2_leftE_2">
+                       <widget class="QDoubleSpinBox" name="spinBox_2_leftE_2">
                         <property name="sizePolicy">
                          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                           <horstretch>0</horstretch>
                           <verstretch>0</verstretch>
                          </sizepolicy>
                         </property>
-                        <property name="minimum">
-                         <number>0</number>
-                        </property>
                         <property name="maximum">
-                         <number>8192</number>
-                        </property>
-                        <property name="singleStep">
-                         <number>100</number>
-                        </property>
-                        <property name="value">
-                         <number>400</number>
+                         <double>99999.990000000005239</double>
                         </property>
                        </widget>
                       </item>
@@ -1713,24 +1650,15 @@ li.checked::marker { content: &quot;\2612&quot;; }
                        </widget>
                       </item>
                       <item>
-                       <widget class="QSpinBox" name="spinBox_2_rightE_2">
+                       <widget class="QDoubleSpinBox" name="spinBox_2_rightE_2">
                         <property name="sizePolicy">
                          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                           <horstretch>0</horstretch>
                           <verstretch>0</verstretch>
                          </sizepolicy>
                         </property>
-                        <property name="minimum">
-                         <number>1</number>
-                        </property>
                         <property name="maximum">
-                         <number>8192</number>
-                        </property>
-                        <property name="singleStep">
-                         <number>100</number>
-                        </property>
-                        <property name="value">
-                         <number>600</number>
+                         <double>99999.990000000005239</double>
                         </property>
                        </widget>
                       </item>

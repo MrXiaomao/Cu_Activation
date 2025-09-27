@@ -13,7 +13,7 @@
 #include <map>
 #include "sysutils.h"
 //使用前向声明，避免与文件sysutils.h相互包含
-
+#include "globalsettings.h"
 
 #define MAX_ENERGY 8192 //最大能量
 // long long nanoseconds = 1000000000LL; //1s = 1E9ns
@@ -67,7 +67,7 @@ public:
         }
         
         currentGaussCount[0] = 0;
-        currentGaussCount[1] = 0;
+        currentGaussCount[1] = 0;        
     }
 
     /**
@@ -221,4 +221,5 @@ private:
     unsigned short EnergyWindow[4];//能窗边界，依次存放探测器1左边界、右边界，探测器2左边界、右边界。
     vector<AutoGaussFit> GaussFitLog; //记录修改能窗区间的左右宽度,
 };
+
 #endif // COINCIDENCEANALYZER_H

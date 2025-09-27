@@ -104,8 +104,8 @@ OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
 
 void OfflineDataAnalysisWidget::slotUpdateEnWindow()
 {
-    unsigned short EnWin[4] = {(unsigned short)ui->spinBox_1_leftE->value(), (unsigned short)ui->spinBox_1_rightE->value(),
-                               (unsigned short)ui->spinBox_2_leftE->value(), (unsigned short)ui->spinBox_2_rightE->value()};
+    double EnWin[4] = {(double)ui->spinBox_1_leftE->value(), (double)ui->spinBox_1_rightE->value(),
+                               (double)ui->spinBox_2_leftE->value(), (double)ui->spinBox_2_rightE->value()};
 
     PlotWidget* plotWidget = this->findChild<PlotWidget*>("offline-PlotWidget");
     plotWidget->slotUpdateEnWindow(EnWin);

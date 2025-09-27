@@ -11,6 +11,15 @@ EnergyCalibrationForm::EnergyCalibrationForm(QWidget *parent) :
 
     initCustomPlot();
 
+    // 保存界面参数
+    QSettings mSettings("./config/Calibration.ini", QSettings::IniFormat);
+    int count = mSettings.value("Table/count", 0).toInt();
+    for (int i= 0; i<count; ++i){
+        int row = ui->tableWidget->rowCount();
+        ui->tableWidget->insertRow(row);
+        ui->tableWidget->setItem(row, 0, new QTableWidgetItem(QString("%1").arg(mSettings.value(QString("Table/channel%1").arg(i+1)).toString())));
+        ui->tableWidget->setItem(row, 1, new QTableWidgetItem(QString("%1").arg(mSettings.value(QString("Table/energy%1").arg(i+1)).toString())));
+    }
     ui->radioButton_2->setVisible(false);
     ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 }
@@ -141,7 +150,7 @@ void EnergyCalibrationForm::initCustomPlot()
 //        // 重新绘制
 //        customPlot->replot();
 //    });
-//    timerUpdate->start(50);
+//    timerUpdate->start(50);    
 }
 
 void EnergyCalibrationForm::on_pushButton_add_clicked()
@@ -188,6 +197,15 @@ void EnergyCalibrationForm::on_pushButton_2_clicked()
     {
         //第二个拟合函数
         calculate(2);
+    }
+
+    // 保存界面参数
+    QSettings mSettings("./config/Calibration.ini", QSettings::IniFormat);
+    mSettings.setValue("Table/count", ui->tableWidget->rowCount());
+    for (int i= 0; i<ui->tableWidget->rowCount(); ++i){
+        double x, y;
+        mSettings.setValue(QString("Table/channel%1").arg(i+1), ui->tableWidget->item(i, 0)->text());
+        mSettings.setValue(QString("Table/energy%1").arg(i+1), ui->tableWidget->item(i, 1)->text());
     }
 }
 
@@ -441,9 +459,10 @@ void EnergyCalibrationForm::on_pushButton_clicked()
 
     mUserSettings->prepare();
     mUserSettings->beginGroup();
-    mUserSettings->setValue("EnCalibrration_k", C[0]);
-    mUserSettings->setValue("EnCalibrration_b", C[1]);
+    mUserSettings->setValue("EnCalibrration_k", C[1]);
+    mUserSettings->setValue("EnCalibrration_b", C[0]);
     mUserSettings->endGroup();
+    mUserSettings->flush();
     mUserSettings->finish();
 }
 

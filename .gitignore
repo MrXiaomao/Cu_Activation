@@ -4,3 +4,6 @@
 /temp
 /*.autosave
 /.qtc_clangd
+/.vscode
+Cu_Activation.pro.user
+Makefile

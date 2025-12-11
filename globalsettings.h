@@ -160,7 +160,7 @@ public:
         if (fileName.isEmpty())
             file.setFileName(mFileName);
 
-        if (file.open(QIODevice::ReadWrite | QIODevice::Text)) {
+        if (file.open(QIODevice::ReadWrite | QIODevice::Truncate | QIODevice::Text)) {
             QJsonDocument jsonDoc(mJsonRoot);
             file.write(jsonDoc.toJson());
             file.close();

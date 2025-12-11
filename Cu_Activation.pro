@@ -206,7 +206,7 @@ win32 {
 windows {
     # MinGW
     *-g++* {
-        QMAKE_CXXFLAGS += -Wall -Wextra -pedantic
+        QMAKE_CXXFLAGS += -Wall -Wextra -Wpedantic
     }
     # MSVC
     *-msvc* {

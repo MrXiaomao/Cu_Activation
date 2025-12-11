@@ -2342,7 +2342,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </widget>
   <action name="action_devices">
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/shebeishebeiguanli.png</normaloff>:/resource/shebeishebeiguanli.png</iconset>
    </property>
    <property name="text">
@@ -2351,7 +2351,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="action_energycalibration">
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/measure.png</normaloff>:/resource/measure.png</iconset>
    </property>
    <property name="text">
@@ -2363,7 +2363,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/power-off.png</normaloff>:/resource/power-off.png</iconset>
    </property>
    <property name="text">
@@ -2378,7 +2378,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="action_SpectrumModel">
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/energy.png</normaloff>:/resource/energy.png</iconset>
    </property>
    <property name="text">
@@ -2387,7 +2387,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="action_WaveformModel">
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/wave.png</normaloff>:/resource/wave.png</iconset>
    </property>
    <property name="text">
@@ -2396,7 +2396,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="action_log">
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/log.png</normaloff>:/resource/log.png</iconset>
    </property>
    <property name="text">
@@ -2405,7 +2405,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="action_help">
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/help.png</normaloff>:/resource/help.png</iconset>
    </property>
    <property name="text">
@@ -2417,7 +2417,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="action_about">
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/about.png</normaloff>:/resource/about.png</iconset>
    </property>
    <property name="text">
@@ -2426,7 +2426,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="action_displacement">
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/lianjie.png</normaloff>:/resource/lianjie.png</iconset>
    </property>
    <property name="text">
@@ -2444,7 +2444,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/mathlog.png</normaloff>:/resource/mathlog.png</iconset>
    </property>
    <property name="text">
@@ -2453,7 +2453,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="action_close">
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/exit.png</normaloff>:/resource/exit.png</iconset>
    </property>
    <property name="text">
@@ -2462,7 +2462,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="action_cachepath">
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/dakaiwenjian.png</normaloff>:/resource/dakaiwenjian.png</iconset>
    </property>
    <property name="text">
@@ -2471,11 +2471,11 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="action_DataAnalysis">
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/analyze.png</normaloff>:/resource/analyze.png</iconset>
    </property>
    <property name="text">
-    <string>数据查看和分析</string>
+    <string>离线数据分析...</string>
    </property>
   </action>
   <action name="action_detector_connect">
@@ -2483,7 +2483,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/conect.png</normaloff>:/resource/conect.png</iconset>
    </property>
    <property name="text">
@@ -2495,7 +2495,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/IoTDB.png</normaloff>:/resource/IoTDB.png</iconset>
    </property>
    <property name="text">
@@ -2510,7 +2510,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/pause.png</normaloff>:/resource/pause.png</iconset>
    </property>
    <property name="text">
@@ -2522,7 +2522,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="action_start_measure">
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/circle-red.png</normaloff>:/resource/circle-red.png</iconset>
    </property>
    <property name="text">
@@ -2531,7 +2531,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="action_config">
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/canshushezhi-05.png</normaloff>:/resource/canshushezhi-05.png</iconset>
    </property>
    <property name="text">
@@ -2543,7 +2543,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/restore.png</normaloff>:/resource/restore.png</iconset>
    </property>
    <property name="text">
@@ -2552,7 +2552,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="action_Moving">
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/zhiling.png</normaloff>:/resource/zhiling.png</iconset>
    </property>
    <property name="text">
@@ -2561,7 +2561,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="action_analyze">
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/analyze.png</normaloff>:/resource/analyze.png</iconset>
    </property>
    <property name="text">
@@ -2573,7 +2573,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="action_openfile">
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/dakaiwenjian.png</normaloff>:/resource/dakaiwenjian.png</iconset>
    </property>
    <property name="text">
@@ -2585,7 +2585,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="action_yieldcalibration">
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/ruler.png</normaloff>:/resource/ruler.png</iconset>
    </property>
    <property name="text">
@@ -2594,7 +2594,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="action_viewlog">
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/log.png</normaloff>:/resource/log.png</iconset>
    </property>
    <property name="text">
@@ -2612,7 +2612,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/move.png</normaloff>:/resource/move.png</iconset>
    </property>
    <property name="text">
@@ -2627,7 +2627,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/tip.png</normaloff>:/resource/tip.png</iconset>
    </property>
    <property name="text">
@@ -2642,7 +2642,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/expand-width-fill.png</normaloff>:/resource/expand-width-fill.png</iconset>
    </property>
    <property name="text">
@@ -2654,7 +2654,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="action_restore_2">
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/resrore.png</normaloff>:/resource/resrore.png</iconset>
    </property>
    <property name="text">
@@ -2672,7 +2672,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/qingchu.png</normaloff>:/resource/qingchu.png</iconset>
    </property>
    <property name="text">
@@ -2687,7 +2687,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   </action>
   <action name="action_optLog">
    <property name="icon">
-    <iconset resource="resource.qrc">
+    <iconset>
      <normaloff>:/resource/log.png</normaloff>:/resource/log.png</iconset>
    </property>
    <property name="text">
@@ -2701,8 +2701,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
    </property>
   </action>
  </widget>
- <resources>
-  <include location="resource.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>

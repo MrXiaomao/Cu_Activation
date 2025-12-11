@@ -79,12 +79,14 @@ public:
         return mFileName;
     }
 
+    //添加文件锁
     void prepare(){
         emit sigPrepare(mFileName);
         //qDebug() << "enter lock >>>";
         mAccessMutex.lock();
     }
 
+    //释放文件锁
     bool finish()
     {
         mAccessMutex.unlock();
@@ -108,6 +110,7 @@ public:
             }
         }
     };
+
     Q_DECL_DEPRECATED void endGroup(){
         if (!mPrefix.isEmpty()){
             mJsonRoot[mPrefix] = mJsonGroup;

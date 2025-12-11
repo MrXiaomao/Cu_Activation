@@ -91,7 +91,12 @@ bool CacheDirConfigWidget::save()
         userSettings->beginGroup();
         userSettings->setValue("defaultCache", cacheDir);
         userSettings->endGroup();
+        bool result = userSettings->flush();
         userSettings->finish();
+        if (result){
+            QMessageBox::information(nullptr, tr("提示"), tr("缓存路径设置成功！"));
+            return true;
+        }
         commandhelper->setDefaultCacheDir(cacheDir);
         return true;
     } else {

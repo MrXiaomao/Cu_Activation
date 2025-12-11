@@ -2,7 +2,7 @@
  * @Author: MrPan
  * @Date: 2025-04-06 20:15:30
  * @LastEditors: Maoxiaoqing
- * @LastEditTime: 2025-08-22 17:26:03
+ * @LastEditTime: 2025-12-11 16:32:24
  * @Description: 用来管理网口的数据发送与接受，管理网口数据的处理相关业务。
  */
 #ifndef COMMANDHELPER_H
@@ -215,7 +215,7 @@ public slots:
     void closeDetector();
 
     //触发阈值1
-    QByteArray getCmdTriggerThold1(quint16 ch1, quint16 ch2);
+    QByteArray getCmdTriggerThold(quint16 ch1, quint16 ch2);
 
     //波形极性
     QByteArray getCmdWaveformPolarity(quint8 v = 0x00);
@@ -313,6 +313,6 @@ private:
     std::vector<DetTimeEnergy> cacheSpectrumFrames;
 };
 
-extern double enCalibration[2]; //能量刻度参数
+extern double g_enCalibration[2]; //能量刻度参数, y=kx+b; g_enCalibration[0]:k, g_enCalibration[1]:b
 extern unsigned int multiChannel; //多道道数
 #endif // COMMANDHELPER_H

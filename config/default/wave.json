@@ -4,8 +4,6 @@
     "Path": "E:/数据保存默认路径",
     "TriggerThold1": 200,
     "TriggerThold2": 200,
-    "TriggerThold3": 0,
-    "TriggerThold4": 0,
     "WaveLength": 1,
     "WaveformPolarity": 0
 }

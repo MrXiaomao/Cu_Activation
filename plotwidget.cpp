@@ -249,7 +249,7 @@ void PlotWidget::initCustomPlot(){
             customPlot->xAxis->setRange(0, 600);//初始默认10分钟
 
             dispatchAdditionalTipFunction(customPlot);
-            dispatchAdditionalDragFunction(customPlot);
+            // dispatchAdditionalDragFunction(customPlot);
         }
 
         QCustomPlot *customPlot = allocCustomPlot("CoResult", spPlotWindow);
@@ -685,7 +685,7 @@ QCustomPlot *PlotWidget::allocCustomPlot(QString objName, bool needGauss, QWidge
     customPlot->axisRect()->insetLayout()->setInsetAlignment(0, Qt::AlignTop|Qt::AlignRight);
     // 设置边界
     customPlot->setContentsMargins(0, 0, 0, 0);
-    // 设置标签倾斜角度，避免显示不下
+    // 设置坐标轴标签倾斜角度，避免显示不下
     customPlot->xAxis->setTickLabelRotation(-45);
     // 背景色
     customPlot->setBackground(QBrush(clrBackground));
@@ -1643,7 +1643,7 @@ void PlotWidget::slotUpdatePlotDatas(const SingleSpectrum &r1, const vector<Coin
             int ch = 0;
             int mersize = MULTI_CHANNEL / multiChannel;
             for (unsigned int i=0; i<multiChannel; ++i){
-                keys << double(i+1) * enCalibration[0] + enCalibration[1];
+                keys << double(i+1) * g_enCalibration[0] + g_enCalibration[1];
 
                 //合并道址
                 int mergechannel = 0;
@@ -1685,7 +1685,7 @@ void PlotWidget::slotUpdatePlotDatas(const SingleSpectrum &r1, const vector<Coin
             int ch = 0;
             int mersize = MULTI_CHANNEL / multiChannel;
             for (unsigned int i=0; i<multiChannel; ++i){
-                keys << double(i+1) * enCalibration[0] + enCalibration[1];
+                keys << double(i+1) * g_enCalibration[0] + g_enCalibration[1];
 
                 //合并道址
                 int mergechannel = 0;
@@ -1894,7 +1894,7 @@ void PlotWidget::slotAddPlotDatas(SingleSpectrum r1, CoincidenceResult r3)
             int ch = 0;
             int mersize = MULTI_CHANNEL / multiChannel;
             for (unsigned int i=0; i<multiChannel; ++i){
-                keys << (i+1) * enCalibration[0] + enCalibration[1];
+                keys << (i+1) * g_enCalibration[0] + g_enCalibration[1];
 
                 //合并道址
                 int mergechannel = 0;
@@ -1935,7 +1935,7 @@ void PlotWidget::slotAddPlotDatas(SingleSpectrum r1, CoincidenceResult r3)
             int ch = 0;
             int mersize = MULTI_CHANNEL / multiChannel;
             for (unsigned int i=0; i<multiChannel; ++i){
-                keys << (i+1) * enCalibration[0] + enCalibration[1];
+                keys << (i+1) * g_enCalibration[0] + g_enCalibration[1];
 
                 //合并道址
                 int mergechannel = 0;

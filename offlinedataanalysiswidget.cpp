@@ -24,6 +24,8 @@
 #include <iostream>
 #define IS_VALID_DATA;
 
+extern double g_enCalibration[2];
+
 OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::OfflineDataAnalysisWidget)
@@ -95,10 +97,10 @@ OfflineDataAnalysisWidget::OfflineDataAnalysisWidget(QWidget *parent)
         reAnalyzer = true;
     });
 
-    connect(ui->spinBox_1_leftE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
-    connect(ui->spinBox_1_rightE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
-    connect(ui->spinBox_2_leftE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
-    connect(ui->spinBox_2_rightE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_1_leftE, SIGNAL(valueChanged(double)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_1_rightE, SIGNAL(valueChanged(double)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_2_leftE, SIGNAL(valueChanged(double)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_2_rightE, SIGNAL(valueChanged(double)), this, SLOT(slotUpdateEnWindow()));
     slotUpdateEnWindow();
 }
 
@@ -184,6 +186,21 @@ void OfflineDataAnalysisWidget::initCustomPlot()
 #include <QTimer>
 bool OfflineDataAnalysisWidget::LoadMeasureParameter(QString filePath)
 {
+    //获取能量刻度系数
+    JsonSettings* mUserSettings = GlobalSettings::instance()->mUserSettings;
+    if (mUserSettings->isOpen())
+    {
+        mUserSettings->prepare();
+        mUserSettings->beginGroup();
+        g_enCalibration[0] = mUserSettings->value("EnCalibrration_k", 1.0).toDouble();
+        g_enCalibration[1] = mUserSettings->value("EnCalibrration_b", 0.0).toDouble();
+        mUserSettings->endGroup();
+        mUserSettings->finish();
+
+        if (g_enCalibration[0] < 0.0001)
+            g_enCalibration[0] = 1.0;
+    }
+
     //重新初始化
     for(int i=0; i<3; i++){
         for(int j=3; j<6; j++){

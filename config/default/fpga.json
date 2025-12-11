@@ -3,8 +3,6 @@
     "DetectorGain": 5,
     "TriggerThold1": 200,
     "TriggerThold2": 200,
-    "TriggerThold3": 0,
-    "TriggerThold4": 0,
     "WaveformPolarity": 0,
 	"isTrapShaping":true,
 	"TrapShape_risePoint":20,

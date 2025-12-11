@@ -903,15 +903,15 @@ void MainWindow::InitMainWindowUi()
     this->setProperty("last_safe_exit", true);
     this->load();
 
-    connect(ui->spinBox_1_leftE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
-    connect(ui->spinBox_1_rightE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
-    connect(ui->spinBox_2_leftE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
-    connect(ui->spinBox_2_rightE, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_1_leftE, SIGNAL(valueChanged(double)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_1_rightE, SIGNAL(valueChanged(double)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_2_leftE, SIGNAL(valueChanged(double)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_2_rightE, SIGNAL(valueChanged(double)), this, SLOT(slotUpdateEnWindow()));
 
-    connect(ui->spinBox_1_leftE_2, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
-    connect(ui->spinBox_1_rightE_2, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
-    connect(ui->spinBox_2_leftE_2, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
-    connect(ui->spinBox_2_rightE_2, SIGNAL(valueChanged(int)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_1_leftE_2, SIGNAL(valueChanged(double)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_1_rightE_2, SIGNAL(valueChanged(double)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_2_leftE_2, SIGNAL(valueChanged(double)), this, SLOT(slotUpdateEnWindow()));
+    connect(ui->spinBox_2_rightE_2, SIGNAL(valueChanged(double)), this, SLOT(slotUpdateEnWindow()));
 
     // 注册全局快捷键（取消注册，容易误操作）
     //RegisterHotKey(reinterpret_cast<HWND>(this->winId()), 1, 0x00, VK_F1);

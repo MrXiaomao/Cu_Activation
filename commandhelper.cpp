@@ -22,7 +22,7 @@
 
 #include <QLockFile>
 #include "globalsettings.h"
-double enCalibration[2]; //能量刻度参数
+double g_enCalibration[2];
 unsigned int multiChannel = 8192; //多道道数
 CommandHelper::CommandHelper(QObject *parent) : QObject(parent)
   , coincidenceAnalyzer(new CoincidenceAnalyzer)
@@ -519,17 +519,17 @@ void CommandHelper::updateCoincidenceData(const SingleSpectrum &r1, const vector
             autoEnWindow = newEnWindow;
             std::vector<double> newAutoEnWindow;
             for (auto a : newEnWindow){
-                newAutoEnWindow.push_back((double)a * enCalibration[0] + enCalibration[1]);
+                newAutoEnWindow.push_back((double)a * g_enCalibration[0] + g_enCalibration[1]);
             }
 
             //打印能窗自动更新的日志
             vector<AutoGaussFit> gausslog = coincidenceAnalyzer->GetGaussFitLog();
             if(gausslog.size()>0){
                 AutoGaussFit resultAutoGaussFit = gausslog.back();
-                resultAutoGaussFit.EnLeft1 = resultAutoGaussFit.EnLeft1 * enCalibration[0] + enCalibration[1];
-                resultAutoGaussFit.EnRight1 = resultAutoGaussFit.EnRight1 * enCalibration[0] + enCalibration[1];
-                resultAutoGaussFit.EnLeft2 = resultAutoGaussFit.EnLeft2 * enCalibration[0] + enCalibration[1];
-                resultAutoGaussFit.EnRight2 = resultAutoGaussFit.EnRight2 * enCalibration[0] + enCalibration[1];
+                resultAutoGaussFit.EnLeft1 = resultAutoGaussFit.EnLeft1 * g_enCalibration[0] + g_enCalibration[1];
+                resultAutoGaussFit.EnRight1 = resultAutoGaussFit.EnRight1 * g_enCalibration[0] + g_enCalibration[1];
+                resultAutoGaussFit.EnLeft2 = resultAutoGaussFit.EnLeft2 * g_enCalibration[0] + g_enCalibration[1];
+                resultAutoGaussFit.EnRight2 = resultAutoGaussFit.EnRight2 * g_enCalibration[0] + g_enCalibration[1];
 
                 //有新的能窗产生
                 QString autoEnChangeFile = ShotDir + "/" + str_start_time + "_能窗自动更新.txt";
@@ -1002,8 +1002,8 @@ void CommandHelper::closeDetector()
     // emit sigDetectorStatus(false);
 }
 
-//触发阈值1
-QByteArray CommandHelper::getCmdTriggerThold1(quint16 ch1, quint16 ch2)
+//触发阈值，设置通道1和通道2的触发阈值，通道3、通道4硬件上已经禁用了。
+QByteArray CommandHelper::getCmdTriggerThold(quint16 ch1, quint16 ch2)
 {
     QByteArray command;
     QDataStream dataStream(&command, QIODevice::WriteOnly);
@@ -1294,13 +1294,13 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
     {
         mUserSettings->prepare();
         mUserSettings->beginGroup();
-        enCalibration[0] = mUserSettings->value("EnCalibrration_k", 1.0).toDouble();
-        enCalibration[1] = mUserSettings->value("EnCalibrration_b", 0.0).toDouble();
+        g_enCalibration[0] = mUserSettings->value("EnCalibrration_k", 1.0).toDouble();
+        g_enCalibration[1] = mUserSettings->value("EnCalibrration_b", 0.0).toDouble();
         mUserSettings->endGroup();
         mUserSettings->finish();
 
-        if (enCalibration[0] < 0.0001)
-            enCalibration[0] = 1.0;
+        if (g_enCalibration[0] < 0.0001)
+            g_enCalibration[0] = 1.0;
     }
 
     coincidenceAnalyzer->initialize();
@@ -1419,7 +1419,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
         // 粒子模式
 
         //阈值
-        cmdPool.push_back(getCmdTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2));
+        cmdPool.push_back(getCmdTriggerThold(detectorParameter.triggerThold1, detectorParameter.triggerThold2));
         //"设置波形极性
         cmdPool.push_back(getCmdWaveformPolarity(detectorParameter.waveformPolarity));
         //设置死时间
@@ -1454,7 +1454,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
         //能谱模式
 
         //阈值
-        cmdPool.push_back(getCmdTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2));
+        cmdPool.push_back(getCmdTriggerThold(detectorParameter.triggerThold1, detectorParameter.triggerThold2));
         //"设置波形极性
         cmdPool.push_back(getCmdWaveformPolarity(detectorParameter.waveformPolarity));
         //设置死时间
@@ -1491,7 +1491,7 @@ void CommandHelper::slotStartManualMeasure(DetectorParameter p)
         // 波形模式
 
         //阈值
-        cmdPool.push_back(getCmdTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2));
+        cmdPool.push_back(getCmdTriggerThold(detectorParameter.triggerThold1, detectorParameter.triggerThold2));
         //"设置波形极性
         cmdPool.push_back(getCmdWaveformPolarity(detectorParameter.waveformPolarity));
         // 探测器增益
@@ -1571,13 +1571,13 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
     {
         mUserSettings->prepare();
         mUserSettings->beginGroup();
-        enCalibration[0] = mUserSettings->value("EnCalibrration_k", 1.0).toDouble();
-        enCalibration[1] = mUserSettings->value("EnCalibrration_b", 0.0).toDouble();
+        g_enCalibration[0] = mUserSettings->value("EnCalibrration_k", 1.0).toDouble();
+        g_enCalibration[1] = mUserSettings->value("EnCalibrration_b", 0.0).toDouble();
         mUserSettings->endGroup();
         mUserSettings->finish();
 
-        if (enCalibration[0] < 0.0001)
-            enCalibration[0] = 1.0;
+        if (g_enCalibration[0] < 0.0001)
+            g_enCalibration[0] = 1.0;
     }
 
     coincidenceAnalyzer->initialize();
@@ -1657,7 +1657,7 @@ void CommandHelper::slotStartAutoMeasure(DetectorParameter p)
 
     cmdPool.clear();
     //阈值
-    cmdPool.push_back(getCmdTriggerThold1(detectorParameter.triggerThold1, detectorParameter.triggerThold2));
+    cmdPool.push_back(getCmdTriggerThold(detectorParameter.triggerThold1, detectorParameter.triggerThold2));
     // 波形极性
     cmdPool.push_back(getCmdWaveformPolarity(detectorParameter.waveformPolarity));
     // 死时间
@@ -2209,10 +2209,10 @@ void CommandHelper::detTimeEnergyWorkThread()
                             {
                                 saveParticleInfo(data1_2, data2_2);
                                 unsigned short uEnWindow[4];
-                                uEnWindow[0] = (unsigned short)((EnWindow[0] - enCalibration[1]) / enCalibration[0]);
-                                uEnWindow[1] = (unsigned short)((EnWindow[1] - enCalibration[1]) / enCalibration[0]);
-                                uEnWindow[2] = (unsigned short)((EnWindow[2] - enCalibration[1]) / enCalibration[0]);
-                                uEnWindow[3] = (unsigned short)((EnWindow[3] - enCalibration[1]) / enCalibration[0]);
+                                uEnWindow[0] = (unsigned short)((EnWindow[0] - g_enCalibration[1]) / g_enCalibration[0]);
+                                uEnWindow[1] = (unsigned short)((EnWindow[1] - g_enCalibration[1]) / g_enCalibration[0]);
+                                uEnWindow[2] = (unsigned short)((EnWindow[2] - g_enCalibration[1]) / g_enCalibration[0]);
+                                uEnWindow[3] = (unsigned short)((EnWindow[3] - g_enCalibration[1]) / g_enCalibration[0]);
                                 coincidenceAnalyzer->calculate(data1_2, data2_2, uEnWindow, \
                                     detectorParameter.timeWidth, detectorParameter.delayTime, true, true);
                             }
@@ -2246,10 +2246,10 @@ void CommandHelper::detTimeEnergyWorkThread()
                                 }
                                 saveParticleInfo(data1_2, data2_2);
                                 unsigned short uEnWindow[4];
-                                uEnWindow[0] = (unsigned short)((EnWindow[0] - enCalibration[1]) / enCalibration[0]);
-                                uEnWindow[1] = (unsigned short)((EnWindow[1] - enCalibration[1]) / enCalibration[0]);
-                                uEnWindow[2] = (unsigned short)((EnWindow[2] - enCalibration[1]) / enCalibration[0]);
-                                uEnWindow[3] = (unsigned short)((EnWindow[3] - enCalibration[1]) / enCalibration[0]);
+                                uEnWindow[0] = (unsigned short)((EnWindow[0] - g_enCalibration[1]) / g_enCalibration[0]);
+                                uEnWindow[1] = (unsigned short)((EnWindow[1] - g_enCalibration[1]) / g_enCalibration[0]);
+                                uEnWindow[2] = (unsigned short)((EnWindow[2] - g_enCalibration[1]) / g_enCalibration[0]);
+                                uEnWindow[3] = (unsigned short)((EnWindow[3] - g_enCalibration[1]) / g_enCalibration[0]);
                                 coincidenceAnalyzer->calculate(data1_2, data2_2, uEnWindow, \
                                     detectorParameter.timeWidth, detectorParameter.delayTime, true, true);
                             }
@@ -2258,10 +2258,10 @@ void CommandHelper::detTimeEnergyWorkThread()
                                 //只计算能谱数据，不进行符合计数
                                 // qDebug().noquote()<<"Into Size1 = "<<data1_2.size()<<", Size2 = "<<data2_2.size();
                                 unsigned short uEnWindow[4];
-                                uEnWindow[0] = (unsigned short)((EnWindow[0] - enCalibration[1]) / enCalibration[0]);
-                                uEnWindow[1] = (unsigned short)((EnWindow[1] - enCalibration[1]) / enCalibration[0]);
-                                uEnWindow[2] = (unsigned short)((EnWindow[2] - enCalibration[1]) / enCalibration[0]);
-                                uEnWindow[3] = (unsigned short)((EnWindow[3] - enCalibration[1]) / enCalibration[0]);
+                                uEnWindow[0] = (unsigned short)((EnWindow[0] - g_enCalibration[1]) / g_enCalibration[0]);
+                                uEnWindow[1] = (unsigned short)((EnWindow[1] - g_enCalibration[1]) / g_enCalibration[0]);
+                                uEnWindow[2] = (unsigned short)((EnWindow[2] - g_enCalibration[1]) / g_enCalibration[0]);
+                                uEnWindow[3] = (unsigned short)((EnWindow[3] - g_enCalibration[1]) / g_enCalibration[0]);
                                 coincidenceAnalyzer->calculate(data1_2, data2_2, uEnWindow, \
                                     detectorParameter.timeWidth, detectorParameter.delayTime, false, false);
                                 // qDebug().noquote()<<"Out";

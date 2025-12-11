@@ -92,14 +92,6 @@ bool FPGASetting::save()
         fpgaSettings->setValue("TriggerThold2", ch2);
     }
 
-    //探测器3-4阈值
-    {
-        quint16 ch3 = 0x00;
-        quint16 ch4 = 0x00;
-        fpgaSettings->setValue("TriggerThold3", ch3);
-        fpgaSettings->setValue("TriggerThold4", ch4);
-    }
-
     //死时间
     {
         quint16 deadTime = ui->spinBox_3->value();

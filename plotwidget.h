@@ -143,6 +143,7 @@ private:
     qint32 COUNT_X_AXIS_UPPER[2];
     qint32 COUNT_Y_AXIS_LOWER[2];
     qint32 COUNT_Y_AXIS_UPPER[2];
+    
     //能谱模式下
     qint32 SPECTRUM_X_AXIS_LOWER;
     qint32 SPECTRUM_X_AXIS_UPPER;

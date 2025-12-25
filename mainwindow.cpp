@@ -409,29 +409,24 @@ MainWindow::MainWindow(QWidget *parent)
     connect(commandHelper, &CommandHelper::sigPlot, this, [=](SingleSpectrum r1, CoincidenceResult r3){
         this->lastRecvDataTime = QDateTime::currentDateTime();
         bool pause_plot = this->property("pause_plot").toBool();
-        if (1/*!pause_plot*/){
-            // if(r3.size()==0) return;
+        if (!pause_plot){
+            if(r3.size()==0) return;
             ui->lcdNumber_CountRate1->display(r3.CountRate1);
             ui->lcdNumber_CountRate2->display(r3.CountRate2);
             ui->lcdNumber_ConCount_single->display(r3.ConCount_single);
             ui->lcdNumber_DeathRatio1->display(r3.DeathRatio1);
             ui->lcdNumber_DeathRatio2->display(r3.DeathRatio2);
-
-            // ui->lcdNumber_CountRate1->repaint();
-            // ui->lcdNumber_CountRate2->repaint();
-            // ui->lcdNumber_ConCount_single->repaint();
-            // ui->lcdNumber_DeathRatio1->repaint();
-            // ui->lcdNumber_DeathRatio2->repaint();
         }
     }, Qt::QueuedConnection/*主线程处理界面信息*/);
+
     connect(commandHelper, &CommandHelper::sigPlot, this, [=](SingleSpectrum r1, CoincidenceResult r3){
-        //this->lastRecvDataTime = QDateTime::currentDateTime();
-        //bool pause_plot = this->property("pause_plot").toBool();
-        if (1/*!pause_plot*/){
+        bool pause_plot = this->property("pause_plot").toBool();
+        if (!pause_plot){
             PlotWidget* plotWidget = this->findChild<PlotWidget*>("online-PlotWidget");
             plotWidget->slotAddPlotDatas(r1, r3);
         }
     }, Qt::DirectConnection/*子线程处理数据*/);
+
     qRegisterMetaType<vector<CoincidenceResult>>("vector<CoincidenceResult>");
     connect(commandHelper, &CommandHelper::sigNewPlot, this, [=](const SingleSpectrum &r1, const vector<CoincidenceResult> &r3){
         this->lastRecvDataTime = QDateTime::currentDateTime();
@@ -445,6 +440,7 @@ MainWindow::MainWindow(QWidget *parent)
             ui->lcdNumber_DeathRatio2->display(r3.back().DeathRatio2);
         }
     }, Qt::QueuedConnection/*防止堵塞*/);
+
     connect(commandHelper, &CommandHelper::sigNewPlot, this, [=](const SingleSpectrum &r1, const vector<CoincidenceResult>& r3){
         //this->lastRecvDataTime = QDateTime::currentDateTime();
         //bool pause_plot = this->property("pause_plot").toBool();
